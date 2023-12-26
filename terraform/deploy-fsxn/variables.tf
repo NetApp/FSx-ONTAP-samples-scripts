@@ -1,42 +1,46 @@
 variable "vpc_id" {
+   description = "The ID of the VPC in which the FSxN fikesystem should be deployed"
    type = string
-   default = "vpc-06df8175c83fa34d3"
 }
 
 variable "fsx_subnets" {
+   description = "The IDs of the subnets fro which the FSxN filesystem will be assigned IP addresses"
    type = map
    default = {
-      "primarysub" = "subnet-0363569f91f7bac2d"
-      "secondarysub" = "subnet-0ad787406f660bcbb"
+      "primarysub" = ""
+      "secondarysub" = ""
    }
 }
 
-variable "size_in_gb" {
+variable "fs_capacity_size_gb" {
+   description = "The storage capacity (GiB) of the FSxN file system. Valid values between 1024 and 196608"
    type = string
-   default = "1024"
 }
 
 variable "deploy_type" {
+   description = "The filesystem deployment type. Supports MULTI_AZ_1 and SINGLE_AZ_1"
    type = string 
-   default = "SINGLE_AZ_1"
 }
        
-variable "throughput_in_MBps" {
+variable "fs_tput_in_MBps" {
+   description = "The throughput capacity (in MBps) for the file system. Valid values are 128, 256, 512, 1024, 2048, and 4096."
    type = string
    default = "128"
 }
 
 variable "svm_name" {
+   description = "The name of the Storage Virtual Machine"
    type = string
    default = "fsx"
 }
 
 variable "vol_info" {
+   description = "Details for the volume creation"
    type = map
    default = {
-      "vol_name" = "volx"
-	  "junction_path" = "/volx"
-	  "size" = 1024
+     "vol_name" = "vol1"
+     "junction_path" = "/vol1"
+	  "size_mg" = 1024
 	  "efficiency" = true
 	  "tier_policy_name" = "AUTO"
 	  "cooling_period" = 31
