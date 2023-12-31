@@ -12,7 +12,7 @@ provider "aws" {
   region = "us-west-2"
 }
 
-resource "aws_fsx_ontap_file_system" "rvwn-terra-fsxn" {
+resource "aws_fsx_ontap_file_system" "terraform-fsxn" {
    storage_capacity = var.fs_capacity_size_gb
    subnet_ids = [var.fsx_subnets["primarysub"]]
    deployment_type = var.deploy_type
