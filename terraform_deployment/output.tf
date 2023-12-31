@@ -7,3 +7,8 @@ output "my_svm_id" {
   description = "The ID of the FSxN Storage Virtual Machine"
   value       = aws_fsx_ontap_storage_virtual_machine.mysvm.id
 }
+
+output "my_vol_id" {
+  description = "The ID of the ONTAP volume in the File System"
+  value       = aws_fsx_ontap_volume.myvol.id
+}
