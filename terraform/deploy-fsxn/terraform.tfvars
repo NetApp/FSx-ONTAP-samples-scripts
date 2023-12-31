@@ -1,7 +1,7 @@
-vpc_id = ""
+vpc_id = "vpc-445d4f21"
 fsx_subnets = {
-      "primarysub" = "subnet-0363569f91f7bac2d"
-      "secondarysub" = "subnet-0ad787406f660bcbb"
+      "primarysub" = "subnet-8fba81f8"
+      "secondarysub" = "subnet-542bae0f"
    }
 fs_capacity_size_gb = "1024"
 deploy_type = "SINGLE_AZ_1"
