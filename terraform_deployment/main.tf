@@ -24,7 +24,7 @@ resource "aws_fsx_ontap_file_system" "terraform-fsxn" {
 }
 
 resource "aws_fsx_ontap_storage_virtual_machine" "mysvm" {
-  file_system_id = output.my_filesystem_id
+  file_system_id = aws_fsx_ontap_file_system.terraform-fsxn.id
   name           = var.svm_name
 }
 
@@ -33,7 +33,7 @@ resource "aws_fsx_ontap_volume" "myvol" {
   junction_path              = var.vol_info["junction_path"]
   size_in_megabytes          = var.vol_info["size_mg"]
   storage_efficiency_enabled = var.vol_info["efficiency"]
-  storage_virtual_machine_id = output.my_svm_id
+  storage_virtual_machine_id = aws_fsx_ontap_storage_virtual_machine.mysvm.id
 
   tiering_policy {
     name           = var.vol_info["tier_policy_name"]
