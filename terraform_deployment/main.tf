@@ -19,7 +19,7 @@ resource "aws_fsx_ontap_file_system" "terraform-fsxn" {
    throughput_capacity = var.fs_tput_in_MBps
    preferred_subnet_id = var.fsx_subnets["primarysub"]
    tags = {
-	Name = "rvwn-fsx1"
+	Name = var.fs_name
    }
 }
 

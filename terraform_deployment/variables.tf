@@ -1,3 +1,9 @@
+variable "fs_name" {
+   description = "The deployed filesystem name"
+   type = string
+   default = "my_fsx_ontap"
+}
+
 variable "vpc_id" {
    description = "The ID of the VPC in which the FSxN fikesystem should be deployed"
    type = string

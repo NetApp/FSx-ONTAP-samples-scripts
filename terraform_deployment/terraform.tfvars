@@ -1,3 +1,4 @@
+fs_name = "terraform-fsxn"
 vpc_id = "vpc-445d4f21"
 fsx_subnets = {
       "primarysub" = "subnet-8fba81f8"
