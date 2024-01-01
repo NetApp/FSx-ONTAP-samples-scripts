@@ -1,8 +1,8 @@
 fs_name = "terraform-fsxn"
-vpc_id = "vpc-445d4f21"
+vpc_id = ""
 fsx_subnets = {
-      "primarysub" = "subnet-8fba81f8"
-      "secondarysub" = "subnet-542bae0f"
+      "primarysub" = ""
+      "secondarysub" = ""
    }
 fs_capacity_size_gb = "1024"
 deploy_type = "SINGLE_AZ_1"

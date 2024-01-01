@@ -20,6 +20,24 @@ This is a standalone Terraform configutation repository that contains the follow
 * **terraform.tfvard** - Contains the variables assignments for this sample. Terraform will automatically use this file as it's main variables definition file as it uses the saved name. Note that if you change the file name you will need to specify that file on the command line with `-var-file`.
 Exported values will override any of the variables in both the variables.tf file and the terraform.tfvars file
 
+* **output.tf** - Contains output declarations of the resources created by this Terraform module. Terraform stores output values in the configuration's state file.
+
+### What to expect
+
+Running this terraform sample will result the following:
+* Create a new FSX for Netapp ONTAP file system in your AWS account named "_terraform-fsxn_". The File System will be created with the following configuration parameters:
+    * 1024Gb of storage capacity
+    * Single AZ deployment type
+    * 256Mbps of throughput capacity 
+
+* Create a Storage Virtual Maching (svm) in this new File System named "_first_svm_"
+* Create a new FlexVol volume in this svm named "_vol1_" with the following configuration parameters:
+    * Size of 1024Mb
+    * Storage efficiencies mechanism enabled
+    * Auto tiering policy with 31 cooling days
+
+> [!NOTE]
+> All of the above configuration parameters can be modified for your preference by assigning your own values in the _terraform.tfvars_ file! 
 
 ## Prerequisites
 --
