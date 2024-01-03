@@ -6,7 +6,6 @@ Follow the instructions below to use this sample in your own environment.
 * [Introduction](#introduction)
 * [Prerequisites](#prerequisites)
 * [Getting Started](#getting-started)
-* [Configuration](#configuration)
 * [Usage Examples](#usage-examples)
 * [License](#license)
 
@@ -40,12 +39,18 @@ Running this terraform sample will result the following:
 > All of the above configuration parameters can be modified for your preference by assigning your own values in the _terraform.tfvars_ file! 
 
 ## Prerequisites
---
+
+### Terraform
+
+Terraform should be installed in the server from which you are running this sample. Check out [this link](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli) for installation details. 
+
+### AWS Account Setup
+
+* An AWS Account with an administrative user in AWS IAM Identity Center
+
+
 
 ## Getting Started
---
-
-## Configuration
 --
 
 ## Usage Examples
