@@ -1,5 +1,5 @@
-# Deploy an ONTAP FSX file system using Terraform
-This sample demonstrates how to deploy an FSx for NetApp ONTAP file system, including an SVM and a volume in that file system, using aws Terraform provider. 
+# Deploy an ONTAP FSx file-system using Terraform
+This sample demonstrates how to deploy an FSx for NetApp ONTAP file system, including an SVM and a FlexVolume in that file system, using AWS Terraform provider. 
 Follow the instructions below to use this sample in your own environment.
 
 ## Table of Contents
@@ -12,25 +12,25 @@ Follow the instructions below to use this sample in your own environment.
 ## Introduction
 ### Repository Overview
 This is a standalone Terraform configutation repository that contains the following files:
-* **main.tf** - the main set of configuration for this terraform sample
+* **main.tf** - The main set of configuration for this terraform sample
 
 * **variables.tf** - Contains the variable definitions for this sample
 
 * **terraform.tfvard** - Contains the variables assignments for this sample. Terraform will automatically use this file as it's main variables definition file as it uses the saved name. Note that if you change the file name you will need to specify that file on the command line with `-var-file`.
 Exported values will override any of the variables in both the variables.tf file and the terraform.tfvars file
 
-* **output.tf** - Contains output declarations of the resources created by this Terraform module. Terraform stores output values in the configuration's state file.
+* **output.tf** - Contains output declarations of the resources created by this Terraform module. Terraform stores output values in the configuration's state file
 
 ### What to expect
 
 Running this terraform sample will result the following:
-* Create a new FSX for Netapp ONTAP file system in your AWS account named "_terraform-fsxn_". The File System will be created with the following configuration parameters:
+* Create a new FSx for Netapp ONTAP file-system in your AWS account named "_terraform-fsxn_". The file-system will be created with the following configuration parameters:
     * 1024Gb of storage capacity
     * Single AZ deployment type
     * 256Mbps of throughput capacity 
 
-* Create a Storage Virtual Maching (svm) in this new File System named "_first_svm_"
-* Create a new FlexVol volume in this svm named "_vol1_" with the following configuration parameters:
+* Create a Storage Virtual Maching (SVM) in this new file-system named "_first_svm_"
+* Create a new FlexVol volume in this SVM named "_vol1_" with the following configuration parameters:
     * Size of 1024Mb
     * Storage efficiencies mechanism enabled
     * Auto tiering policy with 31 cooling days
@@ -96,7 +96,7 @@ Terraform should be installed in the server from which you are running this samp
 
 
 
-## Getting Started
+## Usage
 
 #### 1. Clone the repository
 In your server's terminal, navigate to the location where you wish to store this Terraform repository, and clone the repository using your preferred authentication type. In this example we are using HTTPS clone:
@@ -155,9 +155,5 @@ Run the following command to execute the Terrafom code and apply the changes pro
 ```shell
 $ terraform apply
 ```
-
-
-## Usage Examples
---
 
 ## License
