@@ -1,5 +1,5 @@
 # Deploy an ONTAP FSX file system using Terraform
-This sample demonstrates how to deploy an FSX for Netapp ONTAP file system, including an SVM and a volume in that file system, using aws Terraform provider. 
+This sample demonstrates how to deploy an FSx for NetApp ONTAP file system, including an SVM and a volume in that file system, using aws Terraform provider. 
 Follow the instructions below to use this sample in your own environment.
 
 ## Table of Contents
@@ -60,7 +60,8 @@ Terraform should be installed in the server from which you are running this samp
 
     This order matches the precedence used by the [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-quickstart.html#cli-configure-quickstart-precedence) and the [AWS SDKs](https://aws.amazon.com/tools/).
 
-    > [!NOTE] In this sample, the AWS Credentials were configured through [AWS CLI](https://aws.amazon.com/cli/), which adds them to a shared configuration file (option 4 above). Therefore, this documentation only provides guidance on setting-up the AWS credentials with shared configuration file using AWS CLI.
+    > [NOTE!]
+    > In this sample, the AWS Credentials were configured through [AWS CLI](https://aws.amazon.com/cli/), which adds them to a shared configuration file (option 4 above). Therefore, this documentation only provides guidance on setting-up the AWS credentials with shared configuration file using AWS CLI.
 
     #### Configure AWS Credentials using AWS CLI
 
@@ -154,7 +155,6 @@ Run the following command to execute the Terrafom code and apply the changes pro
 ```shell
 $ terraform apply
 ```
-
 
 
 ## Usage Examples
