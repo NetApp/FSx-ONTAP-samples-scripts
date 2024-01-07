@@ -2,4 +2,4 @@
 This GitHub repository contains comprehensive code samples and automation scripts for FSx for Netapp ONTAP operations, promoting the use of Infrastructure as Code (IAC) tools and encouraging developers to extend the product's functionalities through code.
 
 ## Table of Contents
-* [FSxN deployment using Terraform](#FSxN-Samples/terraform_feployment/main)
+* [FSxN deployment using Terraform](#FSxN-Samples/tree/main/terraform_deployment)
