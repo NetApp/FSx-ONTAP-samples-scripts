@@ -1,0 +1,41 @@
+# Copyright (c) NetApp, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+name: "Code Quality: Terraform"
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  terraform:
+    name: Terraform
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout pull request
+        uses: actions/checkout@v3.5.0
+        with:
+          fetch-depth: 1
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_wrapper: false
+          terraform_version: 1.6.6
+
+      - name: Initialize Terraform
+        run: terraform init
+
+      - name: Format Terraform configuration
+        run: terraform fmt -diff -check -no-color -recursive
+
+      - name: Validate Terraform configuration
+        run: terraform validate
+
+      - name: Lint Terraform configuration
+        run: curl -sSfL https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | sh
+            tflint
