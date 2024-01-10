@@ -1,0 +1,88 @@
+# Copyright (c) NetApp, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+
+# see https://terraform-docs.io/user-guide/configuration/formatter/
+formatter: "markdown table"
+
+# see https://terraform-docs.io/user-guide/configuration/output/
+output:
+  file: "README.md"
+  mode: inject
+  template: |-
+    <!-- BEGIN_TF_DOCS -->
+    {{ .Content }}
+    <!-- END_TF_DOCS -->
+
+# see https://terraform-docs.io/user-guide/configuration/settings/
+settings:
+  anchor: false
+  color: true
+  default: true
+  escape: false
+  indent: 3
+  required: true
+  sensitive: true
+  type: true
+
+# see https://terraform-docs.io/user-guide/configuration/sort/
+sort:
+  enabled: true
+  by: required
+
+# see https://terraform-docs.io/user-guide/configuration/sections/
+sections:
+  show:
+    - providers
+    - inputs
+    - outputs
+
+content: |
+
+  ## Table of Contents
+  * [Introduction](#introduction)
+  * [Prerequisites](#prerequisites)
+  * [Getting Started](#getting-started)
+  * [Usage Examples](#usage-examples)
+  * [Author Information](#author-information)
+  * [License](#license)
+
+  ## Introduction
+
+  << place your description here >>
+
+  ##Prerequisites
+
+  {{ .Providers}}
+
+  ### Repository Overview
+
+  {{ .Inputs }}
+
+  {{ .Outputs }}
+
+  ## Getting Started
+
+  << place your instructions here >>
+
+  ## Usage Examples
+
+  << place your examples here >>
+
+  ## Author Information
+
+  This repository is maintained by the contributors listed on [GitHub](https://github.com/NetApp/FSxN-Samples/graphs/contributors).
+
+  ## License
+
+  Licensed under the Apache License, Version 2.0 (the "License").
+
+  You may obtain a copy of the License at [apache.org/licenses/LICENSE-2.0](http://www.apache.org/licenses/LICENSE-2.0).
+
+  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an _"AS IS"_ basis, without WARRANTIES or conditions of any kind, either express or implied.
+
+  See the License for the specific language governing permissions and limitations under the License.
+
+# see https://terraform-docs.io/user-guide/configuration/version/
+version: ">= 0.16.0, < 1.0.0"

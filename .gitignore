@@ -1,3 +1,2 @@
-terraform_deployment/.terraform
-terraform_deployment/.terraform.lock.hcl
+terraform_deployment/.terraform*
 terraform_deployment/terraform.tfstate*
