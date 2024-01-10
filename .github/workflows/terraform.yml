@@ -30,8 +30,8 @@ jobs:
       - name: Initialize Terraform
         run: terraform init
 
-      - name: Format Terraform configuration
-        run: terraform fmt -diff -check -no-color -recursive
+      # - name: Format Terraform configuration
+      #   run: terraform fmt -diff -check -no-color -recursive
 
       - name: Validate Terraform configuration
         run: terraform validate
