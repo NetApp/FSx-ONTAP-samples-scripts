@@ -102,7 +102,7 @@ Terraform should be installed in the server from which you are running this samp
 #### 1. Clone the repository
 In your server's terminal, navigate to the location where you wish to store this Terraform repository, and clone the repository using your preferred authentication type. In this example we are using HTTPS clone:
 
-$
+$\
 ```shell 
 git clone https://github.com/NetApp/FSxN-Samples.git
 ```
