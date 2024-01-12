@@ -147,14 +147,14 @@ Open the **`terraform.tfvars`** file in your preferred text editor. Update the v
 #### 5. Create a Terraform plan
 Run the following command to create an execution plan, which lets you preview the changes that Terraform plans to make to your infrastructure:
 ```shell
-$ terraform plan
+terraform plan
 ```
 Ensure that the proposed changes match what you expected before you apply the changes!
 
 #### 6. Apply the Terraform plan
 Run the following command to execute the Terrafom code and apply the changes proposed in the `plan` step:
 ```shell
-$ terraform apply
+terraform apply
 ```
 
 ## Author Information
