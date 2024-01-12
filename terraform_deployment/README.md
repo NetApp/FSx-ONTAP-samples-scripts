@@ -107,7 +107,7 @@ git clone https://github.com/NetApp/FSxN-Samples.git
 ```
 
 #### 2. Navigate to the directory
-```shell
+```console
 $ cd terraform_deployment
 ```
 
