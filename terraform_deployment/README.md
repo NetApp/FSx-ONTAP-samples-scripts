@@ -107,14 +107,14 @@ git clone https://github.com/NetApp/FSxN-Samples.git
 ```
 
 #### 2. Navigate to the directory
-```console
-$ cd terraform_deployment
+```shell
+cd terraform_deployment
 ```
 
 #### 3. Initialize Terraform
 This directory represents a standalone Terraform module. Run the following command to initialize the module and install all dependencies:
 ```shell
-$ terraform init
+terraform init
 ```
 
 A succesfull initialization should display the following output:
