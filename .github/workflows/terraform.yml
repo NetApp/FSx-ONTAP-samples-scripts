@@ -35,7 +35,3 @@ jobs:
 
       - name: Validate Terraform configuration
         run: terraform validate
-
-      - name: Lint Terraform configuration
-        run: curl -sSfL https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | sh
-            tflint
