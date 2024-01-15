@@ -5,7 +5,11 @@ name: "Code Quality: Terraform"
 
 on:
   pull_request:
+    paths:
+      - "Terraform_samples/**"
   push:
+    paths:
+      - "Terraform_samples/**"
     branches:
       - main
 
