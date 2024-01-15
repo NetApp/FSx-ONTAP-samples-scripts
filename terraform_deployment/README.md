@@ -17,7 +17,7 @@ This is a standalone Terraform configutation repository that contains the follow
 
 * **variables.tf** - Contains the variable definitions for this sample
 
-* **terraform.tfvard** - Contains the variables assignments for this sample. Terraform will automatically use this file as it's main variables definition file as it uses the saved name. Note that if you change the file name you will need to specify that file on the command line with `-var-file`.
+* **terraform.tfvar** - Contains the variables assignments for this sample. Terraform will automatically use this file as it's main variables definition file as it uses the saved name. Note that if you change the file name you will need to specify that file on the command line with `-var-file`.
 Exported values will override any of the variables in both the variables.tf file and the terraform.tfvars file
 
 * **output.tf** - Contains output declarations of the resources created by this Terraform module. Terraform stores output values in the configuration's state file
@@ -41,8 +41,8 @@ Running this terraform sample will result the following:
 
 ## Prerequisites
 
-1. [Terraform prerequisits](#terraform)
-2. [AWS prerequisits](#aws-account-setup)
+1. [Terraform prerequisites](#terraform)
+2. [AWS prerequisites](#aws-account-setup)
 
 ### Terraform
 
@@ -102,19 +102,19 @@ Terraform should be installed in the server from which you are running this samp
 #### 1. Clone the repository
 In your server's terminal, navigate to the location where you wish to store this Terraform repository, and clone the repository using your preferred authentication type. In this example we are using HTTPS clone:
 
-```shell
-$ git clone https://github.com/NetApp/FSxN-Samples.git
+```shell 
+git clone https://github.com/NetApp/FSxN-Samples.git
 ```
 
 #### 2. Navigate to the directory
 ```shell
-$ cd terraform_deployment
+cd terraform_deployment
 ```
 
 #### 3. Initialize Terraform
 This directory represents a standalone Terraform module. Run the following command to initialize the module and install all dependencies:
 ```shell
-$ terraform init
+terraform init
 ```
 
 A succesfull initialization should display the following output:
@@ -147,14 +147,14 @@ Open the **`terraform.tfvars`** file in your preferred text editor. Update the v
 #### 5. Create a Terraform plan
 Run the following command to create an execution plan, which lets you preview the changes that Terraform plans to make to your infrastructure:
 ```shell
-$ terraform plan
+terraform plan
 ```
 Ensure that the proposed changes match what you expected before you apply the changes!
 
 #### 6. Apply the Terraform plan
 Run the following command to execute the Terrafom code and apply the changes proposed in the `plan` step:
 ```shell
-$ terraform apply
+terraform apply
 ```
 
 ## Author Information
