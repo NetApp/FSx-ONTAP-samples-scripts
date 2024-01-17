@@ -15,10 +15,7 @@ Follow the instructions below to use this sample in your own environment.
 This is a standalone Terraform configutation repository that contains the following files:
 * **main.tf** - The main set of configuration for this terraform sample
 
-* **variables.tf** - Contains the variable definitions for this sample
-
-* **terraform.tfvars** - Contains the variables assignments for this sample. Terraform will automatically use this file as it's main variables definition file as it uses the saved name. Note that if you change the file name you will need to specify that file on the command line with `-var-file`.
-Exported values will override any of the variables in both the variables.tf file and the terraform.tfvars file
+* **variables.tf** - Contains the variable definitions and assignments for this sample. Exported values will override any of the variables in this file. 
 
 * **output.tf** - Contains output declarations of the resources created by this Terraform module. Terraform stores output values in the configuration's state file
 
