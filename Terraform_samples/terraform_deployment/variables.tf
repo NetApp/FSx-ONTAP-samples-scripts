@@ -1,7 +1,7 @@
 variable "fs_name" {
    description = "The deployed filesystem name"
    type = string
-   default = "my_fsx_ontap"
+   default = "terraform-fsxn"
 }
 
 variable "vpc_id" {
@@ -21,23 +21,25 @@ variable "fsx_subnets" {
 variable "fs_capacity_size_gb" {
    description = "The storage capacity (GiB) of the FSxN file system. Valid values between 1024 and 196608"
    type = string
+   default = "1024"
 }
 
 variable "deploy_type" {
    description = "The filesystem deployment type. Supports MULTI_AZ_1 and SINGLE_AZ_1"
    type = string 
+   default = "SINGLE_AZ_1"
 }
        
 variable "fs_tput_in_MBps" {
    description = "The throughput capacity (in MBps) for the file system. Valid values are 128, 256, 512, 1024, 2048, and 4096."
    type = string
-   default = "128"
+   default = "256"
 }
 
 variable "svm_name" {
    description = "The name of the Storage Virtual Machine"
    type = string
-   default = "fsx"
+   default = "first_svm"
 }
 
 variable "vol_info" {
