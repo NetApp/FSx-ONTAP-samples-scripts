@@ -7,6 +7,7 @@ variable "fs_name" {
 variable "vpc_id" {
    description = "The ID of the VPC in which the FSxN fikesystem should be deployed"
    type = string
+   default = "vpc-111111111"
 }
 
 variable "fsx_subnets" {
@@ -54,6 +55,3 @@ variable "vol_info" {
 	  "cooling_period" = 31
    }
 }
-
-
-
