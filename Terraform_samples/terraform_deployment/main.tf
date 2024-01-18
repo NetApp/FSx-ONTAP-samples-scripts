@@ -1,5 +1,3 @@
-// TODO: add security group resource
-// TODO: Include all possible parameters in the resource block
 // TODO: Consider using aws secret manager resource to keep the created password string
 // TODO: Consider making this a module
 
@@ -132,38 +130,77 @@ resource "aws_vpc_security_group_egress_rule" "allow_all_traffic" {
 
 /*
   The following resources are for deploying a complete FSx ONTAP file system. 
-  The code below deploys a file system, a storage virtual machine, and a volume.
+  The code below deploys the following resources in this order:
+  1. A file system 
+  2. A storage virtual machine
+  3. A volume within the storage virtual machine
+
   Every resource include both optional and required parameters, separated by a comment line.
   Feel free to add or remove optional parameters as needed.
+  The current settings are just a suggestion for basic functionality.
 */
 
 resource "aws_fsx_ontap_file_system" "terraform-fsxn" {
-  storage_capacity = var.fs_capacity_size_gb
-  subnet_ids = var.vpc_idfsx_subnets["primarysub"]
-  deployment_type = var.deploy_type
-  throughput_capacity = var.fs_tput_in_MBps
+// REQUIRED PARAMETERS 
+  subnet_ids          = [var.fsx_subnets["primarysub"]]
   preferred_subnet_id = var.fsx_subnets["primarysub"]
+
+// OPTIONAL PARAMETERS
+  storage_capacity    = var.fsx_capacity_size_gb
+  security_group_ids  = [aws_security_group.fsx_sg.id]
+  deployment_type     = var.fsx_deploy_type
+  throughput_capacity = var.fsx_tput_in_MBps
   tags = {
-	  Name = var.fs_nvar.vpc_id
+	  Name = var.fsx_name
   }
+  # weekly_maintenance_start_time = "00:00:00"
+  # kms_key_id = ""
+  # automatic_backup_retention_days = 0
+  # daily_automatic_backup_start_time = "00:00"
+  # disk_iops_configuration = ""
+  # endpoint_ip_address_range = ""
+  # ha_pairs = 1
+  # Storage_type = "SSD"
+  # fsx_admin_password = ""
+  # route_table_ids = []
+  # throughput_capacity_per_ha_pair = 0
 }
 
 resource "aws_fsx_ontap_storage_virtual_machine" "mysvm" {
-  file_system_id = aws_fsx_ontap_file_system.terraform-fsxn.id
-  name           = var.svm_name
+// REQUIRED PARAMETERS
+  file_system_id      = aws_fsx_ontap_file_system.terraform-fsxn.id
+  name                = var.svm_name
+
+// OPTIONAL PARAMETERS
+  # root_volume_security_style = "UNIX"
+  # tags = {}
+  # active_directory_configuration {
+  #   netbios_name = "mysvm"
+  #   self_managed_active_directory_configuration {}
+  # }
 }
 
 resource "aws_fsx_ontap_volume" "myvol" {
+// REQUIRED PARAMETERS
   name                       = var.vol_info["vol_name"]
-  junction_path              = var.vol_info["junction_path"]
   size_in_megabytes          = var.vol_info["size_mg"]
-  storage_efficiency_enabled = var.vol_info["efficiency"]
   storage_virtual_machine_id = aws_fsx_ontap_storage_virtual_machine.mysvm.id
 
+// OPTIONAL PARAMETERS
+  junction_path              = var.vol_info["junction_path"]
+  ontap_volume_type          = "RW"
+  storage_efficiency_enabled = var.vol_info["efficiency"]
   tiering_policy {
     name           = var.vol_info["tier_policy_name"]
     cooling_period = var.vol_info["cooling_period"]
   }
+  # bypass_snaplock_enterprise_retention = true
+  # copy_tags_to_backups = false
+  # security_style = "MIXED"
+  # skip_final_backup = false
+  # snaplock_configuration {}
+  # snapshot_policy {}
+  # tags = {}  
 }
 
 
