@@ -44,6 +44,7 @@ content: |
   * [Introduction](#introduction)
   * [Prerequisites](#prerequisites)
   * [Usage](#usage)
+  * [Repository Overview](#repository-overview)
   * [Author Information](#author-information)
   * [License](#license)
 
@@ -53,13 +54,13 @@ content: |
 
   {{ .Providers}}
 
-  ### Repository Overview
+  ## Usage
+
+  ## Repository Overview
 
   {{ .Inputs }}
 
   {{ .Outputs }}
-
-  ## Usage
  
   ## Author Information
 

@@ -7,6 +7,7 @@ Follow the instructions below to use this sample in your own environment.
 * [Introduction](#introduction)
 * [Prerequisites](#prerequisites)
 * [Usage](#usage)
+* [Repository Overview](#repository-overview)
 * [Author Information](#author-information)
 * [License](#license)
 
@@ -104,7 +105,6 @@ Running this terraform module will result the following:
     To list configuration data, use the [`aws configire list`](https://docs.aws.amazon.com/cli/latest/reference/configure/list.html) command. This command lists the profile, access key, secret key, and region configuration information used for the specified profile. For each configuration item, it shows the value, where the configuration value was retrieved, and the configuration variable name.
 
 
-
 ## Usage
 
 ### Reference this module
@@ -175,7 +175,6 @@ terraform apply -y
 ```
 
 ## Repository Overview
-
 ### Providers
 
 | Name | Version |
