@@ -1,6 +1,3 @@
-// TODO: Consider using aws secret manager resource to keep the created password string
-// TODO: Consider making this a module
-
 
 /* 
   The following resources are a Security Group followed by ingress and egress rules for FSx ONTAP. 
