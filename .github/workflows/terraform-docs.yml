@@ -6,7 +6,7 @@ name: "Documentation: terraform-docs"
 on:
   pull_request:
     paths:
-      - "Terraform_samples/**"
+      - "Terraform/**"
 
 jobs:
   docs:
@@ -20,7 +20,7 @@ jobs:
       - name: Render documentation and push changes back to branch
         uses: terraform-docs/gh-actions@v1.0.0
         with:
-          working-dir: Terraform_samples/
+          working-dir: Terraform/
           config-file: ".terraform-docs.yml"
           output-file: "README.md"
           output-method: inject
