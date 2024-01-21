@@ -43,8 +43,7 @@ content: |
   ## Table of Contents
   * [Introduction](#introduction)
   * [Prerequisites](#prerequisites)
-  * [Getting Started](#getting-started)
-  * [Usage Examples](#usage-examples)
+  * [Usage](#usage)
   * [Author Information](#author-information)
   * [License](#license)
 
@@ -62,14 +61,8 @@ content: |
 
   {{ .Outputs }}
 
-  ## Getting Started
-
-  << place your instructions here >>
-
-  ## Usage Examples
-
-  << place your examples here >>
-
+  ## Usage
+ 
   ## Author Information
 
   This repository is maintained by the contributors listed on [GitHub](https://github.com/NetApp/FSxN-Samples/graphs/contributors).
