@@ -49,9 +49,7 @@ content: |
 
   ## Introduction
 
-  << place your description here >>
-
-  ##Prerequisites
+  ## Prerequisites
 
   {{ .Providers}}
 
