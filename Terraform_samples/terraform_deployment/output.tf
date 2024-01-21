@@ -1,3 +1,9 @@
+output "my_fsx_ontap_security_group_id" {
+  description = "The ID of the FSxN Security Group"
+  value       = aws_security_group.fsx_sg.id
+  
+}
+
 output "my_filesystem_id" {
   description = "The ID of the FSxN Filesystem"
   value       = aws_fsx_ontap_file_system.terraform-fsxn.id
