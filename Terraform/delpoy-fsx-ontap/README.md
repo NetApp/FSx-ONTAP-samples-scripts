@@ -174,40 +174,13 @@ Once confirmed, run the `terraform apply` command followed by `yes` to execute t
 terraform apply -y
 ```
 
-## Author Information
-
-This repository is maintained by the contributors listed on [GitHub](https://github.com/NetApp/FSxN-Samples/graphs/contributors).
-
-## License
-
-Licensed under the Apache License, Version 2.0 (the "License").
-
-You may obtain a copy of the License at [apache.org/licenses/LICENSE-2.0](http://www.apache.org/licenses/LICENSE-2.0).
-
-Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an _"AS IS"_ basis, without WARRANTIES or conditions of any kind, either express or implied.
-
-See the License for the specific language governing permissions and limitations under the License.
-
-<!-- BEGIN_TF_DOCS -->
-
-## Table of Contents
-* [Introduction](#introduction)
-* [Prerequisites](#prerequisites)
-* [Usage](#usage)
-* [Author Information](#author-information)
-* [License](#license)
-
-## Introduction
-
-## Prerequisites
+## Repository Overview
 
 ### Providers
 
 | Name | Version |
 |------|---------|
 | aws | n/a |
-
-### Repository Overview
 
 ### Inputs
 
@@ -232,8 +205,6 @@ See the License for the specific language governing permissions and limitations 
 | my_svm_id | The ID of the FSxN Storage Virtual Machine |
 | my_vol_id | The ID of the ONTAP volume in the File System |
 
-## Usage
-
 ## Author Information
 
 This repository is maintained by the contributors listed on [GitHub](https://github.com/NetApp/FSxN-Samples/graphs/contributors).
@@ -248,4 +219,5 @@ Unless required by applicable law or agreed to in writing, software distributed 
 
 See the License for the specific language governing permissions and limitations under the License.
 
-<!-- END_TF_DOCS -->
+
+
