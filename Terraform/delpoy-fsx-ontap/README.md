@@ -187,3 +187,65 @@ You may obtain a copy of the License at [apache.org/licenses/LICENSE-2.0](http:/
 Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an _"AS IS"_ basis, without WARRANTIES or conditions of any kind, either express or implied.
 
 See the License for the specific language governing permissions and limitations under the License.
+
+<!-- BEGIN_TF_DOCS -->
+
+## Table of Contents
+* [Introduction](#introduction)
+* [Prerequisites](#prerequisites)
+* [Usage](#usage)
+* [Author Information](#author-information)
+* [License](#license)
+
+## Introduction
+
+## Prerequisites
+
+### Providers
+
+| Name | Version |
+|------|---------|
+| aws | n/a |
+
+### Repository Overview
+
+### Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| fsx_capacity_size_gb | The storage capacity (GiB) of the FSxN file system. Valid values between 1024 and 196608 | `string` | `"1024"` | no |
+| fsx_deploy_type | The filesystem deployment type. Supports MULTI_AZ_1 and SINGLE_AZ_1 | `string` | `"SINGLE_AZ_1"` | no |
+| fsx_name | The deployed filesystem name | `string` | `"terraform-fsxn"` | no |
+| fsx_subnets | The IDs of the subnets fro which the FSxN filesystem will be assigned IP addresses | `map` | <pre>{<br>  "primarysub": "",<br>  "secondarysub": ""<br>}</pre> | no |
+| fsx_tput_in_MBps | The throughput capacity (in MBps) for the file system. Valid values are 128, 256, 512, 1024, 2048, and 4096. | `string` | `"256"` | no |
+| svm_name | The name of the Storage Virtual Machine | `string` | `"first_svm"` | no |
+| tags | Tags to be applied to the resources | `map` | <pre>{<br>  "Name": "terraform-fsxn"<br>}</pre> | no |
+| vol_info | Details for the volume creation | `map` | <pre>{<br>  "cooling_period": 31,<br>  "efficiency": true,<br>  "junction_path": "/vol1",<br>  "size_mg": 1024,<br>  "tier_policy_name": "AUTO",<br>  "vol_name": "vol1"<br>}</pre> | no |
+| vpc_id | The ID of the VPC in which the FSxN fikesystem should be deployed | `string` | `"vpc-111111111"` | no |
+
+### Outputs
+
+| Name | Description |
+|------|-------------|
+| my_filesystem_id | The ID of the FSxN Filesystem |
+| my_fsx_ontap_security_group_id | The ID of the FSxN Security Group |
+| my_svm_id | The ID of the FSxN Storage Virtual Machine |
+| my_vol_id | The ID of the ONTAP volume in the File System |
+
+## Usage
+
+## Author Information
+
+This repository is maintained by the contributors listed on [GitHub](https://github.com/NetApp/FSxN-Samples/graphs/contributors).
+
+## License
+
+Licensed under the Apache License, Version 2.0 (the "License").
+
+You may obtain a copy of the License at [apache.org/licenses/LICENSE-2.0](http://www.apache.org/licenses/LICENSE-2.0).
+
+Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an _"AS IS"_ basis, without WARRANTIES or conditions of any kind, either express or implied.
+
+See the License for the specific language governing permissions and limitations under the License.
+
+<!-- END_TF_DOCS -->
