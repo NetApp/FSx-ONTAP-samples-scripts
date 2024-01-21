@@ -42,7 +42,7 @@ Running this terraform module will result the following:
     * Auto tiering policy with 31 cooling days
 
 > [!NOTE]
-> All of the above configuration parameters can be modified for your preference by assigning your own values in the _variables.tf_ file! 
+> All of the above configuration parameters can be modified for your preference by assigning your own values in the module block!
 
 ## Prerequisites
 
