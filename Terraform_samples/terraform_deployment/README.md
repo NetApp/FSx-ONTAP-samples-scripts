@@ -1,5 +1,6 @@
 # Deploy an ONTAP FSx file-system using Terraform
-This sample demonstrates how to deploy an FSx for NetApp ONTAP file system, including an SVM and a FlexVolume in that file system, using AWS Terraform provider. 
+This is a Terraform module which creates an FSx for NetApp ONTAP file system, including an SVM, a Security-Group and a FlexVolume in that file system, using AWS Terraform provider. 
+This repo can be sourced as a terraform module.
 Follow the instructions below to use this sample in your own environment.
 
 ## Table of Contents
@@ -12,8 +13,8 @@ Follow the instructions below to use this sample in your own environment.
 
 ## Introduction
 ### Repository Overview
-This is a standalone Terraform configutation repository that contains the following files:
-* **main.tf** - The main set of configuration for this terraform sample
+This is a Terraform module that contains the following files:
+* **main.tf** - The main set of configuration for this terraform module
 
 * **variables.tf** - Contains the variable definitions and assignments for this sample. Exported values will override any of the variables in this file. 
 
@@ -21,7 +22,15 @@ This is a standalone Terraform configutation repository that contains the follow
 
 ### What to expect
 
-Running this terraform sample will result the following:
+Running this terraform module will result the following:
+* Create a new AWS Security Group in your VPC with the following rules:
+    - **Ingress** allow all ICMP traffic
+    - **Ingress** allow nfs port 111 (both TCP and UDP)
+    - **Ingress** allow cifc TCP port 139
+    - **Ingress** allow snmp ports 161-162 (both TCP and UDP)
+    - **Ingress** allow smb cifs TCP port 445
+    - **Ingress** alloe bfs mount port 635 (both TCP and UDP)
+    - **Egress** allow all traffic
 * Create a new FSx for Netapp ONTAP file-system in your AWS account named "_terraform-fsxn_". The file-system will be created with the following configuration parameters:
     * 1024Gb of storage capacity
     * Single AZ deployment type
@@ -34,7 +43,7 @@ Running this terraform sample will result the following:
     * Auto tiering policy with 31 cooling days
 
 > [!NOTE]
-> All of the above configuration parameters can be modified for your preference by assigning your own values in the _terraform.tfvars_ file! 
+> All of the above configuration parameters can be modified for your preference by assigning your own values in the _variables.tf_ file! 
 
 ## Prerequisites
 
@@ -43,7 +52,10 @@ Running this terraform sample will result the following:
 
 ### Terraform
 
-Terraform should be installed in the server from which you are running this sample. Check out [this link](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli) for installation details. 
+| Name | Version |
+|------|---------|
+| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.6.6 |
+| <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 5.25 |
 
 ### AWS Account Setup
 
@@ -96,62 +108,71 @@ Terraform should be installed in the server from which you are running this samp
 
 ## Usage
 
-#### 1. Clone the repository
-In your server's terminal, navigate to the location where you wish to store this Terraform repository, and clone the repository using your preferred authentication type. In this example we are using HTTPS clone:
+### Reference this module
 
-```shell 
-git clone https://github.com/NetApp/FSxN-Samples.git
+Add the following module block to your root module `main.tf` file.
+Make sure to replace all values within `< >` with your own variables.
+
+```ruby
+module "fsxontap" {
+    source = "github.com/Netapp/FSxN-Samples/Terraform_samples/terraform_deployment"
+
+    vpc_id = "<YOUR-VPC-ID>"
+    fsx_subnets = {
+        "primarysub" = "<YOUR-PRIMARY-SUBNET>"
+        "secondarysub" = "<YOUR-SECONDAY-SUBNET>"
+    }
+    
+    tags = {
+        Terraform   = "true"
+        Environment = "dev"
+    }
+}
+```
+   > [NOTE!]
+   > To Override default values assigned to other variables in this module, add them to this source block as well. The above source block includes the minimum requirements only.
+
+### AWS provider block
+
+Add the AWS provider block to your root module `main.tf` file with the required configuration. For more information check [the docs](https://registry.terraform.io/providers/hashicorp/aws/latest/docs)
+
+Example:
+```ruby
+terraform {
+  required_providers {
+    aws = {
+      source = "hashicorp/aws"
+      version = "5.25"
+    }
+  }
+}
+
+provider "aws" {
+  # Configuration options
+}
 ```
 
-#### 2. Navigate to the directory
+### Install the module
+
+Whenever you add a new module to a configuration, Terraform must install the module before it can be used. Both the `terraform get` and `terraform init` commands will install and update modules. The `terraform init` command will also initialize backends and install plugins.
+
 ```shell
-cd terraform_deployment
+terraform get
+Downloading git::https://github.com/Netapp/FSxN-Samples.git for fsxontap...
+- fsxontap in .terraform/modules/fsxontap/Terraform_samples/terraform_deployment
 ```
 
-#### 3. Initialize Terraform
-This directory represents a standalone Terraform module. Run the following command to initialize the module and install all dependencies:
-```shell
-terraform init
-```
+### Plan and Apply the cofiguration
 
-A succesfull initialization should display the following output:
-```shell
-
-Initializing the backend...
-
-Initializing provider plugins...
-- Reusing previous version of hashicorp/aws from the dependency lock file
-- Using previously-installed hashicorp/aws v5.25.0
-
-Terraform has been successfully initialized!
-
-You may now begin working with Terraform. Try running "terraform plan" to see
-any changes that are required for your infrastructure. All Terraform commands
-should now work.
-
-If you ever set or change modules or backend configuration for Terraform,
-rerun this command to reinitialize your working directory. If you forget, other
-commands will detect it and remind you to do so if necessary.
-```
-You can see that Terraform recognizes the modules required by our configuration: `hashicorp/aws`.
-
-#### 4. Update Variables
-
-Open the **`terraform.tfvars`** file in your preferred text editor. Update the values of the variables to match your preferences and save the file. This will ensure that the Terraform code deploys resources according to your specifications.
-
-**Make sure to replace the values with ones that match your AWS environment and needs.**
-
-#### 5. Create a Terraform plan
-Run the following command to create an execution plan, which lets you preview the changes that Terraform plans to make to your infrastructure:
+Now that your new module is installed and configured, run the `terraform plan` command to create an execution plan, which lets you preview the changes that Terraform plans to make to your infrastructure:
 ```shell
 terraform plan
 ```
 Ensure that the proposed changes match what you expected before you apply the changes!
 
-#### 6. Apply the Terraform plan
-Run the following command to execute the Terrafom code and apply the changes proposed in the `plan` step:
+Once confirmed, run the `terraform apply` command followed by `yes` to execute the Terrafom code and apply the changes proposed in the `plan` step:
 ```shell
-terraform apply
+terraform apply -y
 ```
 
 ## Author Information

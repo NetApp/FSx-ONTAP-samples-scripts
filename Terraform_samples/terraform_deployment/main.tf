@@ -2,20 +2,6 @@
 // TODO: Consider making this a module
 
 
-terraform {
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "5.25.0"
-    }
-  }
-
-}
-
-provider "aws" {
-  region = "us-west-2"
-}
-
 /* 
   The following resources are a Security Group followed by ingress and egress rules for FSx ONTAP. 
   The Security Group is not required for deploying FSx ONTAP, but is included here for completeness.

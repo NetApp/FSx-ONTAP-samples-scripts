@@ -55,3 +55,11 @@ variable "vol_info" {
 	  "cooling_period" = 31
    }
 }
+
+variable "tags" {
+   description = "Tags to be applied to the resources"
+   type = map
+   default = {
+      "Name" = "terraform-fsxn"
+   }
+}
