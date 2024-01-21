@@ -1,3 +1,5 @@
+# Copyright (c) NetApp, Inc.
+# SPDX-License-Identifier: Apache-2.0
 
 /* 
   The following resources are a Security Group followed by ingress and egress rules for FSx ONTAP. 

@@ -3,6 +3,7 @@ This GitHub repository contains comprehensive code samples and automation script
 
 ## Table of Contents
 * [FSxN deployment using Terraform](/Terraform/deploy-fsx-ontap)
+* [CLI convenience scripys](/cli_convenience_scripts)
 
 
 ## Author Information
