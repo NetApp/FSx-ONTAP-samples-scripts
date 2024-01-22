@@ -6,10 +6,10 @@ name: "Code Quality: Terraform"
 on:
   pull_request:
     paths:
-      - "Terraform/**"
+      - "Terraform/*"
   push:
     paths:
-      - "Terraform/**"
+      - "Terraform/*"
     branches:
       - main
 
