@@ -6,7 +6,12 @@ name: "Documentation: terraform-docs"
 on:
   pull_request:
     paths:
-      - "Terraform/*"
+      - 'Terraform/**'
+  push:
+    paths:
+      - 'Terraform/**'
+    branches:
+      - main
 
 jobs:
   docs:
