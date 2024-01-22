@@ -40,25 +40,17 @@ sections:
 
 content: |
 
-  ## Table of Contents
-  * [Introduction](#introduction)
-  * [Prerequisites](#prerequisites)
-  * [Usage](#usage)
-  * [Repository Overview](#repository-overview)
-  * [Author Information](#author-information)
-  * [License](#license)
-
-  ## Introduction
-
-  ## Prerequisites
-
-  {{ .Providers}}
-
-  ## Usage
-
   ## Repository Overview
 
+  ### Providers
+
+  {{ .Providers }}
+
+  ### Inputs
+
   {{ .Inputs }}
+
+  ### Outputs
 
   {{ .Outputs }}
  
