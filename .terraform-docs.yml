@@ -42,15 +42,9 @@ content: |
 
   ## Repository Overview
 
-  ### Providers
-
   {{ .Providers }}
 
-  ### Inputs
-
   {{ .Inputs }}
-
-  ### Outputs
 
   {{ .Outputs }}
  
