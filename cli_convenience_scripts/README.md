@@ -14,8 +14,8 @@ Before running the UNIX based scripts, make sure the following package is instal
 | Script                  | Description     |
 |:------------------------|:----------------|
 |list_fsx_fss             | List all the FSxN filesystems that the user has access to. |
-|list_fax_fss.ps1         | List all the FSxN filesystems that the user has access to, written in PowerShell. |
+|list_fsx_fss.ps1         | List all the FSxN filesystems that the user has access to, written in PowerShell. |
 |list_fsx_volumes         | List all the FSxN volumes that the user has access to. |
 |list_fsx_svms            | List all the storage virtual machines that the user access to. |
-|fsx_create_volume        | Creates a new volume under a specified SVM. |
-|fsx_delete_volume        | Deletes a volume. |
+|create_fsx_volume        | Creates a new volume under a specified SVM. |
+|delete_fsx_volume        | Deletes a volume. |

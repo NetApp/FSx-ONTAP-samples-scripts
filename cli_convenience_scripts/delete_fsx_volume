@@ -1,0 +1,57 @@
+#!/bin/bash
+################################################################################
+# THIS SOFTWARE IS PROVIDED BY NETAPP "AS IS" AND ANY EXPRESS OR IMPLIED
+# WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO
+# EVENT SHALL NETAPP BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+# OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR'
+# OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+################################################################################
+#
+# This script is used to delete an FSxN volume.
+#
+################################################################################
+
+################################################################################
+#  This function just outputs the usage information and exits.
+################################################################################
+usage () {
+cat 1>&2 <<EOF
+Usage: $(basename $0) -v volumeId [-r region]
+where
+  volumeId: is the ID of the volume to delete.
+  region: is the AWS region where the FSxN filesystem resides.
+EOF
+  exit 1
+}
+
+################################################################################
+# Main logic starts here.
+################################################################################
+#
+# Set some defaults.
+region=$(aws configure list | egrep '^.*egion ' | awk '{print $2}')
+#
+# Process command line arguments.
+while getopts "v:" option; do
+  case $option in
+    r) region="$OPTARG"
+      ;;
+    v) volumeId="$OPTARG"
+      ;;
+    *) usage
+      ;;
+  esac
+done
+#
+# Ensure all the required parameters have been provided.
+if [ -z "$volumeId" ]; then
+  echo "Error, you must provide volume ID." 1>&2
+  usage
+fi
+
+aws fsx delete-volume --volume-id $volumeId --region=$region

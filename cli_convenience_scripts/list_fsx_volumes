@@ -1,0 +1,88 @@
+#!/bin/bash
+################################################################################
+# THIS SOFTWARE IS PROVIDED BY NETAPP "AS IS" AND ANY EXPRESS OR IMPLIED
+# WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO
+# EVENT SHALL NETAPP BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+# OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR'
+# OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+################################################################################
+#
+################################################################################
+# This script will list all the AWS FSx volumes that a user has access to.
+# It will list:
+#   o Region
+#   o File System ID
+#   o File System Name - optional
+#   o Volume ID
+#   o Volume Name
+#
+################################################################################
+
+################################################################################
+# This function outputs the usage information and exists.
+################################################################################
+usage () {
+  cat <<EOF
+Usage $(basename $0) [-r region] [-a] [-n]
+  Where: -r region allows you to specify the region you want the list from.
+         -a means all regions.
+         -n means include the file system name.
+EOF
+  exit 1
+}
+
+################################################################################
+# Main logic starts here.
+################################################################################
+
+tmpout=/tmp/list_aws_vol-out.$$
+tmpout2=/tmp/list_aws_vol-out0.$$
+trap 'rm -f $tmpout $tmpout2' exit
+#
+# Check that the required utilities are installed.
+if which jq > /dev/null 2>&1; then
+  :
+else
+  echo "Error, this script requires 'jq' to run."
+  exit 1
+fi
+#
+# Process command line arguments.
+allRegions=false
+region=$(aws configure list | egrep '^.*egion ' | awk '{print $2}')
+includeFsName=false
+while getopts "hanr:" option; do
+  case "$option" in
+    r) region="$OPTARG"
+      ;;
+    a) allRegions=true
+      ;;
+    n) includeFsName=true
+      ;;
+    *) usage
+      ;;
+  esac
+done
+
+if [ "$allRegions" = "true" ]; then
+  regions=$(aws ec2 describe-regions --query "Regions[].RegionName" --output=json | jq -r '.[]')
+else
+  regions=$region
+fi
+#
+# Loop on all the regions.
+for region in $regions; do
+  aws fsx describe-volumes --region=$region | jq -r '.Volumes[] | .FileSystemId + "," + .Name + "," + .VolumeId' | sort > $tmpout
+
+  if [ $includeFsName == "true" ]; then
+    aws fsx describe-file-systems --region=$region | jq -r '.FileSystems[] | .FileSystemId + "," + (.Tags[] | select(.Key == "Name") .Value)' > $tmpout2
+    awk -F, -v region=$region 'BEGIN {first=1; maxNameLen=0; while(getline < "'$tmpout2'") {fss[$1]=$2; if(length($2) > maxNameLen) {maxNameLen=length($2)}}; maxNameLen +=2; formatStr="%12s %20s%-"maxNameLen"s %23s %s\n"}; {if(first) {printf "\n"; printf formatStr, "Region", "FileSystem ID", "(Name)", "Volume ID", "Volume Name"; first=0}; name="("fss[$1]")"; printf formatStr, region, $1, name, $3, $2}' < $tmpout
+  else
+    awk -F, -v region=$region 'BEGIN {first=1; formatStr="%12s %23s %23s %s\n"}; {if(first) {printf "\n"; printf formatStr, "Region", "FileSystem ID", "Volume ID", "Volume Name"; first=0}; printf formatStr, region, $1, $3, $2}' < $tmpout
+  fi
+done

@@ -1,0 +1,91 @@
+#!/bin/bash
+#
+#################################################################################
+# THIS SOFTWARE IS PROVIDED BY NETAPP "AS IS" AND ANY EXPRESS OR IMPLIED
+# WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO
+# EVENT SHALL NETAPP BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+# OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR'
+# OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+################################################################################
+#
+################################################################################
+# This script will list all the AWS FSx file systems the user has access to.
+# It will list:
+#   o Region
+#   o File System ID
+#   o File Systesm "name"
+#   o Status
+#   o Management IP
+#   o VPC ID - optional
+#   o Subnet ID - optional
+#
+# In the case of the Management IP and Subnet ID, it will only show the first
+# one defined. Based on the potential output from the API call, there could
+# be more than one.
+################################################################################
+
+################################################################################
+# This function is used to output the usage information for the script and exit.
+################################################################################
+usage () {
+  cat <<EOF
+Usage $(basename $0) [-r region] [-a] [-n]
+  Where: -r region allows you to specify the region you want the list from.
+         -a means all regions.
+         -n means include network information.
+EOF
+  exit 1
+}
+
+################################################################################
+# Main logic starts here.
+################################################################################
+tmpout=/tmp/list_aws_vol-out.$$
+trap "rm -f $tmpout" exit
+#
+# Ensure all the required ultilities are installed.
+if which jq > /dev/null 2>&1; then
+  :
+else
+  echo "Error, this script requires 'jq' to run."
+  exit 1
+fi
+#
+# Process command line arguments.
+allRegions=false
+includeNetworking=false
+region=$(aws configure list | egrep '^.*egion ' | awk '{print $2}')
+while getopts "ahnr:" option; do
+  case "$option" in
+    r) region="$OPTARG"
+      ;;
+    a) allRegions=true
+      ;;
+    n) includeNetworking=true
+      ;;
+    *) usage
+      ;;
+  esac
+done
+
+if [ "$allRegions" = "true" ]; then
+  regions=$(aws ec2 describe-regions --query "Regions[].RegionName" --output=json | jq -r '.[]')
+else
+  regions=$region
+fi
+#
+# Loop on all the requested regions.
+for region in $regions; do
+  aws fsx describe-file-systems --region=$region | jq -r '.FileSystems[] | .FileSystemId + "," + (.Tags[] | select(.Key == "Name") .Value) + "," + .Lifecycle + "," + .OntapConfiguration.Endpoints.Management.IpAddresses[0] + "," + .VpcId + "," + .SubnetIds[0]' > $tmpout
+
+  if ("$includeNetworking" == "true") then
+    awk -F, -v region=$region 'BEGIN {first=1; formatStr="%12s %23s %35s %10s %15s %21s %24s\n"}; {if(first) {printf "\n"; printf formatStr, "Region", "FileSystem ID", "Name", "Status", "Managment IP", "VPC ID", "Subnet ID"; first=0}; printf formatStr, region, $1, $2, $3, $4, $5, $6}' < $tmpout
+  else
+    awk -F, -v region=$region 'BEGIN {first=1; formatStr="%12s %23s %35s %10s %15s\n"}; {if(first) {printf "\n"; printf formatStr, "Region", "FileSystem ID", "Name", "Status", "Managment IP", "VPC ID", "Subnet ID"; first=0}; printf formatStr, region, $1, $2, $3, $4}' < $tmpout
+  fi
+done
