@@ -176,3 +176,74 @@ Once confirmed, run the `terraform apply` command followed by `yes` to execute t
 ```shell
 terraform apply -y
 ```
+
+<!-- BEGIN_TF_DOCS -->
+
+## Repository Overview
+
+### Providers
+
+### Providers
+
+| Name | Version |
+|------|---------|
+| aws | n/a |
+
+### Inputs
+
+### Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| fsx_admin_password | The ONTAP administrative password for the fsxadmin user that you can use to administer your file system using the ONTAP CLI and REST API | `string` | n/a | yes |
+| ad_configuration | Configuration block that Amazon FSx uses to join the FSx ONTAP Storage Virtual Machine(SVM) to your Microsoft Active Directory (AD) directory. | `map` | <pre>{<br>  "netbios_name": "first_svm",<br>  "self_managed_active_directory_configuration": {<br>    "dns_ips": [],<br>    "domain_name": "corp.example.com",<br>    "file_system_administrators_group": "Domain Admins",<br>    "organizational_unit_distinguished_name": "NONE",<br>    "password": "",<br>    "username": ""<br>  }<br>}</pre> | no |
+| backup_retention_days | The number of days to retain automatic backups. Setting this to 0 disables automatic backups. You can retain automatic backups for a maximum of 90 days. | `number` | `0` | no |
+| cidr_for_sg | cide block to be used for the ingress rules | `string` | `"0.0.0.0/0"` | no |
+| create_sg | Determines whether the SG should be deployed as part of this execution or not | `bool` | `false` | no |
+| daily_backup_start_time | A recurring daily time, in the format HH:MM. HH is the zero-padded hour of the day (0-23), and MM is the zero-padded minute of the hour. Requires automatic_backup_retention_days to be set. | `string` | `"00:00"` | no |
+| disk_iops_configuration | The SSD IOPS configuration for the Amazon FSx for NetApp ONTAP file system | `map` | <pre>{<br>  "iops": 3000,<br>  "mode": "AUTOMATIC"<br>}</pre> | no |
+| fsx_capacity_size_gb | The storage capacity (GiB) of the FSxN file system. Valid values between 1024 and 196608 | `number` | `1024` | no |
+| fsx_deploy_type | The filesystem deployment type. Supports MULTI_AZ_1 and SINGLE_AZ_1 | `string` | `"SINGLE_AZ_1"` | no |
+| fsx_maintenance_start_time | The preferred start time (in d:HH:MM format) to perform weekly maintenance, in the UTC time zone. | `string` | `"00:00:00"` | no |
+| fsx_name | The deployed filesystem name | `string` | `"terraform-fsxn"` | no |
+| fsx_subnets | The IDs of the subnets fro which the FSxN filesystem will be assigned IP addresses | `map` | <pre>{<br>  "primarysub": "",<br>  "secondarysub": ""<br>}</pre> | no |
+| fsx_tput_in_MBps | The throughput capacity (in MBps) for the file system. Valid values are 128, 256, 512, 1024, 2048, and 4096. | `number` | `256` | no |
+| ha_pairs | The number of ha_pairs to deploy for the file system. Valid values are 1 through 6. Recommend only using this parameter for 2 or more ha pairs. | `number` | `1` | no |
+| kms_key_id | ARN for the KMS Key to encrypt the file system at rest, Defaults to an AWS managed KMS Key. | `string` | `""` | no |
+| root_vol_sec_style | Specifies the root volume security style, Valid values are UNIX, NTFS, and MIXED. All volumes created under this SVM will inherit the root security style unless the security style is specified on the volume. | `string` | `"UNIX"` | no |
+| storage_type | The filesystem storage type | `string` | `"SSD"` | no |
+| svm_name | The name of the Storage Virtual Machine | `string` | `"first_svm"` | no |
+| tags | Tags to be applied to the resources | `map` | <pre>{<br>  "Name": "terraform-fsxn"<br>}</pre> | no |
+| tput_capacity_in_MBps | Sets the throughput capacity (in MBps) for the file system that you're creating. Valid values are 128, 256, 512, 1024, 2048, and 4096. This parameter should only be used when specifying not using the ha_pairs parameter. | `number` | `256` | no |
+| tput_capacity_per_pair_in_MBps | Sets the throughput capacity (in MBps) for the file system that you're creating. Valid values are 3072,6144. This parameter should only be used when specifying the ha_pairs parameter. | `number` | `3072` | no |
+| vol_info | Details for the volume creation | `map` | <pre>{<br>  "bypass_sl_retention": false,<br>  "cooling_period": 31,<br>  "copy_tags_to_backups": false,<br>  "efficiency": true,<br>  "junction_path": "/vol1",<br>  "sec_style": "UNIX",<br>  "size_mg": 1024,<br>  "skip_final_backup": false,<br>  "tier_policy_name": "AUTO",<br>  "vol_name": "vol1",<br>  "vol_type": "RW"<br>}</pre> | no |
+| vol_snaplock_configuration | The SnapLock configuration for an FSx for ONTAP volume | `map` | <pre>{<br>  "audit_log_volume": false,<br>  "autocommit_period": {<br>    "type": "NONE",<br>    "value": 0<br>  },<br>  "privileged_delete": "DISABLED",<br>  "retention_period": {<br>    "default_retention": {<br>      "type": "UNSPECIFIED",<br>      "value": 0<br>    },<br>    "maximum_retention": {<br>      "type": "UNSPECIFIED",<br>      "value": 0<br>    },<br>    "minimum_retention": {<br>      "type": "UNSPECIFIED",<br>      "value": 0<br>    }<br>  },<br>  "snaplock_type": "COMPLIANCE",<br>  "volume_append_mode_enabled": false<br>}</pre> | no |
+| vol_snapshot_policy | Specifies the snapshot policy for the volume | `map` | <pre>{<br>  "Name": "terraform-fsxn"<br>}</pre> | no |
+| vpc_id | The ID of the VPC in which the FSxN fikesystem should be deployed | `string` | `"vpc-111111111"` | no |
+
+### Outputs
+
+### Outputs
+
+| Name | Description |
+|------|-------------|
+| my_filesystem_id | The ID of the FSxN Filesystem |
+| my_fsx_ontap_security_group_id | The ID of the FSxN Security Group |
+| my_svm_id | The ID of the FSxN Storage Virtual Machine |
+| my_vol_id | The ID of the ONTAP volume in the File System |
+
+## Author Information
+
+This repository is maintained by the contributors listed on [GitHub](https://github.com/NetApp/FSxN-Samples/graphs/contributors).
+
+## License
+
+Licensed under the Apache License, Version 2.0 (the "License").
+
+You may obtain a copy of the License at [apache.org/licenses/LICENSE-2.0](http://www.apache.org/licenses/LICENSE-2.0).
+
+Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an _"AS IS"_ basis, without WARRANTIES or conditions of any kind, either express or implied.
+
+See the License for the specific language governing permissions and limitations under the License.
+
+<!-- END_TF_DOCS -->
