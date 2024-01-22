@@ -6,7 +6,7 @@ name: "Documentation: terraform-docs"
 on:
   pull_request:
     paths:
-      - "Terraform/**"
+      - "Terraform/*"
 
 jobs:
   docs:
@@ -23,5 +23,5 @@ jobs:
           working-dir: Terraform/*
           config-file: ".terraform-docs.yml"
           output-file: "README.md"
-          output-method: replace
+          output-method: inject
           git-push: true
