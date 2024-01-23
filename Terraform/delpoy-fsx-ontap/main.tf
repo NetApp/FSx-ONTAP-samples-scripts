@@ -149,12 +149,9 @@ resource "aws_fsx_ontap_file_system" "terraform-fsxn" {
     iops = var.disk_iops_configuration[iops]
     mode = var.disk_iops_configuration[mode]
   }
+  fsx_admin_password = var.fsx_admin_password
+  route_table_ids = var.route_table_ids
   # endpoint_ip_address_range = ""
-  # ha_pairs = var.ha_pairs
-  # fsx_admin_password = var.fsx_admin_password 
-  # route_table_ids = []
-  # throughput_capacity = var.fsx_tput_in_MBps
-  # throughput_capacity_per_ha_pair = var.fsx_tput_per_pair_in_MBps
 }
 
 resource "aws_fsx_ontap_storage_virtual_machine" "mysvm" {
