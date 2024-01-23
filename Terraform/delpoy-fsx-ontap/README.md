@@ -2,6 +2,8 @@
 This is a Terraform module which creates an FSx for NetApp ONTAP file system, including an SVM, a Security-Group and a FlexVolume in that file system, using AWS Terraform provider. 
 This repo can be sourced as a terraform module.
 Follow the instructions below to use this sample in your own environment.
+> [!NOTE]
+> This module does not support scale-out! One ha pair per deployment. 
 
 ## Table of Contents
 * [Introduction](#introduction)
@@ -123,6 +125,8 @@ module "fsxontap" {
     }
     create_sg = true
     cidr_for_sg = "<YOUR-CIDR-BLOCK>"
+    fsx_admin_password = "<YOUR_PASSWORD>"
+    route_table_ids = ["ID-1", "ID-2"]
     tags = {
         Terraform   = "true"
         Environment = "dev"

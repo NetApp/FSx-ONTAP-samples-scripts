@@ -99,16 +99,9 @@ variable "storage_type" {
    default = "SSD"
 }
 
-variable "tput_capacity_in_MBps" {
-   description = "Sets the throughput capacity (in MBps) for the file system that you're creating. Valid values are 128, 256, 512, 1024, 2048, and 4096. This parameter should only be used when specifying not using the ha_pairs parameter."
-   type = number
-   default = 256
-}
-
-variable "tput_capacity_per_pair_in_MBps" {
-   description = "Sets the throughput capacity (in MBps) for the file system that you're creating. Valid values are 3072,6144. This parameter should only be used when specifying the ha_pairs parameter."
-   type = number
-   default = 3072
+variable "route_table_ids" {
+   description = "Specifies the VPC route tables in which your file system's endpoints will be created. You should specify all VPC route tables associated with the subnets in which your clients are located."
+   type = list
 }
 
 variable "svm_name" {
