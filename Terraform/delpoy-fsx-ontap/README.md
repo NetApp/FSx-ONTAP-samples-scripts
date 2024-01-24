@@ -13,7 +13,7 @@ Follow the instructions below to use this sample in your own environment.
 * [Author Information](#author-information)
 * [License](#license)
 
-## Introduction
+## Introduction 
 ### Repository Overview
 This is a Terraform module that contains the following files:
 * **main.tf** - The main set of configuration for this terraform module
