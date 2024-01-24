@@ -217,4 +217,3 @@ resource "aws_fsx_ontap_volume" "myvol" {
   snapshot_policy = "NONE"
   tags = var.tags
 }
-
