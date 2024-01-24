@@ -17,6 +17,7 @@ jobs:
   terraform:
     name: Terraform
     runs-on: ubuntu-latest
+<<<<<<< HEAD
     defaults:
       run:
 <<<<<<< HEAD
@@ -24,6 +25,11 @@ jobs:
 =======
         working-directory: Terraform/deploy-fsx-ontap222
 >>>>>>> e67ee05 (dummy for tests)
+=======
+    # defaults:
+    #   run:
+    #     working-directory: Terraform/deploy-fsx-ontap222
+>>>>>>> d8354d2 (dummy for tests)
 
     steps:
       - name: Checkout pull request
