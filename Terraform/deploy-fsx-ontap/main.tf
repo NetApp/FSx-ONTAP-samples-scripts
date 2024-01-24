@@ -164,16 +164,7 @@ resource "aws_fsx_ontap_storage_virtual_machine" "mysvm" {
   tags = {
 	  Name = var.svm_name
   }
-  # active_directory_configuration {
-  #   netbios_name = var.ad_configuration[netbios_name]
-  #   self_managed_active_directory_configuration {
-  #     dns_ips = var.ad_configuration[self_managed_active_directory_configuration][dns_ips]
-  #     domain_name = var.ad_configuration[self_managed_active_directory_configuration][domain_name]
-  #     organizational_unit = var.ad_configuration[self_managed_active_directory_configuration][organizational_unit]
-  #     password = var.ad_configuration[self_managed_active_directory_configuration][password]
-  #     username = var.ad_configuration[self_managed_active_directory_configuration][username]
-  #   }
-  # }
+  # active_directory_configuration {}
 }
 
 resource "aws_fsx_ontap_volume" "myvol" {
@@ -194,26 +185,7 @@ resource "aws_fsx_ontap_volume" "myvol" {
   copy_tags_to_backups = var.vol_info["copy_tags_to_backups"]
   security_style = var.vol_info["sec_style"]
   skip_final_backup = var.vol_info["skip_final_backup"]
-  # snaplock_configuration {
-  #   audit_log_volume = var.vol_snaplock_configuration["audit_log_volume"]
-  #   snaplock_type = var.vol_snaplock_configuration["snaplock_type"]
-  #   privileged_delete = var.vol_snaplock_configuration["privileged_delete"]
-  #   volume_append_mode_enabled = var.vol_snaplock_configuration["volume_append_mode_enabled"]
-  #   retention_period {
-  #     default_retention {
-  #       type = var.vol_snaplock_configuration["retention_period"]["default_retention"]["type"]
-  #       value = var.vol_snaplock_configuration["retention_period"]["default_retention"]["value"]
-  #     }
-  #     maximum_retention {
-  #       type = var.vol_snaplock_configuration["retention_period"]["maximum_retention"]["type"]
-  #       value = var.vol_snaplock_configuration["retention_period"]["maximum_retention"]["value"]
-  #     }
-  #     minimum_retention {
-  #       type = var.vol_snaplock_configuration["retention_period"]["minimum_retention"]["type"]
-  #       value = var.vol_snaplock_configuration["retention_period"]["minimum_retention"]["value"] 
-  #     }
-  #   }
-  # }
+  # snaplock_configuration {}
   snapshot_policy = "NONE"
   tags = var.tags
 }

@@ -116,22 +116,6 @@ variable "root_vol_sec_style" {
    default = "UNIX"
 }
 
-variable "ad_configuration" {
-   description = "Configuration block that Amazon FSx uses to join the FSx ONTAP Storage Virtual Machine(SVM) to your Microsoft Active Directory (AD) directory."
-   type = map
-   default = {
-      "netbios_name" = "first_svm"
-      "self_managed_active_directory_configuration" = {
-         "dns_ips" = []
-         "domain_name" = "corp.example.com"
-         "password" = ""
-         "username" = ""
-         "file_system_administrators_group" = "Domain Admins"
-         "organizational_unit_distinguished_name" = "NONE"
-      }
-   }   
-}
-
 variable "vol_info" {
    description = "Details for the volume creation"
    type = map
@@ -147,35 +131,6 @@ variable "vol_info" {
      "copy_tags_to_backups" = false
      "sec_style" = "UNIX"
      "skip_final_backup" = false
-   }
-}
-
-variable "vol_snaplock_configuration" {
-   description = "The SnapLock configuration for an FSx for ONTAP volume"
-   type = map
-   default = {
-      "audit_log_volume" = false
-      "snaplock_type" = "COMPLIANCE"
-      "privileged_delete" = "DISABLED"
-      "volume_append_mode_enabled" = false
-      "retention_period" = {
-         "default_retention" = {
-            "type" = "UNSPECIFIED"
-            "value" = 0
-         }
-         "maximum_retention" = {
-            "type" = "UNSPECIFIED"
-            "value" = 0
-         }
-         "minimum_retention" = {
-            "type" = "UNSPECIFIED"
-            "value" = 0
-         }
-      }
-      "autocommit_period" = {
-         "type" = "NONE"
-         "value" = 0
-      }
    }
 }
 
