@@ -2,6 +2,8 @@
 This is a Terraform module which creates an FSx for NetApp ONTAP file system, including an SVM, a Security-Group and a FlexVolume in that file system, using AWS Terraform provider. 
 This repo can be sourced as a terraform module.
 Follow the instructions below to use this sample in your own environment.
+> [!NOTE]
+> This module does not support scale-out! One ha pair per deployment. 
 
 ## Table of Contents
 * [Introduction](#introduction)
@@ -123,6 +125,8 @@ module "fsxontap" {
     }
     create_sg = true
     cidr_for_sg = "<YOUR-CIDR-BLOCK>"
+    fsx_admin_password = "<YOUR_PASSWORD>"
+    route_table_ids = ["ID-1", "ID-2"]
     tags = {
         Terraform   = "true"
         Environment = "dev"
@@ -183,20 +187,16 @@ terraform apply -y
 
 ### Providers
 
-### Providers
-
 | Name | Version |
 |------|---------|
 | aws | n/a |
 
 ### Inputs
 
-### Inputs
-
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
 | fsx_admin_password | The ONTAP administrative password for the fsxadmin user that you can use to administer your file system using the ONTAP CLI and REST API | `string` | n/a | yes |
-| ad_configuration | Configuration block that Amazon FSx uses to join the FSx ONTAP Storage Virtual Machine(SVM) to your Microsoft Active Directory (AD) directory. | `map` | <pre>{<br>  "netbios_name": "first_svm",<br>  "self_managed_active_directory_configuration": {<br>    "dns_ips": [],<br>    "domain_name": "corp.example.com",<br>    "file_system_administrators_group": "Domain Admins",<br>    "organizational_unit_distinguished_name": "NONE",<br>    "password": "",<br>    "username": ""<br>  }<br>}</pre> | no |
+| route_table_ids | Specifies the VPC route tables in which your file system's endpoints will be created. You should specify all VPC route tables associated with the subnets in which your clients are located. | `list` | n/a | yes |
 | backup_retention_days | The number of days to retain automatic backups. Setting this to 0 disables automatic backups. You can retain automatic backups for a maximum of 90 days. | `number` | `0` | no |
 | cidr_for_sg | cide block to be used for the ingress rules | `string` | `"0.0.0.0/0"` | no |
 | create_sg | Determines whether the SG should be deployed as part of this execution or not | `bool` | `false` | no |
@@ -214,14 +214,9 @@ terraform apply -y
 | storage_type | The filesystem storage type | `string` | `"SSD"` | no |
 | svm_name | The name of the Storage Virtual Machine | `string` | `"first_svm"` | no |
 | tags | Tags to be applied to the resources | `map` | <pre>{<br>  "Name": "terraform-fsxn"<br>}</pre> | no |
-| tput_capacity_in_MBps | Sets the throughput capacity (in MBps) for the file system that you're creating. Valid values are 128, 256, 512, 1024, 2048, and 4096. This parameter should only be used when specifying not using the ha_pairs parameter. | `number` | `256` | no |
-| tput_capacity_per_pair_in_MBps | Sets the throughput capacity (in MBps) for the file system that you're creating. Valid values are 3072,6144. This parameter should only be used when specifying the ha_pairs parameter. | `number` | `3072` | no |
 | vol_info | Details for the volume creation | `map` | <pre>{<br>  "bypass_sl_retention": false,<br>  "cooling_period": 31,<br>  "copy_tags_to_backups": false,<br>  "efficiency": true,<br>  "junction_path": "/vol1",<br>  "sec_style": "UNIX",<br>  "size_mg": 1024,<br>  "skip_final_backup": false,<br>  "tier_policy_name": "AUTO",<br>  "vol_name": "vol1",<br>  "vol_type": "RW"<br>}</pre> | no |
-| vol_snaplock_configuration | The SnapLock configuration for an FSx for ONTAP volume | `map` | <pre>{<br>  "audit_log_volume": false,<br>  "autocommit_period": {<br>    "type": "NONE",<br>    "value": 0<br>  },<br>  "privileged_delete": "DISABLED",<br>  "retention_period": {<br>    "default_retention": {<br>      "type": "UNSPECIFIED",<br>      "value": 0<br>    },<br>    "maximum_retention": {<br>      "type": "UNSPECIFIED",<br>      "value": 0<br>    },<br>    "minimum_retention": {<br>      "type": "UNSPECIFIED",<br>      "value": 0<br>    }<br>  },<br>  "snaplock_type": "COMPLIANCE",<br>  "volume_append_mode_enabled": false<br>}</pre> | no |
 | vol_snapshot_policy | Specifies the snapshot policy for the volume | `map` | <pre>{<br>  "Name": "terraform-fsxn"<br>}</pre> | no |
 | vpc_id | The ID of the VPC in which the FSxN fikesystem should be deployed | `string` | `"vpc-111111111"` | no |
-
-### Outputs
 
 ### Outputs
 

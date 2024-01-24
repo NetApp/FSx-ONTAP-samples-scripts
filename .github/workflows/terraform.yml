@@ -17,12 +17,15 @@ jobs:
   terraform:
     name: Terraform
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./Terraform/deploy-fsx-ontap
 
     steps:
       - name: Checkout pull request
         uses: actions/checkout@v3.5.0
         with:
-          fetch-depth: 1
+          fetch-depth: 0
           ref: ${{ github.event.pull_request.head.ref }}
 
       - name: Set up Terraform
