@@ -19,7 +19,11 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
+<<<<<<< HEAD
         working-directory: ./Terraform/delpoy-fsx-ontap
+=======
+        working-directory: Terraform/deploy-fsx-ontap222
+>>>>>>> e67ee05 (dummy for tests)
 
     steps:
       - name: Checkout pull request
