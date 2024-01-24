@@ -18,8 +18,8 @@ jobs:
     name: Terraform
     runs-on: ubuntu-latest
     defaults:
-      run:
-        working-directory: ./Terraform/delpoy-fsx-ontap
+       run:
+         working-directory: ./Terraform/deploy-fsx-ontap
 
     steps:
       - name: Checkout pull request
@@ -33,12 +33,6 @@ jobs:
         with:
           terraform_wrapper: false
           terraform_version: 1.6.6
-      
-      - name: Check location
-        run: pwd
-
-      - name: Initialize ls
-        run: ls -la
 
       - name: Initialize Terraform
         run: terraform init
