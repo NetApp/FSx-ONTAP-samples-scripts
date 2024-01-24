@@ -33,6 +33,9 @@ jobs:
         with:
           terraform_wrapper: false
           terraform_version: 1.6.6
+      
+      - name: Check location
+        run: pwd
 
       - name: Initialize ls
         run: ls -la
