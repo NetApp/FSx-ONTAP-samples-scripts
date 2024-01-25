@@ -24,11 +24,11 @@ variable "vpc_id" {
 
 variable "fsx_subnets" {
   description = "The IDs of the subnets fro which the FSxN filesystem will be assigned IP addresses"
-  type        = map
-  default     = {
-     "primarysub" = ""
-     "secondarysub" = ""
-  }
+  type        = map(any)
+  default = {
+    "primarysub"   = ""
+    "secondarysub" = ""
+   }
 }
 
 variable "fsx_capacity_size_gb" {
@@ -74,8 +74,8 @@ variable "daily_backup_start_time" {
 
 variable "disk_iops_configuration" {
   description = "The SSD IOPS configuration for the Amazon FSx for NetApp ONTAP file system"
-  type        = map
-  default     = {
+  type        = map(any)
+  default = {
      "iops" = 3000
      "mode" = "AUTOMATIC"
   }
@@ -94,7 +94,7 @@ variable "storage_type" {
 
 variable "route_table_ids" {
   description = "Specifies the VPC route tables in which your file system's endpoints will be created. You should specify all VPC route tables associated with the subnets in which your clients are located."
-  type        = list
+  type        = list(any)
 }
 
 variable "svm_name" {
@@ -111,8 +111,8 @@ variable "root_vol_sec_style" {
 
 variable "vol_info" {
   description = "Details for the volume creation"
-  type        = map
-  default     = {
+  type        = map(any)
+  default = {
     "vol_name"             = "vol1"
     "junction_path"        = "/vol1"
 	 "size_mg"              = 1024
@@ -129,16 +129,16 @@ variable "vol_info" {
 
 variable "vol_snapshot_policy" {
   description = "Specifies the snapshot policy for the volume"
-  type        = map
-  default     = {
+  type        = map(any)
+  default = {
      "Name" = "terraform-fsxn"
   }
 }
 
 variable "tags" {
   description = "Tags to be applied to the resources"
-  type        = map
-  default     = {
+  type        = map(any)
+  default = {
      "Name" = "terraform-fsxn"
   }
 }

@@ -133,10 +133,10 @@ resource "aws_fsx_ontap_file_system" "terraform-fsxn" {
   preferred_subnet_id = var.fsx_subnets["primarysub"]
 
   // OPTIONAL PARAMETERS
-  storage_capacity    = var.fsx_capacity_size_gb
-  security_group_ids  = var.create_sg ? [element(aws_security_group.fsx_sg.*.id, 0)] : []
-  deployment_type     = var.fsx_deploy_type
-  throughput_capacity = var.fsx_tput_in_MBps
+  storage_capacity                  = var.fsx_capacity_size_gb
+  security_group_ids                = var.create_sg ? [element(aws_security_group.fsx_sg.*.id, 0)] : []
+  deployment_type                   = var.fsx_deploy_type
+  throughput_capacity               = var.fsx_tput_in_MBps
   weekly_maintenance_start_time     = var.fsx_maintenance_start_time
   kms_key_id                        = var.kms_key_id
   automatic_backup_retention_days   = var.backup_retention_days
