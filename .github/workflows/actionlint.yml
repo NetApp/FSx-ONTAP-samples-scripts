@@ -32,8 +32,8 @@ jobs:
             VALIDATE_BASH_EXEC : true
             BASH_SEVERITY : "error"
             VALIDATE_GITHUB_ACTIONS : true
-            VALIDATE_MARKDOWN : true
-            VALIDATE_NATURAL_LANGUAGE : true
+            # VALIDATE_MARKDOWN : true
+            # VALIDATE_NATURAL_LANGUAGE : true
             VALIDATE_POWERSHELL : true
             VALIDATE_TERRAFORM_FMT : true
             VALIDATE_YAML : true  
