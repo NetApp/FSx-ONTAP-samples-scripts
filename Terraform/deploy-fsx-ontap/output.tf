@@ -1,6 +1,6 @@
 output "my_fsx_ontap_security_group_id" {
   description = "The ID of the FSxN Security Group"
-  value       = aws_security_group.fsx_sg.id
+  value       = var.create_sg ? [element(aws_security_group.fsx_sg.*.id, 0)] : []
   
 }
 
