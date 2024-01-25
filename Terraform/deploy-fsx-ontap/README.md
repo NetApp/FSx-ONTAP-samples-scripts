@@ -197,24 +197,24 @@ terraform apply -y
 |------|-------------|------|---------|:--------:|
 | fsx_admin_password | The ONTAP administrative password for the fsxadmin user that you can use to administer your file system using the ONTAP CLI and REST API | `string` | n/a | yes |
 | kms_key_id | ARN for the KMS Key to encrypt the file system at rest, Defaults to an AWS managed KMS Key. | `string` | n/a | yes |
-| route_table_ids | Specifies the VPC route tables in which your file system's endpoints will be created. You should specify all VPC route tables associated with the subnets in which your clients are located. | `list` | n/a | yes |
+| route_table_ids | Specifies the VPC route tables in which your file system's endpoints will be created. You should specify all VPC route tables associated with the subnets in which your clients are located. | `list(any)` | n/a | yes |
 | backup_retention_days | The number of days to retain automatic backups. Setting this to 0 disables automatic backups. You can retain automatic backups for a maximum of 90 days. | `number` | `0` | no |
 | cidr_for_sg | cide block to be used for the ingress rules | `string` | `"0.0.0.0/0"` | no |
 | create_sg | Determines whether the SG should be deployed as part of this execution or not | `bool` | `false` | no |
 | daily_backup_start_time | A recurring daily time, in the format HH:MM. HH is the zero-padded hour of the day (0-23), and MM is the zero-padded minute of the hour. Requires automatic_backup_retention_days to be set. | `string` | `"00:00"` | no |
-| disk_iops_configuration | The SSD IOPS configuration for the Amazon FSx for NetApp ONTAP file system | `map` | <pre>{<br>  "iops": 3000,<br>  "mode": "AUTOMATIC"<br>}</pre> | no |
+| disk_iops_configuration | The SSD IOPS configuration for the Amazon FSx for NetApp ONTAP file system | `map(any)` | <pre>{<br>  "iops": 3000,<br>  "mode": "AUTOMATIC"<br>}</pre> | no |
 | fsx_capacity_size_gb | The storage capacity (GiB) of the FSxN file system. Valid values between 1024 and 196608 | `number` | `1024` | no |
 | fsx_deploy_type | The filesystem deployment type. Supports MULTI_AZ_1 and SINGLE_AZ_1 | `string` | `"SINGLE_AZ_1"` | no |
 | fsx_maintenance_start_time | The preferred start time (in d:HH:MM format) to perform weekly maintenance, in the UTC time zone. | `string` | `"00:00:00"` | no |
 | fsx_name | The deployed filesystem name | `string` | `"terraform-fsxn"` | no |
-| fsx_subnets | The IDs of the subnets fro which the FSxN filesystem will be assigned IP addresses | `map` | <pre>{<br>  "primarysub": "",<br>  "secondarysub": ""<br>}</pre> | no |
+| fsx_subnets | The IDs of the subnets fro which the FSxN filesystem will be assigned IP addresses | `map(any)` | <pre>{<br>  "primarysub": "",<br>  "secondarysub": ""<br>}</pre> | no |
 | fsx_tput_in_MBps | The throughput capacity (in MBps) for the file system. Valid values are 128, 256, 512, 1024, 2048, and 4096. | `number` | `256` | no |
 | root_vol_sec_style | Specifies the root volume security style, Valid values are UNIX, NTFS, and MIXED. All volumes created under this SVM will inherit the root security style unless the security style is specified on the volume. | `string` | `"UNIX"` | no |
 | storage_type | The filesystem storage type | `string` | `"SSD"` | no |
 | svm_name | The name of the Storage Virtual Machine | `string` | `"first_svm"` | no |
-| tags | Tags to be applied to the resources | `map` | <pre>{<br>  "Name": "terraform-fsxn"<br>}</pre> | no |
-| vol_info | Details for the volume creation | `map` | <pre>{<br>  "bypass_sl_retention": false,<br>  "cooling_period": 31,<br>  "copy_tags_to_backups": false,<br>  "efficiency": true,<br>  "junction_path": "/vol1",<br>  "sec_style": "UNIX",<br>  "size_mg": 1024,<br>  "skip_final_backup": false,<br>  "tier_policy_name": "AUTO",<br>  "vol_name": "vol1",<br>  "vol_type": "RW"<br>}</pre> | no |
-| vol_snapshot_policy | Specifies the snapshot policy for the volume | `map` | <pre>{<br>  "Name": "terraform-fsxn"<br>}</pre> | no |
+| tags | Tags to be applied to the resources | `map(any)` | <pre>{<br>  "Name": "terraform-fsxn"<br>}</pre> | no |
+| vol_info | Details for the volume creation | `map(any)` | <pre>{<br>  "bypass_sl_retention": false,<br>  "cooling_period": 31,<br>  "copy_tags_to_backups": false,<br>  "efficiency": true,<br>  "junction_path": "/vol1",<br>  "sec_style": "UNIX",<br>  "size_mg": 1024,<br>  "skip_final_backup": false,<br>  "tier_policy_name": "AUTO",<br>  "vol_name": "vol1",<br>  "vol_type": "RW"<br>}</pre> | no |
+| vol_snapshot_policy | Specifies the snapshot policy for the volume | `map(any)` | <pre>{<br>  "Name": "terraform-fsxn"<br>}</pre> | no |
 | vpc_id | The ID of the VPC in which the FSxN fikesystem should be deployed | `string` | `"vpc-111111111"` | no |
 
 ### Outputs
