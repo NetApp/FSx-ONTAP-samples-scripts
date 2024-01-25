@@ -28,7 +28,6 @@ jobs:
             DEFAULT_BRANCH: main
             # To report GitHub Actions status checks, you must provide a GitHub token.
             GITHUB_TOKEN : ${{ secrets.GITHUB_TOKEN }}
-            DEFAULT_BRANCH	: main
             VALIDATE_BASH : true
             VALIDATE_BASH_EXEC : true
             BASH_SEVERITY : "error"
