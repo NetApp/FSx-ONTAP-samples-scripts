@@ -1,2 +1,2 @@
-deploy-fsx-ontap/.terraform*
-deploy-fsx-ontap/terraform.tfstate*
+Terraform/deploy-fsx-ontap/.terraform*
+Terraform/deploy-fsx-ontap/terraform.tfstate*
