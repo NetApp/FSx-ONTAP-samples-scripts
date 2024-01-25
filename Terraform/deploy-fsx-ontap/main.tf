@@ -109,7 +109,7 @@ resource "aws_vpc_security_group_ingress_rule" "nfs_mount_udp" {
 }
 
 resource "aws_vpc_security_group_egress_rule" "allow_all_traffic" {
-  count = var.create_sg ? 1 : 0
+  count             = var.create_sg ? 1 : 0
   security_group_id = aws_security_group.fsx_sg[count.index].id
   cidr_ipv4         = "0.0.0.0/0"
   ip_protocol       = "-1"
@@ -133,13 +133,10 @@ resource "aws_fsx_ontap_file_system" "terraform-fsxn" {
   preferred_subnet_id = var.fsx_subnets["primarysub"]
 
   // OPTIONAL PARAMETERS
-  storage_capacity    = var.fsx_capacity_size_gb
-  security_group_ids  = var.create_sg ? [element(aws_security_group.fsx_sg.*.id, 0)] : []
-  deployment_type     = var.fsx_deploy_type
-  throughput_capacity = var.fsx_tput_in_MBps
-  tags = { 
-    Name = var.fsx_name
-  }
+  storage_capacity                  = var.fsx_capacity_size_gb
+  security_group_ids                = var.create_sg ? [element(aws_security_group.fsx_sg.*.id, 0)] : []
+  deployment_type                   = var.fsx_deploy_type
+  throughput_capacity               = var.fsx_tput_in_MBps
   weekly_maintenance_start_time     = var.fsx_maintenance_start_time
   kms_key_id                        = var.kms_key_id
   automatic_backup_retention_days   = var.backup_retention_days
@@ -151,19 +148,18 @@ resource "aws_fsx_ontap_file_system" "terraform-fsxn" {
   }
   fsx_admin_password = var.fsx_admin_password
   route_table_ids    = var.route_table_ids
+  tags               = var.tags
   # endpoint_ip_address_range = ""
 }
 
 resource "aws_fsx_ontap_storage_virtual_machine" "mysvm" {
   // REQUIRED PARAMETERS
-  file_system_id      = aws_fsx_ontap_file_system.terraform-fsxn.id
-  name                = var.svm_name
+  file_system_id = aws_fsx_ontap_file_system.terraform-fsxn.id
+  name           = var.svm_name
 
   // OPTIONAL PARAMETERS
   root_volume_security_style = var.root_vol_sec_style
-  tags = {
-	  Name = var.svm_name
-  }
+  tags                       = var.tags
   # active_directory_configuration {}
 }
 
