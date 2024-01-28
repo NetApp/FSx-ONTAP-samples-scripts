@@ -123,18 +123,18 @@ module "fsxontap" {
         "primarysub" = "<YOUR-PRIMARY-SUBNET>"
         "secondarysub" = "<YOUR-SECONDAY-SUBNET>"
     }
-    create_sg = true
+    create_sg = <true / false> // true to create Security Group for the Fs / false otherwise
     cidr_for_sg = "<YOUR-CIDR-BLOCK>"
     fsx_admin_password = "<YOUR_PASSWORD>"
-    route_table_ids = ["ID-1", "ID-2"]
+    route_table_ids = [<"ID-1", "ID-2", ...>]
     tags = {
         Terraform   = "true"
         Environment = "dev"
     }
 }
 ```
-   > [NOTE!]
-   > To Override default values assigned to other variables in this module, add them to this source block as well. The above source block includes the minimum requirements only.
+  > [NOTE!]
+  > To Override default values assigned to other variables in this module, add them to this source block as well. The above source block includes the minimum requirements only.
 
 Please read the vriables descruptions in `variables.tf` file for more information regarding the variables passed to the module block.
 
