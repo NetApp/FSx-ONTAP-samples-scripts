@@ -58,7 +58,7 @@ variable "fsx_maintenance_start_time" {
 variable "kms_key_id" {
   description = "ARN for the KMS Key to encrypt the file system at rest, Defaults to an AWS managed KMS Key."
   type        = string
-  default = null
+  default     = null
 }
 
 variable "backup_retention_days" {
@@ -76,10 +76,7 @@ variable "daily_backup_start_time" {
 variable "disk_iops_configuration" {
   description = "The SSD IOPS configuration for the Amazon FSx for NetApp ONTAP file system"
   type        = map(any)
-  default = {
-     "iops" = 3000
-     "mode" = "AUTOMATIC"
-  }
+  default     = null
 }
 
 variable "fsx_admin_password" {
