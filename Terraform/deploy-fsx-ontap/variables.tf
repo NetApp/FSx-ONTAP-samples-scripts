@@ -23,9 +23,12 @@ variable "vpc_id" {
 }
 
 variable "fsx_subnets" {
-  description = "Specifies the VPC route tables in which your file system's endpoints will be created. You should specify all VPC route tables associated with the subnets in which your clients are located. By default, Amazon FSx selects your VPC's default route table."
-  type        = list(any)
-  default = null
+  description = "A list of IDs for the subnets that the file system will be accessible from. Up to 2 subnets can be provided."
+  type        = map(any)
+  default = {
+       "primarysub" = ""
+       "secondarysub" = ""
+  }
 }
 
 variable "fsx_capacity_size_gb" {
@@ -91,7 +94,7 @@ variable "storage_type" {
 }
 
 variable "route_table_ids" {
-  description = "Specifies the VPC route tables in which your file system's endpoints will be created. You should specify all VPC route tables associated with the subnets in which your clients are located."
+  description = "Specifies the VPC route tables in which your file system's endpoints will be created. You should specify all VPC route tables associated with the subnets in which your clients are located. By default, Amazon FSx selects your VPC's default route table."
   type        = list(any)
   default     = null
 }
