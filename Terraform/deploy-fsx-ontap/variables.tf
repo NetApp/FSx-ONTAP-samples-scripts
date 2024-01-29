@@ -58,6 +58,7 @@ variable "fsx_maintenance_start_time" {
 variable "kms_key_id" {
   description = "ARN for the KMS Key to encrypt the file system at rest, Defaults to an AWS managed KMS Key."
   type        = string
+  default = null
 }
 
 variable "backup_retention_days" {
