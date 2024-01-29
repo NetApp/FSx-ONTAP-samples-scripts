@@ -126,7 +126,6 @@ module "fsxontap" {
     create_sg = <true / false> // true to create Security Group for the Fs / false otherwise
     cidr_for_sg = "<YOUR-CIDR-BLOCK>"
     fsx_admin_password = "<YOUR_PASSWORD>"
-    route_table_ids = [<"ID-1", "ID-2", ...>]
     tags = {
         Terraform   = "true"
         Environment = "dev"
@@ -196,7 +195,6 @@ terraform apply -y
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
 | fsx_admin_password | The ONTAP administrative password for the fsxadmin user that you can use to administer your file system using the ONTAP CLI and REST API | `string` | n/a | yes |
-| route_table_ids | Specifies the VPC route tables in which your file system's endpoints will be created. You should specify all VPC route tables associated with the subnets in which your clients are located. | `list(any)` | n/a | yes |
 | backup_retention_days | The number of days to retain automatic backups. Setting this to 0 disables automatic backups. You can retain automatic backups for a maximum of 90 days. | `number` | `0` | no |
 | cidr_for_sg | cide block to be used for the ingress rules | `string` | `"0.0.0.0/0"` | no |
 | create_sg | Determines whether the SG should be deployed as part of this execution or not | `bool` | `false` | no |
@@ -210,6 +208,7 @@ terraform apply -y
 | fsx_tput_in_MBps | The throughput capacity (in MBps) for the file system. Valid values are 128, 256, 512, 1024, 2048, and 4096. | `number` | `256` | no |
 | kms_key_id | ARN for the KMS Key to encrypt the file system at rest, Defaults to an AWS managed KMS Key. | `string` | `null` | no |
 | root_vol_sec_style | Specifies the root volume security style, Valid values are UNIX, NTFS, and MIXED. All volumes created under this SVM will inherit the root security style unless the security style is specified on the volume. | `string` | `"UNIX"` | no |
+| route_table_ids | Specifies the VPC route tables in which your file system's endpoints will be created. You should specify all VPC route tables associated with the subnets in which your clients are located. | `list(any)` | `null` | no |
 | storage_type | The filesystem storage type | `string` | `"SSD"` | no |
 | svm_name | The name of the Storage Virtual Machine | `string` | `"first_svm"` | no |
 | tags | Tags to be applied to the resources | `map(any)` | <pre>{<br>  "Name": "terraform-fsxn"<br>}</pre> | no |
