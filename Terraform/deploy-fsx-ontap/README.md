@@ -126,7 +126,6 @@ module "fsxontap" {
     create_sg = <true / false> // true to create Security Group for the Fs / false otherwise
     cidr_for_sg = "<YOUR-CIDR-BLOCK>"
     fsx_admin_password = "<YOUR_PASSWORD>"
-    route_table_ids = [<"ID-1", "ID-2", ...>]
     tags = {
         Terraform   = "true"
         Environment = "dev"

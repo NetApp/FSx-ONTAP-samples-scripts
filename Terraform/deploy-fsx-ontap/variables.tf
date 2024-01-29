@@ -96,6 +96,7 @@ variable "storage_type" {
 variable "route_table_ids" {
   description = "Specifies the VPC route tables in which your file system's endpoints will be created. You should specify all VPC route tables associated with the subnets in which your clients are located."
   type        = list(any)
+  default     = null
 }
 
 variable "svm_name" {
