@@ -133,7 +133,7 @@ resource "aws_vpc_security_group_egress_rule" "allow_all_traffic" {
 
 resource "aws_fsx_ontap_file_system" "terraform-fsxn" {
   // REQUIRED PARAMETERS 
-  subnet_ids          = [var.fsx_subnets["primarysub"]]
+  subnet_ids          = [var.fsx_subnets["primarysub"], var.fsx_subnets["secondarysub"]]
   preferred_subnet_id = var.fsx_subnets["primarysub"]
 
   // OPTIONAL PARAMETERS
