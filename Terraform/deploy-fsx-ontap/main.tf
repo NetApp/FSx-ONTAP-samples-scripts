@@ -1,3 +1,5 @@
+// TODO add SG rule for SnapMirror
+
 # Copyright (c) NetApp, Inc.
 # SPDX-License-Identifier: Apache-2.0
 
@@ -22,7 +24,7 @@ resource "aws_security_group" "fsx_sg" {
 
 resource "aws_vpc_security_group_ingress_rule" "all_icmp" {
   count             = var.create_sg ? 1 : 0
-  security_group_id = aws_security_group.fsx_sg[count.index]
+  security_group_id = aws_security_group.fsx_sg[count.index].id
   description       = "Allow all ICMP traffic"
   cidr_ipv4         = "0.0.0.0/0"
   ip_protocol       = "icmp"
@@ -30,7 +32,7 @@ resource "aws_vpc_security_group_ingress_rule" "all_icmp" {
 
 resource "aws_vpc_security_group_ingress_rule" "nfs_tcp" {
   count             = var.create_sg ? 1 : 0
-  security_group_id = aws_security_group.fsx_sg[count.index]
+  security_group_id = aws_security_group.fsx_sg[count.index].id
   description       = "Remote procedure call for NFS"
   cidr_ipv4         = var.cidr_for_sg
   from_port         = 111
@@ -40,7 +42,7 @@ resource "aws_vpc_security_group_ingress_rule" "nfs_tcp" {
 
 resource "aws_vpc_security_group_ingress_rule" "nfs_udp" {
   count             = var.create_sg ? 1 : 0
-  security_group_id = aws_security_group.fsx_sg[count.index]
+  security_group_id = aws_security_group.fsx_sg[count.index].id
   description       = "Remote procedure call for NFS"
   cidr_ipv4         = var.cidr_for_sg
   from_port         = 111
@@ -50,7 +52,7 @@ resource "aws_vpc_security_group_ingress_rule" "nfs_udp" {
 
 resource "aws_vpc_security_group_ingress_rule" "cifs" {
   count             = var.create_sg ? 1 : 0
-  security_group_id = aws_security_group.fsx_sg[count.index]
+  security_group_id = aws_security_group.fsx_sg[count.index].id
   description       = "NetBIOS service session for CIFS"
   cidr_ipv4         = var.cidr_for_sg
   from_port         = 139
@@ -60,7 +62,7 @@ resource "aws_vpc_security_group_ingress_rule" "cifs" {
 
 resource "aws_vpc_security_group_ingress_rule" "snmp_tcp" {
   count             = var.create_sg ? 1 : 0
-  security_group_id = aws_security_group.fsx_sg[count.index]
+  security_group_id = aws_security_group.fsx_sg[count.index].id
   description       = "Simple network management protocol for log collection"
   cidr_ipv4         = var.cidr_for_sg
   from_port         = 161
@@ -70,7 +72,7 @@ resource "aws_vpc_security_group_ingress_rule" "snmp_tcp" {
 
 resource "aws_vpc_security_group_ingress_rule" "snmp_udp" {
   count             = var.create_sg ? 1 : 0
-  security_group_id = aws_security_group.fsx_sg[count.index]
+  security_group_id = aws_security_group.fsx_sg[count.index].id
   description       = "Simple network management protocol for log collection"
   cidr_ipv4         = var.cidr_for_sg
   from_port         = 161
@@ -80,7 +82,7 @@ resource "aws_vpc_security_group_ingress_rule" "snmp_udp" {
 
 resource "aws_vpc_security_group_ingress_rule" "smb_cifs" {
   count             = var.create_sg ? 1 : 0
-  security_group_id = aws_security_group.fsx_sg[count.index]
+  security_group_id = aws_security_group.fsx_sg[count.index].id
   description       = "Microsoft SMB/CIFS over TCP with NetBIOS framing"
   cidr_ipv4         = var.cidr_for_sg
   from_port         = 445
@@ -90,7 +92,7 @@ resource "aws_vpc_security_group_ingress_rule" "smb_cifs" {
 
 resource "aws_vpc_security_group_ingress_rule" "nfs_mount_tcp" {
   count             = var.create_sg ? 1 : 0
-  security_group_id = aws_security_group.fsx_sg[count.index]
+  security_group_id = aws_security_group.fsx_sg[count.index].id
   description       = "NFS mount"
   cidr_ipv4         = var.cidr_for_sg
   from_port         = 635
@@ -100,7 +102,7 @@ resource "aws_vpc_security_group_ingress_rule" "nfs_mount_tcp" {
 
 resource "aws_vpc_security_group_ingress_rule" "nfs_mount_udp" {
   count             = var.create_sg ? 1 : 0
-  security_group_id = aws_security_group.fsx_sg[count.index]
+  security_group_id = aws_security_group.fsx_sg[count.index].id
   description       = "NFS mount"
   cidr_ipv4         = var.cidr_for_sg
   from_port         = 635
