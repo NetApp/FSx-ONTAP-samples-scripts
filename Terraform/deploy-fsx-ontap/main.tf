@@ -183,6 +183,6 @@ resource "aws_fsx_ontap_volume" "myvol" {
   security_style                       = var.vol_info["sec_style"]
   skip_final_backup                    = var.vol_info["skip_final_backup"]
   # snaplock_configuration {}
-  snapshot_policy = "NONE"
+  snapshot_policy = null
   tags            = var.tags
 }
