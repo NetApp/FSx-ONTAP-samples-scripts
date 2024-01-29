@@ -146,10 +146,16 @@ resource "aws_fsx_ontap_file_system" "terraform-fsxn" {
   automatic_backup_retention_days   = var.backup_retention_days
   daily_automatic_backup_start_time = var.daily_backup_start_time
   storage_type                      = var.storage_type
-  disk_iops_configuration           = var.disk_iops_configuration
   fsx_admin_password = var.fsx_admin_password
   route_table_ids    = var.route_table_ids
   tags               = var.tags
+  dynamic "disk_iops_configuration" {
+    for_each = var.disk_iops_configuration != null ? [var.disk_iops_configuration] : []
+    content {
+      iops = disk_iops_configuration.value["iops"]
+      mode = disk_iops_configuration.value["mode"]
+    }
+  }
   # endpoint_ip_address_range = ""
 }
 
@@ -183,6 +189,6 @@ resource "aws_fsx_ontap_volume" "myvol" {
   security_style                       = var.vol_info["sec_style"]
   skip_final_backup                    = var.vol_info["skip_final_backup"]
   # snaplock_configuration {}
-  snapshot_policy = null
+  # snapshot_policy {}
   tags            = var.tags
 }

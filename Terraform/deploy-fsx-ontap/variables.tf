@@ -129,9 +129,7 @@ variable "vol_info" {
 variable "vol_snapshot_policy" {
   description = "Specifies the snapshot policy for the volume"
   type        = map(any)
-  default = {
-     "Name" = "terraform-fsxn"
-  }
+  default = null
 }
 
 variable "tags" {
