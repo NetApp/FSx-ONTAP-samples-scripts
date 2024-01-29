@@ -119,10 +119,7 @@ module "fsxontap" {
     source = "github.com/Netapp/FSxN-Samples/Terraform/deploy-fsx-ontap"
 
     vpc_id = "<YOUR-VPC-ID>"
-    fsx_subnets = {
-        "primarysub" = "<YOUR-PRIMARY-SUBNET>"
-        "secondarysub" = "<YOUR-SECONDAY-SUBNET>"
-    }
+    fsx_subnets = ["<YOUR-PRIMARY-SUBNET>", "<YOUR-SECONDAY-SUBNET>"]
     create_sg = <true / false> // true to create Security Group for the Fs / false otherwise
     cidr_for_sg = "<YOUR-CIDR-BLOCK>"
     fsx_admin_password = "<YOUR_PASSWORD>"
