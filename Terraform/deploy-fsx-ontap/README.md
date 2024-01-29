@@ -201,7 +201,7 @@ terraform apply -y
 | fsx_deploy_type | The filesystem deployment type. Supports MULTI_AZ_1 and SINGLE_AZ_1 | `string` | `"SINGLE_AZ_1"` | no |
 | fsx_maintenance_start_time | The preferred start time (in d:HH:MM format) to perform weekly maintenance, in the UTC time zone. | `string` | `"1:00:00"` | no |
 | fsx_name | The deployed filesystem name | `string` | `"terraform-fsxn"` | no |
-| fsx_subnets | The IDs of the subnets fro which the FSxN filesystem will be assigned IP addresses | `map(any)` | <pre>{<br>  "primarysub": "",<br>  "secondarysub": ""<br>}</pre> | no |
+| fsx_subnets | Specifies the VPC route tables in which your file system's endpoints will be created. You should specify all VPC route tables associated with the subnets in which your clients are located. By default, Amazon FSx selects your VPC's default route table. | `list(any)` | `null` | no |
 | fsx_tput_in_MBps | The throughput capacity (in MBps) for the file system. Valid values are 128, 256, 512, 1024, 2048, and 4096. | `number` | `256` | no |
 | kms_key_id | ARN for the KMS Key to encrypt the file system at rest, Defaults to an AWS managed KMS Key. | `string` | `null` | no |
 | root_vol_sec_style | Specifies the root volume security style, Valid values are UNIX, NTFS, and MIXED. All volumes created under this SVM will inherit the root security style unless the security style is specified on the volume. | `string` | `"UNIX"` | no |
