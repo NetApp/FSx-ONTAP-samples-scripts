@@ -52,7 +52,7 @@ variable "fsx_tput_in_MBps" {
 variable "fsx_maintenance_start_time" {
   description = "The preferred start time (in d:HH:MM format) to perform weekly maintenance, in the UTC time zone."
   type        = string
-  default     = "00:00:00"
+  default     = "1:00:00"
 }
 
 variable "kms_key_id" {
