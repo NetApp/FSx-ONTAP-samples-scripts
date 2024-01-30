@@ -210,7 +210,7 @@ terraform apply -y
 | svm_name | The name of the Storage Virtual Machine | `string` | `"first_svm"` | no |
 | tags | Tags to be applied to the resources | `map(any)` | <pre>{<br>  "Name": "terraform-fsxn"<br>}</pre> | no |
 | vol_info | Details for the volume creation | `map(any)` | <pre>{<br>  "bypass_sl_retention": false,<br>  "cooling_period": 31,<br>  "copy_tags_to_backups": false,<br>  "efficiency": true,<br>  "junction_path": "/vol1",<br>  "sec_style": "UNIX",<br>  "size_mg": 1024,<br>  "skip_final_backup": false,<br>  "tier_policy_name": "AUTO",<br>  "vol_name": "vol1",<br>  "vol_type": "RW"<br>}</pre> | no |
-| vol_snapshot_policy | Specifies the snapshot policy for the volume | `map(any)` | <pre>{<br>  "Name": "terraform-fsxn"<br>}</pre> | no |
+| vol_snapshot_policy | Specifies the snapshot policy for the volume | `map(any)` | `null` | no |
 | vpc_id | The ID of the VPC in which the FSxN fikesystem should be deployed | `string` | `"vpc-111111111"` | no |
 
 ### Outputs
