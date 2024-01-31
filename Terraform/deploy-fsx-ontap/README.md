@@ -116,7 +116,7 @@ Make sure to replace all values within `< >` with your own variables.
 
 ```ruby
 module "fsxontap" {
-    source = "github.com/Netapp/FSxN-Samples/Terraform/deploy-fsx-ontap"
+    source = "github.com/Netapp/FSx-ONTAP-samples-scripts/Terraform/deploy-fsx-ontap"
 
     vpc_id = "<YOUR-VPC-ID>"
     fsx_subnets = ["<YOUR-PRIMARY-SUBNET>", "<YOUR-SECONDAY-SUBNET>"]
@@ -160,7 +160,7 @@ Whenever you add a new module to a configuration, Terraform must install the mod
 
 ```shell
 terraform get
-Downloading git::https://github.com/Netapp/FSxN-Samples.git for fsxontap...
+Downloading git::https://github.com/Netapp/FSx-ONTAP-samples-scripts.git for fsxontap...
 - fsxontap in .terraform/modules/fsxontap/Terraform/deploy-fsx-ontap
 ```
 
@@ -224,7 +224,7 @@ terraform apply -y
 
 ## Author Information
 
-This repository is maintained by the contributors listed on [GitHub](https://github.com/NetApp/FSxN-Samples/graphs/contributors).
+This repository is maintained by the contributors listed on [GitHub](https://github.com/NetApp/FSx-ONTAP-samples-scripts/graphs/contributors).
 
 ## License
 
