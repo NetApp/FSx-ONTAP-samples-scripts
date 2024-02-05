@@ -204,7 +204,7 @@ terraform apply -y
 | daily_backup_start_time | A recurring daily time, in the format HH:MM. HH is the zero-padded hour of the day (0-23), and MM is the zero-padded minute of the hour. Requires automatic_backup_retention_days to be set. | `string` | `"00:00"` | no |
 | disk_iops_configuration | The SSD IOPS configuration for the Amazon FSx for NetApp ONTAP file system | `map(any)` | `null` | no |
 | fsx_capacity_size_gb | The storage capacity (GiB) of the FSxN file system. Valid values between 1024 and 196608 | `number` | `1024` | no |
-| fsx_deploy_type | The filesystem deployment type. Supports MULTI_AZ_1 and SINGLE_AZ_1 | `string` | `"SINGLE_AZ_1"` | no |
+| fsx_deploy_type | The filesystem deployment type. Supports MULTI_AZ_1 and SINGLE_AZ_1 | `string` | `"MULTI_AZ_1"` | no |
 | fsx_maintenance_start_time | The preferred start time (in d:HH:MM format) to perform weekly maintenance, in the UTC time zone. | `string` | `"1:00:00"` | no |
 | fsx_name | The deployed filesystem name | `string` | `"terraform-fsxn"` | no |
 | fsx_subnets | A list of IDs for the subnets that the file system will be accessible from. Up to 2 subnets can be provided. | `map(any)` | <pre>{<br>  "primarysub": "",<br>  "secondarysub": ""<br>}</pre> | no |
