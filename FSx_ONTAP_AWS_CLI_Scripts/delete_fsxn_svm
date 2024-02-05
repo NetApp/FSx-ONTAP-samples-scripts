@@ -12,8 +12,8 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ################################################################################
 #
-# This script is used to delete an FSxN volume.
-#
+# This script is used to delete a storage virtual machine from a
+# FSxN filesystem.
 ################################################################################
 
 ################################################################################
@@ -21,10 +21,10 @@
 ################################################################################
 usage () {
 cat 1>&2 <<EOF
-Usage: $(basename $0) -v volumeId [-r region]
-where
-  volumeId: is the ID of the volume to delete.
-  region: is the AWS region where the FSxN filesystem resides.
+Usage: $(basename $0) -i svmID [-r region] 
+Where:
+  svmID: Is the ID of the storage virtual machine you want to delete.
+  region: Is the AWS region where the SVM resides.
 EOF
   exit 1
 }
@@ -32,26 +32,55 @@ EOF
 ################################################################################
 # Main logic starts here.
 ################################################################################
+tmpout=/tmp/fsx_svm_create.$$
+volumesFile=/tmp/fsx_svm_create-volumes.$$
+trap 'rm -f $tmpout volumesFile' exit
+
+if which aws jq > /dev/null 2>&1; then
+  :
+else
+  echo "Error, both the 'aws' and 'jq' commands are required to run this script." 1>&2
+  exit 1
+fi
 #
-# Set some defaults.
+# Set any defaults.
 region=$(aws configure list | egrep '^.*egion ' | awk '{print $2}')
 #
 # Process command line arguments.
-while getopts "v:" option; do
+while getopts "i:r:" option; do
   case $option in
-    r) region="$OPTARG"
+    i) svmID=$OPTARG
       ;;
-    v) volumeId="$OPTARG"
+    r) region=$OPTARG
       ;;
-    *) usage
+    *) echo "Error, unknown option '$option'." 1>&2
+      usage
       ;;
   esac
+  shift
 done
 #
 # Ensure all the required parameters have been provided.
-if [ -z "$volumeId" ]; then
-  echo "Error, you must provide volume ID." 1>&2
+if [ -z "$svmID" ]; then
+  echo "Error, missing reuqired arguments." 1>&2
   usage
+  exit 1
 fi
 
-aws fsx delete-volume --volume-id $volumeId --region=$region
+aws fsx delete-storage-virtual-machine --region=$region --storage-virtual-machine-id $svmID > $tmpout 2>&1
+
+if [ $? != "0" ]; then
+  echo "Failed to delete storage virtual machine." 1>&2
+  cat $tmpout
+  exit 1
+else
+  status=$(jq -r .Lifecycle $tmpout)
+  if [ "$status" == "DELETING" ]; then
+    echo "Storage Virtual Machine with an id of '$svmID' is being deleted."
+    exit 0
+  else
+    echo "Unknown status '$status'. Complete output returned from the AWS api:"
+    cat $tmpout
+    exit 1
+  fi
+fi

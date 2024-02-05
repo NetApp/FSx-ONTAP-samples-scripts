@@ -1,0 +1,181 @@
+#!/bin/bash
+#
+#################################################################################
+# THIS SOFTWARE IS PROVIDED BY NETAPP "AS IS" AND ANY EXPRESS OR IMPLIED
+# WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO
+# EVENT SHALL NETAPP BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+# OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR'
+# OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+################################################################################
+#
+################################################################################
+# This script will list all the AWS FSxN file systems the user has access to.
+# It will list:
+#   o Region
+#   o File System ID
+#   o File Systesm "name"
+#   o Status
+#   o Management IP
+#   o VPC ID - optional
+#   o Subnet ID - optional
+#
+# In the case of the Management IP and Subnet ID, it will only show the first
+# one defined. Based on the potential output from the API call, there could
+# be more than one.
+#
+# If the '-c' option is provided, instead of providing the information above
+# it will display a hierarchical view of each file system, meaning it will
+# display all the SVMs, and under each SVM, all the volumes that are under it.
+################################################################################
+
+################################################################################
+# This function is used to output the usage information for the script and exit.
+################################################################################
+usage () {
+  cat 1>&2 <<EOF
+Usage $(basename $0) [-r region] [-a] [-n] [-c] [-s] [-i fileSystemId] [-f fileSystemName]
+  Where: -r region allows you to specify the region you want the list from.
+         -a means all regions.
+         -n means include addional network information.
+         -c means to display a hierarchical view of each filesystem including svms and volumes.
+         -i allows you to limit the display to the file system with the id provided.
+         -f allows you to limit the display to the file system with the name provided.
+         -s means to display the current status of a volume. Only relative with the -c option.
+EOF
+  exit 1
+}
+
+################################################################################
+# Main logic starts here.
+################################################################################
+tmpout=/tmp/list_fss-out.$$
+fileSystemsFile=/tmp/list_fss-fss.$$
+svmsFile=/tmp/list_fss-svms.$$
+volumesFile=/tmp/list_fss-volumes.$$
+trap 'rm -f $tmpout $fileSystemsFile $svmsFile $volumesFile' exit
+#
+# Ensure all the required ultilities are installed.
+if which aws jq > /dev/null 2>&1; then
+  :
+else
+  echo "Error, both the 'aws' and 'jq' commands are required to run this script." 1>&2
+  exit 1
+fi
+#
+# Set defaults.
+allRegions=false
+includeNetworking=false
+contents=false
+showStatus=false
+region=$(aws configure list | egrep '^.*egion ' | awk '{print $2}')
+#
+# Process command line arguments.
+while getopts "csanr:i:f:" option; do
+  case "$option" in
+    r) region="$OPTARG"
+      ;;
+    a) allRegions=true
+      ;;
+    n) includeNetworking=true
+      ;;
+    c) contents=true
+      ;;
+    i) fsid=$OPTARG
+      ;;
+    f) fileSystemName="$OPTARG"
+      ;;
+    s) showStatus=true
+      ;;
+    *) echo "Error, unknown option '$option'." 1>&2
+      usage
+      ;;
+  esac
+done
+
+if [ "$allRegions" = "true" ]; then
+  regions=$(aws ec2 describe-regions --query "Regions[].RegionName" --output=json | jq -r '.[]')
+else
+  regions=$region
+fi
+
+if [ ! -z "$fsid" -a ! -z "$fileSystemName" ]; then
+  echo "Error, you can't specify both a file system ID and file system name." 1>&2
+  exit 1
+fi
+
+#
+# Loop on all the requested regions.
+for region in $regions; do
+  #
+  # Check that the fsx service is supported in thie region
+  if [ ! -z "$(getent hosts fsx.$region.amazonaws.com)" ]; then
+    if [ ! -z "$fileSystemName" ]; then
+      fsid=$(aws fsx describe-file-systems --region=$region --output=json 2> /dev/null | jq -r '.FileSystems[] | if((.Tags[] | select(.Key == "Name") .Value) == "'"${fileSystemName}"'") then .FileSystemId else empty end' 2> /dev/null)
+      if [ ! -z "$fsid" ]; then
+        aws fsx describe-file-systems --file-system-ids $fsid --region=$region --output=json > $fileSystemsFile 2>&1
+      else
+        echo "Error, failed to get the file system ID based on a file system name of '$fileSystemName'." 1>&2
+        exit 1
+      fi
+    else
+      if [ -z "$fsid" ]; then
+        aws fsx describe-file-systems --region=$region --output=json > $fileSystemsFile 2>&1
+      else
+        aws fsx describe-file-systems --file-system-ids $fsid --region=$region --output=json > $fileSystemsFile 2>&1
+      fi
+    fi
+
+    if [ $? -ne 0 ]; then
+      echo "Error, failed to get the list of file systems." 1>&2
+      cat $fileSystemsFile 1>&2
+      exit 1
+    fi
+  
+    if [ $contents == "true" ]; then
+      aws fsx describe-storage-virtual-machines --region=$region --output=json > $svmsFile 2>&1
+      if [ $? -ne 0 ]; then
+        echo "Error, failed to get the list of SVMs." 1>&2
+        cat $svmsFile 1>&2
+        exit 1
+      fi
+  
+      aws fsx describe-volumes --region=$region --output=json > $volumesFile 2>&1
+      if [ $? -ne 0 ]; then
+        echo "Error, failed to get the list of volumes." 1>&2
+        cat $volumesFile 1>&2
+        exit 1
+      fi
+  
+      printf "$region\n"
+      jq -r '.FileSystems[] | .FileSystemId + " " + .Lifecycle + " " + (.Tags[] | select(.Key == "Name") .Value)' $fileSystemsFile | while read fs fsStatus fsName; do
+        [ "$showStatus" == "true" ] && printf "\t$fs($fsStatus) - '$fsName'\n"
+        [ "$showStatus" != "true" ] && printf "\t$fs - '$fsName'\n"
+        jq -r '.StorageVirtualMachines[] | if(.FileSystemId == "'$fs'") then .StorageVirtualMachineId + " " + .Lifecycle + " " + .Name else empty end' $svmsFile | while read svm svmStatus svmName; do
+          [ "$showStatus" == "true" ] && printf "\t\t$svm($svmStatus) - '$svmName'\n"
+          [ "$showStatus" != "true" ] && printf "\t\t$svm - '$svmName'\n"
+          jq -r '.Volumes[] | if(.FileSystemId == "'$fs'" and .OntapConfiguration.StorageVirtualMachineId == "'$svm'") then .VolumeId + " " + .Lifecycle + " " + .Name else empty end' $volumesFile | while read volume volStatus volumeName; do
+            [ "$showStatus" == "true" ] && printf "\t\t\t$volume($volStatus) - '$volumeName'\n"
+            [ "$showStatus" != "true" ] && printf "\t\t\t$volume - '$volumeName'\n"
+          done
+        done
+      done
+    else
+      jq -r '.FileSystems[] | .FileSystemId + "," + (.Tags[] | select(.Key == "Name") .Value) + "," + .Lifecycle + "," + .OntapConfiguration.Endpoints.Management.IpAddresses[0] + "," + .VpcId + "," + .SubnetIds[0]' $fileSystemsFile > $tmpout
+  
+      if ("$includeNetworking" == "true") then
+        awk -F, -v region=$region 'BEGIN {first=1; formatStr="%12s %23s %35s %10s %15s %21s %24s\n"}; {if(first) {printf "\n"; printf formatStr, "Region", "FileSystem ID", "Name", "Status", "Managment IP", "VPC ID", "Subnet ID"; first=0}; printf formatStr, region, $1, $2, $3, $4, $5, $6}' < $tmpout
+      else
+        awk -F, -v region=$region 'BEGIN {first=1; formatStr="%12s %23s %35s %10s %15s\n"}; {if(first) {printf "\n"; printf formatStr, "Region", "FileSystem ID", "Name", "Status", "Managment IP", "VPC ID", "Subnet ID"; first=0}; printf formatStr, region, $1, $2, $3, $4}' < $tmpout
+      fi
+    fi
+  else
+    if [ $allRegions != "true" ]; then
+      printf "The fsx service is currently not supported in the $region region.\n"
+    fi
+  fi
+done

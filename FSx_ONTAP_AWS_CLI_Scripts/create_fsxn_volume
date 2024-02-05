@@ -17,11 +17,11 @@
 ################################################################################
 
 ################################################################################
-#  This function just outputs the usage information and exits.
+# This function just outputs the usage information and exits.
 ################################################################################
 usage () {
 cat 1>&2 <<EOF
-Usage: $(basename $0) -m svmId -n volumeName [-r region] [-s size]
+Usage: $(basename $0) -i svmID -n volumeName [-r region] [-s size]
 where
   svmID: is the SVM ID in the filesystem you want to create the volume.
   volumeName: is the name you want to assign the volume.
@@ -34,15 +34,17 @@ EOF
 ################################################################################
 # Main logic starts here.
 ################################################################################
+tmpout=/tmp/create_volume.$$
+trap 'rm -f $tmpout' exit
 #
 # Set some defaults.
 size=20
 region=$(aws configure list | egrep '^.*egion ' | awk '{print $2}')
 #
 # Process command line arguments.
-while getopts "m:n:r:s:" option; do
+while getopts "i:n:r:s:" option; do
   case $option in
-    m) svmId=$OPTARG
+    i) svmId=$OPTARG
       ;;
     n) volumeName=$OPTARG
       ;;
@@ -59,7 +61,6 @@ done
 if [ -z "$volumeName" -o -z "$svmId" ]; then
   echo "Error, you must provide a volume name and SVM ID." 1>&2
   usage
-  exit 1
 fi
 
 aws fsx create-volume --volume-type ONTAP --name $volumeName --ontap-configuration "{
@@ -70,4 +71,20 @@ aws fsx create-volume --volume-type ONTAP --name $volumeName --ontap-configurati
   \"StorageVirtualMachineId\": \"$svmId\",
   \"TieringPolicy\" : {\"CoolingPeriod\": 31, \"Name\": \"SNAPSHOT_ONLY\"},
   \"OntapVolumeType\": \"RW\",
-  \"SnapshotPolicy\": \"default\"}" --region=$region
+  \"SnapshotPolicy\": \"default\"}" --region=$region --output=json > $tmpout 2>&1
+
+if [ $? != "0" ]; then
+  echo "Failed to create the FSxN volume." 1>&2
+  cat $tmpout 1>&2
+  exit 1
+else
+  status=$(jq -r .Volume.Lifecycle $tmpout 2> /dev/null)
+  if [ "$status" == "CREATING" -o "$status" == "PENDING" ]; then
+    echo "FSxN volume '$volumeName'($(jq -r .Volume.VolumeId $tmpout)) is being created."
+    exit 0
+  else
+    echo "Unknown status '$status'. Complete output returned from the AWS api:" 1>&2
+    cat $tmpout 1>&2
+    exit 1
+  fi
+fi
