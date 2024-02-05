@@ -1,5 +1,5 @@
 # Deploy an ONTAP FSx file-system using Terraform
-This is a Terraform module which creates an FSx for NetApp ONTAP file system, including an SVM, a Security-Group and a FlexVolume in that file system, using AWS Terraform provider. 
+This is a Terraform module which creates an FSx for NetApp ONTAP file system in a multi-AZ fashion, including an SVM, a Security-Group and a FlexVolume in that file system, using AWS Terraform provider. 
 This repo can be sourced as a terraform module.
 Follow the instructions below to use this sample in your own environment.
 > [!NOTE]
@@ -35,7 +35,7 @@ Running this terraform module will result the following:
     - **Egress** allow all traffic
 * Create a new FSx for Netapp ONTAP file-system in your AWS account named "_terraform-fsxn_". The file-system will be created with the following configuration parameters:
     * 1024Gb of storage capacity
-    * Single AZ deployment type
+    * Multi AZ deployment type
     * 256Mbps of throughput capacity 
 
 * Create a Storage Virtual Maching (SVM) in this new file-system named "_first_svm_"
@@ -116,10 +116,13 @@ Make sure to replace all values within `< >` with your own variables.
 
 ```ruby
 module "fsxontap" {
-    source = "github.com/Netapp/FSx-ONTAP-samples-scripts/Terraform/deploy-fsx-ontap"
+    source = "github.com/Netapp/FSx-ONTAP-samples-scripts/Terraform/deploy-fsx-ontap/module"
 
     vpc_id = "<YOUR-VPC-ID>"
-    fsx_subnets = ["<YOUR-PRIMARY-SUBNET>", "<YOUR-SECONDAY-SUBNET>"]
+    fsx_subnets = {
+      primarysub = "<YOUR-PRIMARY-SUBNET>"
+      secondarysub = "<YOUR-SECONDAY-SUBNET>"
+    }
     create_sg = <true / false> // true to create Security Group for the Fs / false otherwise
     cidr_for_sg = "<YOUR-CIDR-BLOCK>"
     fsx_admin_password = "<YOUR_PASSWORD>"
@@ -131,6 +134,9 @@ module "fsxontap" {
 ```
   > [NOTE!]
   > To Override default values assigned to other variables in this module, add them to this source block as well. The above source block includes the minimum requirements only.
+
+  > [NOTE!]
+  > The default deployment type is: MULTI_AZ_1. For SINGLE AZ deployment override the `fsx_deploy_type` variable in the module block, and make sure to only provide one subnet as `primarysub`
 
 Please read the vriables descruptions in `variables.tf` file for more information regarding the variables passed to the module block.
 

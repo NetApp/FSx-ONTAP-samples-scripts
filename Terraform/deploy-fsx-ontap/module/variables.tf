@@ -40,7 +40,7 @@ variable "fsx_capacity_size_gb" {
 variable "fsx_deploy_type" {
   description = "The filesystem deployment type. Supports MULTI_AZ_1 and SINGLE_AZ_1"
   type        = string 
-  default     = "SINGLE_AZ_1"
+  default     = "MULTI_AZ_1"
 }
        
 variable "fsx_tput_in_MBps" {
