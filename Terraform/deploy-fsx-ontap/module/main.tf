@@ -8,7 +8,6 @@
   The Security Group is not required for deploying FSx ONTAP, but is included here for completeness.
 
   - If you wish to skip this resource, pass the variable "create_sg" as false to the module block. Otherwise, pass true.
-
   - If you wish to use the Security Group, choose the relevant source for the ingress rules as cidr block and pass the variable "cidr_for_sg" to the module block.
 
   Note that a source reference for a Security Group is optional, but is considered to be a best practice.
