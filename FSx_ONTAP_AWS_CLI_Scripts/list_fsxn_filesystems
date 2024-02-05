@@ -167,7 +167,7 @@ for region in $regions; do
     else
       jq -r '.FileSystems[] | .FileSystemId + "," + (.Tags[] | select(.Key == "Name") .Value) + "," + .Lifecycle + "," + .OntapConfiguration.Endpoints.Management.IpAddresses[0] + "," + .VpcId + "," + .SubnetIds[0]' $fileSystemsFile > $tmpout
   
-      if ("$includeNetworking" == "true") then
+      if [ "$includeNetworking" == "true" ]; then
         awk -F, -v region=$region 'BEGIN {first=1; formatStr="%12s %23s %35s %10s %15s %21s %24s\n"}; {if(first) {printf "\n"; printf formatStr, "Region", "FileSystem ID", "Name", "Status", "Managment IP", "VPC ID", "Subnet ID"; first=0}; printf formatStr, region, $1, $2, $3, $4, $5, $6}' < $tmpout
       else
         awk -F, -v region=$region 'BEGIN {first=1; formatStr="%12s %23s %35s %10s %15s\n"}; {if(first) {printf "\n"; printf formatStr, "Region", "FileSystem ID", "Name", "Status", "Managment IP", "VPC ID", "Subnet ID"; first=0}; printf formatStr, region, $1, $2, $3, $4}' < $tmpout

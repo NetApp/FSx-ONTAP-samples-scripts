@@ -58,7 +58,7 @@ foreach ($region in $regions) {
         $name=$tag.Value
       }
     }
-    if ($fs.OntapConfiguration.Endpoints.Management.IpAddresses -ne $null) {
+    if ($null -ne $fs.OntapConfiguration.Endpoints.Management.IpAddresses) {
       $manIP = $fs.OntapConfiguration.Endpoints.Management.IpAddresses[0]
     } else {
       $manIP = "N/A"
