@@ -17,6 +17,11 @@ on:
 jobs:
   docs:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        directory:
+          - 'Terraform/deploy-fsx-ontap/module'
+          - 'Terraform/deploy-fsx-ontap/standalone-module'
     steps:
       - name: Checkout pull request  
         uses: actions/checkout@v3.5.0
@@ -26,7 +31,7 @@ jobs:
       - name: Render documentation and push changes back to branch
         uses: terraform-docs/gh-actions@v1.0.0
         with:
-          working-dir: Terraform/*
+          working-dir: Terraform/${{ matrix.directory }}
           config-file: ".terraform-docs.yml"
           output-file: "README.md"
           output-method: inject

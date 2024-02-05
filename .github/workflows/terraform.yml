@@ -18,9 +18,14 @@ jobs:
   terraform:
     name: Terraform
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        directory:
+          - 'Terraform/deploy-fsx-ontap/module'
+          - 'Terraform/deploy-fsx-ontap/standalone-module'
     defaults:
       run:
-        working-directory: ./Terraform/deploy-fsx-ontap
+        working-directory: ${{ matrix.directory }}
 
     steps:
       - name: Checkout pull request
