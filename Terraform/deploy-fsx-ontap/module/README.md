@@ -1,5 +1,5 @@
 # Deploy an ONTAP FSx file-system using Terraform
-This is a Terraform module which creates an FSx for NetApp ONTAP file system, including an SVM, a Security-Group and a FlexVolume in that file system, using AWS Terraform provider. 
+This is a Terraform module which creates an FSx for NetApp ONTAP file system in a multi-AZ fashion, including an SVM, a Security-Group and a FlexVolume in that file system, using AWS Terraform provider. 
 This repo can be sourced as a terraform module.
 Follow the instructions below to use this sample in your own environment.
 > [!NOTE]
@@ -35,7 +35,7 @@ Running this terraform module will result the following:
     - **Egress** allow all traffic
 * Create a new FSx for Netapp ONTAP file-system in your AWS account named "_terraform-fsxn_". The file-system will be created with the following configuration parameters:
     * 1024Gb of storage capacity
-    * Single AZ deployment type
+    * Multi AZ deployment type
     * 256Mbps of throughput capacity 
 
 * Create a Storage Virtual Maching (SVM) in this new file-system named "_first_svm_"
@@ -116,10 +116,13 @@ Make sure to replace all values within `< >` with your own variables.
 
 ```ruby
 module "fsxontap" {
-    source = "github.com/Netapp/FSx-ONTAP-samples-scripts/Terraform/deploy-fsx-ontap"
+    source = "github.com/Netapp/FSx-ONTAP-samples-scripts/Terraform/deploy-fsx-ontap/module"
 
     vpc_id = "<YOUR-VPC-ID>"
-    fsx_subnets = ["<YOUR-PRIMARY-SUBNET>", "<YOUR-SECONDAY-SUBNET>"]
+    fsx_subnets = {
+      primarysub = "<YOUR-PRIMARY-SUBNET>"
+      secondarysub = "<YOUR-SECONDAY-SUBNET>"
+    }
     create_sg = <true / false> // true to create Security Group for the Fs / false otherwise
     cidr_for_sg = "<YOUR-CIDR-BLOCK>"
     fsx_admin_password = "<YOUR_PASSWORD>"
@@ -131,6 +134,9 @@ module "fsxontap" {
 ```
   > [NOTE!]
   > To Override default values assigned to other variables in this module, add them to this source block as well. The above source block includes the minimum requirements only.
+
+  > [NOTE!]
+  > The default deployment type is: MULTI_AZ_1. For SINGLE AZ deployment override the `fsx_deploy_type` variable in the module block, and make sure to only provide one subnet as `primarysub`
 
 Please read the vriables descruptions in `variables.tf` file for more information regarding the variables passed to the module block.
 
@@ -198,7 +204,7 @@ terraform apply -y
 | daily_backup_start_time | A recurring daily time, in the format HH:MM. HH is the zero-padded hour of the day (0-23), and MM is the zero-padded minute of the hour. Requires automatic_backup_retention_days to be set. | `string` | `"00:00"` | no |
 | disk_iops_configuration | The SSD IOPS configuration for the Amazon FSx for NetApp ONTAP file system | `map(any)` | `null` | no |
 | fsx_capacity_size_gb | The storage capacity (GiB) of the FSxN file system. Valid values between 1024 and 196608 | `number` | `1024` | no |
-| fsx_deploy_type | The filesystem deployment type. Supports MULTI_AZ_1 and SINGLE_AZ_1 | `string` | `"SINGLE_AZ_1"` | no |
+| fsx_deploy_type | The filesystem deployment type. Supports MULTI_AZ_1 and SINGLE_AZ_1 | `string` | `"MULTI_AZ_1"` | no |
 | fsx_maintenance_start_time | The preferred start time (in d:HH:MM format) to perform weekly maintenance, in the UTC time zone. | `string` | `"1:00:00"` | no |
 | fsx_name | The deployed filesystem name | `string` | `"terraform-fsxn"` | no |
 | fsx_subnets | A list of IDs for the subnets that the file system will be accessible from. Up to 2 subnets can be provided. | `map(any)` | <pre>{<br>  "primarysub": "",<br>  "secondarysub": ""<br>}</pre> | no |
