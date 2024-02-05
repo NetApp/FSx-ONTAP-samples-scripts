@@ -120,8 +120,8 @@ module "fsxontap" {
 
     vpc_id = "<YOUR-VPC-ID>"
     fsx_subnets = {
-      primarysub = "<YOUR-PRIMARY-SUBNET>"
-      secondarysub = "<YOUR-SECONDAY-SUBNET>"
+        primarysub   = "<YOUR-PRIMARY-SUBNET>"
+        secondarysub = "<YOUR-SECONDAY-SUBNET>"
     }
     create_sg = <true / false> // true to create Security Group for the Fs / false otherwise
     cidr_for_sg = "<YOUR-CIDR-BLOCK>"
