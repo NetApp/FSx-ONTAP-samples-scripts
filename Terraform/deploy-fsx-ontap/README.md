@@ -1,5 +1,3 @@
-<!-- BEGIN_TF_DOCS -->
-
 ## Repository Overview
 
 - [Callable terraform module for FSxN creation](/module)
