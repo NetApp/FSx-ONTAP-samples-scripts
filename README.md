@@ -1,4 +1,4 @@
-# FSxN-Samples
+# FSx-ONTAP-samples-scripts
 This GitHub repository contains comprehensive code samples and automation scripts for FSx for Netapp ONTAP operations, promoting the use of Infrastructure as Code (IAC) tools and encouraging developers to extend the product's functionalities through code.
 
 ## Table of Contents
@@ -8,7 +8,7 @@ This GitHub repository contains comprehensive code samples and automation script
 
 ## Author Information
 
-This repository is maintained by the contributors listed on [GitHub](https://github.com/NetApp/FSxN-Samples/graphs/contributors).
+This repository is maintained by the contributors listed on [GitHub](https://github.com/NetApp/FSx-ONTAP-samples-scripts/graphs/contributors).
 
 ## License
 
