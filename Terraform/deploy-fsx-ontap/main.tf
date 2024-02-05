@@ -22,7 +22,7 @@ resource "aws_security_group" "fsx_sg" {
 
 resource "aws_vpc_security_group_ingress_rule" "all_icmp" {
   count = var.create_sg ? 1 : 0
-  security_group_id = aws_security_group.fsx_sg.id
+  security_group_id = aws_security_group.fsx_sg[count.index]
   description       = "Allow all ICMP traffic"
   cidr_ipv4         = "0.0.0.0/0"
   ip_protocol       = "icmp"
@@ -30,7 +30,7 @@ resource "aws_vpc_security_group_ingress_rule" "all_icmp" {
 
 resource "aws_vpc_security_group_ingress_rule" "nfs_tcp" {
   count = var.create_sg ? 1 : 0
-  security_group_id = aws_security_group.fsx_sg.id
+  security_group_id = aws_security_group.fsx_sg[count.index]
   description       = "Remote procedure call for NFS"
   cidr_ipv4         = var.cidr_for_sg
   from_port         = 111
@@ -40,7 +40,7 @@ resource "aws_vpc_security_group_ingress_rule" "nfs_tcp" {
 
 resource "aws_vpc_security_group_ingress_rule" "nfs_udp" {
   count = var.create_sg ? 1 : 0
-  security_group_id = aws_security_group.fsx_sg.id
+  security_group_id = aws_security_group.fsx_sg[count.index]
   description       = "Remote procedure call for NFS"
   cidr_ipv4         = var.cidr_for_sg
   from_port         = 111
@@ -50,7 +50,7 @@ resource "aws_vpc_security_group_ingress_rule" "nfs_udp" {
 
 resource "aws_vpc_security_group_ingress_rule" "cifs" {
   count = var.create_sg ? 1 : 0
-  security_group_id = aws_security_group.fsx_sg.id
+  security_group_id = aws_security_group.fsx_sg[count.index]
   description       = "NetBIOS service session for CIFS"
   cidr_ipv4         = var.cidr_for_sg
   from_port         = 139
@@ -60,7 +60,7 @@ resource "aws_vpc_security_group_ingress_rule" "cifs" {
 
 resource "aws_vpc_security_group_ingress_rule" "snmp_tcp" {
   count = var.create_sg ? 1 : 0
-  security_group_id = aws_security_group.fsx_sg.id
+  security_group_id = aws_security_group.fsx_sg[count.index]
   description       = "Simple network management protocol for log collection"
   cidr_ipv4         = var.cidr_for_sg
   from_port         = 161
@@ -70,7 +70,7 @@ resource "aws_vpc_security_group_ingress_rule" "snmp_tcp" {
 
 resource "aws_vpc_security_group_ingress_rule" "snmp_udp" {
   count = var.create_sg ? 1 : 0
-  security_group_id = aws_security_group.fsx_sg.id
+  security_group_id = aws_security_group.fsx_sg[count.index]
   description       = "Simple network management protocol for log collection"
   cidr_ipv4         = var.cidr_for_sg
   from_port         = 161
@@ -80,7 +80,7 @@ resource "aws_vpc_security_group_ingress_rule" "snmp_udp" {
 
 resource "aws_vpc_security_group_ingress_rule" "smb_cifs" {
   count = var.create_sg ? 1 : 0
-  security_group_id = aws_security_group.fsx_sg.id
+  security_group_id = aws_security_group.fsx_sg[count.index]
   description       = "Microsoft SMB/CIFS over TCP with NetBIOS framing"
   cidr_ipv4         = var.cidr_for_sg
   from_port         = 445
@@ -90,7 +90,7 @@ resource "aws_vpc_security_group_ingress_rule" "smb_cifs" {
 
 resource "aws_vpc_security_group_ingress_rule" "nfs_mount_tcp" {
   count = var.create_sg ? 1 : 0
-  security_group_id = aws_security_group.fsx_sg.id
+  security_group_id = aws_security_group.fsx_sg[count.index]
   description       = "NFS mount"
   cidr_ipv4         = var.cidr_for_sg
   from_port         = 635
@@ -100,7 +100,7 @@ resource "aws_vpc_security_group_ingress_rule" "nfs_mount_tcp" {
 
 resource "aws_vpc_security_group_ingress_rule" "nfs_mount_udp" {
   count = var.create_sg ? 1 : 0
-  security_group_id = aws_security_group.fsx_sg.id
+  security_group_id = aws_security_group.fsx_sg[count.index]
   description       = "NFS mount"
   cidr_ipv4         = var.cidr_for_sg
   from_port         = 635
@@ -110,7 +110,7 @@ resource "aws_vpc_security_group_ingress_rule" "nfs_mount_udp" {
 
 resource "aws_vpc_security_group_egress_rule" "allow_all_traffic" {
   count = var.create_sg ? 1 : 0
-  security_group_id = aws_security_group.fsx_sg.id
+  security_group_id = aws_security_group.fsx_sg[count.index].id
   cidr_ipv4         = "0.0.0.0/0"
   ip_protocol       = "-1"
 }
@@ -134,7 +134,7 @@ resource "aws_fsx_ontap_file_system" "terraform-fsxn" {
 
 // OPTIONAL PARAMETERS
   storage_capacity    = var.fsx_capacity_size_gb
-  security_group_ids  = [aws_security_group.fsx_sg.id]
+  security_group_ids  = var.create_sg ? [element(aws_security_group.fsx_sg.*.id, 0)] : []
   deployment_type     = var.fsx_deploy_type
   throughput_capacity = var.fsx_tput_in_MBps
   tags = {
@@ -146,8 +146,8 @@ resource "aws_fsx_ontap_file_system" "terraform-fsxn" {
   daily_automatic_backup_start_time = var.daily_backup_start_time
   storage_type = var.storage_type
   disk_iops_configuration {
-    iops = var.disk_iops_configuration[iops]
-    mode = var.disk_iops_configuration[mode]
+    iops = var.disk_iops_configuration["iops"]
+    mode = var.disk_iops_configuration["mode"]
   }
   fsx_admin_password = var.fsx_admin_password
   route_table_ids = var.route_table_ids
@@ -189,4 +189,3 @@ resource "aws_fsx_ontap_volume" "myvol" {
   snapshot_policy = "NONE"
   tags = var.tags
 }
-

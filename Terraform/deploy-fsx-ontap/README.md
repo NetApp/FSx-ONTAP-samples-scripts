@@ -98,8 +98,8 @@ Running this terraform module will result the following:
 
     ```shell
     $ aws configure
-    AWS Access Key ID [None]: AKIAIOSFODNN7EXAMPLE
-    AWS Secret Access Key [None]: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+    AWS Access Key ID [None]: <YOUR-ACCESS-KEY-ID>
+    AWS Secret Access Key [None]: <YOUR-SECRET-ACCESS-KEY>
     Default region name [None]: us-west-2
     Default output format [None]: json
     ```
