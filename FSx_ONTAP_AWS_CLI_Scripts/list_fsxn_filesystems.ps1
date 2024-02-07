@@ -1,4 +1,3 @@
-#
 ################################################################################
 # THIS SOFTWARE IS PROVIDED BY NETAPP "AS IS" AND ANY EXPRESS OR IMPLIED
 # WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
@@ -13,7 +12,7 @@
 ################################################################################
 #
 # This script is used to list all the FSxN File Systems a user has access to.
-# It accept two optional parameters:
+# It accepts two optional parameters:
 #  -region <region>
 #  -all
 #  Where:
