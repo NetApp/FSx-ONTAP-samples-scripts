@@ -62,7 +62,7 @@ if [ $? != "0" ]; then
   cat $tmpout 1>&2
   exit 1
 else
-  status=$(jq -r .Volume.Lifecycle $tmpout 2> /dev/null)
+  status=$(jq -r .Lifecycle $tmpout 2> /dev/null)
   if [ "$status" == "DELETING"  -o "$status" == "PENDING" ]; then
     echo "Volume '$volumeId' is being deleted."
     exit 0
