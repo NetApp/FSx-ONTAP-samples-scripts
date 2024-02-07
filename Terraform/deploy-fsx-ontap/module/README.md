@@ -1,7 +1,7 @@
 # Deploy an ONTAP FSx file-system using Terraform
 This is a Terraform module which creates an FSx for NetApp ONTAP file system in a multi-AZ fashion, including an SVM, a Security-Group and a FlexVolume in that file system, using AWS Terraform provider. 
-This repo can be sourced as a terraform module.
-Follow the instructions below to use this sample in your own environment.
+This repo should be sourced as a terraform module, and does not need to be cloned locally!
+Follow the instructions below to use this sample in your environment.
 > [!NOTE]
 > This module does not support scale-out! One ha pair per deployment. 
 
@@ -14,17 +14,10 @@ Follow the instructions below to use this sample in your own environment.
 * [License](#license)
 
 ## Introduction
-### Repository Overview
-This is a Terraform module that contains the following files:
-* **main.tf** - The main set of configuration for this terraform module
-
-* **variables.tf** - Contains the variable definitions and assignments for this sample. Exported values will override any of the variables in this file. 
-
-* **output.tf** - Contains output declarations of the resources created by this Terraform module. Terraform stores output values in the configuration's state file
 
 ### What to expect
 
-Running this terraform module will result the following:
+Calling this terraform module will result the following:
 * Create a new AWS Security Group in your VPC with the following rules:
     - **Ingress** allow all ICMP traffic
     - **Ingress** allow nfs port 111 (both TCP and UDP)
@@ -79,28 +72,15 @@ Running this terraform module will result the following:
 
     The AWS Provider can source credentials and other settings from the shared configuration and credentials files. By default, these files are located at `$HOME/.aws/config` and `$HOME/.aws/credentials` on Linux and macOS, and `"%USERPROFILE%\.aws\credentials"` on Windows.
 
-    If no named profile is specified, the `default` profile is used. Use the `profile` parameter or `AWS_PROFILE` environment variable to specify a named profile.
-
-    The locations of the shared configuration and credentials files can be configured using either the parameters `shared_config_files` and `shared_credentials_files` or the environment variables `AWS_CONFIG_FILE` and `AWS_SHARED_CREDENTIALS_FILE`.
-
-    For example:
-    ```ruby
-    provider "aws" {
-        shared_config_files      = ["/Users/tf_user/.aws/conf"]
-        shared_credentials_files = ["/Users/tf_user/.aws/creds"]
-        profile                  = "customprofile"
-    }
-    ```
-
     There are several ways to set your credentials and configuration setting using AWS CLI. We will use [`aws configure`](https://docs.aws.amazon.com/cli/latest/reference/configure/index.html) command:
 
     Run the following command to quickly set and view your credentails, region, and output format. The following example shows sample values:
 
     ```shell
     $ aws configure
-    AWS Access Key ID [None]: <YOUR-ACCESS-KEY-ID>
-    AWS Secret Access Key [None]: <YOUR-SECRET-ACCESS-KEY>
-    Default region name [None]: us-west-2
+    AWS Access Key ID [None]: < YOUR-ACCESS-KEY-ID >
+    AWS Secret Access Key [None]: < YOUR-SECRET-ACCESS-KE >
+    Default region name [None]: < YOUR-PREFERRED-REGION >
     Default output format [None]: json
     ```
 
@@ -109,9 +89,32 @@ Running this terraform module will result the following:
 
 ## Usage
 
+This directory contains a shared Terraform module that can be referenced remotely. **No need to clone the repository in order to use it!**
+To reference this module, create a new terraform folder in your local environment, add a main.tf file and modify it according to the instructions below.
+
+### AWS provider block
+
+Add the AWS provider block to your local root `main.tf` file with the required configuration. For more information check [the docs](https://registry.terraform.io/providers/hashicorp/aws/latest/docs)
+
+Example:
+```ruby
+terraform {
+  required_providers {
+    aws = {
+      source = "hashicorp/aws"
+      version = "5.25"
+    }
+  }
+}
+
+provider "aws" {
+  # Configuration options
+}
+```
+
 ### Reference this module
 
-Add the following module block to your root module `main.tf` file.
+Add the following module block to your local `main.tf` file.
 Make sure to replace all values within `< >` with your own variables.
 
 ```ruby
@@ -136,15 +139,14 @@ module "fsxontap" {
   > To Override default values assigned to other variables in this module, add them to this source block as well. The above source block includes the minimum requirements only.
 
   > [NOTE!]
-  > The default deployment type is: MULTI_AZ_1. For SINGLE AZ deployment override the `fsx_deploy_type` variable in the module block, and make sure to only provide one subnet as `primarysub`
+  > The default deployment type is: MULTI_AZ_1. For SINGLE AZ deployment, override the `fsx_deploy_type` variable in the module block, and make sure to only provide one subnet as `primarysub`
 
-Please read the vriables descruptions in `variables.tf` file for more information regarding the variables passed to the module block.
+Please read the vriables descriptions in `variables.tf` file for more information regarding the variables passed to the module block.
 
-### AWS provider block
+### Example main.tf file
 
-Add the AWS provider block to your root module `main.tf` file with the required configuration. For more information check [the docs](https://registry.terraform.io/providers/hashicorp/aws/latest/docs)
+For a quick and easy start, copy and paste the below example to your main.tf file and modify the variables with your enviroonment's values.
 
-Example:
 ```ruby
 terraform {
   required_providers {
@@ -156,18 +158,68 @@ terraform {
 }
 
 provider "aws" {
-  # Configuration options
+    shared_config_files      = ["$HOME/.aws/conf"]
+    shared_credentials_files = ["$HOME/.aws/credentials"]
+    region = "us-west-2"
 }
+
+
+module "fsxontap" {
+    source = "github.com/Netapp/FSx-ONTAP-samples-scripts/Terraform/deploy-fsx-ontap/module"
+
+    vpc_id = "vpc-111111111"
+    fsx_subnets = {
+        "primarysub" = "subnet-11111111"
+        "secondarysub" = "subnet-2222222"
+    }
+    create_sg = true
+    cidr_for_sg = "10.0.0.0/8"
+    fsx_admin_password = "yourpassword"
+    route_table_ids = ["rtb-111111"]
+    tags = {
+        Terraform   = "true"
+        Environment = "dev"
+    }
+}
+
+
 ```
 
 ### Install the module
 
 Whenever you add a new module to a configuration, Terraform must install the module before it can be used. Both the `terraform get` and `terraform init` commands will install and update modules. The `terraform init` command will also initialize backends and install plugins.
 
+Command:
 ```shell
-terraform get
+terraform init
+```
+Output:
+
+```shell
+Initializing the backend...
+Initializing modules...
 Downloading git::https://github.com/Netapp/FSx-ONTAP-samples-scripts.git for fsxontap...
-- fsxontap in .terraform/modules/fsxontap/Terraform/deploy-fsx-ontap
+- fsxontap in .terraform/modules/fsxontap/Terraform/deploy-fsx-ontap/module
+
+Initializing provider plugins...
+- Finding hashicorp/aws versions matching "5.25.0"...
+- Installing hashicorp/aws v5.25.0...
+- Installed hashicorp/aws v5.25.0 (signed by HashiCorp)
+
+Terraform has created a lock file .terraform.lock.hcl to record the provider
+selections it made above. Include this file in your version control repository
+so that Terraform can guarantee to make the same selections by default when
+you run "terraform init" in the future.
+
+Terraform has been successfully initialized!
+
+You may now begin working with Terraform. Try running "terraform plan" to see
+any changes that are required for your infrastructure. All Terraform commands
+should now work.
+
+If you ever set or change modules or backend configuration for Terraform,
+rerun this command to reinitialize your working directory. If you forget, other
+commands will detect it and remind you to do so if necessary.
 ```
 
 ### Plan and Apply the cofiguration
