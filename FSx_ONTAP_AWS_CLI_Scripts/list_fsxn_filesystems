@@ -41,7 +41,7 @@ usage () {
 Usage $(basename $0) [-r region] [-a] [-n] [-c] [-s] [-i fileSystemId] [-f fileSystemName]
   Where: -r region allows you to specify the region you want the list from.
          -a means all regions.
-         -n means include addional network information.
+         -n means include additional network information.
          -c means to display a hierarchical view of each filesystem including svms and volumes.
          -i allows you to limit the display to the file system with the id provided.
          -f allows you to limit the display to the file system with the name provided.
@@ -107,7 +107,6 @@ if [ ! -z "$fsid" -a ! -z "$fileSystemName" ]; then
   echo "Error, you can't specify both a file system ID and file system name." 1>&2
   exit 1
 fi
-
 #
 # Loop on all the requested regions.
 for region in $regions; do
