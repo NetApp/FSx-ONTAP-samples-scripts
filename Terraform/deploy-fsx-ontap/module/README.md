@@ -114,7 +114,7 @@ Running this terraform module will result the following:
 Add the following module block to your root module `main.tf` file.
 Make sure to replace all values within `< >` with your own variables.
 
-```ruby
+```json
 module "fsxontap" {
     source = "github.com/Netapp/FSx-ONTAP-samples-scripts/Terraform/deploy-fsx-ontap/module"
 
