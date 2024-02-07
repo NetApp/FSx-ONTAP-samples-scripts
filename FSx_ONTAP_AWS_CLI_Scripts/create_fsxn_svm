@@ -72,7 +72,7 @@ fi
 #
 # Ensure all the required parameters have been provided.
 if [ -z "$svmName" -o -z "$fileSystemName" -a -z "$fsid" ]; then
-  echo "Error, missing required argumenets." 1>&2
+  echo "Error, missing required arguments." 1>&2
   usage
 fi
 #

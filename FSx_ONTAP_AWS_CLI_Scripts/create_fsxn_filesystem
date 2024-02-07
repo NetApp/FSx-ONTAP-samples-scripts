@@ -30,7 +30,7 @@ where
   availability: Specifies whether the HA pair should be spread across 'single' or 'multiple' availability zones. Valid settings are 'Single' or 'Multi' (default).
   size: Is size, in gigabytes, you want the file system to be. Minimum and the default is 1024.
   throughput: Is the throughput capacity you the file system to have. Valid numbers are 128, 256, 512, 1024, 2048, and 4096. Default is 128.
-  CIDR: Is an address range that the system management, and data access, IPs will be allocated from. It is only allowed for multi availability zone deployements.
+  CIDR: Is an address range that the system management, and data access, IPs will be allocated from. It is only allowed for multi availability zone deployments.
 EOF
   exit 1
 }
