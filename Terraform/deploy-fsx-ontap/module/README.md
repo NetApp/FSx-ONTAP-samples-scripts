@@ -97,7 +97,7 @@ To reference this module, create a new terraform folder in your local environmen
 Add the AWS provider block to your local root `main.tf` file with the required configuration. For more information check [the docs](https://registry.terraform.io/providers/hashicorp/aws/latest/docs)
 
 Example:
-```ruby
+```hcl
 terraform {
   required_providers {
     aws = {
@@ -117,7 +117,7 @@ provider "aws" {
 Add the following module block to your local `main.tf` file.
 Make sure to replace all values within `< >` with your own variables.
 
-```ruby
+```hcl
 module "fsxontap" {
     source = "github.com/Netapp/FSx-ONTAP-samples-scripts/Terraform/deploy-fsx-ontap/module"
 
@@ -147,7 +147,7 @@ Please read the vriables descriptions in `variables.tf` file for more informatio
 
 For a quick and easy start, copy and paste the below example to your main.tf file and modify the variables with your enviroonment's values.
 
-```ruby
+```hcl
 terraform {
   required_providers {
     aws = {
