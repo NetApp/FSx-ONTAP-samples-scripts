@@ -13,9 +13,13 @@ Before running the UNIX based scripts, make sure the following package is instal
 
 | Script                  | Description     |
 |:------------------------|:----------------|
-|list_fsx_fss             | List all the FSxN filesystems that the user has access to. |
-|list_fax_fss.ps1         | List all the FSxN filesystems that the user has access to, written in PowerShell. |
-|list_fsx_volumes         | List all the FSxN volumes that the user has access to. |
-|list_fsx_svms            | List all the storage virtual machines that the user access to. |
-|fsx_create_volume        | Creates a new volume under a specified SVM. |
-|fsx_delete_volume        | Deletes a volume. |
+|create_fsxn_filesystem   | Creates a new FSx for NetApp ONTAP file-system |
+|create_fsxn_svm          | Creates a new Storage Virtual Server (svm) in a soecific FSx ONTAP filesystem |
+|create_fsxn_volume       | Creates a new volume under a specified SVM. |
+|list_fsx_filesystems     | List all the FSx for NetApp ONTAP filesystems that the user has access to. |
+|list_fsx_filesystems.ps1 | List all the FSx for NetApp ONTAP filesystems that the user has access to, written in PowerShell. |
+|list_fsxn_volumes        | List all the FSx for NetApp ONTAP volumes that the user has access to. |
+|list_fsxn_svms           | List all the storage virtual machines that the user access to. |
+|delete_fsxn_filesystem   | Deletes an FSx for NetApp ONTAP filesystem. |
+|delete_fsxn_svm          | Deletes an svm. |
+|delete_fsxn_volume       | Deletes a volume. |
