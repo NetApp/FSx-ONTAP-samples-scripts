@@ -112,8 +112,8 @@ variable "vol_info" {
   description = "Details for the volume creation"
   type        = map(any)
   default = {
-    "vol_name"             = "vol1"
-    "junction_path"        = "/vol1"
+   "vol_name"             = "vol1"
+   "junction_path"        = "/vol1"
 	 "size_mg"              = 1024
 	 "efficiency"           = true
 	 "tier_policy_name"     = "AUTO"
