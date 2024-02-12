@@ -20,7 +20,8 @@ provider "aws" {
   - If you wish to skip this resource, comment out the resource blocks of the Security Group and the rules.
 
   - If you wish to use the Security Group, choose the relevant source for the ingress rules (can be either cidr block or security group id)
-    and uncomment the relevant line in the resource block. Make sure you add your specific value as well. 
+    and modify/uncomment the relevant line in the resource block. Make sure you add your specific value as well. 
+    Note that currently all rules are configured for source cidr: 10.0.0.0/8
 
   Note that a source reference for a Security Group is optional, but is considered to be a best practice.
   Feel free to add, remove, or change the rules as needed. The rules below are just a suggestion for basic functionality.
@@ -44,7 +45,7 @@ resource "aws_vpc_security_group_ingress_rule" "all_icmp" {
 resource "aws_vpc_security_group_ingress_rule" "nfs_tcp" {
   security_group_id = aws_security_group.fsx_sg.id
   description       = "Remote procedure call for NFS"
-//  cidr_ipv4         = "10.0.0.0/8"
+  cidr_ipv4         = "10.0.0.0/8"
 //  referenced_security_group_id = "sg-11111111111111111"
   from_port         = 111
   to_port           = 111
@@ -54,7 +55,7 @@ resource "aws_vpc_security_group_ingress_rule" "nfs_tcp" {
 resource "aws_vpc_security_group_ingress_rule" "nfs_udp" {
   security_group_id = aws_security_group.fsx_sg.id
   description       = "Remote procedure call for NFS"
-//  cidr_ipv4         = "10.0.0.0/8"
+  cidr_ipv4         = "10.0.0.0/8"
 //  referenced_security_group_id = "sg-11111111111111111"
   from_port         = 111
   to_port           = 111
@@ -64,7 +65,7 @@ resource "aws_vpc_security_group_ingress_rule" "nfs_udp" {
 resource "aws_vpc_security_group_ingress_rule" "cifs" {
   security_group_id = aws_security_group.fsx_sg.id
   description       = "NetBIOS service session for CIFS"
-//  cidr_ipv4         = "10.0.0.0/8"
+  cidr_ipv4         = "10.0.0.0/8"
 //  referenced_security_group_id = "sg-11111111111111111"
   from_port         = 139
   to_port           = 139
@@ -74,7 +75,7 @@ resource "aws_vpc_security_group_ingress_rule" "cifs" {
 resource "aws_vpc_security_group_ingress_rule" "snmp_tcp" {
   security_group_id = aws_security_group.fsx_sg.id
   description       = "Simple network management protocol for log collection"
-//  cidr_ipv4         = "10.0.0.0/8"
+  cidr_ipv4         = "10.0.0.0/8"
 //  referenced_security_group_id = "sg-11111111111111111"
   from_port         = 161
   to_port           = 162
@@ -84,7 +85,7 @@ resource "aws_vpc_security_group_ingress_rule" "snmp_tcp" {
 resource "aws_vpc_security_group_ingress_rule" "snmp_udp" {
   security_group_id = aws_security_group.fsx_sg.id
   description       = "Simple network management protocol for log collection"
-//  cidr_ipv4         = "10.0.0.0/8"
+  cidr_ipv4         = "10.0.0.0/8"
 //  referenced_security_group_id = "sg-11111111111111111"
   from_port         = 161
   to_port           = 162
@@ -94,7 +95,7 @@ resource "aws_vpc_security_group_ingress_rule" "snmp_udp" {
 resource "aws_vpc_security_group_ingress_rule" "smb_cifs" {
   security_group_id = aws_security_group.fsx_sg.id
   description       = "Microsoft SMB/CIFS over TCP with NetBIOS framing"
-//  cidr_ipv4         = "10.0.0.0/8"
+  cidr_ipv4         = "10.0.0.0/8"
 //  referenced_security_group_id = "sg-11111111111111111"
   from_port         = 445
   to_port           = 445
@@ -104,7 +105,7 @@ resource "aws_vpc_security_group_ingress_rule" "smb_cifs" {
 resource "aws_vpc_security_group_ingress_rule" "nfs_mount_tcp" {
   security_group_id = aws_security_group.fsx_sg.id
   description       = "NFS mount"
-//  cidr_ipv4         = "10.0.0.0/8"
+  cidr_ipv4         = "10.0.0.0/8"
 //  referenced_security_group_id = "sg-11111111111111111"
   from_port         = 635
   to_port           = 635
@@ -114,7 +115,7 @@ resource "aws_vpc_security_group_ingress_rule" "nfs_mount_tcp" {
 resource "aws_vpc_security_group_ingress_rule" "nfs_mount_udp" {
   security_group_id = aws_security_group.fsx_sg.id
   description       = "NFS mount"
-//  cidr_ipv4         = "10.0.0.0/8"
+  cidr_ipv4         = "10.0.0.0/8"
 //  referenced_security_group_id = "sg-11111111111111111"
   from_port         = 635
   to_port           = 635
