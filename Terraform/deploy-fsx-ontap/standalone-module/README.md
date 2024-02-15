@@ -5,8 +5,8 @@ Follow the instructions below to use this sample in your own environment.
 ## Table of Contents
 * [Introduction](#introduction)
 * [Prerequisites](#prerequisites)
-* [Getting Started](#getting-started)
-* [Usage Examples](#usage-examples)
+* [Usage](#usage)
+* [Repository Overview](#repository-overview)
 * [Author Information](#author-information)
 * [License](#license)
 
