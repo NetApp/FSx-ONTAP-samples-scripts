@@ -6,7 +6,7 @@ Follow the instructions below to use this sample in your own environment.
 * [Introduction](#introduction)
 * [Prerequisites](#prerequisites)
 * [Usage](#usage)
-* [Repository Overview](#repository-overview)
+* [Repository Overview](#repository-overview-1)
 * [Author Information](#author-information)
 * [License](#license)
 
