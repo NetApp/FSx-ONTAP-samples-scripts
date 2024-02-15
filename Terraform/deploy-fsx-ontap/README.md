@@ -1,7 +1,7 @@
 ## Repository Overview
 
-- [Callable terraform module for FSxN creation](/module)
-- [Standalone terraform module to clone and run locally](/standalone-module)
+- [Callable terraform module for FSxN creation](/Terraform/deploy-fsx-ontap/module)
+- [Standalone terraform module to clone and run locally](/Terraform/deploy-fsx-ontap/standalone-module)
 
 ## Author Information
 
