@@ -40,7 +40,7 @@ region=$(aws configure list | egrep '^.*egion ' | awk '{print $2}')
 #
 # Process command line arguments.
 skipBackup=true
-while getopts "bi:r:" option; do
+while getopts "hbi:r:" option; do
   case $option in
     r) region="$OPTARG"
       ;;

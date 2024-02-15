@@ -168,7 +168,7 @@ region=$(aws configure list | egrep '^.*egion ' | awk '{print $2}')
 skipBackup=true
 #
 # Process command line arguments.
-while getopts "br:f:i:" option; do
+while getopts "hbr:f:i:" option; do
   case $option in
     f) fileSystemName=$OPTARG
       ;;
@@ -178,8 +178,7 @@ while getopts "br:f:i:" option; do
       ;;
     b) skipBackup=false
       ;;
-    *) echo "Error, unknown option '$option'." 1>&2
-      usage  # implied exit
+    *) usage
       ;;
   esac
 done

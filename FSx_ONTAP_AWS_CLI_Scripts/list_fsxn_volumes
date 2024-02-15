@@ -64,7 +64,7 @@ excludeRoot=false
 filter=""
 fsid=""
 fileSystemName=""
-while getopts "r:af:i:nos:" option; do
+while getopts "hr:af:i:nos:" option; do
   case "$option" in
     r) region="$OPTARG"
       ;;
@@ -92,8 +92,7 @@ while getopts "r:af:i:nos:" option; do
       ;;
     s) svmID="$OPTARG"
       ;;
-    *) echo "Error, unknown option '$option'." 1>&2
-      usage
+    *) usage
       ;;
   esac
 done

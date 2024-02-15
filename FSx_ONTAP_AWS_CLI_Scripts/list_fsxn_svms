@@ -56,7 +56,7 @@ fi
 allRegions=false
 includeFsName=false
 region=$(aws configure list | egrep '^.*egion ' | awk '{print $2}')
-while getopts "anr:i:f:" option; do
+while getopts "hanr:i:f:" option; do
   case "$option" in
     r) region="$OPTARG"
       ;;
@@ -68,8 +68,7 @@ while getopts "anr:i:f:" option; do
       ;;
     f) fileSystemName="$OPTARG"
       ;;
-    *) echo "Error, unknown option '$option'." 1>&2
-      usage
+    *) usage
       ;;
   esac
 done
