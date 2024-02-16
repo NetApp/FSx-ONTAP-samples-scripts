@@ -98,13 +98,29 @@ while getopts "hr:af:i:nos:" option; do
 done
 
 if [ "$allRegions" = "true" ]; then
-  regions=$(aws ec2 describe-regions --query "Regions[].RegionName" --output=json | jq -r '.[]')
+  #
+  # Generate a list of all the valid regions the user can search. That is the
+  # intersection of all the regions they have enabled, and the regions that
+  # support FSxN
+  allEndabledRegions=$(aws ec2 describe-regions --query "Regions[].RegionName" --output=json | jq -r '.[]')
+  allFsxnRegions=$(curl -s https://api.regional-table.region-services.aws.a2z.com/index.json | jq -r '.prices[] | select(.attributes."aws:serviceName" == "Amazon FSx for NetApp ONTAP") .attributes."aws:region"')
+  for reg in $allEndabledRegions; do
+    for fsxnReg in $allFsxnRegions; do
+      if [ $reg == $fsxnReg ]; then
+        regions+=($reg)
+      fi
+    done
+  done
+  if [ -z "$regions" ]; then
+    echo "Error, failed to get the list of regions that support FSxN" 1>&2
+    exit 1
+  fi
 else
-  regions=$region
+  regions=($region)
 fi
 #
 # Loop on all the regions.
-for region in $regions; do
+for region in ${regions[*]}; do
   #
   # Check that the fsx service is supported in thie region
   if [ ! -z "$(getent hosts fsx.$region.amazonaws.com)" ]; then
