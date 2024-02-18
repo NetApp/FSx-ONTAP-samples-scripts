@@ -2,36 +2,38 @@
 
 ## Introduction
 
-The solution provide the ability to export LUN metrics into CloudWatch. It export the Latency, Iops and Throughput metrics. The solution is per FileSystem
-The solution is based on a CloudFormation template that need to be deployed per FileSystem. The template creates the following resourcess
+This solution provides the ability to export LUN metrics from an FSx for ONTAP file system into Amazon CloudWatch. It exports the Latency, IOPS, and Throughput metrics for a single file system.
+The solution is based on a CloudFormation template that you need to deploy for each file system. The template creates the following resources:
 
-1. Lambda - the unit that monitor the FileSystem and add the metrics.
-2. Scheduler - AWS EventBridge scheduler that thrigger the Lambda every minute.
-3. Dashboard - CloudWatch desbaord that show 10 widgets. 9 widgets per metric (Latency, Iops, Throughput - Read, Write and Total) and 1 widget that show top 5 luns with highest throuput.
-4. Lambda Role - IAM role that allow the Lambda to run.
-5. Scheduler Role - IAM role that allow the scheduler to tirgger the lambda.
-6. SecretManager endpoint (optional) - as the Lambda run inside the vpc, by default it will not have outgoing connectivity , so it need to have VPC endpint to the SecretManager service. User can decide either to create it without the CloudFormation or via the CloudFormation.
-7. CloudWatch endpoint (optional) - as the Lambda run inside the vpc, by default it will not have outgoing connectivity , so it need to have VPC endpint to the CloudWatch service. User can decide either to create it without the CloudFormation or via the CloudFormation.
-8. SecretManager secret (optional) - in order to send to the FileSystem ONTAP REST APIs commands, the Lambda needs the ONTAP credentials. the Lambda is desgined to take the password from a secret. User can either provide existing ARN with a key name, or to mark that the CloudFormation template will generate a secret.
+1. Lambda - The service that monitors the file system and collects the metrics.
+2. Scheduler - The Amazon EventBridge scheduler that triggers the Lambda collection every minute.
+3. Dashboard - The Amazon CloudWatch dashboard that shows 10 widgets. There are 9 widgets per metric (Latency, IOPS, Throughput - Read, Write, and Total) and 1 widget that shows the top 5 LUNs with the highest throughput.
+4. Lambda Role - The IAM role that allows the Lambda service to run.
+5. Scheduler Role - The IAM role that allows the scheduler to trigger the Lambda service.
+6. SecretManager endpoint (optional) - Because the Lambda service runs inside the VPC, by default it will not have outgoing connectivity, so it needs to have a VPC endpoint to the SecretManager service. You can decide either to create it with CloudFormation or without CloudFormation.
+7. CloudWatch endpoint (optional) - Because the Lambda service runs inside the VPC, by default it will not have outgoing connectivity, so it needs to have a VPC endpoint to the CloudWatch service. You can decide either to create it with CloudFormation or without CloudFormation.
+8. SecretManager secret (optional) - In order to send the file system ONTAP REST APIs commands, the Lambda service needs the ONTAP credentials. The Lambda is designed to take the password from a secret. You can either provide an existing ARN with a key name, or to mark that the CloudFormation template will generate a secret.
 
 ## Prerequisites
 
-* You must have an AWS Account with necessary permissions to create and manage resources
+* You must have an AWS Account with the necessary permissions to create and manage resources.
+
 ## Usage
 
-In order to use the solution, you will need to run the CloudFomration template in your AWS accout.
+In order to use the solution, you will need to run the CloudFormation template in your AWS account.
+
 The CloudFormation parameters are:
 
-1. FileSystemId (Mandatory) - the id of the FileSystem .
-2. Subnet IDs - the Subnet ids that the lambda will run - the subnets need to have connectivity to the FileSystem.
-3. Security Group IDs (Mandatory) - the SecurityGroup ids that the lambda will be associated when running - they need to provide connectivity to the FileSystem.
-4. VPC ID (Mandatory) - the VPC that the Lambda will run.
-5. Create Secret Manager Endpoint (Not mandatory) - flag if to create SecretManager VPC endpoint inside the VPC.
-6. Create CloudWatch Endpoint (Not mandatory) - flag if to create CloudWatch VPC endpoint inside the VPC.
-7. Create Secret for the password - flag if to create SecretManager secret. In case that it marked as true, the parameter FSX admin password is mandatory.
-8. FSX admin password - the fsxadmin password. in case that the user decided to create Secretmanager secret this parameter is mandatory.
-9. Secret Manager FSX admin password ARN - in case the user already created secret for the Lambda and didnt mark to create secret ARN , this parameter is mandatory.
-10. Secret Manager FSX admin password key - the key of the fsxadmin secret password, if the user didnt mark to create secret ARN , this parameter is mandatory.
+1. FileSystemId (Mandatory) - The ID of the FSx for ONTAP file system.
+2. Subnet IDs - The subnet IDs on which the Lambda service will run - the subnets need to have connectivity to the file system.
+3. Security Group IDs (Mandatory) - The SecurityGroup IDs with which the Lambda service will be associated when running - they need to provide connectivity to the file system.
+4. VPC ID (Mandatory) - The VPC on which the Lambda service will run.
+5. Create Secret Manager Endpoint (Not mandatory) - A flag if you plan to create the SecretManager VPC endpoint inside the VPC.
+6. Create CloudWatch Endpoint (Not mandatory) - A flag if you plan to create the CloudWatch VPC endpoint inside the VPC.
+7. Create Secret for the password - A flag if you plan to create the SecretManager secret. If this is marked as true, the parameter FSX admin password is mandatory.
+8. FSX admin password - The fsxadmin password. This parameter is mandatory if you decide to create the SecretManager secret.
+9. Secret Manager FSX admin password ARN - In case the user has already created a secret for the Lambda service and didn't mark to create the secret ARN, this parameter is mandatory.
+10. Secret Manager FSX admin password key - The key of the fsxadmin secret password. If the user didn't mark to create secret ARN, this parameter is mandatory.
 
 ## Author Information
 
