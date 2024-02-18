@@ -23,12 +23,12 @@ variable "vpc_id" {
 }
 
 variable "fsx_subnets" {
-  description = "The IDs of the subnets fro which the FSxN filesystem will be assigned IP addresses"
+  description = "A list of IDs for the subnets that the file system will be accessible from. Up to 2 subnets can be provided."
   type        = map(any)
   default = {
-    "primarysub"   = ""
-    "secondarysub" = ""
-   }
+       "primarysub" = ""
+       "secondarysub" = ""
+  }
 }
 
 variable "fsx_capacity_size_gb" {
@@ -40,7 +40,7 @@ variable "fsx_capacity_size_gb" {
 variable "fsx_deploy_type" {
   description = "The filesystem deployment type. Supports MULTI_AZ_1 and SINGLE_AZ_1"
   type        = string 
-  default     = "SINGLE_AZ_1"
+  default     = "MULTI_AZ_1"
 }
        
 variable "fsx_tput_in_MBps" {
@@ -52,12 +52,13 @@ variable "fsx_tput_in_MBps" {
 variable "fsx_maintenance_start_time" {
   description = "The preferred start time (in d:HH:MM format) to perform weekly maintenance, in the UTC time zone."
   type        = string
-  default     = "00:00:00"
+  default     = "1:00:00"
 }
 
 variable "kms_key_id" {
   description = "ARN for the KMS Key to encrypt the file system at rest, Defaults to an AWS managed KMS Key."
   type        = string
+  default     = null
 }
 
 variable "backup_retention_days" {
@@ -75,10 +76,7 @@ variable "daily_backup_start_time" {
 variable "disk_iops_configuration" {
   description = "The SSD IOPS configuration for the Amazon FSx for NetApp ONTAP file system"
   type        = map(any)
-  default = {
-     "iops" = 3000
-     "mode" = "AUTOMATIC"
-  }
+  default     = null
 }
 
 variable "fsx_admin_password" {
@@ -93,8 +91,9 @@ variable "storage_type" {
 }
 
 variable "route_table_ids" {
-  description = "Specifies the VPC route tables in which your file system's endpoints will be created. You should specify all VPC route tables associated with the subnets in which your clients are located."
+  description = "Specifies the VPC route tables in which your file system's endpoints will be created. You should specify all VPC route tables associated with the subnets in which your clients are located. By default, Amazon FSx selects your VPC's default route table."
   type        = list(any)
+  default     = null
 }
 
 variable "svm_name" {
@@ -113,8 +112,8 @@ variable "vol_info" {
   description = "Details for the volume creation"
   type        = map(any)
   default = {
-    "vol_name"             = "vol1"
-    "junction_path"        = "/vol1"
+   "vol_name"             = "vol1"
+   "junction_path"        = "/vol1"
 	 "size_mg"              = 1024
 	 "efficiency"           = true
 	 "tier_policy_name"     = "AUTO"
@@ -130,9 +129,7 @@ variable "vol_info" {
 variable "vol_snapshot_policy" {
   description = "Specifies the snapshot policy for the volume"
   type        = map(any)
-  default = {
-     "Name" = "terraform-fsxn"
-  }
+  default = null
 }
 
 variable "tags" {

@@ -1,14 +1,14 @@
-# FSxN-Samples
+# FSx-ONTAP-samples-scripts
 This GitHub repository contains comprehensive code samples and automation scripts for FSx for Netapp ONTAP operations, promoting the use of Infrastructure as Code (IAC) tools and encouraging developers to extend the product's functionalities through code.
 
 ## Table of Contents
 * [FSxN deployment using Terraform](/Terraform/deploy-fsx-ontap)
-* [CLI convenience scripts](/cli_convenience_scripts)
+* [AWS CLI management scripts for FSx ONTAP](/fsx-ontap-aws-cli-scripts)
 
 
 ## Author Information
 
-This repository is maintained by the contributors listed on [GitHub](https://github.com/NetApp/FSxN-Samples/graphs/contributors).
+This repository is maintained by the contributors listed on [GitHub](https://github.com/NetApp/FSx-ONTAP-samples-scripts/graphs/contributors).
 
 ## License
 

@@ -1,116 +1,129 @@
-# Copyright (c) NetApp, Inc.
-# SPDX-License-Identifier: Apache-2.0
+
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "5.25.0"
+    }
+  }
+
+}
+
+provider "aws" {
+  region = "us-west-2"
+}
 
 /* 
   The following resources are a Security Group followed by ingress and egress rules for FSx ONTAP. 
   The Security Group is not required for deploying FSx ONTAP, but is included here for completeness.
 
-  - If you wish to skip this resource, pass the variable "create_sg" as false to the module block. Otherwise, pass true.
+  - If you wish to skip this resource, comment out the resource blocks of the Security Group and the rules.
 
-  - If you wish to use the Security Group, choose the relevant source for the ingress rules as cidr block and pass the variable "cidr_for_sg" to the module block.
+  - If you wish to use the Security Group, choose the relevant source for the ingress rules (can be either cidr block or security group id)
+    and modify/uncomment the relevant line in the resource block. Make sure you add your specific value as well. 
+    Note that currently all rules are configured for source cidr: 10.0.0.0/8
 
   Note that a source reference for a Security Group is optional, but is considered to be a best practice.
-  The rules below are just a suggestion for basic functionality.
+  Feel free to add, remove, or change the rules as needed. The rules below are just a suggestion for basic functionality.
 */
 
 resource "aws_security_group" "fsx_sg" {
-  count       = var.create_sg ? 1 : 0
   name        = "fsx_sg"
   description = "Allow FSx ONTAP required ports"
   vpc_id      = var.vpc_id
 }
 
 resource "aws_vpc_security_group_ingress_rule" "all_icmp" {
-  count             = var.create_sg ? 1 : 0
-  security_group_id = aws_security_group.fsx_sg[count.index]
+  security_group_id = aws_security_group.fsx_sg.id
   description       = "Allow all ICMP traffic"
   cidr_ipv4         = "0.0.0.0/0"
+  from_port         = -1
+  to_port           = -1
   ip_protocol       = "icmp"
 }
 
 resource "aws_vpc_security_group_ingress_rule" "nfs_tcp" {
-  count             = var.create_sg ? 1 : 0
-  security_group_id = aws_security_group.fsx_sg[count.index]
+  security_group_id = aws_security_group.fsx_sg.id
   description       = "Remote procedure call for NFS"
-  cidr_ipv4         = var.cidr_for_sg
+  cidr_ipv4         = "10.0.0.0/8"
+//  referenced_security_group_id = "sg-11111111111111111"
   from_port         = 111
   to_port           = 111
   ip_protocol       = "tcp"
 }
 
 resource "aws_vpc_security_group_ingress_rule" "nfs_udp" {
-  count             = var.create_sg ? 1 : 0
-  security_group_id = aws_security_group.fsx_sg[count.index]
+  security_group_id = aws_security_group.fsx_sg.id
   description       = "Remote procedure call for NFS"
-  cidr_ipv4         = var.cidr_for_sg
+  cidr_ipv4         = "10.0.0.0/8"
+//  referenced_security_group_id = "sg-11111111111111111"
   from_port         = 111
   to_port           = 111
   ip_protocol       = "udp"
 }
 
 resource "aws_vpc_security_group_ingress_rule" "cifs" {
-  count             = var.create_sg ? 1 : 0
-  security_group_id = aws_security_group.fsx_sg[count.index]
+  security_group_id = aws_security_group.fsx_sg.id
   description       = "NetBIOS service session for CIFS"
-  cidr_ipv4         = var.cidr_for_sg
+  cidr_ipv4         = "10.0.0.0/8"
+//  referenced_security_group_id = "sg-11111111111111111"
   from_port         = 139
   to_port           = 139
   ip_protocol       = "tcp"
 }
 
 resource "aws_vpc_security_group_ingress_rule" "snmp_tcp" {
-  count             = var.create_sg ? 1 : 0
-  security_group_id = aws_security_group.fsx_sg[count.index]
+  security_group_id = aws_security_group.fsx_sg.id
   description       = "Simple network management protocol for log collection"
-  cidr_ipv4         = var.cidr_for_sg
+  cidr_ipv4         = "10.0.0.0/8"
+//  referenced_security_group_id = "sg-11111111111111111"
   from_port         = 161
   to_port           = 162
   ip_protocol       = "tcp"
 }
 
 resource "aws_vpc_security_group_ingress_rule" "snmp_udp" {
-  count             = var.create_sg ? 1 : 0
-  security_group_id = aws_security_group.fsx_sg[count.index]
+  security_group_id = aws_security_group.fsx_sg.id
   description       = "Simple network management protocol for log collection"
-  cidr_ipv4         = var.cidr_for_sg
+  cidr_ipv4         = "10.0.0.0/8"
+//  referenced_security_group_id = "sg-11111111111111111"
   from_port         = 161
   to_port           = 162
   ip_protocol       = "udp"
 }
 
 resource "aws_vpc_security_group_ingress_rule" "smb_cifs" {
-  count             = var.create_sg ? 1 : 0
-  security_group_id = aws_security_group.fsx_sg[count.index]
+  security_group_id = aws_security_group.fsx_sg.id
   description       = "Microsoft SMB/CIFS over TCP with NetBIOS framing"
-  cidr_ipv4         = var.cidr_for_sg
+  cidr_ipv4         = "10.0.0.0/8"
+//  referenced_security_group_id = "sg-11111111111111111"
   from_port         = 445
   to_port           = 445
   ip_protocol       = "tcp"
 }
 
 resource "aws_vpc_security_group_ingress_rule" "nfs_mount_tcp" {
-  count             = var.create_sg ? 1 : 0
-  security_group_id = aws_security_group.fsx_sg[count.index]
+  security_group_id = aws_security_group.fsx_sg.id
   description       = "NFS mount"
-  cidr_ipv4         = var.cidr_for_sg
+  cidr_ipv4         = "10.0.0.0/8"
+//  referenced_security_group_id = "sg-11111111111111111"
   from_port         = 635
   to_port           = 635
   ip_protocol       = "tcp"
 }
 
 resource "aws_vpc_security_group_ingress_rule" "nfs_mount_udp" {
-  count             = var.create_sg ? 1 : 0
-  security_group_id = aws_security_group.fsx_sg[count.index]
+  security_group_id = aws_security_group.fsx_sg.id
   description       = "NFS mount"
-  cidr_ipv4         = var.cidr_for_sg
+  cidr_ipv4         = "10.0.0.0/8"
+//  referenced_security_group_id = "sg-11111111111111111"
   from_port         = 635
   to_port           = 635
   ip_protocol       = "udp"
 }
 
 resource "aws_vpc_security_group_egress_rule" "allow_all_traffic" {
-  count             = var.create_sg ? 1 : 0
-  security_group_id = aws_security_group.fsx_sg[count.index].id
+  security_group_id = aws_security_group.fsx_sg.id
   cidr_ipv4         = "0.0.0.0/0"
   ip_protocol       = "-1"
 }
@@ -128,60 +141,65 @@ resource "aws_vpc_security_group_egress_rule" "allow_all_traffic" {
 */
 
 resource "aws_fsx_ontap_file_system" "terraform-fsxn" {
-  // REQUIRED PARAMETERS 
-  subnet_ids          = [var.fsx_subnets["primarysub"]]
+// REQUIRED PARAMETERS 
+  // for SINGLE_AZ deployment, remove the "secondarysub" from the list of subnet_ids
+  subnet_ids          = [var.fsx_subnets["primarysub"], var.fsx_subnets["secondarysub"]]
   preferred_subnet_id = var.fsx_subnets["primarysub"]
 
-  // OPTIONAL PARAMETERS
-  storage_capacity                  = var.fsx_capacity_size_gb
-  security_group_ids                = var.create_sg ? [element(aws_security_group.fsx_sg.*.id, 0)] : []
-  deployment_type                   = var.fsx_deploy_type
-  throughput_capacity               = var.fsx_tput_in_MBps
-  weekly_maintenance_start_time     = var.fsx_maintenance_start_time
-  kms_key_id                        = var.kms_key_id
-  automatic_backup_retention_days   = var.backup_retention_days
-  daily_automatic_backup_start_time = var.daily_backup_start_time
-  storage_type                      = var.storage_type
-  disk_iops_configuration {
-    iops = var.disk_iops_configuration["iops"]
-    mode = var.disk_iops_configuration["mode"]
+// OPTIONAL PARAMETERS
+  storage_capacity    = var.fsx_capacity_size_gb
+  security_group_ids  = [aws_security_group.fsx_sg.id]
+  deployment_type     = var.fsx_deploy_type
+  throughput_capacity = var.fsx_tput_in_MBps
+  fsx_admin_password  = var.fsx_admin_password
+  tags = {
+	  Name = var.fsx_name
   }
-  fsx_admin_password = var.fsx_admin_password
-  route_table_ids    = var.route_table_ids
-  tags               = var.tags
+  # weekly_maintenance_start_time = "00:00:00"
+  # kms_key_id = ""
+  # automatic_backup_retention_days = 0
+  # daily_automatic_backup_start_time = "00:00"
+  # disk_iops_configuration = ""
   # endpoint_ip_address_range = ""
+  # ha_pairs = 1
+  # Storage_type = "SSD"
+  # route_table_ids = []
+  # throughput_capacity_per_ha_pair = 0
 }
 
 resource "aws_fsx_ontap_storage_virtual_machine" "mysvm" {
-  // REQUIRED PARAMETERS
-  file_system_id = aws_fsx_ontap_file_system.terraform-fsxn.id
-  name           = var.svm_name
+// REQUIRED PARAMETERS
+  file_system_id      = aws_fsx_ontap_file_system.terraform-fsxn.id
+  name                = var.svm_name
 
-  // OPTIONAL PARAMETERS
-  root_volume_security_style = var.root_vol_sec_style
-  tags                       = var.tags
-  # active_directory_configuration {}
+// OPTIONAL PARAMETERS
+  # root_volume_security_style = "
+  # tags                       = {}
+  # # active_directory_configuration {}
 }
 
 resource "aws_fsx_ontap_volume" "myvol" {
-  // REQUIRED PARAMETERS
+// REQUIRED PARAMETERS
   name                       = var.vol_info["vol_name"]
   size_in_megabytes          = var.vol_info["size_mg"]
   storage_virtual_machine_id = aws_fsx_ontap_storage_virtual_machine.mysvm.id
 
-  // OPTIONAL PARAMETERS
+// OPTIONAL PARAMETERS
   junction_path              = var.vol_info["junction_path"]
-  ontap_volume_type          = var.vol_info["vol_type"]
+  ontap_volume_type          = "RW"
   storage_efficiency_enabled = var.vol_info["efficiency"]
   tiering_policy {
     name           = var.vol_info["tier_policy_name"]
     cooling_period = var.vol_info["cooling_period"]
   }
-  bypass_snaplock_enterprise_retention = var.vol_info["bypass_sl_retention"]
-  copy_tags_to_backups                 = var.vol_info["copy_tags_to_backups"]
-  security_style                       = var.vol_info["sec_style"]
-  skip_final_backup                    = var.vol_info["skip_final_backup"]
+  // The following argument disables the creation of a post-deletion backup. Comment out to allow the creation of a post-deletion backup.
+  skip_final_backup = true
+  # bypass_snaplock_enterprise_retention = true
+  # copy_tags_to_backups = false
+  # security_style = "MIXED"
   # snaplock_configuration {}
-  snapshot_policy = "NONE"
-  tags            = var.tags
+  # snapshot_policy {}
+  # tags = {}  
 }
+
+
