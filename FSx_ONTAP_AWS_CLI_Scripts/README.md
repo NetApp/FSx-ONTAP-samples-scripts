@@ -24,3 +24,4 @@ Before running the UNIX based scripts, make sure the following package is instal
 |delete_fsxn_filesystem     | Deletes a FSxN file system. |
 |delete_fsxn_svm            | Deltees a FSxN storage virtual machine. |
 |delete_fsxn_volume         | Deletes a FSxN volume. |
+|purge_fsxn_backups         | Purges old FSxN backups. |

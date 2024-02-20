@@ -1,0 +1,107 @@
+#!/bin/bash
+#
+################################################################################
+# This script is used to delete any undesirable FSxN backups. By default an
+# undesirable backup is defined as one that is USER_INITIATED and is more than
+# 7 days old.
+################################################################################
+#
+# Check that the required commands are installed
+if which aws > /dev/null 2>&1; then
+  :
+else
+  echo "Error, this script requires the aws to be installed and configured to run." 1>&2
+  exit 1
+fi
+#
+# Process command line noptions..
+deleteAll=false
+allRegions=false
+cmd=aws
+#
+# Get the default region.
+region=$(aws configure list | egrep '^.*egion ' | awk '{print $2}')
+#
+# Define an "old backup" as one that is older than 7 days.
+oldBackup=$((60*60*24*7))
+
+while getopts "nar:dt:h" option; do
+  case $option in
+    r) region=$OPTARG
+      ;;
+    a) allRegions=true
+      ;;
+    t) oldBackup=$OPTARG
+      ;;
+    d) deleteAll=true
+      ;;
+    n) cmd="echo aws"
+      ;;
+    *) cat 1>&2 <<EOF
+Usage: $(basename $0) [-n] [-d] [-a] [-r region] [-t oldBackup]
+  Where:
+      -a Means to purge backups in all regions.
+      -d Means to delete Automatic backups, as well as User Initiated ones.
+      -r Sets the region to look for old backups. Not compatible with the -a option.
+      -t Sets the number of seconds old a backup has to be to be considered deletable. Default is $((60*60*24*7)) (7 days).
+      -n Means to just echo the commands that would have been run, but don't actually run them.
+EOF
+      exit 1
+      ;;
+  esac
+done
+#
+# Set the regions array to all the regions the user wants to scan.
+if [ "$allRegions" == true ]; then
+  allEndabledRegions=$(aws ec2 describe-regions --query "Regions[].RegionName" --output=json | jq -r '.[]')
+  allFsxnRegions=$(curl -s https://api.regional-table.region-services.aws.a2z.com/index.json | jq -r '.prices[] | select(.attributes."aws:serviceName" == "Amazon FSx for NetApp ONTAP") .attributes."aws:region"')
+  for reg in $allEndabledRegions; do
+    for fsxnReg in $allFsxnRegions; do
+      if [ $reg == $fsxnReg ]; then
+        regions+=($reg)
+      fi
+    done
+  done
+  if [ -z "$regions" ]; then
+    echo "Error, failed to get the list of regions that support FSxN" 1>&2
+    exit 1
+  fi
+else
+  regions=($region)
+fi
+#
+# Get the current time in seconds.
+currentTime=$(date +%s)
+if [ -z "$currentTime" ]; then
+  echo "Error, could not the current time."
+  exit 1
+fi
+#
+# Loop on all the regions defined above.
+for region in ${regions[*]}; do
+  #
+  # Get the current list of the backup IDs with their creation time and type.
+  aws fsx describe-backups --region $region --query "Backups[*].{BackupId: BackupId, CreationTime: CreationTime, Type: Type}" --output=text | \
+  while read backupId creationTime backupType; do 
+    backupTime=$(date --date="$creationTime" "+%s")
+    if [ -z "$backupTime" ]; then
+      echo "Error, could not calculate the backup time." 1>&2
+      exit 1
+    fi
+    backupAge=$((currentTime-backupTime)) 
+    deleteIt=false
+    if [ $deleteAll != true -a "$backupType" == "USER_INITIATED" -a $backupAge -gt $oldBackup  -o \
+         $deleteAll == true -a $backupAge -gt $oldBackup ]; then
+       deleteIt=true
+    fi
+
+    if [ $deleteIt == true ]; then
+      if $cmd fsx delete-backup --backup-id "$backupId"; then
+        :
+      else
+        echo "Error, the deletion failed." 1>&2
+        exit 1
+      fi
+    fi
+  done
+done
