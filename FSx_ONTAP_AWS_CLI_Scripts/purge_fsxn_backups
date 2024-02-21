@@ -1,49 +1,62 @@
 #!/bin/bash
 #
 ################################################################################
-# This script is used to delete any undesirable FSxN backups. By default an
-# undesirable backup is defined as one that is USER_INITIATED and is more than
-# 7 days old.
+# This script is used to delete any undesirable FSxN backups. By default, an
+# undesirable backup is defined as one that was created when a volume was
+# deleted and is more than 7 days old. These backups will be of type
+# "User Initiated", so they will never get deleted, and have a "Name" tag
+# with a value that starts with: "Final backup for fsvol". There are various
+# options that allow you to broaden the scope of what is considered
+# undesirable.
 ################################################################################
 #
 # Check that the required commands are installed
-if which aws > /dev/null 2>&1; then
+if which aws jq > /dev/null 2>&1; then
   :
 else
-  echo "Error, this script requires the aws to be installed and configured to run." 1>&2
+  echo "Error, this script requires the 'aws' and 'jq' commands to be installed and configured before it can be run." 1>&2
   exit 1
 fi
 #
-# Process command line noptions..
-deleteAll=false
-allRegions=false
-cmd=aws
+# Define a tempoary file to write data to.
+tmpout=/tmp/purge_backups.$$
+trap 'rm -f $tmpout' exit
 #
 # Get the default region.
 region=$(aws configure list | egrep '^.*egion ' | awk '{print $2}')
 #
 # Define an "old backup" as one that is older than 7 days.
 oldBackup=$((60*60*24*7))
-
-while getopts "nar:dt:h" option; do
+#
+# Process command line noptions..
+deleteAuto=false
+deleteAllUser=false
+allRegions=false
+cmd=aws
+dryRun=false
+while getopts "nuar:dt:h" option; do
   case $option in
     r) region=$OPTARG
       ;;
     a) allRegions=true
       ;;
-    t) oldBackup=$OPTARG
+    t) oldBackup=$(($OPTARG*60*60*24))
       ;;
-    d) deleteAll=true
+    d) deleteAuto=true
       ;;
-    n) cmd="echo aws"
+    u) deleteAllUser=true
+      ;;
+    n) dryRun=true
+      cmd="echo aws"
       ;;
     *) cat 1>&2 <<EOF
-Usage: $(basename $0) [-n] [-d] [-a] [-r region] [-t oldBackup]
+Usage: $(basename $0) [-n] [-d] [-a] [-u] [-r region] [-t oldBackup]
   Where:
-      -a Means to purge backups in all regions.
-      -d Means to delete Automatic backups, as well as User Initiated ones.
+      -a Means to look for old backups in all regions.
       -r Sets the region to look for old backups. Not compatible with the -a option.
-      -t Sets the number of seconds old a backup has to be to be considered deletable. Default is $((60*60*24*7)) (7 days).
+      -d Means to delete Automatic backups.
+      -u Means to delete all user initiated backups and not just the ones with "Final backup for fsvol" in their name.
+      -t Sets the number of days an old a backup has to be to be considered a deletion candidate. Default is 7 days.
       -n Means to just echo the commands that would have been run, but don't actually run them.
 EOF
       exit 1
@@ -79,10 +92,14 @@ fi
 #
 # Loop on all the regions defined above.
 for region in ${regions[*]}; do
+  if [ "$dryRun" == "true" ]; then
+    echo "Looking for backups in region: $region."
+  fi
   #
   # Get the current list of the backup IDs with their creation time and type.
-  aws fsx describe-backups --region $region --query "Backups[*].{BackupId: BackupId, CreationTime: CreationTime, Type: Type}" --output=text | \
-  while read backupId creationTime backupType; do 
+  aws fsx describe-backups --region $region --query "Backups[*].{BackupId: BackupId, CreationTime: CreationTime, Type: Type, Name: Tags[?Key=='Name']|[0].Value}" --output=json > $tmpout
+  jq -r '.[] | "\(.BackupId) \(.CreationTime) \(.Type) \(.Name)\n"' $tmpout |
+  while read backupId creationTime backupType backupName; do 
     backupTime=$(date --date="$creationTime" "+%s")
     if [ -z "$backupTime" ]; then
       echo "Error, could not calculate the backup time." 1>&2
@@ -90,11 +107,13 @@ for region in ${regions[*]}; do
     fi
     backupAge=$((currentTime-backupTime)) 
     deleteIt=false
-    if [ $deleteAll != true -a "$backupType" == "USER_INITIATED" -a $backupAge -gt $oldBackup  -o \
-         $deleteAll == true -a $backupAge -gt $oldBackup ]; then
-       deleteIt=true
+    if [ $backupAge -gt $oldBackup ]; then
+      if [ $deleteAuto == true -a "$backupType" == "AUTOMATIC" -o \
+           $deleteAllUser == true -a "$backupType" == "USER_INITIATED"  -o \
+           "${backupName:0:22}" == "Final backup for fsvol" -a "$backupType" == "USER_INITIATED" ]; then
+         deleteIt=true
+      fi
     fi
-
     if [ $deleteIt == true ]; then
       if $cmd fsx delete-backup --backup-id "$backupId"; then
         :
