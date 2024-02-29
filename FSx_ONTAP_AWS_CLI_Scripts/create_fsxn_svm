@@ -45,7 +45,6 @@ else
 fi
 #
 # Set some defaults.
-size=20
 region=$(aws configure list | egrep '^.*egion ' | awk '{print $2}')
 #
 # Process command line arguments.
