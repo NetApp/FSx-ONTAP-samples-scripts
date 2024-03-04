@@ -13,7 +13,7 @@ Before running the UNIX based scripts, make sure the following package is instal
 ## Summary of the convenience scripts
 
 | Script                    | Description     |
-|:-00-----------------------|:----------------|
+|:--------------------------|:----------------|
 |create_fsxn_filesystem     | Createa a new FSxN file system.|
 |create_fsxn_svm            | Creates a new storage virtual machine under the specified file system. |
 |create_fsxn_volume         | Creates a new volume under a specified SVM. |
