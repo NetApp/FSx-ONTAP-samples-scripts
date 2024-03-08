@@ -25,16 +25,17 @@ trap 'rm -f $tmpout' exit
 # Get the default region.
 region=$(aws configure list | egrep '^.*egion ' | awk '{print $2}')
 #
-# Define an "old backup" as one that is older than 7 days.
-oldBackup=$((60*60*24*7))
+# Define an "old backup" as one that is older than 31 days.
+oldBackup=$((60*60*24*31))
 #
 # Process command line noptions..
 deleteAuto=false
 deleteAllUser=false
+deleteFinal=true
 allRegions=false
 cmd=aws
 dryRun=false
-while getopts "nuar:dt:h" option; do
+while getopts "nfuar:dt:h" option; do
   case $option in
     r) region=$OPTARG
       ;;
@@ -43,6 +44,8 @@ while getopts "nuar:dt:h" option; do
     t) oldBackup=$(($OPTARG*60*60*24))
       ;;
     d) deleteAuto=true
+      ;;
+    f) deleteFinal=false
       ;;
     u) deleteAllUser=true
       ;;
@@ -55,8 +58,9 @@ Usage: $(basename $0) [-n] [-d] [-a] [-u] [-r region] [-t oldBackup]
       -a Means to look for old backups in all regions.
       -r Sets the region to look for old backups. Not compatible with the -a option.
       -d Means to delete Automatic backups.
+      -f Means don't delete "Final Backup for" backups.
       -u Means to delete all user initiated backups and not just the ones with "Final backup for fsvol" in their name.
-      -t Sets the number of days an old a backup has to be to be considered a deletion candidate. Default is 7 days.
+      -t Sets the number of days an old a backup has to be to be considered a deletion candidate. Default is 31 days.
       -n Means to just echo the commands that would have been run, but don't actually run them.
 EOF
       exit 1
@@ -110,12 +114,12 @@ for region in ${regions[*]}; do
     if [ $backupAge -gt $oldBackup ]; then
       if [ $deleteAuto == true -a "$backupType" == "AUTOMATIC" -o \
            $deleteAllUser == true -a "$backupType" == "USER_INITIATED"  -o \
-           "${backupName:0:22}" == "Final backup for fsvol" -a "$backupType" == "USER_INITIATED" ]; then
+           "${backupName:0:22}" == "Final backup for fsvol" -a "$backupType" == "USER_INITIATED" -a $deleteFinal == true ]; then
          deleteIt=true
       fi
     fi
     if [ $deleteIt == true ]; then
-      if $cmd fsx delete-backup --backup-id "$backupId"; then
+      if $cmd fsx delete-backup --backup-id "$backupId" --region $region; then
         :
       else
         echo "Error, the deletion failed." 1>&2
