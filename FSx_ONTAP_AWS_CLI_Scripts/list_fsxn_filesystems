@@ -44,13 +44,13 @@ Usage $(basename $0) [-r region] [-a] [-n] [-c] [-s] [-b] [-i fileSystemId] [-f 
   Where: pattern - means to only show file systems whos name match the pattern.
          -r region allows you to specify the region you want the list from.
          -a means all regions.
-         -n means include additional network information.
          -c means to display a hierarchical view of each filesystem including svms and volumes.
          -i allows you to limit the display to the file system with the id provided.
          -f allows you to limit the display to the file system with the name provided.
-         -b means to display the backup retenion period. Not compoatible with the -n or -c options.
+         -b means to display the backup retenion period. Not compoatible with the -x or -c options.
          -s means to display the current status of a volume. Only relative with the -c option.
-         -x means to show the AWS ARN for the file system. Not compatible with -n or -c options.
+         -n means to show the AWS ARN for the file system. Not compatible with -x or -c options.
+         -x means include additional information: vpc, subnet, Size, Deployement Type, Throughput, provisioned IOPS.
 EOF
   exit 1
 }
@@ -74,7 +74,7 @@ fi
 #
 # Set defaults.
 allRegions=false
-includeNetworking=false
+includeExtraInfo=false
 contents=false
 showStatus=false
 showARN=false
@@ -90,7 +90,7 @@ while getopts "bhcxsanr:i:f:" option; do
       ;;
     b) showBackup=true
       ;;
-    n) includeNetworking=true
+    x) includeExtraInfo=true
       ;;
     c) contents=true
       ;;
@@ -100,13 +100,32 @@ while getopts "bhcxsanr:i:f:" option; do
       ;;
     s) showStatus=true
       ;;
-    x) showARN=true
+    n) showARN=true
       ;;
     *) usage
       ;;
   esac
 done
 shift $((OPTIND-1))
+#
+# Check for invalid options.
+if [ "$showBackup" == "true" -a \( "$contents" == "true" -o "$includeExtraInfo" == "true" \) ]; then
+  echo "Error, the -b option is not compatiable with the -c or -x options." 1>&2
+  echo ""
+  usage
+fi
+
+if [ "$showARN" == "true" -a \( "$contents" == "true" -o "$includeExtraInfo" == "true" \) ]; then
+  echo "Error, the -n option is not compatiable with the -c or -x options." 1>&2
+  echo ""
+  usage
+fi
+
+if [ "$showStatus" == "true" -a "$contents" != "true" ]; then
+  echo "Error, the -s option is only compatiable with the -c option." 1>&2
+  echo ""
+  usage
+fi
 
 declare -a regions
 if [ "$allRegions" == "true" ]; then
@@ -148,7 +167,11 @@ queryString="FileSystems[*].{
   VpcId: VpcId,
   SubnetId: SubnetIds[0],
   ResourceARN: ResourceARN,
-  AutomaticBackupRetentionDays: OntapConfiguration.AutomaticBackupRetentionDays
+  AutomaticBackupRetentionDays: OntapConfiguration.AutomaticBackupRetentionDays,
+  DeploymentType: OntapConfiguration.DeploymentType,
+  DiskIopsConfiguration: OntapConfiguration.DiskIopsConfiguration.Iops,
+  ThroughputCapacity: OntapConfiguration.ThroughputCapacity,
+  StorageCapacity: StorageCapacity
 }"
 #
 # Loop on all the requested regions.
@@ -206,14 +229,29 @@ for region in ${regions[*]}; do
       done
     done
   else
+    #
+    # Convert JSON into a CSV format.
+    # 1 = fsid
+    # 2 = arn
+    # 3 = name
+    # 4 = lifecycle
+    # 5 = management ip
+    # 6 = vpc id
+    # 7 = subnet id
+    # 8 = backup retention
+    # 9 = deployment type
+    # 10 = iops
+    # 11 = throughput
+    # 12 = size
     if [ ! -z "$1" ]; then
-      jq -r '.[] | .FileSystemId + "," + .ResourceARN + "," + (if((.Name | tostring) | test("'$1'")) then .Name else empty end) + "," + .Lifecycle + "," + .ManagementIp + "," + .VpcId + "," + .SubnetId' $fileSystemsFile > $tmpout
+      #set -x
+      jq -r '.[] | .FileSystemId + "," + .ResourceARN + "," + (if((.Name | tostring) | test("'$1'")) then .Name else empty end) + "," + .Lifecycle + "," + .ManagementIp + "," + .VpcId + "," + .SubnetId + "," + (if(.AutomaticBackupRetentionDays == null) then "Dissabled" else (.AutomaticBackupRetentionDays | tostring) end) + "," + .DeploymentType + "," + (.DiskIopsConfiguration | tostring) + "," + (.ThroughputCapacity | tostring) + "," + (.StorageCapacity | tostring)' $fileSystemsFile > $tmpout
     else
-      jq -r '.[] | .FileSystemId + "," + .ResourceARN + "," + .Name + "," + .Lifecycle + "," + .ManagementIp + "," + .VpcId + "," + .SubnetId + "," + if(.AutomaticBackupRetentionDays == null) then "Dissabled" else (.AutomaticBackupRetentionDays | tostring) end' $fileSystemsFile > $tmpout
+      jq -r '.[] | .FileSystemId + "," + .ResourceARN + "," + .Name + "," + .Lifecycle + "," + .ManagementIp + "," + .VpcId + "," + .SubnetId + "," + if(.AutomaticBackupRetentionDays == null) then "Dissabled" else (.AutomaticBackupRetentionDays | tostring) end + "," + .DeploymentType + "," + (.DiskIopsConfiguration | tostring) + "," + (.ThroughputCapacity | tostring) + "," + (.StorageCapacity | tostring)' $fileSystemsFile > $tmpout
     fi
 
-    if [ "$includeNetworking" == "true" ]; then
-      awk -F, -v region=$region 'BEGIN {first=1; formatStr="%12s %23s %35s %10s %15s %21s %24s\n"}; {if(first) {printf "\n"; printf formatStr, "Region", "FileSystem ID", "Name", "Status", "Management IP", "VPC ID", "Subnet ID"; first=0}; printf formatStr, region, $1, "\"" $3 "\"", $4, $5, $6, $7}' < $tmpout
+    if [ "$includeExtraInfo" == "true" ]; then
+      awk -F, -v region=$region 'BEGIN {first=1; formatStr="%12s %23s %35s %10s %15s %22s %25s %6s %12s %11s %6s\n"}; {if(first) {printf "\n"; printf formatStr, "Region", "FileSystem ID", "Name", "Status", "Management IP", "VPC ID", "Subnet ID", "Size", "Deployment", "Throughput", "Iops"; first=0}; printf formatStr, region, $1, "\"" $3 "\"", $4, $5, $6, $7, $(12), $9, $(11), $(10)}' < $tmpout
     else
       if [ "$showARN" == "true" ]; then
         awk -F, -v region=$region 'BEGIN {first=1; formatStr="%12s %23s %70s %35s %10s %15s\n"}; {if(first) {printf "\n"; printf formatStr, "Region", "FileSystem ID", "ARN", "Name", "Status", "Management IP"; first=0}; printf formatStr, region, $1, $2, "\"" $3 "\"", $4, $5}' < $tmpout
