@@ -3,7 +3,7 @@
 ################################################################################
 # This script is used to delete any undesirable FSxN backups. By default, an
 # undesirable backup is defined as one that was created when a volume was
-# deleted and is more than 7 days old. These backups will be of type
+# deleted and is more than 31 days old. These backups will be of type
 # "User Initiated", so they will never get deleted, and have a "Name" tag
 # with a value that starts with: "Final backup for fsvol". There are various
 # options that allow you to broaden the scope of what is considered
