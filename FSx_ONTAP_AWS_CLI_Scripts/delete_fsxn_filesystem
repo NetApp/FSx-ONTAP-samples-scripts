@@ -24,7 +24,7 @@ cat 1>&2 <<EOF
 Usage: $(basename $0) -f fileSystemName [-r region] [-i fileSystemID] [-b]
 Where:
   fileSystemName: Is the name of the file system you want to delete. This option is mutually exclusive to the -i option.
-  fileSystemID: Is the file system id of the file system you want to delete. This option is mutually exclusive to the -n option.
+  fileSystemID: Is the file system id of the file system you want to delete. This option is mutually exclusive to the -f option.
   region: Is the AWS region where the FSxN filesystem resides.
   -b: endable final backup. Otherwise, it is skipped.
 EOF
@@ -317,7 +317,7 @@ done # for svmId in ${svms[*]}; do
 # Now that all the volumes are deleted, delete the SVMs.
 # Since there can only be 24 SVMs, don't really have to worry about spawning
 # too many at a time.
-printf "\nDeleting SVMs.\n"
+[ ${#svms[*]} -gt 0 ] && printf "\nDeleting SVMs.\n"
 for svmId in ${svms[*]}; do
   delete_svm $svmId &
 done
