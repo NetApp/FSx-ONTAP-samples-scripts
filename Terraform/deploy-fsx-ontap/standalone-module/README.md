@@ -5,8 +5,8 @@ Follow the instructions below to use this sample in your own environment.
 ## Table of Contents
 * [Introduction](#introduction)
 * [Prerequisites](#prerequisites)
-* [Getting Started](#getting-started)
-* [Usage Examples](#usage-examples)
+* [Usage](#usage)
+* [Repository Overview](#repository-overview-1)
 * [Author Information](#author-information)
 * [License](#license)
 
@@ -203,3 +203,5 @@ Unless required by applicable law or agreed to in writing, software distributed 
 See the License for the specific language governing permissions and limitations under the License.
 
 <!-- END_TF_DOCS -->
+
+© 2024 NetApp, Inc. All Rights Reserved.
