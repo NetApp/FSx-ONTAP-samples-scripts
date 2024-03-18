@@ -8,6 +8,9 @@ This GitHub repository contains comprehensive code samples and automation script
 ## Table of Contents
 * [FSxN deployment using Terraform](/Terraform/deploy-fsx-ontap)
 * [AWS CLI management scripts for FSx ONTAP](/fsx-ontap-aws-cli-scripts)
+* [Export LUN metrics from an FSx to Amazon CloudWatch](/Monitoring/Lun)
+* [k8s applications non-stdout logs collection into ELK](/Monitoring/EKS-logs-to-ELK)
+* [FSxN iscsi volume creation automation](/iscsi-vol-create&mount)
 
 
 ## Author Information
