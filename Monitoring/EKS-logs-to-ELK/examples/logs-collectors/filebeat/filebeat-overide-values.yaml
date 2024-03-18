@@ -1,0 +1,12 @@
+daemonset:
+  enabled: true
+  extraVolumeMounts:
+    - name: shared-logs
+      mountPath: /logs
+      readOnly: false
+      subPathExpr: $(NODE_NAME)
+
+  extraVolumes:
+    - name: shared-logs
+      persistentVolumeClaim:
+        claimName: shared-pv
