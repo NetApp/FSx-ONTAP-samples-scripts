@@ -1,0 +1,130 @@
+#!/bin/bash
+#
+################################################################################
+# This script is used to delete any undesirable FSxN backups. By default, an
+# undesirable backup is defined as one that was created when a volume was
+# deleted and is more than 31 days old. These backups will be of type
+# "User Initiated", so they will never get deleted, and have a "Name" tag
+# with a value that starts with: "Final backup for fsvol". There are various
+# options that allow you to broaden the scope of what is considered
+# undesirable.
+################################################################################
+#
+# Check that the required commands are installed
+if which aws jq > /dev/null 2>&1; then
+  :
+else
+  echo "Error, this script requires the 'aws' and 'jq' commands to be installed and configured before it can be run." 1>&2
+  exit 1
+fi
+#
+# Define a tempoary file to write data to.
+tmpout=/tmp/purge_backups.$$
+trap 'rm -f $tmpout' exit
+#
+# Get the default region.
+region=$(aws configure list | egrep '^.*egion ' | awk '{print $2}')
+#
+# Define an "old backup" as one that is older than 31 days.
+oldBackup=$((60*60*24*31))
+#
+# Process command line noptions..
+deleteAuto=false
+deleteAllUser=false
+deleteFinal=true
+allRegions=false
+cmd=aws
+dryRun=false
+while getopts "nfuar:dt:h" option; do
+  case $option in
+    r) region=$OPTARG
+      ;;
+    a) allRegions=true
+      ;;
+    t) oldBackup=$(($OPTARG*60*60*24))
+      ;;
+    d) deleteAuto=true
+      ;;
+    f) deleteFinal=false
+      ;;
+    u) deleteAllUser=true
+      ;;
+    n) dryRun=true
+      cmd="echo aws"
+      ;;
+    *) cat 1>&2 <<EOF
+Usage: $(basename $0) [-n] [-d] [-a] [-u] [-r region] [-t oldBackup]
+  Where:
+      -a Means to look for old backups in all regions.
+      -r Sets the region to look for old backups. Not compatible with the -a option.
+      -d Means to delete Automatic backups.
+      -f Means don't delete "Final Backup for" backups.
+      -u Means to delete all user initiated backups and not just the ones with "Final backup for fsvol" in their name.
+      -t Sets the number of days an old a backup has to be to be considered a deletion candidate. Default is 31 days.
+      -n Means to just echo the commands that would have been run, but don't actually run them.
+EOF
+      exit 1
+      ;;
+  esac
+done
+#
+# Set the regions array to all the regions the user wants to scan.
+if [ "$allRegions" == true ]; then
+  allEndabledRegions=$(aws ec2 describe-regions --query "Regions[].RegionName" --output=json | jq -r '.[]')
+  allFsxnRegions=$(curl -s https://api.regional-table.region-services.aws.a2z.com/index.json | jq -r '.prices[] | select(.attributes."aws:serviceName" == "Amazon FSx for NetApp ONTAP") .attributes."aws:region"')
+  for reg in $allEndabledRegions; do
+    for fsxnReg in $allFsxnRegions; do
+      if [ $reg == $fsxnReg ]; then
+        regions+=($reg)
+      fi
+    done
+  done
+  if [ -z "$regions" ]; then
+    echo "Error, failed to get the list of regions that support FSxN" 1>&2
+    exit 1
+  fi
+else
+  regions=($region)
+fi
+#
+# Get the current time in seconds.
+currentTime=$(date +%s)
+if [ -z "$currentTime" ]; then
+  echo "Error, could not the current time."
+  exit 1
+fi
+#
+# Loop on all the regions defined above.
+for region in ${regions[*]}; do
+  if [ "$dryRun" == "true" ]; then
+    echo "Looking for backups in region: $region."
+  fi
+  #
+  # Get the current list of the backup IDs with their creation time and type.
+  aws fsx describe-backups --region $region --query "Backups[*].{BackupId: BackupId, CreationTime: CreationTime, Type: Type, Name: Tags[?Key=='Name']|[0].Value}" --output=json > $tmpout
+  jq -r '.[] | "\(.BackupId) \(.CreationTime) \(.Type) \(.Name)\n"' $tmpout |
+  while read backupId creationTime backupType backupName; do 
+    backupTime=$(date --date="$creationTime" "+%s")
+    if [ -z "$backupTime" ]; then
+      echo "Error, could not calculate the backup time." 1>&2
+      exit 1
+    fi
+    backupAge=$((currentTime-backupTime)) 
+    deleteIt=false
+    if [ $backupAge -gt $oldBackup ]; then
+      if [ $deleteAuto == true -a "$backupType" == "AUTOMATIC" -o \
+           $deleteAllUser == true -a "$backupType" == "USER_INITIATED"  -o \
+           "${backupName:0:22}" == "Final backup for fsvol" -a "$backupType" == "USER_INITIATED" -a $deleteFinal == true ]; then
+         deleteIt=true
+      fi
+    fi
+    if [ $deleteIt == true ]; then
+      if $cmd fsx delete-backup --backup-id "$backupId" --region $region; then
+        :
+      else
+        echo "Error, the deletion failed." 1>&2
+        exit 1
+      fi
+    fi
+  done
+done
