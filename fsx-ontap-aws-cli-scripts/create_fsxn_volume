@@ -12,19 +12,21 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ################################################################################
 #
-# This script is used to delete an FSxN volume.
+# This script is used to create an FSxN volume under the specified SVM. The
+# FSxN "filesystem" is implied by the SVM ID.
 ################################################################################
 
 ################################################################################
-#  This function just outputs the usage information and exits.
+# This function just outputs the usage information and exits.
 ################################################################################
 usage () {
 cat 1>&2 <<EOF
-Usage: $(basename $0) -i volumeID [-r region] [-b]
+Usage: $(basename $0) -i svmID -n volumeName [-r region] [-s size]
 where
-  volumeID: is the ID of the volume to delete.
+  svmID: is the SVM ID in the filesystem you want to create the volume.
+  volumeName: is the name you want to assign the volume.
   region: is the AWS region where the FSxN filesystem resides.
-  -b: enabled final backup. Otherwise it is skipped.
+  size: is size, in megabytes, you want the filesystem. Default is 20.
 EOF
   exit 1
 }
@@ -32,21 +34,23 @@ EOF
 ################################################################################
 # Main logic starts here.
 ################################################################################
-tmpout=/tmp/delete-volume.$$
+tmpout=/tmp/create_volume.$$
 trap 'rm -f $tmpout' exit
 #
 # Set some defaults.
+size=20
 region=$(aws configure list | egrep '^.*egion ' | awk '{print $2}')
 #
 # Process command line arguments.
-skipBackup=true
-while getopts "hbi:r:" option; do
+while getopts "i:n:r:s:" option; do
   case $option in
-    r) region="$OPTARG"
+    i) svmId=$OPTARG
       ;;
-    i) volumeId="$OPTARG"
+    n) volumeName=$OPTARG
       ;;
-    b) skipBackup=false
+    r) region=$OPTARG
+      ;;
+    s) size=$OPTARG
       ;;
     *) usage
       ;;
@@ -54,21 +58,29 @@ while getopts "hbi:r:" option; do
 done
 #
 # Ensure all the required parameters have been provided.
-if [ -z "$volumeId" ]; then
-  echo "Error, missing required arguments." 1>&2
+if [ -z "$volumeName" -o -z "$svmId" ]; then
+  echo "Error, you must provide a volume name and SVM ID." 1>&2
   usage
 fi
 
-aws fsx delete-volume --volume-id $volumeId --region=$region --output=json --ontap-configuration '{"SkipFinalBackup": '$skipBackup'}' > $tmpout 2>&1
+aws fsx create-volume --volume-type ONTAP --name $volumeName --ontap-configuration "{
+  \"JunctionPath\": \"/$volumeName\",
+  \"SecurityStyle\": \"UNIX\",
+  \"SizeInMegabytes\" : $size,
+  \"StorageEfficiencyEnabled\": true, 
+  \"StorageVirtualMachineId\": \"$svmId\",
+  \"TieringPolicy\" : {\"CoolingPeriod\": 31, \"Name\": \"SNAPSHOT_ONLY\"},
+  \"OntapVolumeType\": \"RW\",
+  \"SnapshotPolicy\": \"default\"}" --region=$region --output=json > $tmpout 2>&1
 
 if [ $? != "0" ]; then
-  echo "Failed to delete volume." 1>&2
+  echo "Failed to create the FSxN volume." 1>&2
   cat $tmpout 1>&2
   exit 1
 else
-  status=$(jq -r .Lifecycle $tmpout 2> /dev/null)
-  if [ "$status" == "DELETING"  -o "$status" == "PENDING" ]; then
-    echo "Volume '$volumeId' is being deleted."
+  status=$(jq -r .Volume.Lifecycle $tmpout 2> /dev/null)
+  if [ "$status" == "CREATING" -o "$status" == "PENDING" ]; then
+    echo "FSxN volume '$volumeName'($(jq -r .Volume.VolumeId $tmpout)) is being created."
     exit 0
   else
     echo "Unknown status '$status'. Complete output returned from the AWS api:" 1>&2

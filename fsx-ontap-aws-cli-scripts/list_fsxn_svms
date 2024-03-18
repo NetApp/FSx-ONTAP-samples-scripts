@@ -56,7 +56,7 @@ fi
 allRegions=false
 includeFsName=false
 region=$(aws configure list | egrep '^.*egion ' | awk '{print $2}')
-while getopts "hanr:i:f:" option; do
+while getopts "anr:i:f:" option; do
   case "$option" in
     r) region="$OPTARG"
       ;;
@@ -68,7 +68,8 @@ while getopts "hanr:i:f:" option; do
       ;;
     f) fileSystemName="$OPTARG"
       ;;
-    *) usage
+    *) echo "Error, unknown option '$option'." 1>&2
+      usage
       ;;
   esac
 done
@@ -79,43 +80,35 @@ if [ ! -z "$fileSystemID" -a ! -z "$fileSystemName" ]; then
 fi
 
 if [ "$allRegions" = "true" ]; then
-  #
-  # Generate a list of all the valid regions the user can search. That is the
-  # intersection of all the regions they have enabled, and the regions that
-  # support FSxN
-  allEndabledRegions=$(aws ec2 describe-regions --query "Regions[].RegionName" --output=json | jq -r '.[]')
-  allFsxnRegions=$(curl -s https://api.regional-table.region-services.aws.a2z.com/index.json | jq -r '.prices[] | select(.attributes."aws:serviceName" == "Amazon FSx for NetApp ONTAP") .attributes."aws:region"')
-  for reg in $allEndabledRegions; do
-    for fsxnReg in $allFsxnRegions; do
-      if [ $reg == $fsxnReg ]; then
-        regions+=($reg)
-      fi
-    done
-  done
-  if [ -z "$regions" ]; then
-    echo "Error, failed to get the list of regions that support FSxN" 1>&2
-    exit 1
-  fi
+  regions=$(aws ec2 describe-regions --query "Regions[].RegionName" --output=json | jq -r '.[]')
 else
-  regions=($region)
+  regions=$region
 fi
 
-if [ ! -z "$fileSystemName" ]; then
+if [ ! -z "$fileSystenName" ]; then
   fileSystemID=$(aws fsx describe-file-systems --output=json 2> /dev/null | jq -r '.FileSystems[] | if((.Tags[] | select(.Key == "Name") .Value) == "'"${fileSystemName}"'") then .FileSystemId else empty end' 2> /dev/null)
 fi
 #
 # Loop on all the regions.
-for region in ${regions[*]}; do
-  if [ -z "$fileSystemID" ]; then
-    aws fsx describe-storage-virtual-machines --region=$region | jq -r '.StorageVirtualMachines[] | .FileSystemId + "," + .StorageVirtualMachineId + "," + .Name' | sort > $tmpout
-  else
-    aws fsx describe-storage-virtual-machines --region=$region | jq -r '.StorageVirtualMachines[] | if(.FileSystemId == "'$fileSystemID'") then .FileSystemId + "," + .StorageVirtualMachineId + "," + .Name else empty end' | sort > $tmpout
-  fi
+for region in $regions; do
+  #
+  # Check that the fsx service is supported in thie region
+  if [ ! -z "$(getent hosts fsx.$region.amazonaws.com)" ]; then
+    if [ -z "$fileSystemID" ]; then
+      aws fsx describe-storage-virtual-machines --region=$region | jq -r '.StorageVirtualMachines[] | .FileSystemId + "," + .StorageVirtualMachineId + "," + .Name' | sort > $tmpout
+    else
+      aws fsx describe-storage-virtual-machines --region=$region | jq -r '.StorageVirtualMachines[] | if(.FileSystemId == "'$fileSystemID'") then .FileSystemId + "," + .StorageVirtualMachineId + "," + .Name else empty end' | sort > $tmpout
+    fi
   
-  if [ $includeFsName == "true" ]; then
-    aws fsx describe-file-systems --region=$region | jq -r '.FileSystems[] | .FileSystemId + "," + (.Tags[] | select(.Key == "Name") .Value)' > $tmpout2
-    awk -F, -v region=$region 'BEGIN {first=1; maxNameLen=0; while(getline < "'$tmpout2'") {fss[$1]=$2; if(length($2) > maxNameLen) {maxNameLen=length($2)}}; maxNameLen +=2; formatStr="%12s %20s%-"maxNameLen"s %23s %s\n"}; {if(first) {printf "\n"; printf formatStr, "Region", "FileSystem ID", "(Name)", "SVM ID", "SVM Name"; first=0}; name="("fss[$1]")"; printf formatStr, region, $1, name, $2, $3}' < $tmpout
+    if [ $includeFsName == "true" ]; then
+      aws fsx describe-file-systems --region=$region | jq -r '.FileSystems[] | .FileSystemId + "," + (.Tags[] | select(.Key == "Name") .Value)' > $tmpout2
+      awk -F, -v region=$region 'BEGIN {first=1; maxNameLen=0; while(getline < "'$tmpout2'") {fss[$1]=$2; if(length($2) > maxNameLen) {maxNameLen=length($2)}}; maxNameLen +=2; formatStr="%12s %20s%-"maxNameLen"s %23s %s\n"}; {if(first) {printf "\n"; printf formatStr, "Region", "FileSystem ID", "(Name)", "SVM ID", "SVM Name"; first=0}; name="("fss[$1]")"; printf formatStr, region, $1, name, $2, $3}' < $tmpout
+    else
+      awk -F, -v region=$region 'BEGIN {first=1; formatStr="%12s %23s %23s %s\n"}; {if(first) {printf "\n"; printf formatStr, "Region", "FileSystem ID", "SVM ID", "SVM Name"; first=0}; printf formatStr, region, $1, $2, $3}' < $tmpout
+    fi
   else
-    awk -F, -v region=$region 'BEGIN {first=1; formatStr="%12s %23s %23s %s\n"}; {if(first) {printf "\n"; printf formatStr, "Region", "FileSystem ID", "SVM ID", "SVM Name"; first=0}; printf formatStr, region, $1, $2, $3}' < $tmpout
+    if [ $allRegions != "true" ]; then
+      printf "The fsx service is currently not supported in the $region region.\n"
+    fi
   fi
 done

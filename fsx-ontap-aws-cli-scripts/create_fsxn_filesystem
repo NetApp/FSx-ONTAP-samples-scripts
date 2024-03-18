@@ -110,10 +110,7 @@ while [ ! -z "$1" ]; do
       endpointips='"EndpointIpAddressRange": "'$2'",'
       shift
       ;;
-    -h|-help|--help)
-      usage
-      ;;
-    *) echo "Error, unknown option $1." 1>&2
+    *) echo "Error, unknow options $1."
       usage
       ;;
   esac
