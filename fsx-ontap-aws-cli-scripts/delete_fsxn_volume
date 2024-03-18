@@ -38,7 +38,7 @@ trap 'rm -f $tmpout' exit
 region=$(aws configure list | egrep '^.*egion ' | awk '{print $2}')
 #
 # Process command line arguments.
-while getopts "i:r:" option; do
+while getopts "hi:r:" option; do
   case $option in
     r) region="$OPTARG"
       ;;

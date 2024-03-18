@@ -75,7 +75,7 @@ showStatus=false
 region=$(aws configure list | egrep '^.*egion ' | awk '{print $2}')
 #
 # Process command line arguments.
-while getopts "csanr:i:f:" option; do
+while getopts "hcsanr:i:f:" option; do
   case "$option" in
     r) region="$OPTARG"
       ;;
@@ -91,8 +91,7 @@ while getopts "csanr:i:f:" option; do
       ;;
     s) showStatus=true
       ;;
-    *) echo "Error, unknown option '$option'." 1>&2
-      usage
+    *) usage
       ;;
   esac
 done

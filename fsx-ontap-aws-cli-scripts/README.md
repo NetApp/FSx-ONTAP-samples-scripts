@@ -8,6 +8,7 @@ Windows Subsystem for Linux (WSL) based Linux distribution installed.
 Before running the UNIX based scripts, make sure the following package is installed:
 
 * jq  - lightweight and flexible command-line JSON processor
+* aws-cli - Command Line Interface for AWS
 
 ## Summary of the convenience scripts
 

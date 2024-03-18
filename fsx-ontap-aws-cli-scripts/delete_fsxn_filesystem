@@ -165,7 +165,7 @@ fi
 region=$(aws configure list | egrep '^.*egion ' | awk '{print $2}')
 #
 # Process command line arguments.
-while getopts "r:f:i:" option; do
+while getopts "hr:f:i:" option; do
   case $option in
     f) fileSystemName=$OPTARG
       ;;
@@ -173,8 +173,7 @@ while getopts "r:f:i:" option; do
       ;;
     i) fsid=$OPTARG
       ;;
-    *) echo "Error, unknown option '$option'." 1>&2
-      usage  # implied exit
+    *) usage  # implied exit
       ;;
   esac
 done
