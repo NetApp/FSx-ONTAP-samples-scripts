@@ -21,11 +21,12 @@
 ################################################################################
 usage () {
 cat 1>&2 <<EOF
-Usage: $(basename $0) -f fileSystemName [-r region] [-i fileSystemID]
+Usage: $(basename $0) -f fileSystemName [-r region] [-i fileSystemID] [-b]
 Where:
   fileSystemName: Is the name of the file system you want to delete. This option is mutually exclusive to the -i option.
-  fileSystemID: Is the file system id of the file system you want to delete. This option is mutually exclusive to the -n option.
+  fileSystemID: Is the file system id of the file system you want to delete. This option is mutually exclusive to the -f option.
   region: Is the AWS region where the FSxN filesystem resides.
+  -b: enable final backup. Otherwise, it is skipped.
 EOF
   exit 1
 }
@@ -59,7 +60,8 @@ delete_volume () {
   trap 'rm -f $tmpout' RETURN
 
   local volumeId=$1
-  aws fsx delete-volume --volume-id $volumeId --region=$region --output=json --ontap-configuration '{"SkipFinalBackup": true}' > $tmpout 2>&1
+  local skipBackup=$2
+  aws fsx delete-volume --volume-id $volumeId --region=$region --output=json --ontap-configuration '{"SkipFinalBackup": '$skipBackup'}' > $tmpout 2>&1
   if [ $? != "0" ]; then
     printf "\nError, failed to delete a volume with volumeId: '$volumeId'.\n"  1>&2
     cat $tmpout 1>&2
@@ -163,9 +165,10 @@ fi
 #
 # Get the default region.
 region=$(aws configure list | egrep '^.*egion ' | awk '{print $2}')
+skipBackup=true
 #
 # Process command line arguments.
-while getopts "r:f:i:" option; do
+while getopts "hbr:f:i:" option; do
   case $option in
     f) fileSystemName=$OPTARG
       ;;
@@ -173,8 +176,9 @@ while getopts "r:f:i:" option; do
       ;;
     i) fsid=$OPTARG
       ;;
-    *) echo "Error, unknown option '$option'." 1>&2
-      usage  # implied exit
+    b) skipBackup=false
+      ;;
+    *) usage
       ;;
   esac
 done
@@ -266,7 +270,7 @@ for svmId in ${svms[*]}; do
     maxNumRunning=1  # Only do one initially, if it completes successfully, then do the rest concurrently.
     printf "\nDeleting all the volumes associated with ${svmId}.\n"
     while [ $i -lt $numVolumes ]; do
-      delete_volume ${volumes[$i]} &
+      delete_volume ${volumes[$i]} $skipBackup &
       let i+=1
       let numRunning+=1
       printf "\rTotal number of volumes to delete: ${numVolumes}. Number of deletes currently running: ${numRunning}. Number waiting to be started: $((numVolumes-i)).     "
@@ -313,7 +317,7 @@ done # for svmId in ${svms[*]}; do
 # Now that all the volumes are deleted, delete the SVMs.
 # Since there can only be 24 SVMs, don't really have to worry about spawning
 # too many at a time.
-printf "\nDeleting SVMs.\n"
+[ ${#svms[*]} -gt 0 ] && printf "\nDeleting SVMs.\n"
 for svmId in ${svms[*]}; do
   delete_svm $svmId &
 done

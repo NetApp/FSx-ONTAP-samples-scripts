@@ -47,14 +47,13 @@ fi
 region=$(aws configure list | egrep '^.*egion ' | awk '{print $2}')
 #
 # Process command line arguments.
-while getopts "i:r:" option; do
+while getopts "hi:r:" option; do
   case $option in
     i) svmID=$OPTARG
       ;;
     r) region=$OPTARG
       ;;
-    *) echo "Error, unknown option '$option'." 1>&2
-      usage
+    *) usage
       ;;
   esac
   shift

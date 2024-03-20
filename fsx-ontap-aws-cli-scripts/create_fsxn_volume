@@ -42,7 +42,7 @@ size=20
 region=$(aws configure list | egrep '^.*egion ' | awk '{print $2}')
 #
 # Process command line arguments.
-while getopts "i:n:r:s:" option; do
+while getopts "hi:n:r:s:" option; do
   case $option in
     i) svmId=$OPTARG
       ;;
