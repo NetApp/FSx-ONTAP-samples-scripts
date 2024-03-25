@@ -202,7 +202,7 @@ To list configuration data, use the [`aws configire list`](https://docs.aws.amaz
 
 > [!NOTE]
 > The role is required to fetch the password for fsxadmin from SSM Secured Parameters. Terraform creates an SSM Paramter which is retrieved via the powershell script of EC2 instance. The role allows the retrieval of the parameter and execute the necessary operations on the filesystem.
-> Alternatively, the password can also be entered in the [user_data](https://github.com/NetApp/FSx-ONTAP-samples-scripts/blob/a94f24a4334899150feda21272095720d358c117/Terraform/deploy-fsx-ontap-sqlserver/modules/ec2/ec2-sql.tf#L99-L100) section found in the ec2-sql.tf file (not recommended).
+> Alternatively, the password can also be entered in the `user_data` section under `$ssmPass` variable found in the ec2-sql.tf file (not recommended).
 
 ## Usage
 
@@ -282,7 +282,8 @@ You can see that Terraform recognizes the modules required by our configuration:
     private_subnets_cidr  = ["10.0.128.0/20", "10.0.144.0/20"]
   ```
 
-> [!IMPORTANT] > **Make sure to replace the values with ones that match your AWS environment and needs.**
+> [!IMPORTANT] 
+> **Make sure to replace the values with ones that match your AWS environment and needs.**
 
 #### 5. Create a Terraform plan
 
