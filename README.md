@@ -11,6 +11,7 @@ This GitHub repository contains comprehensive code samples and automation script
 * [Export LUN metrics from an FSx to Amazon CloudWatch](/Monitoring/Lun)
 * [k8s applications non-stdout logs collection into ELK](/Monitoring/EKS-logs-to-ELK)
 * [FSxN iscsi volume creation automation](/iscsi-vol-create&mount)
+* [Deployment of SQL Server on EC2 with FSx ONTAP](/Terraform/deploy-fsx-ontap-sqlserver)
 
 
 ## Author Information
