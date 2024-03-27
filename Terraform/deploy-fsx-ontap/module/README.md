@@ -65,8 +65,8 @@ Calling this terraform module will result the following:
 
     This order matches the precedence used by the [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-quickstart.html#cli-configure-quickstart-precedence) and the [AWS SDKs](https://aws.amazon.com/tools/).
 
-    > [NOTE!]
-    > In this sample, the AWS Credentials were configured through [AWS CLI](https://aws.amazon.com/cli/), which adds them to a shared configuration file (option 4 above). Therefore, this documentation only provides guidance on setting-up the AWS credentials with shared configuration file using AWS CLI.
+> [!NOTE]
+> In this sample, the AWS Credentials were configured through [AWS CLI](https://aws.amazon.com/cli/), which adds them to a shared configuration file (option 4 above). Therefore, this documentation only provides guidance on setting-up the AWS credentials with shared configuration file using AWS CLI.
 
     #### Configure AWS Credentials using AWS CLI
 
@@ -135,11 +135,12 @@ module "fsxontap" {
     }
 }
 ```
-  > [NOTE!]
-  > To Override default values assigned to other variables in this module, add them to this source block as well. The above source block includes the minimum requirements only.
 
-  > [NOTE!]
-  > The default deployment type is: MULTI_AZ_1. For SINGLE AZ deployment, override the `fsx_deploy_type` variable in the module block, and make sure to only provide one subnet as `primarysub`
+> [!NOTE]
+> To Override default values assigned to other variables in this module, add them to this source block as well. The above source block includes the minimum requirements only.
+
+> [!NOTE]
+> The default deployment type is: MULTI_AZ_1. For SINGLE AZ deployment, override the `fsx_deploy_type` variable in the module block, and make sure to only provide one subnet as `primarysub`
 
 Please read the vriables descriptions in `variables.tf` file for more information regarding the variables passed to the module block.
 
