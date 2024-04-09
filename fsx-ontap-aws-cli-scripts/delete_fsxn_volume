@@ -20,10 +20,11 @@
 ################################################################################
 usage () {
 cat 1>&2 <<EOF
-Usage: $(basename $0) -i volumeID [-r region]
+Usage: $(basename $0) -i volumeID [-r region] [-b]
 where
   volumeID: is the ID of the volume to delete.
   region: is the AWS region where the FSxN filesystem resides.
+  -b: enable final backup. Otherwise it is skipped.
 EOF
   exit 1
 }
@@ -38,11 +39,14 @@ trap 'rm -f $tmpout' exit
 region=$(aws configure list | egrep '^.*egion ' | awk '{print $2}')
 #
 # Process command line arguments.
-while getopts "i:r:" option; do
+skipBackup=true
+while getopts "hbi:r:" option; do
   case $option in
     r) region="$OPTARG"
       ;;
     i) volumeId="$OPTARG"
+      ;;
+    b) skipBackup=false
       ;;
     *) usage
       ;;
@@ -55,7 +59,7 @@ if [ -z "$volumeId" ]; then
   usage
 fi
 
-aws fsx delete-volume --volume-id $volumeId --region=$region --output=json > $tmpout 2>&1
+aws fsx delete-volume --volume-id $volumeId --region=$region --output=json --ontap-configuration '{"SkipFinalBackup": '$skipBackup'}' > $tmpout 2>&1
 
 if [ $? != "0" ]; then
   echo "Failed to delete volume." 1>&2

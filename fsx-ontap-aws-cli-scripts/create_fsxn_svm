@@ -45,11 +45,10 @@ else
 fi
 #
 # Set some defaults.
-size=20
 region=$(aws configure list | egrep '^.*egion ' | awk '{print $2}')
 #
 # Process command line arguments.
-while getopts "n:r:f:i:" option; do
+while getopts "hn:r:f:i:" option; do
   case $option in
     n) svmName=$OPTARG
       ;;
@@ -59,8 +58,7 @@ while getopts "n:r:f:i:" option; do
       ;;
     i) fsid=$OPTARG
       ;;
-    *) echo "Unknown option '$option'." 1>&2
-      usage
+    *) usage
       ;;
   esac
 done
