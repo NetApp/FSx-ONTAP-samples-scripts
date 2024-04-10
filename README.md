@@ -5,6 +5,8 @@ FSx for NetApp ONTAP is an AWS service providing a comprehensive set of advanced
 
 This GitHub repository contains comprehensive code samples and automation scripts for FSx for Netapp ONTAP operations, promoting the use of Infrastructure as Code (IAC) tools and encouraging developers to extend the product's functionalities through code.
 
+We welcome contributions from the community! Please read our [contribution guidelines](CONTRIBUTING.md) before getting started.
+
 ## Table of Contents
 * [FSx ONTAP deployment using Terraform](/Terraform/deploy-fsx-ontap)
 * [AWS CLI management scripts for FSx ONTAP](/fsx-ontap-aws-cli-scripts)
