@@ -12,6 +12,7 @@ This GitHub repository contains comprehensive code samples and automation script
 * [k8s applications non-stdout logs collection into ELK](/Solutions/EKS-logs-to-ELK)
 * [FSx ONTAP iscsi volume creation automation for Windows](/iscsi-vol-create&mount)
 * [Deployment of SQL Server on EC2 with FSx ONTAP](/Terraform/deploy-fsx-ontap-sqlserver)
+* [Export ONTAP metrics from FSx ONTAP to AMAZON CloudWatch using python Lambda function](/Monitoring/monitor-ontap-services)
 
 
 ## Author Information
