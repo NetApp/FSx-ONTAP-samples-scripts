@@ -22,18 +22,16 @@
 # Date: %%DATE%%
 ################################################################################
 
-import botocore
-import boto3
 import json
-import urllib3
-from urllib3.util import Retry
 import re
 import os
 import datetime
 import logging
-import socket
 from logging.handlers import SysLogHandler
-import uuid
+import urllib3
+from urllib3.util import Retry
+import botocore
+import boto3
 
 eventResilience = 4 # Times an event has to be missing before it is removed
                     # from the alert history.
@@ -301,7 +299,7 @@ def checkSystemHealth(service):
                     else:
                         print(f'API call to {endpoint} failed. HTTP status code: {response.status}.')
             else:
-               print(f'Unknown System Health alert type: "{key}".')
+                print(f'Unknown System Health alert type: "{key}".')
 
     if changedEvents:
         s3Client.put_object(Key=config["systemStatusFilename"], Bucket=config["s3BucketName"], Body=json.dumps(fsxStatus).encode('UTF-8'))
@@ -999,7 +997,7 @@ def lambda_handler(event, context):
     #
     # Disable warning about connecting to servers with self-signed SSL certificates.
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-    retries = Retry(total=None, connect=1, read=1, redirect=10, status=0, other=0)
+    retries = Retry(total=None, connect=1, read=1, redirect=10, status=0, other=0)  # pylint: disable=E1123
     http = urllib3.PoolManager(cert_reqs='CERT_NONE', retries=retries)
     #
     # Get the conditions we want to alert on.
