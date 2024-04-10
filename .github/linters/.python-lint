@@ -447,7 +447,24 @@ disable=raw-checker-failed,
         too-many-locals,
         no-else-raise,
         consider-using-dict-items,
-        logging-fstring-interpolation
+        logging-fstring-interpolation,
+        deprecated-module,
+        import-error,
+        relative-beyond-top-level,
+        cyclic-import,
+        consider-using-from-import,
+        wildcard-import,
+        reimported,
+        import-self,
+        preferred-module,
+        misplaced-future,
+        multiple-imports,
+        wrong-import-order,
+        ungrouped-imports,
+        wrong-import-position,
+        useless-import-alias,
+        import-outside-toplevel,
+        shadowed-import
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option
@@ -488,7 +505,7 @@ never-returning-functions=sys.exit,argparse.parse_error
 # Let 'consider-using-join' be raised when the separator to join on would be
 # non-empty (resulting in expected fixes of the type: ``"- " + " -
 # ".join(items)``)
-suggest-join-with-non-empty-separator=yes
+#suggest-join-with-non-empty-separator=yes
 
 
 [REPORTS]
