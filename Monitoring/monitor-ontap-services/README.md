@@ -170,7 +170,7 @@ Each rule should be an object with one, or more, of the following keys:
 - maxQuotaInodesPercentUsed  - Specifies the maximum allowable inode utilization (between 0 and 100) before an alert is sent.
 
 ##### Example Matching conditions file:
-```
+```json
 {
   "services": [
     {
@@ -266,3 +266,17 @@ In the above example, it will alert on:
 - If any quota policies where the space utilization is more than 100% of the soft limit.
 - If any quota policies are showing any inode utilization more than 95%
 A matching conditions file must be created and stored in the S3 bucket with the name given as the "conditionsFilename" configuration variable. Feel free to use the example above as a starting point. Note that you should ensure it is in valid JSON format, otherwise the program will fail to load the file. There are various programs and websites that can validate a JSON file for you.
+
+## Author Information
+
+This repository is maintained by the contributors listed on [GitHub](https://github.com/NetApp/FSx-ONTAP-samples-scripts/graphs/contributors).
+
+## License
+
+Licensed under the Apache License, Version 2.0 (the "License").
+
+You may obtain a copy of the License at [apache.org/licenses/LICENSE-2.0](http://www.apache.org/licenses/LICENSE-2.0).
+
+Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" basis, without WARRANTIES or conditions of any kind, either express or implied.
+
+See the License for the specific language governing permissions and limitations under the License.
