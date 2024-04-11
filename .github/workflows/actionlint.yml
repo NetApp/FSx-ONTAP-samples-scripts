@@ -38,4 +38,4 @@ jobs:
           VALIDATE_POWERSHELL: true
           # VALIDATE_TERRAFORM_FMT: true
           VALIDATE_YAML: true  
-            
+          VALIDATE_PYTHON_PYLINT: true
