@@ -25,19 +25,19 @@ This repository contains the deployment for Amazon FSx for NetApp ONTAP, Microso
 
 #### Terraform Files
 
-| File          | File Path                                | Description                                                                                                                                                                             |
-| ------------- | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| main.tf       | deploy-fsx-ontap-sqlserver/main.tf       | This is the primary terraform file that contains provider information and module configuration for SQL Server EC2 and Amazon FSx for NetApp ONTAP                                       |
-| networking.tf | deploy-fsx-ontap-sqlserver/networking.tf | Creates the networking components - VPC, Public and Private Subnets, Internet Gateway, NAT Gateway, Route Table (private and public), Security Groups (default, EC2 to FSxN and others) |
-| ssm.tf        | deploy-fsx-ontap-sqlserver/ssm.tf        | Creates an SSM parameter to store the password for the file system                                                                                                                      |
-| variables.tf  | deploy-fsx-ontap-sqlserver/variables.tf  | Defines all the variables (and default values) used in main.tf, networking.tf, ssm.tf                                                                                                   |
+| File          | File Path                                       | Description                                                                                                                                                                             |
+| ------------- | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| main.tf       | deploy-fsx-ontap-fileshare-access/main.tf       | This is the primary terraform file that contains provider information and module configuration for Microsoft AD EC2 and Amazon FSx for NetApp ONTAP                                     |
+| networking.tf | deploy-fsx-ontap-fileshare-access/networking.tf | Creates the networking components - VPC, Public and Private Subnets, Internet Gateway, NAT Gateway, Route Table (private and public), Security Groups (default, EC2 to FSxN and others) |
+| ssm.tf        | deploy-fsx-ontap-fileshare-access/ssm.tf        | Creates an SSM parameter to store the password for the file system                                                                                                                      |
+| variables.tf  | deploy-fsx-ontap-fileshare-access/variables.tf  | Defines all the variables (and default values) used in main.tf, networking.tf, ssm.tf                                                                                                   |
 
 #### Terraform Modules
 
 | Module | File              | File Path                                                       | Description                                                                                                        |
 | ------ | ----------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | ec2ad  | ec2-ami.tf        | deploy-fsx-ontap-fileshare-access/modules/ec2/ec2-ami.tf        | The file contains the AMI used for deploying the Microsoft AD                                                      |
-| ec2ad  | ec2-ad.tf         | deploy-fsx-ontap-fileshare-access/modules/ec2/ec2-sql.tf        | The file defines the EC2 and script to configure the Microsoft AD                                                  |
+| ec2ad  | ec2-ad.tf         | deploy-fsx-ontap-fileshare-access/modules/ec2/ec2-ad.tf         | The file defines the EC2 and script to configure the Microsoft AD                                                  |
 | ec2ad  | variables.tf      | deploy-fsx-ontap-fileshare-access/modules/ec2/variables.tf      | Defines all the variables (and default values) used in main.tf and ec2-ad.tf                                       |
 | ec2ad  | outputs.tf        | deploy-fsx-ontap-fileshare-access/modules/ec2/outputs.tf        | Defines the output variables for Microsoft AD Server                                                               |
 | fsxn   | fsx-fs.tf         | deploy-fsx-ontap-fileshare-access/modules/fsxn/fsx-fs.tf        | Defines the Amazon FSx for NetApp ONTAP file system and it's properties (SSD, Throughput, Deployment Mode etc.)    |
@@ -64,7 +64,7 @@ This repository contains the deployment for Amazon FSx for NetApp ONTAP, Microso
 | environment           | Name of the environment (demo, test, qa etc.)                                                                 | `string`       | `Demo`                               |    No    |
 | aws_location          | AWS region                                                                                                    | `string`       | `ap-southeast-1`                     |   Yes    |
 | availability_zones    | Availability Zones corresponding to the regions                                                               | `list(string)` | `"ap-southeast-1", "ap-southeast-2"` |   Yes    |
-| ec2_instance_type     | SQL Server EC2 instance type                                                                                  | `string`       | `t3.2xlarge`                         |   Yes    |
+| ec2_instance_type     | AD EC2 instance type                                                                                          | `string`       | `t3.2xlarge`                         |   Yes    |
 | ec2_instance_keypair  | EC2 Key Pair to be assigned for the deployed EC2 instance                                                     | `string`       |                                      |   Yes    |
 | ec2_iam_role          | IAM Role assigned to the EC2 (see section)[#create-an-iam-role-and-attach-the-policy-amazonssmreadonlyaccess] | `string`       |                                      |   Yes    |
 | fsxn_password         | Password for the fsxadmin user assigned to the filesystem                                                     | `string`       |                                      |   Yes    |
@@ -75,15 +75,16 @@ This repository contains the deployment for Amazon FSx for NetApp ONTAP, Microso
 
 ### Outputs
 
-| Name                     | Description                          |
-| ------------------------ | ------------------------------------ |
-| FSxN_management_ip       | FSxN File System Management Endpoint |
-| FSxN_svm_iscsi_endpoints | FSxN SVM iSCSI IP addresses          |
-| FSxN_sql_server_ip       | SQL Server EC2 IP addresses          |
-| FSxN_file_system_id      | FSxN File System Id                  |
-| FSxN_svm_id              | FSxN Storage Virtual Machine Id      |
-| FSxN_sql_data_volume     | FSxN SQL Data Volume Id and Name     |
-| FSxN_sql_log_volume      | FSxN SQL Log Volume Id and Name      |
+| Name                          | Description                            |
+| ----------------------------- | -------------------------------------- |
+| FSxN_Management_IP            | FSxN File System Management Endpoint   |
+| MicrosoftAD_Server_Private_IP | Microsoft AD Private IP                |
+| FSxN_File_System_ID           | FSxN File System ID                    |
+| FSxN_SVM_ID                   | FSxN Storage Virtual Machine ID        |
+| FSxN_SVM_SMB_Endpoint         | FSxN SMB Endpoint Details (DNS and IP) |
+| FSxN_SVM_NFS_Endpoint         | FSxN NFS Endpoint Details (DNS and IP) |
+| FSxN_Volume_1                 | FSxN Volume 1 details                  |
+| FSxN_Volume_2                 | FSxN Volume 2 details                  |
 
 ### What to expect
 
@@ -210,8 +211,8 @@ To list configuration data, use the [`aws configire list`](https://docs.aws.amaz
    - Click the "Create role" button.
 
 > [!NOTE]
-> The role is required to fetch the password for fsxadmin from SSM Secured Parameters. Terraform creates an SSM Paramter which is retrieved via the powershell script of EC2 instance. The role allows the retrieval of the parameter and execute the necessary operations on the filesystem.
-> Alternatively, the password can also be entered in the `user_data` section under `$ssmPass` variable found in the ec2-sql.tf file (not recommended).
+> The role is required to fetch the password for fsxadmin and AD Admin Password from SSM Secured Parameters. Terraform creates an SSM Paramter which is retrieved via the powershell script of EC2 instance. The role allows the retrieval of the parameter and execute the necessary operations on the filesystem.
+> Alternatively, the password can also be entered in the `user_data` section under `$ssmPass` variable found in the ec2-ad.tf file (not recommended).
 
 #### Generate VPN Certificates
 
