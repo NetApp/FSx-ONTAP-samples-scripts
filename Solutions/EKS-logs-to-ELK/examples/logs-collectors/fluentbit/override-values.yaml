@@ -1,3 +1,4 @@
+---
 fluentbit:
   enable: true
   input:
@@ -5,8 +6,8 @@ fluentbit:
       enable: true
       path: "/logs/*/*.log"
   output:
-      stdout: 
-        enable: true
+    stdout:
+      enable: true
       
   additionalVolumes: 
     - name: shared-logs
