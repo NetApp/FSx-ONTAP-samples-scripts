@@ -173,7 +173,7 @@ def checkSystem():
     # This is also a way to test that the FSxN cluster is accessible.
     try:
         endpoint = f'https://{config["OntapAdminServer"]}/api/cluster?fields=version,name'
-        response = http.request('GET', endpoint, headers=headers, timeout=1.0)
+        response = http.request('GET', endpoint, headers=headers, timeout=5.0)
         if response.status == 200:
             if not fsxStatus["systemHealth"]:
                 fsxStatus["systemHealth"] = True
