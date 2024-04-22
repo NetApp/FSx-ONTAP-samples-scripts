@@ -1,4 +1,5 @@
 # FSx-ONTAP-samples-scripts
+
 FSx for NetApp ONTAP is an AWS service providing a comprehensive set of advanced storage features purposely built to maximize cost performance, resilience, and accessibility in business-critical workloads.
 
 ## Overview
@@ -6,13 +7,14 @@ FSx for NetApp ONTAP is an AWS service providing a comprehensive set of advanced
 This GitHub repository contains comprehensive code samples and automation scripts for FSx for Netapp ONTAP operations, promoting the use of Infrastructure as Code (IAC) tools and encouraging developers to extend the product's functionalities through code.
 
 ## Table of Contents
-* [FSx ONTAP deployment using Terraform](/Terraform/deploy-fsx-ontap)
-* [AWS CLI management scripts for FSx ONTAP](/fsx-ontap-aws-cli-scripts)
-* [Export LUN metrics from an FSx ONTAP to Amazon CloudWatch](/Monitoring/LUN-monitoring)
-* [k8s applications non-stdout logs collection into ELK](/Solutions/EKS-logs-to-ELK)
-* [FSx ONTAP iscsi volume creation automation for Windows](/iscsi-vol-create&mount)
-* [Deployment of SQL Server on EC2 with FSx ONTAP](/Terraform/deploy-fsx-ontap-sqlserver)
 
+- [FSx ONTAP deployment using Terraform](/Terraform/deploy-fsx-ontap)
+- [AWS CLI management scripts for FSx ONTAP](/fsx-ontap-aws-cli-scripts)
+- [Export LUN metrics from an FSx ONTAP to Amazon CloudWatch](/Monitoring/LUN-monitoring)
+- [k8s applications non-stdout logs collection into ELK](/Solutions/EKS-logs-to-ELK)
+- [FSx ONTAP iscsi volume creation automation for Windows](/iscsi-vol-create&mount)
+- [Deployment of SQL Server on EC2 with FSx ONTAP](/Terraform/deploy-fsx-ontap-sqlserver)
+- [Deployment of FSx ONTAP with VPN for File Share Access](/Terraform/deploy-fsx-ontap-fileshare-access)
 
 ## Author Information
 
