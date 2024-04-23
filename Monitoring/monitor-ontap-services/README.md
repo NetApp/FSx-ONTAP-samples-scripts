@@ -31,7 +31,7 @@ to the specified SNS topic. The program will also send a syslog message to a sys
 is set. The program will store the event information in an S3 bucket so that it can be compared against it before sending
 a second message for the same event. The configuration files is also kept in the S3 bucket for easy access.
 
-![Architecture](images/Monitoring_Ontap_Services_Architecture.png)
+![Architecture](images/Monitoring_ONTAP_Services_Architecture-2.png)
 
 ## Preparation
 There are a few things you need to do to properly deploy this script.
