@@ -1,4 +1,5 @@
 # FSx-ONTAP-samples-scripts
+
 FSx for NetApp ONTAP is an AWS service providing a comprehensive set of advanced storage features purposely built to maximize cost performance, resilience, and accessibility in business-critical workloads.
 
 ## Overview
@@ -8,6 +9,7 @@ This GitHub repository contains comprehensive code samples and automation script
 We welcome contributions from the community! Please read our [contribution guidelines](CONTRIBUTING.md) before getting started.
 
 ## Table of Contents
+
 * [FSx ONTAP deployment using Terraform](/Terraform/deploy-fsx-ontap)
 * [AWS CLI management scripts for FSx ONTAP](/fsx-ontap-aws-cli-scripts)
 * [Export LUN metrics from an FSx ONTAP to Amazon CloudWatch](/Monitoring/LUN-monitoring)
@@ -15,7 +17,7 @@ We welcome contributions from the community! Please read our [contribution guide
 * [FSx ONTAP iscsi volume creation automation for Windows](/iscsi-vol-create&mount)
 * [Deployment of SQL Server on EC2 with FSx ONTAP](/Terraform/deploy-fsx-ontap-sqlserver)
 * [Monitor ONTAP metrics from FSx ONTAP using python Lambda function](/Monitoring/monitor-ontap-services)
-
+* [Deployment of FSx ONTAP with VPN for File Share Access](/Terraform/deploy-fsx-ontap-fileshare-access)
 
 ## Author Information
 
