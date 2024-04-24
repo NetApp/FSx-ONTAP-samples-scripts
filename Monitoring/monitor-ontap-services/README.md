@@ -23,6 +23,16 @@ Here is an itemized list of the services that this program can monitor:
 - If a volume is over a certain percentage full. User can set two thresholds (Warning and Critical).
 - If any quotas are over a certain percentage full. User can follow both soft and hard limits.
 
+## Architecture
+The program is designed to be run as a Lambda function. It is triggered by an EventBridge rule that is set to run
+on a regular basis. The program will then use the ONTAP APIs to obtain the required information to determine if
+any of the conditions that are being monitored have been met. If they have, then the program will send an SNS message
+to the specified SNS topic. The program will also send a syslog message to a syslog server if the syslogIP parameter
+is set. The program will store the event information in an S3 bucket so that it can be compared against it before sending
+a second message for the same event. The configuration files is also kept in the S3 bucket for easy access.
+
+![Architecture](images/Monitoring_ONTAP_Services_Architecture-2.png)
+
 ## Preparation
 There are a few things you need to do to properly deploy this script.
 
