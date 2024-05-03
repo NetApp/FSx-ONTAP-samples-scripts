@@ -160,6 +160,7 @@ fi
 # Define the query string that is used to get only the fields needed to generate the output.
 # It also makes the 'jq' commands below easily, since it flattens the JSON structure.
 queryString="FileSystems[*].{
+  FileSystemType: FileSystemType,
   FileSystemId: FileSystemId,
   Lifecycle:Lifecycle,
   Name:Tags[?Key=='Name']|[0].Value,
@@ -214,7 +215,7 @@ for region in ${regions[*]}; do
     fi
 
     printf "$region\n"
-    jq -r '.[] | .FileSystemId + " " + .Lifecycle + " =" + .Name + "="' $fileSystemsFile | while read fs fsStatus fsName; do
+    jq -r '.[] | if(.FileSystemType != "ONTAP") then empty else .FileSystemId + " " + .Lifecycle + " =" + .Name + "=" end' $fileSystemsFile | while read fs fsStatus fsName; do
       x="${fsName#=}"
       fsName="${x%=}"
       [ "$showStatus" == "true" ] && printf "\t$fs($fsStatus) - '$fsName'\n"
@@ -244,10 +245,9 @@ for region in ${regions[*]}; do
     # 11 = throughput
     # 12 = size
     if [ ! -z "$1" ]; then
-      #set -x
-      jq -r '.[] | .FileSystemId + "," + .ResourceARN + "," + (if((.Name | tostring) | test("'$1'")) then .Name else empty end) + "," + .Lifecycle + "," + .ManagementIp + "," + .VpcId + "," + .SubnetId + "," + (if(.AutomaticBackupRetentionDays == null) then "Dissabled" else (.AutomaticBackupRetentionDays | tostring) end) + "," + .DeploymentType + "," + (.DiskIopsConfiguration | tostring) + "," + (.ThroughputCapacity | tostring) + "," + (.StorageCapacity | tostring)' $fileSystemsFile > $tmpout
+      jq -r '.[] | if(.FileSystemType == "ONTAP") then .FileSystemId + "," + .ResourceARN + "," + (if((.Name | tostring) | test("'$1'")) then .Name else empty end) + "," + .Lifecycle + "," + .ManagementIp + "," + .VpcId + "," + .SubnetId + "," + (if(.AutomaticBackupRetentionDays == null) then "Dissabled" else (.AutomaticBackupRetentionDays | tostring) end) + "," + .DeploymentType + "," + (.DiskIopsConfiguration | tostring) + "," + (.ThroughputCapacity | tostring) + "," + (.StorageCapacity | tostring) else empty end' $fileSystemsFile > $tmpout
     else
-      jq -r '.[] | .FileSystemId + "," + .ResourceARN + "," + .Name + "," + .Lifecycle + "," + .ManagementIp + "," + .VpcId + "," + .SubnetId + "," + if(.AutomaticBackupRetentionDays == null) then "Dissabled" else (.AutomaticBackupRetentionDays | tostring) end + "," + .DeploymentType + "," + (.DiskIopsConfiguration | tostring) + "," + (.ThroughputCapacity | tostring) + "," + (.StorageCapacity | tostring)' $fileSystemsFile > $tmpout
+      jq -r '.[] | if(.FileSystemType == "ONTAP") then .FileSystemId + "," + .ResourceARN + "," + .Name + "," + .Lifecycle + "," + .ManagementIp + "," + .VpcId + "," + .SubnetId + "," + if(.AutomaticBackupRetentionDays == null) then "Dissabled" else (.AutomaticBackupRetentionDays | tostring) end + "," + .DeploymentType + "," + (.DiskIopsConfiguration | tostring) + "," + (.ThroughputCapacity | tostring) + "," + (.StorageCapacity | tostring) else empty end' $fileSystemsFile > $tmpout
     fi
 
     if [ "$includeExtraInfo" == "true" ]; then
