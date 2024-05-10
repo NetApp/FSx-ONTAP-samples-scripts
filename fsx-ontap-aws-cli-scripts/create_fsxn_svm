@@ -85,7 +85,7 @@ if [ -z "$fsid" ]; then
 fi
 #
 # Create the SVM
-aws fsx create-storage-virtual-machine --name $svmName --region=$region --file-system-id $fsid --output=json > $tmpout 2>&1
+aws fsx create-storage-virtual-machine --name $svmName --region=$region --file-system-id "$fsid" --output=json > $tmpout 2>&1
 
 if [ $? != "0" ]; then
   echo "Failed to create storage virtual machine." 1>&2
