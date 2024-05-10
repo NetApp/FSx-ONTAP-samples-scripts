@@ -8,6 +8,8 @@ This GitHub repository contains comprehensive code samples and automation script
 
 We welcome contributions from the community! Please read our [contribution guidelines](CONTRIBUTING.md) before getting started.
 
+Have a great idea? We'd love to hear it! Please share it via the Discussions tab under the Ideas catagory.
+
 ## Table of Contents
 
 * [FSx ONTAP deployment using Terraform](/Terraform/deploy-fsx-ontap)
