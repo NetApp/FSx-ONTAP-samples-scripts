@@ -13,10 +13,10 @@ Have a great idea? We'd love to hear it! Please share it via the Discussions tab
 ## Table of Contents
 
 * [FSx ONTAP deployment using Terraform](/Terraform/deploy-fsx-ontap)
-* [AWS CLI management scripts for FSx ONTAP](/fsx-ontap-aws-cli-scripts)
+* [AWS CLI management scripts for FSx ONTAP](/Management-Utilities/fsx-ontap-aws-cli-scripts)
 * [Export LUN metrics from an FSx ONTAP to Amazon CloudWatch](/Monitoring/LUN-monitoring)
 * [k8s applications non-stdout logs collection into ELK](/Solutions/EKS-logs-to-ELK)
-* [FSx ONTAP iscsi volume creation automation for Windows](/iscsi-vol-create&mount)
+* [FSx ONTAP iscsi volume creation automation for Windows](/Management-Utilities/iscsi-vol-create&mount)
 * [Deployment of SQL Server on EC2 with FSx ONTAP](/Terraform/deploy-fsx-ontap-sqlserver)
 * [Monitor ONTAP metrics from FSx ONTAP using python Lambda function](/Monitoring/monitor-ontap-services)
 * [Deployment of FSx ONTAP with VPN for File Share Access](/Terraform/deploy-fsx-ontap-fileshare-access)
