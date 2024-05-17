@@ -3,16 +3,16 @@
 ## Introduction
 
 In this project you'll find the instructions and code necessary to deploy an AWS EKS
-cluster and an Amazon FSx for NetApp ONTAP File System (FSxN) to provide the persistent storage
+cluster and an Amazon FSx for NetApp ONTAP File System (FSxN) to provide persistent storage
 for it. It will leverage NetApp's Astra Trident to provide the interface between EKS to FSxN.
 
 ## Prerequisites
 
 A Linux based EC2 instance with the following installed:
-- Hashicorp Terraform
+- HashiCorp Terraform
 - AWS CLI authenticated with an account that has privileges necessary to:
 	- Deploy an EKS cluster
-	- Deplay an FSx for Netapp ONTAP File System
+	- Deploy an FSx for Netapp ONTAP File System
 	- Create security groups
 	- Create a VPC and subnets
 	- Create a NAT Gateway
@@ -21,19 +21,19 @@ A Linux based EC2 instance with the following installed:
 ## Installation Overview
 The overall process is as follows:
 - Ensure the prerequisites have been installed and configured.
-- Clone this repo from GitHub
-- Make any desired changes to the variables.tf file.
+- Clone this repo from GitHub.
+- Make changes to the variables.tf file.
 - Run 'terraform init' to initialize the terraform environment.
 - Run 'terraform apply -auto-approve' to:
-  - Create a new VPC with public and priviate subnets
-  - Deploy a FSx for NetApp ONTAP File System
-  - Deploy a EKS cluster
-  - Deploy an EC2 Linux based instance
-- SSH to the Linux based instance to complete the setup
-  - Install the FSx for NetApp ONTAP Trident CSI driver
-  - Configure the Trident CSI driver
-  - Create a Kubernetes storage class
-- Deploy an sample application to test the storage with
+  - Create a new VPC with public and private subnets.
+  - Deploy a FSx for NetApp ONTAP File System.
+  - Deploy an EKS cluster.
+  - Deploy an EC2 Linux based instance.
+- SSH to the Linux based instance to complete the setup:
+  - Install the FSx for NetApp ONTAP Trident CSI driver.
+  - Configure the Trident CSI driver.
+  - Create a Kubernetes storage class.
+- Deploy a sample application to test the storage with.
 
 ## Detailed Instructions
 ## Clone the "NetApp/FSx-ONTAP-samples-scripts" repo from GitHub
@@ -88,7 +88,7 @@ ssh -i <path_to_key_pair> ubuntu@<jump_server_public_ip>
 ```
 Where:
 - <path_to_key_pair> is the path to where you have stored the key_pair that you
-referened in the variables.tf file.
+referenced in the variables.tf file.
 - <jump_server_public_ip> is the IP address of the jump start server that was displayed
 in the output from the `terraform apply` command.
 
@@ -104,7 +104,7 @@ you set the default output format to.
 
 ### Allow access to the EKS cluster for your user id
 AWS's EKS clusters have a secondary form for permissions. As such, you have to add an "access-entry"
-to your EKS configuration, and associate it with Cluster Admin policy to be able to view and
+to your EKS configuration and associate it with Cluster Admin policy to be able to view and
 configure the EKS cluster. The first step to do this is to find out your IAM ARN.
 You can do that via this command:
 ```bash
@@ -120,7 +120,7 @@ IAM ARN obtained from the command above.
 
 The final step is to associate the Cluster Admin policy to that access-entry with this command:
 ```bash
-aws eks associate-access-policy --cluster-name <EKS_CLUSTER_NAME>  --principal-arn <USER_ARN> --policy-arn arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy --access-scope type=cluster
+aws eks associate-access-policy --cluster-name <EKS_CLUSTER_NAME> --principal-arn <USER_ARN> --policy-arn arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy --access-scope type=cluster
 ```
 Like above, replace <EKS_CLUSTER_NAME> with the name of your EKS cluster. And replace <USER_ARN> with
 IAM ARN obtained from the command above. Leave the rest of the arguments as is.
@@ -137,7 +137,7 @@ Run the following command to confirm you can communicate with the EKS cluster:
 ```bash
 kubectl get nodes
 ```
-You should get output similar to this:
+You should get output like this:
 ```bash
 NAME                                           STATUS   ROLES    AGE   VERSION
 ip-192-168-1-100.us-west-2.compute.internal     Ready    <none>   2m    v1.21.2-eks-55c2c7
@@ -166,7 +166,7 @@ helm install trident -n trident --create-namespace  trident-installer/helm/tride
 ```
 
 ### Confirm Trident is up and running
-Confirm that the Trident operator is up and running by runing this command:
+Confirm that the Trident operator is up and running by running this command:
 ```bash
 kubectl get pods -n trident
 ```
@@ -181,7 +181,7 @@ trident-operator-67d6fd899b-jrnt2     1/1     Running   0          20h
 Note that it might take a minute before all four of those pods show up.
 
 ### Configure the Trident CSI backend to FSx for NetApp ONTAP
-For the example use case outlined below we are going to set up an iSCSI LUN for an MySQL
+For the example use case outlined below we are going to set up an iSCSI LUN for a MySQL
 database. Because of that, we are going to set the storage driver name
 in the Trident backend configuration to `ontap-san`. You can read more about
 the different driver types in the
@@ -193,10 +193,10 @@ from the `terraform apply` command. If you have lost that output, you can always
 into the server where you ran `terraform apply` and simply run it again. It should
 state that there aren't any changes to be made and show the output again.
 
-Note that a copy of the this repo has been put into the
-ubuntu home directory for you. Don't be confused with this copy and the one you used to create the
-environment earlier. This copy will not have the terraform state information, nor your changes
-to the variables.tf file.
+Note that a copy of this repo has been put into ubuntu's home directory for you.
+Don't be confused with this copy and the one you used to create the
+environment with earlier. This copy will not have the terraform state information,
+nor your changes to the variables.tf file.
 
 Execute the following commands to configure Trident to use the `ontap-san` driver.
 ```bash
@@ -212,7 +212,7 @@ SVM that was created.
 Feel free to look at the `temp/backend-tbc-ontap-san.yaml` file that was used to
 configure the Trident backend.
 
-To confirm that the backend has been appropriatedly configured, run this command:
+To confirm that the backend has been appropriately configured, run this command:
 ```bash
 kubectl get tridentbackendconfig -n trident
 ```
@@ -241,7 +241,7 @@ Feel free to look at the `manifests/storageclass-fsxn-block.yaml` file to see
 how the storage class was configured.
 
 ## Create a stateful application
-Now that you have setup Kubernetes to use Trident to interface with FSxN for presistent
+Now that you have set up Kubernetes to use Trident to interface with FSxN for persistent
 storage, you are ready to create an application that will use it. In the example below,
 we are setting up a MySQL database that will use a iSCSI LUN configured on the FSxN file system.
 
@@ -261,8 +261,8 @@ NAME           STATUS   VOLUME                                     CAPACITY   AC
 mysql-volume   Bound    pvc-f1e94884-fb3b-4cb0-b58b-50fa2b8cbb77   50Gi       RWO            fsx-basic-block   <unset>                 20h
 ```
 
-### Deploy an MySQL database using the storage created above
-Now you can deply a MySQL database by executing:
+### Deploy a MySQL database using the storage created above
+Now you can deploy a MySQL database by executing:
 ```bash
 kubectl create -f manifests/mysql.yaml
 ```
@@ -280,15 +280,15 @@ To see how the MySQL was configured, check out the `manifests/mysql.yaml` file.
 
 ### Populate the MySQL database with data
 
-Now to confirm that the database is able to read and write to the presistent storage you need
+Now to confirm that the database is able to read and write to the persistent storage you need
 to put some data in the database. Do that by first logging into the MySQL instance.
 It will prompt for a password. In the yaml file used to create the database, you'll see
 that we set that to `Netapp1!`
 ```bash
 kubectl exec -it $(kubectl get pod -l "app=mysql-fsx" --namespace=default -o jsonpath='{.items[0].metadata.name}') -- mysql -u root -p
 ```
-Onced logged in, here are some SQL statements used to create a database, create a table, then insert
-some values:
+After you have logged in, here are some SQL statements you can use to create a database, create a table, then insert
+some values into the table:
 ```bash
 mysql> create database fsxdatabase; 
 Query OK, 1 row affected (0.01 sec)
@@ -322,7 +322,7 @@ mysql> select * from fsx;
 ## Final steps
 
 At this point you don't need to jump server created to configure the EKS environment for
-the FSxN File System, so feel free to `terminate` it (i.e. destory it).
+the FSxN File System, so feel free to `terminate` it (i.e. destroy it).
 
 Other than that, you are welcome to deploy other applications that need persistent storage.
 
