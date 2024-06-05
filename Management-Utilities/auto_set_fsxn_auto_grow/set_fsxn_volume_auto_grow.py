@@ -25,7 +25,6 @@ import time
 import urllib3
 from urllib3.util import Retry
 import logging
-import botocore
 import boto3
 #
 # Create a table of secret names and keys for the username and password for each of the FSxIds.
@@ -142,9 +141,9 @@ def lambda_handler(event, context):
     volumeId   = event['detail']['responseElements']['volume']['volumeId']
     volumeARN  = event['detail']['responseElements']['volume']['resourceARN']
     if fsxId == "" or regionName == "" or volumeId == "" or volumeName == "" or volumeARN == "":
-        message = f"Couldn't obtain the fsxId, region, volume name, volume ID or volume ARN from the CloudWatch evevnt."
+        message = "Couldn't obtain the fsxId, region, volume name, volume ID or volume ARN from the CloudWatch evevnt."
         logger.critcal(message)
-        raise Exception(mmessage)
+        raise Exception(message)
 
     logger.debug(f'Data from CloudWatch event: FSxID={fsxId}, Region={regionName}, VolumeName={volumeName}, volumeId={volumeId}.')
     #
