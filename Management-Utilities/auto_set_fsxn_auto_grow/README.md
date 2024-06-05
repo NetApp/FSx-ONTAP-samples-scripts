@@ -2,11 +2,11 @@
 
 ## Introduction
 This project helps to mitigate the issue of not being able to set the auto size mode to
-'grow' when creating a FSxN volume from the AWS console or API. It does this by providing
+on an FSxN volume when creating it from the AWS console or API. It does this by providing
 a Lambda function that will set the mode for you, and instructions on how to set up a
 CloudWatch event to trigger the Lambda function whenever a volume is created. With this
 combination it ensures that all volumes are effectively created with the auto size mode
-set to 'grow'.
+set up the way you want for all volumes.
 
 ## Set Up
 There are just a few things you have to do to set this up:
@@ -46,17 +46,26 @@ Create a Lambda function with the following parameters:
   - Attached a security group that allows access from any IP within the two subnets.
 
 After you create the function, you will be able to insert the code included with this 
-projrectinto the code box. Once you have inserted the code, modify the "secretsTable"
+project into the code box. Once you have inserted the code, modify the "secretsTable"
 array to provide the secrets name, and the keys for the username as password for each
 of the FSxN File Systems that you want to manage with this script. Also, set the
-secretsManagerRegion variable to the region where your secrets are stored.
+secretsManagerRegion variable to the region where your secrets are stored. Finally
+set the auto size parameters (autoSizeMode, growThresholdPercentage,
+maxGrowSizePercentage, shrinkThresholdPercentage, minShrinkSizePercentage and
+maxWaitTime) as you see fit. NOTE: Do note delete the variables
+or set them to None or empty strings, as the script will fail to run appropraitely
+if done so.
 
 Once you have updated the program, click on the "Deploy" button.
 
-Next, click on the Configuration tab, then General and set the timeout to 10 seconds.
+Next, click on the Configuration tab, then General and set the timeout to 2 minutes, or
+two times the number of seconds you set the maxWaitTime variable. Note that typically
+the program will not run this long, but if there are a lot of volumes being created at the
+same time, it may have to wait a while for the volume to get created on the ONTAP side before
+it can set the auto size mode.
 
-### Create an Event Bridge Rule (a.k.a. Cloud Watch Event) that will trigger when a FSx Volume is created
-Once on the "Event Bridge" page, click on Rules on the left add side. From there click
+### Create an Event Bridge Rule (a.k.a. CloudWatch Event) that will trigger when a FSx Volume is created
+Once on the "Event Bridge" page, click on Rules on the left hand side. From there click
 on Create Rule. Give the rule a name, and make sure to put the rule on the "Default" bus.
 Finally select "Rule with an event pattern" and click Next.
 
@@ -82,8 +91,8 @@ Edit Event Pattern text box:
 Click Next. This next page will allow you to select the Lambda function you created above.
 Just take the defaults for the remaining pages and click on "Create Rule."
 
-This point every time a volume is created the Lambda function will be called, and it will
-set the auto size mode to "grow".
+At this point every time a volume is created the Lambda function will be called, and it will
+attempt to set the auto size mode as specified via the variables at the top of the code.
 
 ## Author Information
 

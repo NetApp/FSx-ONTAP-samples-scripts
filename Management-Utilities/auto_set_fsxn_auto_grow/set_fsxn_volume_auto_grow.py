@@ -38,6 +38,35 @@ secretsTable = [
 #
 # Set the region where the secrets are stored.
 secretsManagerRegion="us-west-2"
+#
+# Set the auto size mode. Supported values are "grow", "grow_shrink", and "off".
+autoSizeMode = "grow"
+#
+# Set the grow-threshold-precentage for the volume. This is the percentage of the volume that must be used before it grows.
+growThresholdPercentage = 85
+#
+# Set the maximum grow size for the volume in terms of the percentage of the provisioned size.
+maxGrowSizePercentage = 120
+#
+# Set the shrink-threshold-precentage for the volume. This is the percentage of the volume that must be free before it shrinks.
+shrinkThresholdPercentage = 50
+#
+# Set the minimum shirtk size for the volume in terms of the percentage of the provisioned size.
+minShrinkSizePercentage = 100
+#
+# Set the iime to wait for a volume to get created. This Lambda function will
+# loop waiting for the volume to be created on the ONTAP side so it can set
+# the auto size parameters. It will wait up to the number of seconds specified
+# below before giving up. NOTE: You must set the timeout of this function
+# to at least the number of seconds specified here, and probably two times
+# the number here to account for the time it takes to do the API call,
+# otherwise the Lambda timeout feature will kill it before it is able to
+# iterate as many times as you want it to. Also note that the main reason for
+# it to take a while for a volume to get created is when multiple are being
+# created at the same time, so if you have autmation that might create a lot of
+# volumes at the same time, you might need to either adjust this number really
+# high, or come up with another way to get the auto size mode.
+maxWaitTime=60
 
 ################################################################################
 # This function is used to obtain the username and password from AWS's Secrets
@@ -56,25 +85,26 @@ def getCredentials(secretsManagerClient, fsxnId):
     return ("", "")
 
 ################################################################################
-# This function returns the UUID of the volume that has the ARN passed in. It
-# tries a few times, sleeping 1 second between attempts, since the UUID
-# doesn't exist until the volume has been created on the ONTAP side.
-# It returns an empty string if the ARN is not found.
+# This function returns the AWS structure for a FSxN volume based on the
+# volumeId passed it. It confirms that the volume has been created on the ONTAP
+# side by checking that the ResourceARN field equals the volumeARN passed in
+# that came from the volume creation event and that the UUID field has been
+# populated. It returns None if it can't find the volume.
 ################################################################################
-def getVolumeUUID(fsxClient, volumeId, volumeARN):
+def getVolumeData(fsxClient, volumeId, volumeARN):
 
     global logger
 
     cnt = 0
-    while cnt < 3:
+    while cnt < maxWaitTime:
         awsVolume = fsxClient.describe_volumes(VolumeIds=[volumeId])['Volumes'][0]
-        if awsVolume['ResourceARN'] == volumeARN:
-            return awsVolume['OntapConfiguration']['UUID']
+        if awsVolume['ResourceARN'] == volumeARN and awsVolume['OntapConfiguration'].get("UUID") != None:
+            return awsVolume
         logger.debug(f'Looping, getting the UUID {cnt}')
         cnt += 1
         time.sleep(1)
 
-    return ""
+    return None
 
 ################################################################################
 ################################################################################
@@ -85,7 +115,7 @@ def lambda_handler(event, context):
     # Set up "logging" to appropriately display messages. It can be set it up
     # to send messages to a syslog server.
     logging.basicConfig(datefmt='%Y-%m-%d_%H:%M:%S', format='%(asctime)s:%(name)s:%(levelname)s:%(message)s', encoding='utf-8')
-    logger = logging.getLogger("scan_create_sm_relationships")
+    logger = logging.getLogger("set_fsxn_volume_auto_size")
 #    logger.setLevel(logging.DEBUG)
     logger.setLevel(logging.INFO)
     #
@@ -134,25 +164,30 @@ def lambda_handler(event, context):
     fs = fsxClient.describe_file_systems(FileSystemIds = [fsxId])['FileSystems'][0]
     fsxnIp = fs['OntapConfiguration']['Endpoints']['Management']['IpAddresses'][0]
     if fsxnIp == "":
-        message = f"Can't find manament IP for FSxN file system with an ID of '{fsxId}'."
+        message = f"Can't find management IP for FSxN file system with an ID of '{fsxId}'."
         logger.critical(message)
         raise Exception(message)
-
-    volumeUUID = getVolumeUUID(fsxClient, volumeId, volumeARN)
-    if volumeUUID == "":
-        message = f"Can't find the volumeUUID based on the volume ARN {volumeARN}."
+    #
+    # Get the volume UUID and volume size based on the volume ID.
+    volumeData = getVolumeData(fsxClient, volumeId, volumeARN)
+    if volumeData == None:
+        message=f'Failed to get volume information for volumeID: {volumeId}.'
         logger.critical(message)
         raise Exception(message)
+    volumeUUID = volumeData["OntapConfiguration"]["UUID"]
+    volumeSizeInMegabytes = volumeData["OntapConfiguration"]["SizeInMegabytes"]
     #
     # Set the auto grow feature.
     try:
         endpoint = f'https://{fsxnIp}/api/storage/volumes/{volumeUUID}'
-        data = '{"autosize": {"mode": "grow"}}'
+        maximum = volumeSizeInMegabytes * maxGrowSizePercentage / 100 * 1024 * 1024
+        minimum = volumeSizeInMegabytes * minShrinkSizePercentage / 100 * 1024 * 1024
+        data = json.dumps({"autosize": {"mode": autoSizeMode, "grow_threshold": growThresholdPercentage, "maximum": maximum, "minimum": minimum, "shrink_threshold": shrinkThresholdPercentage}})
         logger.debug(f'Trying {endpoint} with {data}.')
         response = http.request('PATCH', endpoint, headers=headers, timeout=5.0, body=data)
         if response.status >= 200 and response.status <= 299:
-            logger.info(f"Updated the auto grow flag for volume name {volumeName}.")
+            logger.info(f"Updated the auto size parameters for volume name {volumeName}.")
         else:
-            logger.error(f'API call to {endpoint} failed. HTTP status code: {response.status}.')
+            logger.error(f'API call to {endpoint} failed. HTTP status code: {response.status}. Error message: {response.data}.')
     except Exception as err:
         logger.critical(f'Failed to issue API against {fsxnIp}. The error messages received: "{err}".')
