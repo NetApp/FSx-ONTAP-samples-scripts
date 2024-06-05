@@ -1,7 +1,7 @@
 # Automatically Set Auto Size mode to Grow on FSx for NetApp ONTAP Volumes
 
 ## Introduction
-This project helps to mitigate the issue of not being able to set the auto size mode to
+This project helps to mitigate the issue of not being able to set the auto size mode
 on an FSxN volume when creating it from the AWS console or API. It does this by providing
 a Lambda function that will set the mode for you, and instructions on how to set up a
 CloudWatch event to trigger the Lambda function whenever a volume is created. With this
@@ -53,7 +53,7 @@ secretsManagerRegion variable to the region where your secrets are stored. Final
 set the auto size parameters (autoSizeMode, growThresholdPercentage,
 maxGrowSizePercentage, shrinkThresholdPercentage, minShrinkSizePercentage and
 maxWaitTime) as you see fit. NOTE: Do note delete the variables
-or set them to None or empty strings, as the script will fail to run appropraitely
+or set them to None or empty strings, as the script will fail to run appropriately
 if done so.
 
 Once you have updated the program, click on the "Deploy" button.

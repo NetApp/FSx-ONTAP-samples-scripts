@@ -42,13 +42,13 @@ secretsManagerRegion="us-west-2"
 # Set the auto size mode. Supported values are "grow", "grow_shrink", and "off".
 autoSizeMode = "grow"
 #
-# Set the grow-threshold-precentage for the volume. This is the percentage of the volume that must be used before it grows.
+# Set the grow-threshold-percentage for the volume. This is the percentage of the volume that must be used before it grows.
 growThresholdPercentage = 85
 #
 # Set the maximum grow size for the volume in terms of the percentage of the provisioned size.
 maxGrowSizePercentage = 120
 #
-# Set the shrink-threshold-precentage for the volume. This is the percentage of the volume that must be free before it shrinks.
+# Set the shrink-threshold-percentage for the volume. This is the percentage of the volume that must be free before it shrinks.
 shrinkThresholdPercentage = 50
 #
 # Set the minimum shirtk size for the volume in terms of the percentage of the provisioned size.
@@ -63,7 +63,7 @@ minShrinkSizePercentage = 100
 # otherwise the Lambda timeout feature will kill it before it is able to
 # iterate as many times as you want it to. Also note that the main reason for
 # it to take a while for a volume to get created is when multiple are being
-# created at the same time, so if you have autmation that might create a lot of
+# created at the same time, so if you have automation that might create a lot of
 # volumes at the same time, you might need to either adjust this number really
 # high, or come up with another way to get the auto size mode.
 maxWaitTime=60
