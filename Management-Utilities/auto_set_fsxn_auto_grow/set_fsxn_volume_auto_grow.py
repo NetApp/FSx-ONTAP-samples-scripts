@@ -27,12 +27,16 @@ from urllib3.util import Retry
 import logging
 import boto3
 #
-# Create a table of secret names and keys for the username and password for each of the FSxIds.
+# Create a table of secret names and keys for the username and password for
+# each of the FSxIds. In the example below, it shows using the same
+# secret for four differnt FSxIds, but you can set it up to use
+# a different secret and/or keys for the username and password for each
+# of the FSxId.
 secretsTable = [
-        {"id": "fs-0e8d9172fa545ef3b", "secretName": "mon-fsxn-credentials", "usernameKey": "mon-fsxn-username", "passwordKey": "mon-fsxn-password"},
-        {"id": "fs-020de2687bd98ccf7", "secretName": "mon-fsxn-credentials", "usernameKey": "mon-fsxn-username", "passwordKey": "mon-fsxn-password"},
-        {"id": "fs-07bcb7ad84ac75e43", "secretName": "mon-fsxn-credentials", "usernameKey": "mon-fsxn-username", "passwordKey": "mon-fsxn-password"},
-        {"id": "fs-077b5ff41951c57b2", "secretName": "mon-fsxn-credentials", "usernameKey": "mon-fsxn-username", "passwordKey": "mon-fsxn-password"}
+        {"id": "fs-0e8d9172fa545ef3b", "secretName": "fsxn-credentials", "usernameKey": "fsxn-username", "passwordKey": "fsxn-password"},
+        {"id": "fs-020de2687bd98ccf7", "secretName": "fsxn-credentials", "usernameKey": "fsxn-username", "passwordKey": "fsxn-password"},
+        {"id": "fs-07bcb7ad84ac75e43", "secretName": "fsxn-credentials", "usernameKey": "fsxn-username", "passwordKey": "fsxn-password"},
+        {"id": "fs-077b5ff41951c57b2", "secretName": "fsxn-credentials", "usernameKey": "fsxn-username", "passwordKey": "fsxn-password"}
     ]
 #
 # Set the region where the secrets are stored.
