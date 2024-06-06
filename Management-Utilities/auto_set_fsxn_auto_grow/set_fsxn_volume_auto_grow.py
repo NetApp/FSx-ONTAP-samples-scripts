@@ -33,10 +33,10 @@ import boto3
 # a different secret and/or keys for the username and password for each
 # of the FSxId.
 secretsTable = [
-        {"id": "fs-0e8d9172fa545ef3b", "secretName": "fsxn-credentials", "usernameKey": "fsxn-username", "passwordKey": "fsxn-password"},
-        {"id": "fs-020de2687bd98ccf7", "secretName": "fsxn-credentials", "usernameKey": "fsxn-username", "passwordKey": "fsxn-password"},
-        {"id": "fs-07bcb7ad84ac75e43", "secretName": "fsxn-credentials", "usernameKey": "fsxn-username", "passwordKey": "fsxn-password"},
-        {"id": "fs-077b5ff41951c57b2", "secretName": "fsxn-credentials", "usernameKey": "fsxn-username", "passwordKey": "fsxn-password"}
+        {"id": "fs-0e8d9172fa5XXXXXX", "secretName": "fsxn-credentials", "usernameKey": "fsxn-username", "passwordKey": "fsxn-password"},
+        {"id": "fs-020de2687bdXXXXXX", "secretName": "fsxn-credentials", "usernameKey": "fsxn-username", "passwordKey": "fsxn-password"},
+        {"id": "fs-07bcb7ad84aXXXXXX", "secretName": "fsxn-credentials", "usernameKey": "fsxn-username", "passwordKey": "fsxn-password"},
+        {"id": "fs-077b5ff4195XXXXXX", "secretName": "fsxn-credentials", "usernameKey": "fsxn-username", "passwordKey": "fsxn-password"}
     ]
 #
 # Set the region where the secrets are stored.
