@@ -10,14 +10,7 @@ This script is used to ensure that all your volumes, in all your FSxN file syste
 - If it is set to false, then it checks from the AWS side to see if there is a "protect_volume" tag set to "skip".
 - If there isn't one, then it uses the ONTAP SnapMirror API to create the SnapMirror relationship. This API will create a destination volume if it does not already exist.
 
-While there is some logic in the script to attempt to handle FlexGroup volumes, there are issues with it, so that part of the script has been disabled. The issues I encountered trying to support FlexGroups:
-**NOTE:** All of the below is based on ONTAP version 9.13.1.
-- The SnapMirror API does not work with FlexGroups (even though the documentation implies that it does). Because of this I attempted to use the CLI "pass-through" API to create the SnapMirror relationship the "old fashioned way" by:
-    - Create the destination volume if it doesn't already exist.
-    - Create the SnapMirror relationship.
-    - Initialize the SnapMirror relationship.
-- When creating the destination volume, it just creates with the default parameters, so it might not match the configuration of the source volume. Specially, the number of constituents could be different.
-- The "snapmirror.destinations.is_ontap" field is not maintained by ONTAP for FlexGroup volumes. So, the script will attempt to create a SM relationship every time it is run. It will fail, and probably not harm anything, but it isn't clean. A "To Do" is the leverage the SnapMirror API to obtain the list of SnapMirror relationships and figure out if the volume already has a relationship reviewing that list. Note that "snapmirror list-destinations" also doesn't work for FlexGroup volumes.
+**NOTE:** This script only creates SnapMirror relationships for FlexVol volumes. It does not create SnapMirror relationships for FlexGroup volumes.
 
 ## Set Up
 There are a few things you need to do in order to get this script to run properly:

@@ -162,41 +162,6 @@ def getVolumeARN(awsVolumes, volumeUUID):
     return("")
 
 ################################################################################
-# This function waits for an ONTAP job to complete.
-# NOTE: This function is only needed for creating SM relationships for
-# FlexGroup volumes. It returns 'True' if the job completed successfully,
-# otherwise it returns False.
-################################################################################
-def waitForJobToComplete(fsxnIp, headers, jobUUID):
-
-    global logger
-
-    count = 0
-    logger.debug(f'Waiting for {jobUUID} to finish.')
-    while count < 10:
-        try:
-            endpoint = f'https://{fsxnIp}/api/cluster/jobs/{jobUUID}'
-            logger.debug(f'Trying {endpoint}.')
-            response = http.request('GET', endpoint, headers=headers, timeout=5.0)
-            if response.status == 200:
-                data = json.loads(response.data)
-                jobState = data['state'].lower()
-                if jobState == "success":
-                    return True
-                if jobState in ["failure", "error", "quit", "dead", "unknown", "dormant"]:
-                    return False
-            else:
-                logger.error(f'API call to {endpoint} failed. HTTP status code: {response.status}.')
-                return False
-        except Exception as err:
-            logger.critical(f'Failed to issue API against {fsxnIp}. Endpoint={endpoint}, The error messages received: "{err}".')
-            return False
-        time.sleep(2)
-        count += 1
-    logger.error(f'Timed out waiting for a job with a UUID of "{jobUUID}" to complete on {fsxnIp}.')
-    return False
-
-################################################################################
 # This function is used to obtain the username and password from AWS's Secrets
 # Manager for the fsxnId passed in. It returns empty strings if it can't
 # find the credentials.
@@ -215,128 +180,15 @@ def getCredentials(fsxnId):
     return ("", "")
 
 ################################################################################
-# This function is used to attempt to set up a snapmirror relationship for a
-# flexgroup volume. Since I was unable to get the regular API to create
-# SnapMirror relationshipsto work, at least when dealing with flexgroups, this
-# function does it the old fashioned way of creating a DP volume if it doesn't
-# already exist. creating the SM relationship, then initializing it. 
-#
-# It assumes that the destination SVM exist and has already been peered.
+# Since the ONTAP SnapMirror API does not work with FlexGroups, this function
+# was created as a place holder for coming up with an alternative way to
+# protect them.
 ################################################################################
 def protectFlexGroup(fsxId, svmName, volumeName):
 
     global logger, http, numSnapMirrorRelationships
 
-    logger.info(f'Unfortunately, creating snapmirror relationships for FlexGroups has not be thoroughly tested and therefore is disabled.')
-    return
-    #
-    # find the partner fsx cluster, and svmName
-    partnerIp = ""
-    for fsx in partnerTable:
-        if fsx['fsxId'] == fsxId and fsx['svmName'] == svmName:
-            partnerIp = fsx['partnerFsxnIp']
-            partnerSvmName = fsx['partnerSvmName']
-            partnerSvmSourceName = fsx['partnerSvmSourceName']
-            break
-
-    if partnerIp == "":
-        logger.error(f'No partner found for fsxId: {fsxId} and svmName: {svmName}.')
-        return
-
-    (username, password) = getCredentials(fsxId)
-    if username == "" or password == "":
-        logger.error(f'No credentials for FSxN ID: {fsxId}.')
-        return
-
-    auth = urllib3.make_headers(basic_auth=f'{username}:{password}')
-    headers = { **auth }
-    #
-    # Check to see if the destination volume already exist.
-    try:
-        endpoint = f'https://{partnerIp}/api/storage/volumes?name={volumeName}{destinationVolumeSuffix}&svm.name={partnerSvmName}&fields=type,style'
-        logger.debug(f'Trying {endpoint}.')
-        response = http.request('GET', endpoint, headers=headers, timeout=5.0)
-        if response.status == 200:
-            data = json.loads(response.data)
-        else:
-            logger.error(f'API call to {endpoint} failed. HTTP status code: {response.status}.')
-            return
-    except Exception as err:
-        logger.critical(f'Failed to issue API against {partnerIp}. Cluster could be down. The error messages received: "{err}".')
-        return
-
-    if data['num_records'] < 1:  # If the number of records is 0, then the volume doesn't exist, so try to create it,
-        try:
-            endpoint = f'https://{partnerIp}/api/storage/volumes'
-            data = {
-                "name": f'{volumeName}{destinationVolumeSuffix}',
-                "svm": partnerSvmName,
-                "aggregates": ["aggr1"],
-                "style": "flexgroup",
-                "type": "dp"
-            }
-            logger.debug(f'Trying {endpoint} with {data}.')
-            if not dryRun:
-                response = http.request('POST', endpoint, headers=headers, body=json.dumps(data), timeout=5.0)
-                if response.status >= 200 or response.status <= 299:
-                    data = json.loads(response.data)
-                    jobUUID = data['job']['uuid']
-                    if waitForJobToComplete(partnerIp, headers, jobUUID):
-                        logger.error(f'Failed to create destination flexgroup volume {partnerIp}::{partnerSvmName}:{volumeName}{destinationVolumeSuffix}.')
-                        return
-                else:
-                    logger.error(f'API call to {endpoint} failed. HTTP status code: {response.status}.')
-                    return
-        except Exception as err:
-            logger.critical(f'Failed to issue API against {partnerIp}. Cluster could be down. The error messages received: "{err}".')
-            return
-    else: # The volume already exist. Make sure it is the correct type and style.
-        if data['records'][0]['type'].lower() != "dp" or data['records'][0]['style'].lower() != "flexgroup":
-            logger.error(f'Destination volume "{partnerIp}::{partnerSvmName}:{volumeName}{destinationVolumeSuffix}" already exist but is not of type "DP", or is not a flexgroup type volume.')
-            return
-    #
-    # At this point we have the destination volume. Time to create the snapmirror relationship.
-    try:
-        endpoint = f'https://{partnerIp}/api/private/cli/snapmirror'
-        data = {
-            "source-path": f'{partnerSvmSourceName}:{volumeName}',
-            "destination-path": f'{partnerSvmName}:{volumeName}{destinationVolumeSuffix}'
-        }
-        logger.debug(f'Trying {endpoint} with {data}.')
-        if not dryRun:
-            response = http.request('POST', endpoint, headers=headers, body=json.dumps(data), timeout=5.0)
-            if response.status >= 200 or response.status <= 299:
-                data = json.loads(response.data)
-                if data['cli_output'][0:len('Operation succeeded:')] != 'Operation succeeded:':
-                    logger.error(f'Failed to create the SnapMirror relationship for volume {partnerIp}::{svmName}:{volumeName}. Message={data["cli_output"]}')
-                    return
-            else:
-                logger.error(f'API call to {endpoint} failed. HTTP status code: {response.status}.')
-                return
-    except Exception as err:
-        logger.critical(f'Failed to issue API against {partnerIp}. Cluster could be down. The error messages received: "{err}".')
-        return
-    #
-    # Last step is to do the initialize.
-    try:
-        endpoint = f'https://{partnerIp}/api/private/cli/snapmirror/initialize'
-        data = {
-            "source-path": f'{partnerSvmSourceName}:{volumeName}',
-            "destination-path": f'{partnerSvmName}:{volumeName}{destinationVolumeSuffix}'
-        }
-        logger.debug(f'Trying {endpoint} with {data}.')
-        if not dryRun:
-            response = http.request('POST', endpoint, headers=headers, body=json.dumps(data), timeout=5.0)
-            if response.status < 200 or response.status > 299:
-                logger.error(f'API call to {endpoint} failed. HTTP status code: {response.status}.')
-                return
-            logger.info(f'Path {fsxId}::{svmName}:{volumeName} is being SnapMirrored to {partnerIp}::{partnerSvmName}:{volumeName}{destinationVolumeSuffix}')
-        else:
-            logger.info(f'Path {fsxId}::{svmName}:{volumeName} would have been SnapMirrored to {partnerIp}::{partnerSvmName}:{volumeName}{destinationVolumeSuffix}')
-        numSnapMirrorRelationships += 1  # pylint: disable=E0602
-    except Exception as err:
-        logger.critical(f'Failed to issue API against {partnerIp}. Cluster could be down. The error messages received: "{err}".')
-        return
+    logger.warning(f'Unfortunately, creating snapmirror relationships for FlexGroups is currently not supported.')
     return
 
 ################################################################################
