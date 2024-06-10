@@ -35,21 +35,21 @@
 # case an "alias" is has to be created when you peer the SVMs (a.k.a. vservers).
 partnerTable = [
         {
-            'fsxId': 'fs-0e8d9172fa545ef3b',
+            'fsxId': 'fs-0e8d9172XXXXXXXXX',
             'svmName': 'fsx',
             'partnerFsxnIp': '198.19.253.210',
             'partnerSvmName': 'fsx',
             'partnerSvmSourceName': 'fsx_source'
         },
         {
-            'fsxId': 'fs-0e8d9172fa545ef3b',
+            'fsxId': 'fs-0e8d9172XXXXXXXXX',
             'svmName': 'fsx_smb',
             'partnerFsxnIp': '198.19.253.210',
             'partnerSvmName': 'fsx',
             'partnerSvmSourceName': 'fsx_smb'
         },
         {
-            'fsxId': 'fs-020de2687bd98ccf7',
+            'fsxId': 'fs-020de268XXXXXXXXX',
             'svmName': 'fsx',
             'partnerFsxnIp': '198.19.255.162',
             'partnerSvmName': 'fsx',
@@ -67,15 +67,15 @@ partnerTable = [
 #  passwordKey - The name of the key that holds the password to use.
 #
 #secretsTable = [ 
-#        {"id": "fs-0e8d9172fa545ef3b", "secretName": "mon-fsxn-credentials", "usernameKey": "mon-fsxn-username", "passwordKey": "mon-fsxn-password"},
-#        {"id": "fs-020de2687bd98ccf7", "secretName": "mon-fsxn-credentials", "usernameKey": "mon-fsxn-username", "passwordKey": "mon-fsxn-password"},
-#        {"id": "fs-07bcb7ad84ac75e43", "secretName": "mon-fsxn-credentials", "usernameKey": "mon-fsxn-username", "passwordKey": "mon-fsxn-password"},
-#        {"id": "fs-077b5ff41951c57b2", "secretName": "mon-fsxn-credentials", "usernameKey": "mon-fsxn-username", "passwordKey": "mon-fsxn-password"}
+#        {"id": "fs-0e8d9172XXXXXXXXX", "secretName": "fsxn-credentials", "usernameKey": "fsxn-username", "passwordKey": "fsxn-password"},
+#        {"id": "fs-020de268XXXXXXXXX", "secretName": "fsxn-credentials", "usernameKey": "fsxn-username", "passwordKey": "fsxn-password"},
+#        {"id": "fs-07bcb7adXXXXXXXXX", "secretName": "fsxn-credentials", "usernameKey": "fsxn-username", "passwordKey": "fsxn-password"},
+#        {"id": "fs-077b5ff4XXXXXXXXX", "secretName": "fsxn-credentials", "usernameKey": "fsxn-username", "passwordKey": "fsxn-password"}
 #    ]
 #
 # NOTE: If both the secretsTable, and dynamodbTableName are defined, the secretsTable will be used.
 #
-dynamodbTableName="keith_secrets"
+dynamodbTableName="fsxn_secrets"
 dynamodbRegion="us-west-2"
 #
 # Provide the region the secrets manager resides in:
@@ -118,7 +118,6 @@ import time
 import urllib3
 from urllib3.util import Retry
 import logging
-import botocore
 import boto3
 #
 # Define a custom exception so we can gracefully exit the program if too many
@@ -132,6 +131,7 @@ class TooManySMs(Exception):
     # __str__ is to print() the value
     def __str__(self):
         return(repr(self.value))
+
 
 ################################################################################
 # This function returns the value assigned to the "protect_volume" tag
@@ -282,7 +282,7 @@ def protectFlexGroup(fsxId, svmName, volumeName):
                     data = json.loads(response.data)
                     jobUUID = data['job']['uuid']
                     if waitForJobToComplete(partnerIp, headers, jobUUID):
-                        logger.error(f'Failed to create destination flexgroup volume {partnerIp}::{partnerSvm}:{volumeName}{destinationVolumeSuffix}.')
+                        logger.error(f'Failed to create destination flexgroup volume {partnerIp}::{partnerSvmName}:{volumeName}{destinationVolumeSuffix}.')
                         return
                 else:
                     logger.error(f'API call to {endpoint} failed. HTTP status code: {response.status}.')
@@ -333,7 +333,7 @@ def protectFlexGroup(fsxId, svmName, volumeName):
             logger.info(f'Path {fsxId}::{svmName}:{volumeName} is being SnapMirrored to {partnerIp}::{partnerSvmName}:{volumeName}{destinationVolumeSuffix}')
         else:
             logger.info(f'Path {fsxId}::{svmName}:{volumeName} would have been SnapMirrored to {partnerIp}::{partnerSvmName}:{volumeName}{destinationVolumeSuffix}')
-        numSnapMirrorRelationships += 1
+        numSnapMirrorRelationships += 1  # pylint: disable=E0602
     except Exception as err:
         logger.critical(f'Failed to issue API against {partnerIp}. Cluster could be down. The error messages received: "{err}".')
         return
@@ -457,12 +457,11 @@ def lambda_handler(event, context):
     # Set up "logging" to appropriately display messages. It can be set it up
     # to send messages to a syslog server.
     logging.basicConfig(datefmt='%Y-%m-%d_%H:%M:%S', format='%(asctime)s:%(name)s:%(levelname)s:%(message)s', encoding='utf-8')
-    logger = logging.getLogger("scan_create_sm_relationships")
-    logger.setLevel(logging.DEBUG)
-#    logger.setLevel(logging.INFO)
+    logger = logging.getLogger("auto_create_sm_relationships")
+#    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
     #
     # Ensure the logging level on higher for these noisy modules to mute thier messages.
-    logging.getLogger("botocore").setLevel(logging.WARNING)
     logging.getLogger("boto3").setLevel(logging.WARNING)
     logging.getLogger("urllib3").setLevel(logging.WARNING)
     #
