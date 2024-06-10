@@ -13,7 +13,7 @@ There are just a few things you have to do to set this up:
 
 ### Create secrets in AWS Secrets Manager
 Create a secret in Secrets Manager for each of the FSxN file systems you want to manage with
-this script. Each secret should have the key value pairs. One that specifies the
+this script. Each secret should have two key value pairs. One that specifies the
 user account to use when issuing API calls, and the other that specifies the password for
 that account. Note that if you use the same username and password, it is okay
 to use the same secret for multiple file systems.
@@ -63,7 +63,7 @@ is a dictionary with the following keys:
 - secretsManagerRegion - Defines the region where your secrets are stored.
 - autoSizeMode - Defines the auto size mode you want to set the volume to. Valid values are:
     - grow - The volume will automatically grow when it reaches the grow threshold.
-    - grow_shrink - The volume will automatically grow and shrink when it eachs the shrink threshold.
+    - grow_shrink - The volume will automatically grow, and shrink when it reachs the shrink threshold.
     - off - The volume will not automatically grow or shrink.
 - growThresholdPercentage - The percentage of the volume that must be used before the volume will grow.
 - maxGrowSizePercentage - The maximum size the volume can auto grow to expressed in terms of a percentage of the volume size. The default is 200%.
@@ -71,7 +71,7 @@ is a dictionary with the following keys:
 - minShrinkSizePercentage - The minimum size the volume can auto shrink to expressed in terms of a percentage of the volume size. The default is 50%.
 - maxWaitTime - The maximum time, in seconds, the script will wait for the volume to be created before it will give up and exit.
 
-** NOTE:** Do not delete the variables or set them to None or empty
+**NOTE:** Do not delete the variables or set them to None or empty
 strings, as the script will not run properly if done so.
 
 Once you have updated the program, click on the "Deploy" button.
@@ -83,7 +83,7 @@ same time, it may have to wait a while for the volume to get created on the ONTA
 it can set the auto size mode.
 
 ### Create an Event Bridge Rule (a.k.a. CloudWatch Event) that will trigger when a FSx Volume is created
-Once on the "Event Bridge" page, click on Rules on the left hand side. From there click
+Once on the "Event Bridge" page, click on Rules on the left-hand side. From there click
 on Create Rule. Give the rule a name, and make sure to put the rule on the "Default" bus.
 Finally select "Rule with an event pattern" and click Next.
 
