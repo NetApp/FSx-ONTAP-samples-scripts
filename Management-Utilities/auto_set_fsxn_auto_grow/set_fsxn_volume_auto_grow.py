@@ -49,7 +49,7 @@ autoSizeMode = "grow"
 growThresholdPercentage = 85
 #
 # Set the maximum grow size for the volume in terms of the percentage of the provisioned size.
-maxGrowSizePercentage = 120
+maxGrowSizePercentage = 200
 #
 # Set the shrink-threshold-percentage for the volume. This is the percentage of the volume that must be free before it shrinks.
 shrinkThresholdPercentage = 50
@@ -62,11 +62,11 @@ minShrinkSizePercentage = 100
 # the auto size parameters. It will wait up to the number of seconds specified
 # below before giving up. NOTE: You must set the timeout of this function
 # to at least the number of seconds specified here, and probably two times
-# the number here to account for the time it takes to do the API call,
+# the number to account for the time it takes to do the API calls,
 # otherwise the Lambda timeout feature will kill it before it is able to
-# iterate as many times as you want it to. Also note that the main reason for
+# wait as long you want it to. Also note that the main reason for
 # it to take a while for a volume to get created is when multiple are being
-# created at the same time, so if you have automation that might create a lot of
+# created at the same time. So, if you have automation that might create a lot of
 # volumes at the same time, you might need to either adjust this number really
 # high, or come up with another way to get the auto size mode.
 maxWaitTime=60
