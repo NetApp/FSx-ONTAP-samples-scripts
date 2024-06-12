@@ -1,3 +1,5 @@
+#
+# Generate a random password for FSx
 resource "random_string" "fsx_password" {
   length           = 8
   min_lower        = 1
@@ -5,7 +7,18 @@ resource "random_string" "fsx_password" {
   min_special      = 0
   min_upper        = 1
   number           = true
-  special          = false
+  special          = true
+  override_special = "@$%^&*()_+="
+}
+#
+# Store the password in AWS Secrets Manager
+resource "aws_secretsmanager_secret" "fsx_secret_password" {
+ name = var.fsx_password_secret_name
+}
+#
+resource "aws_secretsmanager_secret_version" "fsx_secret_password" {
+  secret_id = aws_secretsmanager_secret.fsx_secret_password.id
+  secret_string =  jsonencode({username = "fsxadmin", password = random_string.fsx_password.result})
 }
 
 resource "aws_fsx_ontap_file_system" "eksfs" {

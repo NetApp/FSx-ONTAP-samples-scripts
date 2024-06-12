@@ -8,6 +8,11 @@ variable "fsx_name" {
   description = "default fsx name"
 }
 
+variable "fsx_pasword_secret_name" {
+  default     = "fsx-secret"
+  description = "The name of the secret in the AWS Secrets Manager that will contain the fsx password. A new random password will be created in that secret."
+}
+
 variable "fsxn_throughput_capacity" {
   default = 128
   description = "The throughput capacity to be allocated to the FSxN cluster. Must be 128, 256, 512, 1024, 2048, 4096."
@@ -21,7 +26,7 @@ variable "fsxn_storage_capacity" {
 # Keep in mind that key pairs are regional, so pick one that is in the region specified above.
 variable "key_pair_name" {
   default = "MUST REPLACE WITH YOUR KEY PAIR NAME"
-  description = "The key pair to associated with the jump server."
+  description = "The key pair to associate with the jump server."
 }
 
 variable "secure_ips" {

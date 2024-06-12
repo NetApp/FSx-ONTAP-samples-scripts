@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Secret
 metadata:
-  name: backend-fsx-ontap-secret-san
+  name: backend-fsx-ontap-secret-nas
 type: Opaque
 stringData:
   username: fsxadmin
@@ -10,11 +10,12 @@ stringData:
 apiVersion: trident.netapp.io/v1
 kind: TridentBackendConfig
 metadata:
-  name: backend-fsx-ontap-san
+  name: backend-fsx-ontap-nas
 spec:
   version: 1
-  storageDriverName: ontap-san
+  storageDriverName: ontap-nas
   managementLIF: ${FSX_MANAGEMENT_IP}
   svm: ${FSX_SVM_NAME}
+  dataLIF: ${FSX_SVM_DATA_LIF}
   credentials: 
-    name: backend-fsx-ontap-secret-san
+    name: backend-fsx-ontap-secret-nas

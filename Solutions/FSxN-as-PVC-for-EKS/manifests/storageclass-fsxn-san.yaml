@@ -1,7 +1,7 @@
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
-  name: fsx-basic-block
+  name: fsx-basic-san
 provisioner: csi.trident.netapp.io
 parameters:
   backendType: "ontap-san"
