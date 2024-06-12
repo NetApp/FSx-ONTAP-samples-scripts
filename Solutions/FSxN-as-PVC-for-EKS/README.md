@@ -144,9 +144,9 @@ kubectl get nodes
 ```
 You should get output like this:
 ```bash
-NAME                                           STATUS   ROLES    AGE   VERSION
-ip-192-168-1-100.us-west-2.compute.internal     Ready    <none>   2m    v1.21.2-eks-55c2c7
-ip-192-168-1-101.us-west-2.compute.internal     Ready    <none>   2m    v1.21.2-eks-55c2c7
+NAME                                       STATUS   ROLES    AGE   VERSION
+ip-10-0-1-210.us-west-2.compute.internal   Ready    <none>   57m   v1.29.3-eks-ae9a62a
+ip-10-0-2-243.us-west-2.compute.internal   Ready    <none>   57m   v1.29.3-eks-ae9a62a
 ```
 
 ### Install the Kubernetes Snapshot CRDs and Snapshot Controller:
@@ -258,9 +258,9 @@ kubectl get storageclass
 ```
 The output should be similar to this:
 ```bash
-NAME              PROVISIONER             RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
-fsx-basic-block   csi.trident.netapp.io   Delete          Immediate              true                   20h
-gp2 (default)     kubernetes.io/aws-ebs   Delete          WaitForFirstConsumer   false                  44h
+NAME            PROVISIONER             RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
+fsx-basic-san   csi.trident.netapp.io   Delete          Immediate              true                   9s
+gp2 (default)   kubernetes.io/aws-ebs   Delete          WaitForFirstConsumer   false                  76m
 ```
 Feel free to look at the `manifests/storageclass-fsxn-san.yaml` file to see
 how the storage class was configured.
@@ -282,8 +282,8 @@ kubectl get pvc
 ```
 The output should look similar to this:
 ```bash
-NAME           STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS      VOLUMEATTRIBUTESCLASS   AGE
-mysql-volume   Bound    pvc-f1e94884-fb3b-4cb0-b58b-50fa2b8cbb77   50Gi       RWO            fsx-basic-block   <unset>                 20h
+NAME               STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS    VOLUMEATTRIBUTESCLASS   AGE
+mysql-volume-san   Bound    pvc-b094e040-23d6-45ee-9801-924fec3264d1   50Gi       RWO            fsx-basic-san   <unset>                 8s
 ```
 
 ### Deploy a MySQL database using the storage created above
@@ -297,9 +297,9 @@ kubectl get pods
 ```
 The output should look similar to this:
 ```bash
-NAME                         READY   STATUS    RESTARTS   AGE
-csi-snapshotter-0            3/3     Running   0          22h
-mysql-fsx-695b497757-pvn7q   1/1     Running   0          20h
+NAME                             READY   STATUS    RESTARTS   AGE
+csi-snapshotter-0                3/3     Running   0          13m
+mysql-fsx-san-79cdb57b58-gjjtn   1/1     Running   0          26s
 ```
 To see how the MySQL was configured, check out the `manifests/mysql-san.yaml` file.
 
@@ -310,8 +310,10 @@ to put some data in the database. Do that by first logging into the MySQL instan
 It will prompt for a password. In the yaml file used to create the database, you'll see
 that we set that to `Netapp1!`
 ```bash
-kubectl exec -it $(kubectl get pod -l "app=mysql-fsx" --namespace=default -o jsonpath='{.items[0].metadata.name}') -- mysql -u root -p
+kubectl exec -it $(kubectl get pod -l "app=mysql-fsx-san" --namespace=default -o jsonpath='{.items[0].metadata.name}') -- mysql -u root -p
 ```
+NOTE: If you are using the NFS storage, be sure to use mysal-fsx-nas instead of mysql-fsx-san in the command above.
+
 After you have logged in, here is a session showing an example of creating a database, then creating a table, then inserting
 some values into the table:
 ```bash

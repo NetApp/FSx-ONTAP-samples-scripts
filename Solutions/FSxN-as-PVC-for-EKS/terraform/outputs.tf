@@ -7,7 +7,8 @@ output "fsx-management-ip" {
   value = join("", aws_fsx_ontap_file_system.eksfs.endpoints[0].management[0].ip_addresses)
 }
 
-output "fsx-password-secret-name" {                                                                                                   value = var.fsx_password_secret_name
+output "fsx-password-secret-name" {
+  value = var.fsx_password_secret_name
 }
 
 output "fsx-password-secret-arn" {
@@ -15,7 +16,7 @@ output "fsx-password-secret-arn" {
 }
 
 output "fsx-svm-name" {
-  value = format("FSX_SVM_NAME=%s", aws_fsx_ontap_storage_virtual_machine.ekssvm.name)
+  value = aws_fsx_ontap_storage_virtual_machine.ekssvm.name
 }
 
 output "fsx-svm-data-LIF" {

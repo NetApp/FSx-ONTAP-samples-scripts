@@ -21,7 +21,7 @@ spec:
           - name: MYSQL_ROOT_PASSWORD
             valueFrom:
               secretKeyRef:
-                name: mysql-secret
+                name: mysql-secret-san
                 key: password
         volumeMounts:
         - mountPath: /var/lib/mysql

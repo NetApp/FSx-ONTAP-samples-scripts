@@ -8,7 +8,7 @@ variable "fsx_name" {
   description = "default fsx name"
 }
 
-variable "fsx_pasword_secret_name" {
+variable "fsx_password_secret_name" {
   default     = "fsx-secret"
   description = "The name of the secret in the AWS Secrets Manager that will contain the fsx password. A new random password will be created in that secret."
 }
