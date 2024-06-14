@@ -41,7 +41,7 @@ FSxN file system is attached to.
 
 - FSx
 - SecretsManager
-- DynamoDB - This one can be a Gateway endpoint.
+- DynamoDB - You only need this one if you are going to store you secrtsTable in DynamoDB. It can be a Gateway endpoint.
 
 ### Create the Lambda Function
 Create a Lambda function with the following parameters:
