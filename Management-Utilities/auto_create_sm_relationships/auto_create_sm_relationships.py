@@ -216,7 +216,7 @@ def protectFlexGroup(fsxId, svmName, volumeName):
 
     global logger, http, numSnapMirrorRelationships
 
-    logger.warning(f'Unfortunately, creating snapmirror relationships for FlexGroups is currently not supported.')
+    logger.warning('Unfortunately, creating snapmirror relationships for FlexGroups is currently not supported.')
     return
 
 ################################################################################
@@ -265,9 +265,7 @@ def protectVolume(fsxId, svmName, volumeName):
         #
         # To be safe, check that the variable exist, since it might have been
         # commented out above.
-        try:
-            nop = scheduleName
-        except NameError:
+        if not 'scheduleName' in globals():
             scheduleName = ""
 
         if scheduleName != "":
@@ -282,7 +280,7 @@ def protectVolume(fsxId, svmName, volumeName):
             logger.info(f'Path {fsxId}::{svmName}:{volumeName} is being SnapMirrored to {partnerIp}::{partnerSvmName}:{volumeName}{destinationVolumeSuffix}.')
         else:
             logger.info(f'Path {fsxId}::{svmName}:{volumeName} would have been SnapMirrored to {partnerIp}::{partnerSvmName}:{volumeName}{destinationVolumeSuffix}.')
-        numSnapMirrorRelationships += 1
+        numSnapMirrorRelationships += 1 # pylint: disable=E0602
     except Exception as err:
         logger.critical(f'API against {partnerIp} failed. Volume not protected. The error returned: "{err}".')
         return
@@ -352,23 +350,25 @@ def lambda_handler(event, context):
     session = boto3.session.Session()
     secretsManagerClient = session.client(service_name='secretsmanager', region_name=secretsManagerRegion)
     #
-    # Read in the secretTable
-    dynamodbClient = boto3.resource("dynamodb", region_name=dynamodbRegion)
+    # Read in the secretTable if it is not already defined.
+    if 'dynamodbRegion' in globals():
+        dynamodbClient = boto3.resource("dynamodb", region_name=dynamodbRegion) # pylint: disable=E0602
+
     if 'secretsTable' not in globals():
         if 'dynamodbRegion' not in globals() or 'dynamodbSecretsTableName' not in globals():
             raise Exception('Error, you must either define the secretsTable array at the top of this script, or define dynamodbRegion and dynamodbSecretsTableName')
 
-        table = dynamodbClient.Table(dynamodbSecretsTableName)
+        table = dynamodbClient.Table(dynamodbSecretsTableName) # pylint: disable=E0602
 
         response = table.scan()
         secretsTable = response["Items"]
     #
-    # Read in the partnersTable
+    # Read in the partnersTable if it is not already defined.
     if 'partnersTable' not in globals():
         if 'dynamodbRegion' not in globals() or 'dynamodbPartnersTableName' not in globals():
             raise Exception('Error, you must either define the partnersTable array at the top of this script, or define dynamodbRegion and dynamodbPartnersTableName')
 
-        table = dynamodbClient.Table(dynamodbPartnersTableName)
+        table = dynamodbClient.Table(dynamodbPartnersTableName) # pylint: disable=E0602
 
         response = table.scan()
         items = response["Items"]
