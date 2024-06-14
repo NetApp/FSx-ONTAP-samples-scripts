@@ -29,54 +29,82 @@
 ################################################################################
 #
 # Create a table of source FSxN IDs and SVMs and its partner (destination)
-# cluster and SVM. The "partnerSvmSourceName" is the label for the source SVM at
-# the destination cluster. It is usually the same as the SVM name at the source,
+# cluster and SVM. How to fill in the table should be pretty obvious except
+# for the "partnerSvmSourceName". It is the label for the source SVM at the
+# destination cluster. Usually, the SVM name is the same as the source SVM name
 # unless there is a name conflict with SVM name at the destination, in which
 # case an "alias" is has to be created when you peer the SVMs (a.k.a. vservers).
-partnerTable = [
+# In this case partnerSvmSourceName should be set to that alias, otherwise
+# it should just be set the same as the svmName. It must be set though.
+#
+# You can either define an array named "partnersTable", like the one defined
+# below, or define dynamodbPartnersTableName that specifies a DynamoDB table
+# to scan to get the information. The DynamoDB table should have the
+# following attributes:
+#  sourceId - Which is the concatentation of the source file system ID
+#             followed by a ":" followed by the SVM name. It is done this
+#             way because the id has to be unique in the table.
+#  partnerFsxnIp - The IP address of the destination cluster.
+#  partnerSvmName - The name of the SVM at the destination cluster.
+#  partnerSvmSourceName - The name of the SVM at the destination cluster that
+#                         will be the source of the SnapMirror relationship.
+partnersTable = [
         {
             'fsxId': 'fs-0e8d9172XXXXXXXXX',
             'svmName': 'fsx',
-            'partnerFsxnIp': '198.19.253.210',
+            'partnerFsxnIp': '198.19.253.1',
             'partnerSvmName': 'fsx',
             'partnerSvmSourceName': 'fsx_source'
         },
         {
             'fsxId': 'fs-0e8d9172XXXXXXXXX',
             'svmName': 'fsx_smb',
-            'partnerFsxnIp': '198.19.253.210',
+            'partnerFsxnIp': '198.19.253.1',
             'partnerSvmName': 'fsx',
             'partnerSvmSourceName': 'fsx_smb'
         },
         {
             'fsxId': 'fs-020de268XXXXXXXXX',
             'svmName': 'fsx',
-            'partnerFsxnIp': '198.19.255.162',
+            'partnerFsxnIp': '198.19.255.1',
             'partnerSvmName': 'fsx',
             'partnerSvmSourceName': 'fsx_dest'
         },
     ]
 #
+# If you don't want to define the partnersTable in this script, you can
+# define the following variables to use a DynamoDB table to get the
+# partner information.
+#
+# NOTE: If both the partnersTable and dynamodbPartnersTableName are defined,
+# the partnersTable will be used.
+#dynamodbRegion="us-west-2"
+#dynamodbPartnersTableName="fsx_partners"
+#
 # Create a table of secret names and keys for the username and password for each of the FSxIds.
 # You can either define an array named "secretsTable", like below or define
-# dynamodbTableName, that will specify a DynamoDB table to use. It should have the
+# dynamodbSecretsTableName, that will specify a DynamoDB table to use. It should have the
 # following attributes:
-#  id - The file system ID
+#  fsxId - The file system ID
 #  SecretName - The name of the Amazon SecretManger secret that holds the username and password keys.
 #  usernameKey - The name of the key that holds the username to use.
 #  passwordKey - The name of the key that holds the password to use.
 #
-#secretsTable = [ 
-#        {"id": "fs-0e8d9172XXXXXXXXX", "secretName": "fsxn-credentials", "usernameKey": "fsxn-username", "passwordKey": "fsxn-password"},
-#        {"id": "fs-020de268XXXXXXXXX", "secretName": "fsxn-credentials", "usernameKey": "fsxn-username", "passwordKey": "fsxn-password"},
-#        {"id": "fs-07bcb7adXXXXXXXXX", "secretName": "fsxn-credentials", "usernameKey": "fsxn-username", "passwordKey": "fsxn-password"},
-#        {"id": "fs-077b5ff4XXXXXXXXX", "secretName": "fsxn-credentials", "usernameKey": "fsxn-username", "passwordKey": "fsxn-password"}
-#    ]
+secretsTable = [ 
+        {"fsxId": "fs-0e8d9172XXXXXXXXX", "secretName": "fsxn-credentials", "usernameKey": "fsxn-username", "passwordKey": "fsxn-password"},
+        {"fsxId": "fs-020de268XXXXXXXXX", "secretName": "fsxn-credentials", "usernameKey": "fsxn-username", "passwordKey": "fsxn-password"},
+        {"fsxId": "fs-07bcb7adXXXXXXXXX", "secretName": "fsxn-credentials", "usernameKey": "fsxn-username", "passwordKey": "fsxn-password"},
+        {"fsxId": "fs-077b5ff4XXXXXXXXX", "secretName": "fsxn-credentials", "usernameKey": "fsxn-username", "passwordKey": "fsxn-password"}
+    ]
 #
-# NOTE: If both the secretsTable, and dynamodbTableName are defined, the secretsTable will be used.
+# If you don't want to define the secretsTable in this script, you can
+# define the following variables to use a DynamoDB table to get the
+# secret information.
 #
-dynamodbTableName="fsxn_secrets"
-dynamodbRegion="us-west-2"
+# NOTE: If both the secretsTable, and dynamodbSecretsTableName are defined,
+# the secretsTable will be used.
+#dynamodbRegion="us-west-2"
+#dynamodbSecretsTableName="fsx_secrets"
 #
 # Provide the region the secrets manager resides in:
 secretsManagerRegion='us-west-2'
@@ -98,11 +126,11 @@ tieringPolicy="all"
 # a signle run.
 maxSnapMirrorRelationships=10
 #
-# Set the following to 'True' (case sentitive) to have the program just
-# show what it would have done and not really peform any actions.
+# Set the following to 'True' (case sensitive) to have the program just
+# show what it would have done and not really perform any actions.
 dryRun=True
 #
-# Set the following to 'True' (case sentitive) to have the program protect
+# Set the following to 'True' (case sensitive) to have the program protect
 # all volumes that don't have a "protect_volume" tag set to "skip". Or, set
 # it to 'False' to only protect volumes that have a "protect_volume" tag
 # set to "protect".
@@ -171,7 +199,7 @@ def getCredentials(fsxnId):
     global secretsManagerClient, secretsTable
 
     for secretItem in secretsTable:
-        if secretItem['id'] == fsxnId:
+        if secretItem['fsxId'] == fsxnId:
             secretsInfo = secretsManagerClient.get_secret_value(SecretId=secretItem['secretName'])
             secrets = json.loads(secretsInfo['SecretString'])
             username = secrets[secretItem['usernameKey']]
@@ -193,8 +221,8 @@ def protectFlexGroup(fsxId, svmName, volumeName):
 
 ################################################################################
 # This function is used to setup a snapmirror relationship for the source
-# volume passed in. It leverages the "create destionation endpoint"
-# capibilities of the snapmirror API which will create the destionation volume
+# volume passed in. It leverages the "create destination endpoint"
+# capabilities of the snapmirror API which will create the destination volume
 # with the same name as the source volume with a suffix appended to it.
 # The suffix is defined above.
 #
@@ -204,11 +232,11 @@ def protectFlexGroup(fsxId, svmName, volumeName):
 ################################################################################
 def protectVolume(fsxId, svmName, volumeName):
 
-    global logger, http, numSnapMirrorRelationships, scheduleName
+    global logger, http, numSnapMirrorRelationships, scheduleName, partnersTable
     #
     # find the partner cluster management IP and svm for the source fsxId and svm.
     partnerIp = ""
-    for fsx in partnerTable:
+    for fsx in partnersTable:
         if fsx['fsxId'] == fsxId and fsx['svmName'] == svmName:
             partnerIp = fsx['partnerFsxnIp']
             partnerSvmName = fsx['partnerSvmName']
@@ -235,7 +263,7 @@ def protectVolume(fsxId, svmName, volumeName):
                 "state": "snapmirrored",
                 "policy": snapMirrorPolicy}
         #
-        # To be safe, check that the variable exist, since it migth have been
+        # To be safe, check that the variable exist, since it might have been
         # commented out above.
         try:
             nop = scheduleName
@@ -300,7 +328,7 @@ def getOntapVolumes(fsxId, fsxnIp):
 def lambda_handler(event, context):
     #
     # Define some globals so we don't have to pass them around.
-    global logger, http, secretsManagerClient, numSnapMirrorRelationships, secretsTable
+    global logger, http, secretsManagerClient, numSnapMirrorRelationships, secretsTable, partnersTable
     #
     # Get a list of all the regions.
     ec2Client = boto3.client('ec2')
@@ -325,15 +353,35 @@ def lambda_handler(event, context):
     secretsManagerClient = session.client(service_name='secretsmanager', region_name=secretsManagerRegion)
     #
     # Read in the secretTable
+    dynamodbClient = boto3.resource("dynamodb", region_name=dynamodbRegion)
     if 'secretsTable' not in globals():
-        if 'dynamodbRegion' not in globals() or 'dynamodbTableName' not in globals():
-            raise Exception('Error, you must either define the secretsTable array, or define dynamodbRegion and dynamodbTableName')
+        if 'dynamodbRegion' not in globals() or 'dynamodbSecretsTableName' not in globals():
+            raise Exception('Error, you must either define the secretsTable array at the top of this script, or define dynamodbRegion and dynamodbSecretsTableName')
 
-        dynamodbClient = boto3.resource("dynamodb", region_name=dynamodbRegion)
-        table = dynamodbClient.Table(dynamodbTableName)
+        table = dynamodbClient.Table(dynamodbSecretsTableName)
 
         response = table.scan()
         secretsTable = response["Items"]
+    #
+    # Read in the partnersTable
+    if 'partnersTable' not in globals():
+        if 'dynamodbRegion' not in globals() or 'dynamodbPartnersTableName' not in globals():
+            raise Exception('Error, you must either define the partnersTable array at the top of this script, or define dynamodbRegion and dynamodbPartnersTableName')
+
+        table = dynamodbClient.Table(dynamodbPartnersTableName)
+
+        response = table.scan()
+        items = response["Items"]
+        partnersTable = []
+        for item in items:
+            partner = {
+                    'fsxId': item['sourceId'].split(":")[0],
+                    'svmName': item['sourceId'].split(":")[1],
+                    'partnerFsxnIp': item['partnerFsxnIp'],
+                    'partnerSvmName': item['partnerSvmName'],
+                    'partnerSvmSourceName': item['partnerSvmSourceName']
+                }
+            partnersTable.append(partner)
     #
     # Disable warning about connecting to servers with self-signed SSL certificates.
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -342,7 +390,7 @@ def lambda_handler(event, context):
     retries = Retry(total=None, connect=1, read=1, redirect=10, status=0, other=0)  # pylint: disable=E1123
     http = urllib3.PoolManager(cert_reqs='CERT_NONE', retries=retries)
     #
-    # Create a counter of the number of SM reltionships created.
+    # Create a counter of the number of SM relationships created.
     numSnapMirrorRelationships = 0
     #
     # Get the list of regions that support fsx.
