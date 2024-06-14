@@ -26,7 +26,7 @@ There are a few things you need to do in order to get this script to run properl
     - partnerSvmName - The name of the SVM where you want the SnapMirror destination volume to reside.
     - partnerSvmSourceName - Is the "peered name" of the source SVM. Usually, it is the same as the source SVM, but can be different if that same name already exists on the partner file system. When you peer the SVM it will require you to create an alias for the source SVM so all the SVM names are unique.
 
-**NOTE:** Instead of defining the partnersTable in the script, you can define dynamodbPartnersTableName and dynamodbRegion and the script will read in the partner information from the specified DynamoDB table. The partners table should have the following fields:
+    **NOTE:** Instead of defining the partnersTable in the script, you can define dynamodbPartnersTableName and dynamodbRegion and the script will read in the partner information from the specified DynamoDB table. The partners table should have the following fields:
 
     - soureceId - Which is the concatentation of the source file system ID followed by a ":" followed by the SVM name. It is done this way because the id has to be unique in the table. It is split up into its two components in the script when it is read in.
     - partnerFsxnIp - Set to the IP address of the management port of the partner FSxN file system.
@@ -39,7 +39,7 @@ There are a few things you need to do in order to get this script to run properl
     - usernameKey - Set to the name of the key that holds the username.
     - passwordKey - Set to the name of the key that holds the password.
 
-**NOTE:** Instead of defining the secretsTable in the script, you can define dynamodbSecretsTableName and dynamodbRegion and the script will read in the secretsTable information from the specified DynamoDB table. The table should have the same fields as the secretsTable defined above.
+    **NOTE:** Instead of defining the secretsTable in the script, you can define dynamodbSecretsTableName and dynamodbRegion and the script will read in the secretsTable information from the specified DynamoDB table. The table should have the same fields as the secretsTable defined above.
 
 - secretsManagerRegion - Set to the region where the Secrets Manager has been set up.
 - destinationVolumeSuffix - Set to the string you want appended to the source volume name to create the destination volume name.
