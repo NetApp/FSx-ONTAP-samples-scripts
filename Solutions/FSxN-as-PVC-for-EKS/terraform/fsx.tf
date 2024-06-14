@@ -29,7 +29,7 @@ resource "aws_fsx_ontap_file_system" "eksfs" {
   preferred_subnet_id = module.vpc.private_subnets[0]
   security_group_ids  = [aws_security_group.fsx_sg.id]
   fsx_admin_password = random_string.fsx_password.result
-  route_table_ids    = module.vpc.private_route_table_ids
+  route_table_ids    = concat(module.vpc.private_route_table_ids, module.vpc.public_route_table_ids)
   tags = {
     Name = var.fsx_name
   }
@@ -47,7 +47,19 @@ resource "aws_security_group" "fsx_sg" {
     Name = "fsx_sg"
   }
 }
-
+#
+# Allow 'ssh' from jump server based on its security group since will be in the public subnet.
+resource "aws_security_group_rule" "fsx_sg_ssh_from_jump_server" {
+  description       = "allow ssh from jump_server to fsx"
+  from_port         = 0
+  protocol          = "tcp"
+  to_port           = 22
+  security_group_id = aws_security_group.fsx_sg.id
+  type              = "ingress"
+  source_security_group_id = aws_security_group.eks_jump_server.id
+}
+#
+# Allow allow traffic from the private subnets.
 resource "aws_security_group_rule" "fsx_sg_inbound" {
   description       = "allow inbound traffic to eks"
   from_port         = 0
@@ -55,7 +67,8 @@ resource "aws_security_group_rule" "fsx_sg_inbound" {
   to_port           = 0
   security_group_id = aws_security_group.fsx_sg.id
   type              = "ingress"
-  cidr_blocks       = [var.vpc_cidr]
+#  cidr_blocks       = [var.vpc_cidr]
+  cidr_blocks       = module.vpc.private_subnets_cidr_blocks
 }
 
 resource "aws_security_group_rule" "fsx_sg_outbound" {
