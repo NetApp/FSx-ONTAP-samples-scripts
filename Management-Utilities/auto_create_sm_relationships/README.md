@@ -55,13 +55,13 @@ If you want to run this script as a Lambda program, then you'll need to
     - fsx:DescribeFileSystems
     - fsx:DescribeVolumes
     - fsx:ListTagsForResources
-    - dynamodb:GetItem - Optionally, if you are using a DynamoDB table to store the secretsTable.
+    - dynamodb:GetItem - Optional, only needed if you are using a DynamoDB table to access the secretsTable or partnersTable.
 
 Create AWS endpoints for any services that it uses. Currently that is:
 - ec2
 - fsx
 - SecretsManager
-- dynamodb - Optionally, if you are using a DynamoDB table to store the secretsTable.
+- dynamodb - Optional, only needed if you are using a DynamoDB table to access the secretsTable or partnersTable.
 
 # Running The Script
 To run the script on a Linux host, you just need to change the UNIX permissions on the file to be executable, then run it as a command:
