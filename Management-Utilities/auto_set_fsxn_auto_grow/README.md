@@ -27,6 +27,7 @@ The Lambda function doesn't leverage that many AWS services, so only a few permi
 | Allow:logs:CreateLogGroup | arn:aws:logs:<LAMBDA_REGION>:<ACCOUNT_ID>:* | This is required so you can get logs from the Lambda function. |
 | Allow:logs:CreateLogStream<BR>Allow:logs:PutLogEvents | arn:aws:logs:<LAMBDA_REGION>:<ACCOUNT_ID>:/aws/lambda/<LAMBDA_FUNCTION_NAME>:* | This is required so you can get logs from the Lambda function. |
 | Allow:secretsmanager:GetSecretValue | <ARN_OF_SECRET_WITHIN_SECRETS_MANAGER> | This is required so the Lambda function can get the credentials for the FSxN file system. |
+| Allow:dynamodb:Scan | <ARN_OF_DYNAMODB_TABLE> | This is optional, depending on if you put your secretsTable in a DynamoDB. |
 | Allow:fsx:DescribeFileSystems<BR>Allow:fsx:DescribeVolumes | * | You can't limit these API. They are required to get information regarding the file system and volumes. |
 | Allow:ec2:CreateNetworkInterface<BR>Allow:ec2:DeleteNetworkInterface<BR>Allow:ec2:DescribeNetworkInterfaces | * | Since the Lambda function is going to run within your VPC, it has to be able to create a network interface to communicate with the FSxn file system API. |
 
@@ -40,6 +41,7 @@ FSxN file system is attached to.
 
 - FSx
 - SecretsManager
+- DynamoDB - This one can be a Gateway endpoint.
 
 ### Create the Lambda Function
 Create a Lambda function with the following parameters:
@@ -60,6 +62,12 @@ is a dictionary with the following keys:
     - secretName - The name of the secret in Secrets Manager.
     - usernameKey - The name of the key in the secret that contains the username.
     - passwordKey - The name of the key in the secret that contains the password.
+
+    **NOTE:** Instead of defining the secretsTable in the script, you can define
+dynamodbSecretsTableName and dynamodbRegion and the script will read in the
+secretsTable information from the specified DynamoDB table. The table should have
+the same fields as the secretsTable defined above.
+
 - secretsManagerRegion - Defines the region where your secrets are stored.
 - autoSizeMode - Defines the auto size mode you want to set the volume to. Valid values are:
     - grow - The volume will automatically grow when it reaches the grow threshold.

@@ -32,21 +32,21 @@ import boto3
 # secret for four differnt FSxIds, but you can set it up to use
 # a different secret and/or keys for the username and password for each
 # of the FSxId.
-secretsTable = [
-        {"fsxId": "fs-0e8d9172fa5XXXXXX", "secretName": "fsxn-credentials", "usernameKey": "fsxn-username", "passwordKey": "fsxn-password"},
-        {"fsxId": "fs-020de2687bdXXXXXX", "secretName": "fsxn-credentials", "usernameKey": "fsxn-username", "passwordKey": "fsxn-password"},
-        {"fsxId": "fs-07bcb7ad84aXXXXXX", "secretName": "fsxn-credentials", "usernameKey": "fsxn-username", "passwordKey": "fsxn-password"},
-        {"fsxId": "fs-077b5ff4195XXXXXX", "secretName": "fsxn-credentials", "usernameKey": "fsxn-username", "passwordKey": "fsxn-password"}
-    ]
+#secretsTable = [
+#        {"fsxId": "fs-0e8d9172fa5XXXXXX", "secretName": "fsxn-credentials", "usernameKey": "fsxn-username", "passwordKey": "fsxn-password"},
+#        {"fsxId": "fs-020de2687bdXXXXXX", "secretName": "fsxn-credentials", "usernameKey": "fsxn-username", "passwordKey": "fsxn-password"},
+#        {"fsxId": "fs-07bcb7ad84aXXXXXX", "secretName": "fsxn-credentials", "usernameKey": "fsxn-username", "passwordKey": "fsxn-password"},
+#        {"fsxId": "fs-077b5ff4195XXXXXX", "secretName": "fsxn-credentials", "usernameKey": "fsxn-username", "passwordKey": "fsxn-password"}
+#    ]
 #
 # If you don't want to define the secretsTable in this script, you can
 # define the following variables to use a DynamoDB table to get the
 # secret information.
 #
 # NOTE: If both the secretsTable, and dynamodbSecretsTableName are defined,
-# then the secretsTable will be used.
-#dynamodbRegion="us-west-2"
-#dynamodbSecretsTableName="fsx_secrets"
+# the secretsTable will be used.
+dynamodbRegion="us-west-2"
+dynamodbSecretsTableName="keith_secrets"
 #
 # Set the region where the secrets are stored.
 secretsManagerRegion="us-west-2"
@@ -86,7 +86,6 @@ maxWaitTime=60
 # find the credentials.
 ################################################################################
 def getCredentials(secretsManagerClient, fsxnId):
-    global secretsTable
 
     for secretItem in secretsTable:
         if secretItem['fsxId'] == fsxnId:
@@ -154,7 +153,7 @@ def lambda_handler(event, context):
 
     if 'secretsTable' not in globals():
         if 'dynamodbRegion' not in globals() or 'dynamodbSecretsTableName' not in globals():
-            raise Exception('Error, you must either define the secretsTable array at the top of this script, or define dynamodbRegion and dynamodbSecretsTableName.')
+            raise Exception('Error, you must either define the secretsTable array at the top of this script, or define dynamodbRegion and dynamodbSecretsTableName')
 
         table = dynamodbClient.Table(dynamodbSecretsTableName) # pylint: disable=E0602
 
