@@ -2,7 +2,7 @@
 
 ## Introduction
 
-In this sample you'll find the instructions, and the code necessary, to deploy an AWS EKS
+In this sample you'll find the instructions, and the code, necessary to deploy an AWS EKS
 cluster with an Amazon FSx for NetApp ONTAP File System (FSxN) to provide persistent storage
 for it. It will leverage NetApp's Astra Trident to provide the interface between EKS to FSxN.
 
@@ -37,6 +37,8 @@ The overall process is as follows:
 
 ## Detailed Instructions
 ## Clone the "NetApp/FSx-ONTAP-samples-scripts" repo from GitHub
+Execute the following commands to clone the repo and change into the directory where the
+terraform files are located:
 ```bash
 git clone https://github.com/NetApp/FSx-ONTAP-samples-scripts.git
 cd FSx-ONTAP-samples-scripts/Solutions/FSxN-as-PVC-for-EKS/terraform
@@ -44,17 +46,16 @@ cd FSx-ONTAP-samples-scripts/Solutions/FSxN-as-PVC-for-EKS/terraform
 ### Make any desired changes to the variables.tf file.
 Variables that can be changed include:
 - aws_region - The AWS region where you want to deploy the resources.
-- fsx_name - The name you want applied to the FSx for NetApp ONTAP File System.
-- fsx_password_secret_name - The name of the AWS SecretsManager secret that will hold the FSxN password.
-Note that a random password will be generated and stored in the secret.
+- fsx_name - The name you want applied to the FSx for NetApp ONTAP File System. Must not already exist.
+- fsx_password_secret_name - A basename of the AWS SecretsManager secret that will hold the FSxN password.
+A random string will be appended to this name to ensure uniqueness.
 - fsx_throughput_capacity - The throughput capacity of the FSx for NetApp ONTAP File System.
 Read the "description" of the variable to see valid values.
 - fsx_storage_capacity - The storage capacity of the FSx for NetApp ONTAP File System.
 Read the "description" of the variable to see the valid range.
 - key_pair_name - The name of the EC2 key pair to use to access the jump server.
+**Note:** You must set this variable, otherwise the deployment will fail.
 - secure_ips - The IP address ranges to allow SSH access to the jump server. The default is wide open.
-
-**Note:** that you must set the key_pair_name variable, otherwise the deployment will fail.
 
 ### Initialize the Terraform environment
 Run 'terraform init' to initialize the terraform environment.
@@ -91,7 +92,7 @@ Use the following command to 'ssh' to the jump start server:
 ssh -i <path_to_key_pair> ubuntu@<jump_server_public_ip>
 ```
 Where:
-- <path_to_key_pair> is the path to where you have stored the key_pair that you
+- <path_to_key_pair> is the file path to where you have stored the key_pair that you
 referenced in the variables.tf file.
 - <jump_server_public_ip> is the IP address of the jump start server that was displayed
 in the output from the `terraform apply` command.
@@ -114,18 +115,18 @@ You can do that via this command:
 ```bash
 aws iam get-user --output=text --query User.Arn
 ```
-To make the next few commaands easy, create variables that hold the AWS region, EKS cluster name,
-and, the user ARN:
+To make the next few commands easy, create variables that hold the AWS region, EKS cluster name,
+and the user ARN:
 ```bash
 aws_region=<AWS_REGION>
 user_ARN=$(aws iam get-user --output=text --query User.Arn)
 cluster_name=<EKS_CLUSTER_NAME>
 ```
-Of course replace <AWS_REGION> with the region where the resources were deployed. And replace
+Of course, replace <AWS_REGION> with the region where the resources were deployed. And replace
 <EKS_CLUSTER_NAME> with the name of your EKS cluster. Both of these values can be found
 from the output of the `terraform plan` command.
 
-Once you have your varables set, add the EKS access-entry with these command:
+Once you have your variables set, add the EKS access-entry by running these commands:
 ```bash
 aws eks create-access-entry --cluster-name $cluster_name --principal-arn $user_ARN --region $aws_region
 aws eks associate-access-policy --cluster-name $cluster_name --principal-arn $user_ARN --region $aws_region --policy-arn arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy --access-scope type=cluster
@@ -183,12 +184,12 @@ database. Because of that, we are going to setup a Trident backend
 to use the `ontap-san` driver. You can read more about the different driver types in the
 [Astra Trident documentation](https://docs.netapp.com/us-en/trident/trident-use/trident-fsx.html#fsx-for-ontap-driver-details) documentation.
 
-As you go through the steps below, you will noticed that most of the files have "-san" in thier
+As you go through the steps below, you will notice that most of the files have "-san" in their
 name. If you want to see an example of using NFS instead of iSCSI, then there are equivalent
 files that have "-nas" in the name. You can even create two mysql databases, one using iSCSI LUN
 and the another using NFS.
 
-The first step is to define a backend provider and in the process give it the information
+The first step is to define a backend provider and, in the process, give it the information
 it needs to make changes (e.g. create volumes, and LUNs) to the FSxN file system.
 
 In the command below you're going to need the FSxN ID, the FSX SVM Name, and the
@@ -256,7 +257,7 @@ file.
 ## Create a stateful application
 Now that you have set up Kubernetes to use Trident to interface with FSxN for persistent
 storage, you are ready to create an application that will use it. In the example below,
-we are setting up a MySQL database that will use a iSCSI LUN configured on the FSxN file system.
+we are setting up a MySQL database that will use an iSCSI LUN configured on the FSxN file system.
 As mentioned before, if you want to use NFS instead of iSCSI, use the files that have
 "-nas" in their names instead of the "-san".
 
@@ -302,7 +303,7 @@ that we set that to `Netapp1!`
 ```bash
 kubectl exec -it $(kubectl get pod -l "app=mysql-fsx-san" --namespace=default -o jsonpath='{.items[0].metadata.name}') -- mysql -u root -p
 ```
-**NOTE:** Replace "mysql-fsx-san" with "mysal-fas-nas" if you are creating a NFS based MySQL server.
+**NOTE:** Replace "mysql-fsx-san" with "mysql-fsx-nas" if you are creating a NFS based MySQL server.
 
 After you have logged in, here is a session showing an example of creating a database, then creating a table, then inserting
 some values into the table:
@@ -339,8 +340,8 @@ mysql> select * from fsx;
 ```
 
 ## Create a snapshot of the MySQL data
-Of course one of the benefits of FSxN is the ability to take space efficient snapshots of the volumes.
-These snapshots take almost no addiaional space on the backend storage and pose no performance impact.
+Of course, one of the benefits of FSxN is the ability to take space efficient snapshots of the volumes.
+These snapshots take almost no additional space on the backend storage and pose no performance impact.
 So, let's create one for the SQL volume. The first step is to add the volume snapshot store class
 by executing:
 ```bash
@@ -353,7 +354,7 @@ volumesnapshotclass.snapshot.storage.k8s.io/fsx-snapclass created
 Note, that this storage class works for both LUNs and NFS volumes, so there aren't different versions
 of this file based on the storage type you are testing with.
 
-The next step is create a snapshot of the data by executing:
+The next step is to create a snapshot of the data by executing:
 ```bash
 kubectl create -f manifests/volume-snapshot-san.yaml
 ```
