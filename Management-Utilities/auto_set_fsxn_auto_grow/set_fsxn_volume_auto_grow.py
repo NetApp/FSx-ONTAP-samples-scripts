@@ -33,11 +33,20 @@ import boto3
 # a different secret and/or keys for the username and password for each
 # of the FSxId.
 secretsTable = [
-        {"id": "fs-0e8d9172fa5XXXXXX", "secretName": "fsxn-credentials", "usernameKey": "fsxn-username", "passwordKey": "fsxn-password"},
-        {"id": "fs-020de2687bdXXXXXX", "secretName": "fsxn-credentials", "usernameKey": "fsxn-username", "passwordKey": "fsxn-password"},
-        {"id": "fs-07bcb7ad84aXXXXXX", "secretName": "fsxn-credentials", "usernameKey": "fsxn-username", "passwordKey": "fsxn-password"},
-        {"id": "fs-077b5ff4195XXXXXX", "secretName": "fsxn-credentials", "usernameKey": "fsxn-username", "passwordKey": "fsxn-password"}
+        {"fsxId": "fs-0e8d9172fa5XXXXXX", "secretName": "fsxn-credentials", "usernameKey": "fsxn-username", "passwordKey": "fsxn-password"},
+        {"fsxId": "fs-020de2687bdXXXXXX", "secretName": "fsxn-credentials", "usernameKey": "fsxn-username", "passwordKey": "fsxn-password"},
+        {"fsxId": "fs-07bcb7ad84aXXXXXX", "secretName": "fsxn-credentials", "usernameKey": "fsxn-username", "passwordKey": "fsxn-password"},
+        {"fsxId": "fs-077b5ff4195XXXXXX", "secretName": "fsxn-credentials", "usernameKey": "fsxn-username", "passwordKey": "fsxn-password"}
     ]
+#
+# If you don't want to define the secretsTable in this script, you can
+# define the following variables to use a DynamoDB table to get the
+# secret information.
+#
+# NOTE: If both the secretsTable, and dynamodbSecretsTableName are defined,
+# then the secretsTable will be used.
+#dynamodbRegion="us-west-2"
+#dynamodbSecretsTableName="fsx_secrets"
 #
 # Set the region where the secrets are stored.
 secretsManagerRegion="us-west-2"
@@ -77,9 +86,10 @@ maxWaitTime=60
 # find the credentials.
 ################################################################################
 def getCredentials(secretsManagerClient, fsxnId):
+    global secretsTable
 
     for secretItem in secretsTable:
-        if secretItem['id'] == fsxnId:
+        if secretItem['fsxId'] == fsxnId:
             secretsInfo = secretsManagerClient.get_secret_value(SecretId=secretItem['secretName'])
             secrets = json.loads(secretsInfo['SecretString'])
             username = secrets[secretItem['usernameKey']]
@@ -113,7 +123,7 @@ def getVolumeData(fsxClient, volumeId, volumeARN):
 ################################################################################
 def lambda_handler(event, context):
 
-    global logger
+    global logger, secretsTable
     #
     # Set up "logging" to appropriately display messages. It can be set it up
     # to send messages to a syslog server.
@@ -137,6 +147,19 @@ def lambda_handler(event, context):
     # Set the https retries to 1.
     retries = Retry(total=None, connect=1, read=1, redirect=10, status=0, other=0)  # pylint: disable=E1123
     http = urllib3.PoolManager(cert_reqs='CERT_NONE', retries=retries)
+    #
+    # Read in the secretTable if it is not already defined.
+    if 'dynamodbRegion' in globals():
+        dynamodbClient = boto3.resource("dynamodb", region_name=dynamodbRegion) # pylint: disable=E0602
+
+    if 'secretsTable' not in globals():
+        if 'dynamodbRegion' not in globals() or 'dynamodbSecretsTableName' not in globals():
+            raise Exception('Error, you must either define the secretsTable array at the top of this script, or define dynamodbRegion and dynamodbSecretsTableName.')
+
+        table = dynamodbClient.Table(dynamodbSecretsTableName) # pylint: disable=E0602
+
+        response = table.scan()
+        secretsTable = response["Items"]
     #
     # Get the FSxN ID, region, volume name, volume ID, and volume ARN from the CloudWatch event.
     fsxId      = event['detail']['responseElements']['volume']['fileSystemId']
