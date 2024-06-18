@@ -54,7 +54,7 @@ Read the "description" of the variable to see the valid range.
 - key_pair_name - The name of the EC2 key pair to use to access the jump server.
 - secure_ips - The IP address ranges to allow SSH access to the jump server. The default is wide open.
 
-Note that you must set the key_pair_name, otherwise the deployment will fail.
+**Note:** that you must set the key_pair_name variable, otherwise the deployment will fail.
 
 ### Initialize the Terraform environment
 Run 'terraform init' to initialize the terraform environment.
@@ -63,24 +63,24 @@ terraform init
 ```
 
 ### Deploy the resources
-Run 'terraform apply -auto-approve' to deploy:
+Run 'terraform apply --auto-approve' to deploy the resources:
 ```bash
-terraform apply -auto-approve
+terraform apply --auto-approve
 ```
 There will be a lot of output, and it will take 20 to 40 minutes to complete. Once done,
 the following is an example of last part of the output of a successful deployment:
 ```bash
 Outputs:
 
-eks-cluster-name = "fsx-eks-Do8AOE8U"
-eks-jump-server = "Instance ID: i-088a83a6deeabc18b, Public IP: 54.184.236.183"
-fsx-management-ip = "198.19.255.11"
-fsx-password-secret-name = "fsx-password"
-fsx-svm-data-LIF = "198.19.255.197"
+eks-cluster-name = "fsx-eks-mWFem72Z"
+eks-jump-server = "Instance ID: i-0bcf0ed9adeb55814, Public IP: 35.92.238.240"
+fsx-id = "fs-04794c394fa5a85de"
+fsx-password-secret-arn = "arn:aws:secretsmanager:us-west-2:759995470648:secret:fsx-eks-secret20240618170506480900000001-u8IQEp"
+fsx-password-secret-name = "fsx-eks-secret20240618170506480900000001"
 fsx-svm-name = "ekssvm"
 region = "us-west-2"
-vpc-id = "vpc-0a915e6ad76daf5d9"
-zz_update_kubeconfig_command = "aws eks update-kubeconfig --name fsx-eks-Do8AOE8U --region us-west-2"
+vpc-id = "vpc-043a3d602b64e2f56"
+zz_update_kubeconfig_command = "aws eks update-kubeconfig --name fsx-eks-mWFem72Z --region us-west-2"
 ```
 You will use the values in the commands below, so probably a good idea to copy the output somewhere
 so you can easily reference it later.
@@ -117,9 +117,9 @@ aws iam get-user --output=text --query User.Arn
 To make the next few commaands easy, create variables that hold the AWS region, EKS cluster name,
 and, the user ARN:
 ```bash
-awsRegion=<AWS_REGION>
-userARN=$(aws iam get-user --output=text --query User.Arn)
-clusterName=<EKS_CLUSTER_NAME>
+aws_region=<AWS_REGION>
+user_ARN=$(aws iam get-user --output=text --query User.Arn)
+cluster_name=<EKS_CLUSTER_NAME>
 ```
 Of course replace <AWS_REGION> with the region where the resources were deployed. And replace
 <EKS_CLUSTER_NAME> with the name of your EKS cluster. Both of these values can be found
@@ -127,18 +127,18 @@ from the output of the `terraform plan` command.
 
 Once you have your varables set, add the EKS access-entry with these command:
 ```bash
-aws eks create-access-entry --cluster-name $clusterName --principal-arn $userARN
-aws eks associate-access-policy --cluster-name $clusterName --principal-arn $userARN --policy-arn arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy --access-scope type=cluster
+aws eks create-access-entry --cluster-name $cluster_name --principal-arn $user_ARN --region $aws_region
+aws eks associate-access-policy --cluster-name $cluster_name --principal-arn $user_ARN --region $aws_region --policy-arn arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy --access-scope type=cluster
 ```
 
 ### Configure kubectl to use the EKS cluster
-You'll notice from the output of the `terraform apply` command a "zz_update_kubeconfig_command"
-variable. The output of that variable shows the command to run to configure kubectl to use
-the AWS EKS cluster.
+You'll notice at the bottom of the output from the `terraform apply` command a
+"zz_update_kubeconfig_command" variable. The output of that variable shows the
+command to run to configure kubectl to use the AWS EKS cluster.
 
 Here's an example based on the "terraform apply" output shown above:
 ```bash
-aws eks update-kubeconfig --name fsx-eks-Do8AOE8U --region us-west-2
+aws eks update-kubeconfig --name fsx-eks-mWFem72Z --region us-west-2
 ```
 Run the following command to confirm you can communicate with the EKS cluster:
 ```bash
@@ -146,9 +146,9 @@ kubectl get nodes
 ```
 You should get output like this:
 ```bash
-NAME                                           STATUS   ROLES    AGE   VERSION
-ip-192-168-1-100.us-west-2.compute.internal     Ready    <none>   2m    v1.21.2-eks-55c2c7
-ip-192-168-1-101.us-west-2.compute.internal     Ready    <none>   2m    v1.21.2-eks-55c2c7
+NAME                                       STATUS   ROLES    AGE   VERSION
+ip-10-0-1-84.us-west-2.compute.internal    Ready    <none>   76m   v1.29.3-eks-ae9a62a
+ip-10-0-2-117.us-west-2.compute.internal   Ready    <none>   76m   v1.29.3-eks-ae9a62a
 ```
 
 ### Install the Kubernetes Snapshot CRDs and Snapshot Controller:
@@ -183,10 +183,10 @@ database. Because of that, we are going to setup a Trident backend
 to use the `ontap-san` driver. You can read more about the different driver types in the
 [Astra Trident documentation](https://docs.netapp.com/us-en/trident/trident-use/trident-fsx.html#fsx-for-ontap-driver-details) documentation.
 
-As you go through the steps below, you will noticed that all the files have "-san" in the
-name. If you want to see an example of using NFS instead of iSCSI, there are equivalent
-files that have "-nas" in the name that leverage a NFS volume instead of an iSCSI LUN.
-You can even create two mysql databases, one using iSCSI and the other using NFS.
+As you go through the steps below, you will noticed that most of the files have "-san" in thier
+name. If you want to see an example of using NFS instead of iSCSI, then there are equivalent
+files that have "-nas" in the name. You can even create two mysql databases, one using iSCSI LUN
+and the another using NFS.
 
 The first step is to define a backend provider and in the process give it the information
 it needs to make changes (e.g. create volumes, and LUNs) to the FSxN file system.
@@ -197,11 +197,11 @@ from the `terraform apply` command. If you have lost that output, you can always
 into the server where you ran `terraform apply` and simply run it again. It should
 state that there aren't any changes to be made and simply show the output again.
 
-Note that a copy of this repo has been put into ubuntu's home directory on the jumpserver for you.
-Don't be confused with this copy and the one you used to create the
-environment with earlier. This copy will not have the terraform state information,
-nor your changes to the variables.tf file, but it does have other files you'll need
-to complete the setup.
+Note that a copy of this repo has been put into ubuntu's home directory on the
+jump server for you. Don't be confused with this copy of the repo and the one you
+used to create the environment with earlier. This copy will not have the terraform
+state information, nor your changes to the variables.tf file, but it does have
+other files you'll need to complete the setup.
 
 Execute the following commands to configure Trident to use the `ontap-san` driver.
 ```bash
@@ -214,15 +214,16 @@ envsubst < manifests/backend-tbc-ontap-san.tmpl > temp/backend-tbc-ontap-san.yam
 kubectl create -n trident -f temp/backend-tbc-ontap-san.yaml
 ```
 Of course replace:
-- <fsx-id> with the FSxN ID.
-- <fsx-svm-name> with the name of the SVM that was created.
-- <secret-arn> with the ARN of the AWS SecretsManager secret that holds the FSxN password.
+- \<fsx-id> with the FSxN ID.
+- \<fsx-svm-name> with the name of the SVM that was created.
+- \<secret-arn> with the ARN of the AWS SecretsManager secret that holds the FSxN password.
 
-Feel free to look at the `temp/backend-tbc-ontap-san.yaml` file that was used to
-configure the Trident backend.
+To get more information regarding how the backed was configured, look at the
+`temp/backend-tbc-ontap-san.yaml` file.
 
-As mentioned above, if you want to use NFS storage, instead of iSCSI, you can use the
-`manifests/backend-tbc-ontap-nas.tmpl` file instead of the `manifests/backend-tbc-ontap-san.tmpl` file.
+As mentioned above, if you want to use NFS storage instead of iSCSI, you can use the
+`manifests/backend-tbc-ontap-nas.tmpl` file instead of the `manifests/backend-tbc-ontap-san.tmpl`
+file.
 
 To confirm that the backend has been appropriately configured, run this command:
 ```bash
@@ -246,16 +247,18 @@ kubectl get storageclass
 The output should be similar to this:
 ```bash
 NAME              PROVISIONER             RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
-fsx-basic-block   csi.trident.netapp.io   Delete          Immediate              true                   20h
+fsx-basic-san     csi.trident.netapp.io   Delete          Immediate              true                   20h
 gp2 (default)     kubernetes.io/aws-ebs   Delete          WaitForFirstConsumer   false                  44h
 ```
-Feel free to look at the `manifests/storageclass-fsxn-san.yaml` file to see
-how the storage class was configured.
+To see more details on how the storage class was defined, look at the `manifests/storageclass-fsxn-san.yaml`
+file.
 
 ## Create a stateful application
 Now that you have set up Kubernetes to use Trident to interface with FSxN for persistent
 storage, you are ready to create an application that will use it. In the example below,
 we are setting up a MySQL database that will use a iSCSI LUN configured on the FSxN file system.
+As mentioned before, if you want to use NFS instead of iSCSI, use the files that have
+"-nas" in their names instead of the "-san".
 
 ### Create a Persistent Volume Claim
 The first step is to create an iSCSI LUN for the database by executing:
@@ -269,8 +272,8 @@ kubectl get pvc
 ```
 The output should look similar to this:
 ```bash
-NAME           STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS      VOLUMEATTRIBUTESCLASS   AGE
-mysql-volume   Bound    pvc-f1e94884-fb3b-4cb0-b58b-50fa2b8cbb77   50Gi       RWO            fsx-basic-block   <unset>                 20h
+NAME               STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS    VOLUMEATTRIBUTESCLASS   AGE
+mysql-volume-san   Bound    pvc-15e834eb-daf8-4a96-a2d5-4044442fbe90   50Gi       RWO            fsx-basic-san   <unset>                 13s
 ```
 
 ### Deploy a MySQL database using the storage created above
@@ -297,8 +300,10 @@ to put some data in the database. Do that by first logging into the MySQL instan
 It will prompt for a password. In the yaml file used to create the database, you'll see
 that we set that to `Netapp1!`
 ```bash
-kubectl exec -it $(kubectl get pod -l "app=mysql-fsx" --namespace=default -o jsonpath='{.items[0].metadata.name}') -- mysql -u root -p
+kubectl exec -it $(kubectl get pod -l "app=mysql-fsx-san" --namespace=default -o jsonpath='{.items[0].metadata.name}') -- mysql -u root -p
 ```
+**NOTE:** Replace "mysql-fsx-san" with "mysal-fas-nas" if you are creating a NFS based MySQL server.
+
 After you have logged in, here is a session showing an example of creating a database, then creating a table, then inserting
 some values into the table:
 ```bash
@@ -310,8 +315,9 @@ Database changed
 mysql> create table fsx (filesystem varchar(20), capacity varchar(20), region varchar(20));
 Query OK, 0 rows affected (0.04 sec)
 
-mysql> insert into fsx (`filesystem`, `capacity`, `region`) values ('netapp01','1024GB', 'us-east-1'),('netapp02', 
-'10240GB', 'us-east-2'),('eks001', '2048GB', 'us-west-1'),('eks002', '1024GB', 'us-west-2'),('netapp03', '1024GB', 'us-east-1'),('netapp04', '1024GB', 'us-west-1'); 
+mysql> insert into fsx (`filesystem`, `capacity`, `region`) values ('netapp01','1024GB', 'us-east-1'),
+('netapp02', '10240GB', 'us-east-2'),('eks001', '2048GB', 'us-west-1'),('eks002', '1024GB', 'us-west-2'),
+('netapp03', '1024GB', 'us-east-1'),('netapp04', '1024GB', 'us-west-1'); 
 Query OK, 6 rows affected (0.03 sec) 
 Records: 6  Duplicates: 0  Warnings: 0
 ```
@@ -335,7 +341,8 @@ mysql> select * from fsx;
 ## Create a snapshot of the MySQL data
 Of course one of the benefits of FSxN is the ability to take space efficient snapshots of the volumes.
 These snapshots take almost no addiaional space on the backend storage and pose no performance impact.
-So, let's create one for the SQL volume. The first step is to VolumeSnapshotClass by executing:
+So, let's create one for the SQL volume. The first step is to add the volume snapshot store class
+by executing:
 ```bash
 kubectl create -f manifests/volume-snapshot-class.yaml 
 ```
@@ -343,7 +350,10 @@ The output should look like:
 ```bash
 volumesnapshotclass.snapshot.storage.k8s.io/fsx-snapclass created
 ```
-Next, create a snapshot of the data by executing:
+Note, that this storage class works for both LUNs and NFS volumes, so there aren't different versions
+of this file based on the storage type you are testing with.
+
+The next step is create a snapshot of the data by executing:
 ```bash
 kubectl create -f manifests/volume-snapshot-san.yaml
 ```
@@ -362,10 +372,11 @@ mysql-volume-san-snap-01   true         mysql-volume-san                        
 ```
 
 ## Clone the MySQL data to a new storage persisent volume
-Now that you have a snapshot of the data, you can create a read/write version of it, that
-can be used as a new storage volume. This step creates a new FlexClone volume in FSx for ONTAP.
-As mentioned above, on initial creation, a FlexClone takes almost no space; only a pointer
-table gets created to the shared data blocks of the volume it is being cloned from.
+Now that you have a snapshot of the data, you use it to create a read/write version of it. This
+can be used as a new storage volume for another mysql database. This step creates a new
+FlexClone volume in FSx for ONTAP.  Note that FlexClone volumes take up almost no space;
+only a pointer table is created to point to the shared data blocks of the volume it is
+being cloned from.
 
 The first step is to create a PersistentVolume from the snapshot by executing:
 ```bash

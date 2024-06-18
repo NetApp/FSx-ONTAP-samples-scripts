@@ -1,10 +1,14 @@
+#
+# Create a security group for the jump server.
 resource "aws_security_group" "eks_jump_server" {
   name_prefix = "eks_jump_server"
   vpc_id      = module.vpc.vpc_id
 }
-
+#
+# This rule allow port 22 from any CIDR listed in the secure_ips variable
+# in the variables.tf file.
 resource "aws_security_group_rule" "eks_jump_server_ingress" {
-  description       = "Allow inbound ssh traffic from anywhere."
+  description       = "Allow inbound ssh traffic from the secure_ips defined in the varaibles.tf file."
   from_port         = 0
   protocol          = "tcp"
   to_port           = 22
@@ -12,7 +16,8 @@ resource "aws_security_group_rule" "eks_jump_server_ingress" {
   type              = "ingress"
   cidr_blocks = var.secure_ips
 }
-
+#
+# This allows all out bound traffic.
 resource "aws_security_group_rule" "eks_jump_server_egress" {
   description       = "Allow outbound traffic to anywhere"
   from_port         = 0

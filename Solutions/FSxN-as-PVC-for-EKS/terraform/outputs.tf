@@ -3,12 +3,8 @@ output "region" {
   value       = var.aws_region
 }
 
-output "fsx-management-ip" {
-  value = join("", aws_fsx_ontap_file_system.eksfs.endpoints[0].management[0].ip_addresses)
-}
-
 output "fsx-password-secret-name" {
-  value = var.fsx_password_secret_name
+   value = aws_secretsmanager_secret.fsx_secret_password.name
 }
 
 output "fsx-password-secret-arn" {
@@ -19,8 +15,8 @@ output "fsx-svm-name" {
   value = aws_fsx_ontap_storage_virtual_machine.ekssvm.name
 }
 
-output "fsx-svm-data-LIF" {
-  value = join("", aws_fsx_ontap_storage_virtual_machine.ekssvm.endpoints[0].nfs[0].ip_addresses)
+output "fsx-id" {
+  value = aws_fsx_ontap_file_system.eksfs.id
 }
 
 output "eks-cluster-name" {

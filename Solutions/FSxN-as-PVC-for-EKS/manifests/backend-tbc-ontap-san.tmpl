@@ -1,20 +1,14 @@
-apiVersion: v1
-kind: Secret
-metadata:
-  name: backend-fsx-ontap-secret-san
-type: Opaque
-stringData:
-  username: fsxadmin
-  password: ${FSX_PASSWORD}
----
 apiVersion: trident.netapp.io/v1
 kind: TridentBackendConfig
 metadata:
   name: backend-fsx-ontap-san
+  namespace: trident
 spec:
   version: 1
   storageDriverName: ontap-san
-  managementLIF: ${FSX_MANAGEMENT_IP}
   svm: ${FSX_SVM_NAME}
-  credentials: 
-    name: backend-fsx-ontap-secret-san
+  aws:
+    fsxFilesystemID: ${FSX_ID}
+  credentials:
+    name: ${SECRET_ARN}
+    type: awsarn

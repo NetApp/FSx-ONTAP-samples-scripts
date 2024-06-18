@@ -36,17 +36,13 @@ apt install -y jq unzip
 # Install the aws cli:
 cd /var/tmp
 curl -s "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-unzip awscliv2.zip
+unzip -q awscliv2.zip
 ./aws/install
 rm -rf awscliv2.zip aws
 #
 # Install kubectl:
 curl -sLO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
 install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
-#
-# Install eksctl
-curl -s "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
-mv /tmp/eksctl /usr/local/bin
 #
 # Install helm:
 snap install helm --classic
@@ -55,9 +51,10 @@ snap install helm --classic
 cd /home/ubuntu
 git clone https://github.com/NetApp/FSx-ONTAP-samples-scripts.git
 #
-# The following two lines are only needed during development.
+# The following three lines are only needed during development.
 cd FSx-ONTAP-samples-scripts
 git checkout origin/FSxN-as-PVC-for-EKS
+cd ..
 
 chown -R ubuntu:ubuntu FSx-ONTAP-samples-scripts
 EOF
