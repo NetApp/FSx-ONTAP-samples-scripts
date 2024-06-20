@@ -47,7 +47,7 @@ cd FSx-ONTAP-samples-scripts/Solutions/FSxN-as-PVC-for-EKS/terraform
 Variables that can be changed include:
 - aws_region - The AWS region where you want to deploy the resources.
 - fsx_name - The name you want applied to the FSx for NetApp ONTAP File System. Must not already exist.
-- fsx_password_secret_name - A basename of the AWS SecretsManager secret that will hold the FSxN password.
+- fsx_password_secret_name - A base name of the AWS SecretsManager secret that will hold the FSxN password.
 A random string will be appended to this name to ensure uniqueness.
 - fsx_throughput_capacity - The throughput capacity of the FSx for NetApp ONTAP File System.
 Read the "description" of the variable to see valid values.
@@ -58,13 +58,13 @@ Read the "description" of the variable to see the valid range.
 - secure_ips - The IP address ranges to allow SSH access to the jump server. The default is wide open.
 
 ### Initialize the Terraform environment
-Run 'terraform init' to initialize the terraform environment.
+Run the following command to initialize the terraform environment.
 ```bash
 terraform init
 ```
 
 ### Deploy the resources
-Run 'terraform apply --auto-approve' to deploy the resources:
+Run the following command to deploy the all resources:
 ```bash
 terraform apply --auto-approve
 ```
@@ -85,32 +85,32 @@ vpc-id = "vpc-043a3d602b64e2f56"
 You will use the values in the commands below, so probably a good idea to copy the output somewhere
 so you can easily reference it later.
 
-Note that a FSxN File System was created, with a vserver (a.k.a. SVM). The default username
-for the FSxN File System is 'fsxadmin'. And, the default username for the vserver is 'vsadmin'. The
+Note that an FSxN File System was created, with a vserver (a.k.a. SVM). The default username
+for the FSxN File System is 'fsxadmin'. And the default username for the vserver is 'vsadmin'. The
 password for both of these users is the same and is what is stored in the AWS SecretsManager secret
 shown above. Note that since Terraform was used to create the secret, the password is stored in
 plain text therefore it is **HIGHLY** recommended that you change the password to something else
 by first changing the passwords via the AWS Management Console and then updating the password in
 the AWS SecretsManager secret. You can update the 'username' key in the secret if you want, but
 it must be a vserver admin user, not a system level user. This secret is used by Astra
-Trident and it will always login via the vserver managmenet LIF and therefore it must be a
+Trident and it will always login via the vserver management LIF and therefore it must be a
 vserver admin user. If you want to create a separate secret for the 'fsxadmin' user, feel free
 to do so.
 
 ### SSH to the jump server to complete the setup
-Use the following command to 'ssh' to the jump start server:
+Use the following command to 'ssh' to the jump server:
 ```bash
 ssh -i <path_to_key_pair> ubuntu@<jump_server_public_ip>
 ```
 Where:
 - <path_to_key_pair> is the file path to where you have stored the key_pair that you
 referenced in the variables.tf file.
-- <jump_server_public_ip> is the IP address of the jump start server that was displayed
+- <jump_server_public_ip> is the IP address of the jump server that was displayed
 in the output from the `terraform apply` command.
 
 ### Configure the 'aws' CLI
 There are various ways to configure the AWS cli. If you are unsure how to do it, please
-refer to this URL for instructions:
+refer to this the AWS documentation for instructions:
 [Configuring the AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-quickstart.html)
 
 **NOTE:** When asked for a default region, use the region you specified in the variables.tf file.
@@ -124,7 +124,7 @@ You can do that via this command:
 user_ARN=$(aws sts get-caller-identity --query Arn --output text)
 echo $user_ARN
 ```
-Note that if you are using an SSO to authenicate with AWS, then the actual username
+Note that if you are using an SSO to authenticate with AWS, then the actual username
 you need to add is slightly different than what is output from the above command.
 The following command will take the output from the above command and format it correctly:
 ```bash
@@ -156,7 +156,7 @@ aws eks update-kubeconfig --name $cluster_name --region $aws_region
 Of course the above assumes the cluster_name and aws_region variables are still set from
 running the commands above.
 
-To confirm you are able to communciate with the EKS cluster run the following command:
+To confirm you can communicate with the EKS cluster run the following command:
 ```bash
 kubectl get nodes
 ```
@@ -184,21 +184,18 @@ trident-operator-67d6fd899b-jrnt2     1/1     Running   0          20h
 
 ### Configure the Trident CSI backend to use FSx for NetApp ONTAP
 For the example below we are going to set up an iSCSI LUN for a MySQL
-database. Because of that, we are going to setup Astra Trident as a backend provider
-and configure it to use its `ontap-san` driver. You can read more about
-the different type of drivers it supports in the
-[Astra Trident documentation](https://docs.netapp.com/us-en/trident/trident-use/trident-fsx.html#fsx-for-ontap-driver-details)
-documentation.
+database. To help facilicate that, we are going to setup Astra Trident as a backend provider.
+Since we are going to be creating an iSCSI LUN, we are going to use its `ontap-san` driver.
+Astra Trident has varioius different drivers that you might be interested in. You can read
+more about the drivers it supports in the
+[Astra Trident documentation.](https://docs.netapp.com/us-en/trident/trident-use/trident-fsx.html#fsx-for-ontap-driver-details)
 
 As you go through the steps below, you will notice that most of the files have "-san" in their
 name. If you want to see an example of using NFS instead of iSCSI, then there are equivalent
 files that have "-nas" in their name. You can even create two mysql databases, one using iSCSI LUN
 and the another using NFS.
 
-The first step is to define a backend provider and, in the process, give it the information
-it needs to make changes (e.g. create volumes, and LUNs) to the FSxN file system.
-
-In the command below you're going to need the FSxN ID, the FSX SVM name, and the
+In the commands below you're going to need the FSxN ID, the FSX SVM name, and the
 secret ARN. All of that information can be obtained from the output
 from the `terraform apply` command. If you have lost that output, you can always log back
 into the server where you ran `terraform apply` and simply run it again. It should
@@ -210,11 +207,13 @@ used to create the environment with earlier. This copy will not have the terrafo
 state information, nor your changes to the variables.tf file, but it does have
 other files you'll need to complete the setup.
 
-After making the following substitutions:
+After making the following substitutions in the commands below:
 - \<fsx-id> with the FSxN ID.
 - \<fsx-svm-name> with the name of the SVM that was created.
 - \<secret-arn> with the ARN of the AWS SecretsManager secret that holds the FSxN password.
-Execute the following commands to configure Trident to use the `ontap-san` driver.
+
+Execute the following commands to configure Trident to use the FSxN file system that was
+created earlier using the `terraform --apply` command:
 ```bash
 cd ~/FSx-ONTAP-samples-scripts/Solutions/FSxN-as-PVC-for-EKS
 mkdir temp
@@ -247,7 +246,7 @@ backend-fsx-ontap-san   backend-fsx-ontap-san   7a551921-997c-4c37-a1d1-f2f4c87f
 ```
 
 ### Create a Kubernetes storage class
-The next step is to create a Kubernetes store class by executing:
+The next step is to create a Kubernetes storage class by executing:
 ```bash
 kubectl create -f manifests/storageclass-fsxn-san.yaml
 ```
@@ -306,7 +305,7 @@ To see how the MySQL was configured, check out the `manifests/mysql-san.yaml` fi
 
 ### Populate the MySQL database with data
 
-Now to confirm that the database is able to read and write to the persistent storage you need
+Now to confirm that the database can read and write to the persistent storage you need
 to put some data in the database. Do that by first logging into the MySQL instance using the
 command below. It will prompt for a password. In the yaml file used to create the database,
 you'll see that we set that to `Netapp1!`
@@ -378,7 +377,7 @@ volumesnapshotclass.snapshot.storage.k8s.io/fsx-snapclass created
 Note, that this storage class works for both LUNs and NFS volumes, so there aren't different versions
 of this file based on the storage type you are testing with.
 
-The findal step is to create a snapshot of the data by executing:
+The final step is to create a snapshot of the data by executing:
 ```bash
 kubectl create -f manifests/volume-snapshot-san.yaml
 ```
@@ -396,18 +395,18 @@ NAME                       READYTOUSE   SOURCEPVC          SOURCESNAPSHOTCONTENT
 mysql-volume-san-snap-01   true         mysql-volume-san                           50Gi          fsx-snapclass   snapcontent-b3491f26-47e3-484c-aae0-69d45087d6c7   4s             5s
 ```
 
-## Clone the MySQL data to a new storage persisent volume
+## Clone the MySQL data to a new storage persistent volume
 Now that you have a snapshot of the data, you can use it to create a read/write version
 of it. This can be used as a new storage volume for another mysql database. This operation
-creates a new FlexClone volume in FSx for ONTAP.  Note that initially a FlexClone volumes
+creates a new FlexClone volume in FSx for ONTAP.  Note that initially a FlexClone volume
 take up almost no additional space; only a pointer table is created to point to the
 shared data blocks of the volume it is being cloned from.
 
-The first step is to create a PersistentVolume from the snapshot by executing:
+The first step is to create a Persistent Volume Claim from the snapshot by executing:
 ```bash
 kubectl create -f manifests/pvc-from-san-snapshot.yaml
 ```
-## Create a new MySQL database using the cloned storage
+## Create a new MySQL database using the cloned volume
 Now that you have a new storage volume, you can create a new MySQL database that uses it by executing:
 ```bash
 kubectl create -f manifests/mysql-san-clone.yaml
