@@ -5,7 +5,7 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
-  storageClassName: fsx-basic-block
+  storageClassName: fsx-basic-san
   resources:
     requests:
       storage: 50Gi

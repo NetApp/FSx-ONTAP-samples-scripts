@@ -19,6 +19,10 @@ output "fsx-id" {
   value = aws_fsx_ontap_file_system.eksfs.id
 }
 
+output "fsx-management-ip" {
+  value = format(join("", aws_fsx_ontap_file_system.eksfs.endpoints[0].management[0].ip_addresses))
+}
+
 output "eks-cluster-name" {
   value = data.aws_eks_cluster.eks.id
 }
@@ -29,8 +33,4 @@ output "vpc-id" {
 
 output "eks-jump-server" {
   value = format("Instance ID: %s, Public IP: %s", aws_instance.eks_jump_server.id, aws_instance.eks_jump_server.public_ip)
-}
-
-output "zz_update_kubeconfig_command" {
-  value = format("%s %s %s %s", "aws eks update-kubeconfig --name", module.eks.cluster_name, "--region", var.aws_region)
 }

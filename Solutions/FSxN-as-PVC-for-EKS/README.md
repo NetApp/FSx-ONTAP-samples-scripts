@@ -8,7 +8,7 @@ for it. It will leverage NetApp's Astra Trident to provide the interface between
 
 ## Prerequisites
 
-A Linux based EC2 instance with the following installed:
+A Unix based system with the following installed:
 - HashiCorp's Terraform
 - AWS CLI, authenticated with an account that has privileges necessary to:
 	- Deploy an EKS cluster
@@ -77,14 +77,25 @@ eks-cluster-name = "fsx-eks-mWFem72Z"
 eks-jump-server = "Instance ID: i-0bcf0ed9adeb55814, Public IP: 35.92.238.240"
 fsx-id = "fs-04794c394fa5a85de"
 fsx-password-secret-arn = "arn:aws:secretsmanager:us-west-2:759995470648:secret:fsx-eks-secret20240618170506480900000001-u8IQEp"
-fsx-password-secret-name = "fsx-eks-secret20240618170506480900000001"
+fsx-password-secret-name = "fsx-eks-secrete-3f55084"
 fsx-svm-name = "ekssvm"
 region = "us-west-2"
 vpc-id = "vpc-043a3d602b64e2f56"
-zz_update_kubeconfig_command = "aws eks update-kubeconfig --name fsx-eks-mWFem72Z --region us-west-2"
 ```
 You will use the values in the commands below, so probably a good idea to copy the output somewhere
 so you can easily reference it later.
+
+Note that a FSxN File System was created, with a vserver (a.k.a. SVM). The default username
+for the FSxN File System is 'fsxadmin'. And, the default username for the vserver is 'vsadmin'. The
+password for both of these users is the same and is what is stored in the AWS SecretsManager secret
+shown above. Note that since Terraform was used to create the secret, the password is stored in
+plain text therefore it is **HIGHLY** recommended that you change the password to something else
+by first changing the passwords via the AWS Management Console and then updating the password in
+the AWS SecretsManager secret. You can update the 'username' key in the secret if you want, but
+it must be a vserver admin user, not a system level user. This secret is used by Astra
+Trident and it will always login via the vserver managmenet LIF and therefore it must be a
+vserver admin user. If you want to create a separate secret for the 'fsxadmin' user, feel free
+to do so.
 
 ### SSH to the jump server to complete the setup
 Use the following command to 'ssh' to the jump start server:
@@ -98,14 +109,11 @@ referenced in the variables.tf file.
 in the output from the `terraform apply` command.
 
 ### Configure the 'aws' CLI
-Run the following command to configure the 'aws' command:
-```bash
-aws configure
-```
-It will prompt you for an access key and secret. See above for the required permissions.
-It will also prompt you for a default region and output format. I would recommend setting
-the region to the same region you set in the variables.tf file. It doesn't matter what
-you set the default output format to.
+There are various ways to configure the AWS cli. If you are unsure how to do it, please
+refer to this URL for instructions:
+[Configuring the AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-quickstart.html)
+
+**NOTE:** When asked for a default region, use the region you specified in the variables.tf file.
 
 ### Allow access to the EKS cluster for your user id
 AWS's EKS clusters have a secondary form for permissions. As such, you have to add an "access-entry"
@@ -113,13 +121,21 @@ to your EKS configuration and associate it with Cluster Admin policy to be able 
 configure the EKS cluster. The first step to do this is to find out your IAM ARN.
 You can do that via this command:
 ```bash
-aws iam get-user --output=text --query User.Arn
+user_ARN=$(aws sts get-caller-identity --query Arn --output text)
+echo $user_ARN
 ```
-To make the next few commands easy, create variables that hold the AWS region, EKS cluster name,
-and the user ARN:
+Note that if you are using an SSO to authenicate with AWS, then the actual username
+you need to add is slightly different than what is output from the above command.
+The following command will take the output from the above command and format it correctly:
+```bash
+user_ARN=$(aws sts get-caller-identity | jq -r '.Arn' | awk -F: '{split($6, parts, "/"); printf "arn:aws:iam::%s:role/aws-reserved/sso.amazonaws.com/%s\n", $5, parts[2]}')
+echo $user_ARN
+```
+The above command will leverage a standard AWS role that is created when configuring AWS to use an SSO.
+
+To make the next few commands easy, create variables that hold the AWS region and EKS cluster name.
 ```bash
 aws_region=<AWS_REGION>
-user_ARN=$(aws iam get-user --output=text --query User.Arn)
 cluster_name=<EKS_CLUSTER_NAME>
 ```
 Of course, replace <AWS_REGION> with the region where the resources were deployed. And replace
@@ -133,15 +149,14 @@ aws eks associate-access-policy --cluster-name $cluster_name --principal-arn $us
 ```
 
 ### Configure kubectl to use the EKS cluster
-You'll notice at the bottom of the output from the `terraform apply` command a
-"zz_update_kubeconfig_command" variable. The output of that variable shows the
-command to run to configure kubectl to use the AWS EKS cluster.
-
-Here's an example based on the "terraform apply" output shown above:
+AWS makes it easy to configure 'kubectl' to use the EKS cluster. You can do that by running this command:
 ```bash
-aws eks update-kubeconfig --name fsx-eks-mWFem72Z --region us-west-2
+aws eks update-kubeconfig --name $cluster_name --region $aws_region
 ```
-Run the following command to confirm you can communicate with the EKS cluster:
+Of course the above assumes the cluster_name and aws_region variables are still set from
+running the commands above.
+
+To confirm you are able to communciate with the EKS cluster run the following command:
 ```bash
 kubectl get nodes
 ```
@@ -150,17 +165,6 @@ You should get output like this:
 NAME                                       STATUS   ROLES    AGE   VERSION
 ip-10-0-1-84.us-west-2.compute.internal    Ready    <none>   76m   v1.29.3-eks-ae9a62a
 ip-10-0-2-117.us-west-2.compute.internal   Ready    <none>   76m   v1.29.3-eks-ae9a62a
-```
-
-### Install the Kubernetes Snapshot CRDs and Snapshot Controller:
-Run these commands to install the CRDs:
-```bash
-git clone https://github.com/kubernetes-csi/external-snapshotter 
-cd external-snapshotter/ 
-kubectl kustomize client/config/crd | kubectl create -f - 
-kubectl -n kube-system kustomize deploy/kubernetes/snapshot-controller | kubectl create -f - 
-kubectl kustomize deploy/kubernetes/csi-snapshotter | kubectl create -f - 
-cd ..
 ```
 
 ### Confirm Astra Trident is up and running
@@ -180,19 +184,21 @@ trident-operator-67d6fd899b-jrnt2     1/1     Running   0          20h
 
 ### Configure the Trident CSI backend to use FSx for NetApp ONTAP
 For the example below we are going to set up an iSCSI LUN for a MySQL
-database. Because of that, we are going to setup a Trident backend
-to use the `ontap-san` driver. You can read more about the different driver types in the
-[Astra Trident documentation](https://docs.netapp.com/us-en/trident/trident-use/trident-fsx.html#fsx-for-ontap-driver-details) documentation.
+database. Because of that, we are going to setup Astra Trident as a backend provider
+and configure it to use its `ontap-san` driver. You can read more about
+the different type of drivers it supports in the
+[Astra Trident documentation](https://docs.netapp.com/us-en/trident/trident-use/trident-fsx.html#fsx-for-ontap-driver-details)
+documentation.
 
 As you go through the steps below, you will notice that most of the files have "-san" in their
 name. If you want to see an example of using NFS instead of iSCSI, then there are equivalent
-files that have "-nas" in the name. You can even create two mysql databases, one using iSCSI LUN
+files that have "-nas" in their name. You can even create two mysql databases, one using iSCSI LUN
 and the another using NFS.
 
 The first step is to define a backend provider and, in the process, give it the information
 it needs to make changes (e.g. create volumes, and LUNs) to the FSxN file system.
 
-In the command below you're going to need the FSxN ID, the FSX SVM Name, and the
+In the command below you're going to need the FSxN ID, the FSX SVM name, and the
 secret ARN. All of that information can be obtained from the output
 from the `terraform apply` command. If you have lost that output, you can always log back
 into the server where you ran `terraform apply` and simply run it again. It should
@@ -204,6 +210,10 @@ used to create the environment with earlier. This copy will not have the terrafo
 state information, nor your changes to the variables.tf file, but it does have
 other files you'll need to complete the setup.
 
+After making the following substitutions:
+- \<fsx-id> with the FSxN ID.
+- \<fsx-svm-name> with the name of the SVM that was created.
+- \<secret-arn> with the ARN of the AWS SecretsManager secret that holds the FSxN password.
 Execute the following commands to configure Trident to use the `ontap-san` driver.
 ```bash
 cd ~/FSx-ONTAP-samples-scripts/Solutions/FSxN-as-PVC-for-EKS
@@ -214,17 +224,17 @@ export SECRET_ARN=<secret-arn>
 envsubst < manifests/backend-tbc-ontap-san.tmpl > temp/backend-tbc-ontap-san.yaml
 kubectl create -n trident -f temp/backend-tbc-ontap-san.yaml
 ```
-Of course replace:
-- \<fsx-id> with the FSxN ID.
-- \<fsx-svm-name> with the name of the SVM that was created.
-- \<secret-arn> with the ARN of the AWS SecretsManager secret that holds the FSxN password.
 
 To get more information regarding how the backed was configured, look at the
 `temp/backend-tbc-ontap-san.yaml` file.
 
 As mentioned above, if you want to use NFS storage instead of iSCSI, you can use the
 `manifests/backend-tbc-ontap-nas.tmpl` file instead of the `manifests/backend-tbc-ontap-san.tmpl`
-file.
+file. The last two commands should look like:
+```bash
+envsubst < manifests/backend-tbc-ontap-nas.tmpl > temp/backend-tbc-ontap-nas.yaml
+kubectl create -n trident -f temp/backend-tbc-ontap-nas.yaml
+```
 
 To confirm that the backend has been appropriately configured, run this command:
 ```bash
@@ -297,9 +307,9 @@ To see how the MySQL was configured, check out the `manifests/mysql-san.yaml` fi
 ### Populate the MySQL database with data
 
 Now to confirm that the database is able to read and write to the persistent storage you need
-to put some data in the database. Do that by first logging into the MySQL instance.
-It will prompt for a password. In the yaml file used to create the database, you'll see
-that we set that to `Netapp1!`
+to put some data in the database. Do that by first logging into the MySQL instance using the
+command below. It will prompt for a password. In the yaml file used to create the database,
+you'll see that we set that to `Netapp1!`
 ```bash
 kubectl exec -it $(kubectl get pod -l "app=mysql-fsx-san" --namespace=default -o jsonpath='{.items[0].metadata.name}') -- mysql -u root -p
 ```
@@ -307,12 +317,13 @@ kubectl exec -it $(kubectl get pod -l "app=mysql-fsx-san" --namespace=default -o
 
 After you have logged in, here is a session showing an example of creating a database, then creating a table, then inserting
 some values into the table:
-```bash
+```sql
 mysql> create database fsxdatabase; 
 Query OK, 1 row affected (0.01 sec)
 
 mysql> use fsxdatabase;
 Database changed 
+
 mysql> create table fsx (filesystem varchar(20), capacity varchar(20), region varchar(20));
 Query OK, 0 rows affected (0.04 sec)
 
@@ -324,7 +335,7 @@ Records: 6  Duplicates: 0  Warnings: 0
 ```
 
 And, to confirm everything is there, here is an SQL statement to retrieve the data:
-```bash
+```sql
 mysql> select * from fsx;
 +------------+----------+-----------+
 | filesystem | capacity | region    |
@@ -342,8 +353,21 @@ mysql> select * from fsx;
 ## Create a snapshot of the MySQL data
 Of course, one of the benefits of FSxN is the ability to take space efficient snapshots of the volumes.
 These snapshots take almost no additional space on the backend storage and pose no performance impact.
-So, let's create one for the SQL volume. The first step is to add the volume snapshot store class
-by executing:
+
+### Install the Kubernetes Snapshot CRDs and Snapshot Controller:
+The first step is to install the Snapshot CRDs and the Snapshot Controller.
+To do that run the following commands:
+```bash
+git clone https://github.com/kubernetes-csi/external-snapshotter 
+cd external-snapshotter/ 
+kubectl kustomize client/config/crd | kubectl create -f - 
+kubectl -n kube-system kustomize deploy/kubernetes/snapshot-controller | kubectl create -f - 
+kubectl kustomize deploy/kubernetes/csi-snapshotter | kubectl create -f - 
+cd ..
+```
+
+### Create a snapshot of the MySQL data
+Now, add the volume snapshot class by executing:
 ```bash
 kubectl create -f manifests/volume-snapshot-class.yaml 
 ```
@@ -354,7 +378,7 @@ volumesnapshotclass.snapshot.storage.k8s.io/fsx-snapclass created
 Note, that this storage class works for both LUNs and NFS volumes, so there aren't different versions
 of this file based on the storage type you are testing with.
 
-The next step is to create a snapshot of the data by executing:
+The findal step is to create a snapshot of the data by executing:
 ```bash
 kubectl create -f manifests/volume-snapshot-san.yaml
 ```
@@ -373,11 +397,11 @@ mysql-volume-san-snap-01   true         mysql-volume-san                        
 ```
 
 ## Clone the MySQL data to a new storage persisent volume
-Now that you have a snapshot of the data, you use it to create a read/write version of it. This
-can be used as a new storage volume for another mysql database. This step creates a new
-FlexClone volume in FSx for ONTAP.  Note that FlexClone volumes take up almost no space;
-only a pointer table is created to point to the shared data blocks of the volume it is
-being cloned from.
+Now that you have a snapshot of the data, you can use it to create a read/write version
+of it. This can be used as a new storage volume for another mysql database. This operation
+creates a new FlexClone volume in FSx for ONTAP.  Note that initially a FlexClone volumes
+take up almost no additional space; only a pointer table is created to point to the
+shared data blocks of the volume it is being cloned from.
 
 The first step is to create a PersistentVolume from the snapshot by executing:
 ```bash
