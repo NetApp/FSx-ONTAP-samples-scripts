@@ -15,11 +15,11 @@ A Unix based system with the following installed:
 	- Deploy an FSx for Netapp ONTAP File System
 	- Create security groups
   - Create policies and roles
-  - Create secrtets in AWS SecretsManager
-	- Create a VPC and subnets
-	- Create a NAT Gateway
+  - Create secrets in AWS SecretsManager
+  - Create a VPC and subnets
+  - Create a NAT Gateway
   - Create a Internet Gateway
-	- Create an EC2 instance
+  - Create an EC2 instance
 
 ## Installation Overview
 The overall process is as follows:
@@ -33,7 +33,7 @@ The overall process is as follows:
   - Create a secret in AWS SecretsManager to hold the FSxN password.
   - Deploy an EKS cluster.
   - Deploy an EC2 Linux based instance.
-  - Create policies, roles and security groups to protect the new environement.
+  - Create policies, roles and security groups to protect the new environment.
 - SSH to the Linux based instance to complete the setup:
   - Install the FSx for NetApp ONTAP Trident CSI driver.
   - Configure the Trident CSI driver.
@@ -42,7 +42,7 @@ The overall process is as follows:
 
 ## Detailed Instructions
 ### Clone the "NetApp/FSx-ONTAP-samples-scripts" repo from GitHub
-Execute the following commands to clone the repo and change into the directory where the
+Run the following commands to clone the repo and change into the directory where the
 terraform files are located:
 ```bash
 git clone https://github.com/NetApp/FSx-ONTAP-samples-scripts.git
@@ -70,7 +70,7 @@ terraform init
 ```
 
 ### Deploy the resources
-Run the following command to deploy the all resources:
+Run the following command to deploy all the resources:
 ```bash
 terraform apply --auto-approve
 ```
@@ -132,13 +132,15 @@ echo $user_ARN
 Note that if you are using an SSO to authenticate with AWS, then the actual username
 you need to add is slightly different than what is output from the above command.
 The following command will take the output from the above command and format it correctly:
+**ONLY RUN THIS COMMAND IF YOU ARE USING AN SSO TO AUTHENTICATE WITH AWS**
 ```bash
 user_ARN=$(aws sts get-caller-identity | jq -r '.Arn' | awk -F: '{split($6, parts, "/"); printf "arn:aws:iam::%s:role/aws-reserved/sso.amazonaws.com/%s\n", $5, parts[2]}')
 echo $user_ARN
 ```
 The above command will leverage a standard AWS role that is created when configuring AWS to use an SSO.
 
-To make the next few commands easy, create variables that hold the AWS region and EKS cluster name.
+As you can see above, a variable named "user_ARN" was create to hold the your user's ARN. To make
+the next few commands easy, also create variables that hold the AWS region and EKS cluster name.
 ```bash
 aws_region=<AWS_REGION>
 cluster_name=<EKS_CLUSTER_NAME>
@@ -189,9 +191,9 @@ trident-operator-67d6fd899b-jrnt2     1/1     Running   0          20h
 
 ### Configure the Trident CSI backend to use FSx for NetApp ONTAP
 For the example below we are going to set up an iSCSI LUN for a MySQL
-database. To help facilicate that, we are going to setup Astra Trident as a backend provider.
+database. To help facilitate that, we are going to set up Astra Trident as a backend provider.
 Since we are going to be creating an iSCSI LUN, we are going to use its `ontap-san` driver.
-Astra Trident has serveral different drivers to choose from. You can read more about the
+Astra Trident has several different drivers to choose from. You can read more about the
 drivers it supports in the
 [Astra Trident documentation.](https://docs.netapp.com/us-en/trident/trident-use/trident-fsx.html#fsx-for-ontap-driver-details)
 
@@ -217,7 +219,7 @@ After making the following substitutions in the commands below:
 - \<fsx-svm-name> with the name of the SVM that was created.
 - \<secret-arn> with the ARN of the AWS SecretsManager secret that holds the FSxN password.
 
-Execute the following commands to configure Trident to use the FSxN file system that was
+Run them to configure Trident to use the FSxN file system that was
 created earlier using the `terraform --apply` command:
 ```
 cd ~/FSx-ONTAP-samples-scripts/Solutions/FSxN-as-PVC-for-EKS
@@ -249,13 +251,14 @@ The output should look similar to this:
 NAME                    BACKEND NAME            BACKEND UUID                           PHASE   STATUS
 backend-fsx-ontap-san   backend-fsx-ontap-san   7a551921-997c-4c37-a1d1-f2f4c87fa629   Bound   Success
 ```
-If the status is Failed, then you can add the "--output=json" flag to the `kubectl get tridentbackendconfig`
+If the status is `Failed`, then you can add the "--output=json" flag to the `kubectl get tridentbackendconfig`
 command to get more information as to why it failed. Specifically, look at the "message" field in the output.
 The following command will get just the status messages:
 ```bash
 kubectl get tridentbackendconfig -n trident --output=json | jq '.items[] | .status.message'
 ```
 Once you have resolved any issues, you can remove the failed backend by running:
+**ONLY RUN THIS COMMAND IF THE STATUS IS FAILED**
 ```bash
 kubectl delete -n trident -f temp/backend-tbc-ontap-san.yaml
 ```
@@ -269,7 +272,7 @@ The next step is to create a Kubernetes storage class by executing:
 ```bash
 kubectl create -f manifests/storageclass-fsxn-san.yaml
 ```
-To confirm it worked execute this command:
+To confirm it worked run this command:
 ```bash
 kubectl get storageclass
 ```
@@ -285,17 +288,17 @@ file.
 ## Create a stateful application
 Now that you have set up Kubernetes to use Trident to interface with FSxN for persistent
 storage, you are ready to create an application that will use it. In the example below,
-we are setting up a MySQL database that will use an iSCSI LUN configured on the FSxN file system.
+we are setting up a MySQL database that will use an iSCSI LUN provisioned on the FSxN file system.
 As mentioned before, if you want to use NFS instead of iSCSI, use the files that have
 "-nas" in their names instead of the "-san".
 
 ### Create a Persistent Volume Claim
-The first step is to create an iSCSI LUN for the database by executing:
+The first step is to create an iSCSI LUN for the database by running:
 
 ```bash
 kubectl create -f manifests/pvc-fsxn-san.yaml
 ```
-To check that it worked, execute:
+To check that it worked, run:
 ```bash
 kubectl get pvc
 ```
@@ -307,8 +310,8 @@ mysql-volume-san   Bound    pvc-1aae479e-4b27-4310-8bb2-71255134edf0   50Gi     
 
 If you want to see what was created on the FSxN file system, you can log into it and take a look.
 You will want to login as the 'fsxadmin' user, using the password stored in the AWS SecretsManager secret.
-You can find the IP address of the FSxN file system in the output from the `terraform apply` command.
-Here is an example of logging in and listing all the LUNs on the system:
+You can find the IP address of the FSxN file system in the output from the `terraform apply` command, or
+from the AWS console. Here is an example of logging in and listing all the LUNs and volumes on the system:
 ```bash
 ubuntu@ip-10-0-4-125:~/FSx-ONTAP-samples-scripts/Solutions/FSxN-as-PVC-for-EKS$ ssh -l fsxadmin 198.19.255.174
 (fsxadmin@198.19.255.174) Password:
@@ -326,11 +329,11 @@ Vserver   Volume       Aggregate    State      Type       Size  Available Used%
 ekssvm    ekssvm_root  aggr1        online     RW          1GB    972.4MB    0%
 ekssvm    trident_pvc_1aae479e_4b27_4310_8bb2_71255134edf0
                        aggr1        online     RW         55GB    54.90GB    0%
-3 entries were displayed.
+2 entries were displayed.
 ```
 
 ### Deploy a MySQL database using the storage created above
-Now you can deploy a MySQL database by executing:
+Now you can deploy a MySQL database by running:
 ```bash
 kubectl create -f manifests/mysql-san.yaml
 ```
@@ -378,7 +381,7 @@ Records: 6  Duplicates: 0  Warnings: 0
 ```
 
 And, to confirm everything is there, here is an SQL statement to retrieve the data:
-```sql
+```
 mysql> select * from fsx;
 +------------+----------+-----------+
 | filesystem | capacity | region    |
@@ -420,11 +423,11 @@ The output should look like:
 ```bash
 volumesnapshotclass.snapshot.storage.k8s.io/fsx-snapclass created
 ```
-Note, that this storage class works for both LUNs and NFS volumes, so there aren't different versions
+Note that this storage class works for both LUNs and NFS volumes, so there aren't different versions
 of this file based on the storage type you are testing with.
 
 ### Create a snapshot of the MySQL data
-Now you can create a snapshot by executing:
+Now you can create a snapshot by running:
 ```bash
 kubectl create -f manifests/volume-snapshot-san.yaml
 ```
@@ -432,7 +435,7 @@ The output should look like:
 ```bash
 volumesnapshot.snapshot.storage.k8s.io/mysql-volume-san-snap-01 created
 ```
-To confirm that the snapshot was created, execute:
+To confirm that the snapshot was created, run:
 ```bash
 kubectl get volumesnapshot
 ```
@@ -451,7 +454,7 @@ Vserver  Volume   Snapshot                                  Size Total% Used%
 ekssvm   trident_pvc_1aae479e_4b27_4310_8bb2_71255134edf0
                   snapshot-bdce9310-9698-4b37-9f9b-d1d802e44f17
                                                            140KB     0%    0%
-
+```
 ## Clone the MySQL data to a new storage persistent volume
 Now that you have a snapshot of the data, you can use it to create a read/write version
 of it. This can be used as a new storage volume for another mysql database. This operation
@@ -463,7 +466,7 @@ The first step is to create a Persistent Volume Claim from the snapshot by execu
 ```bash
 kubectl create -f manifests/pvc-from-san-snapshot.yaml
 ```
-To check that it worked, execute:
+To check that it worked, run:
 ```bash
 kubectl get pvc
 ```
@@ -507,7 +510,7 @@ mysql-fsx-san-clone-d66d9d4bf-2r9fw   1/1     Running   0              14s
 kubectl exec -it $(kubectl get pod -l "app=mysql-fsx-san-clone" --namespace=default -o jsonpath='{.items[0].metadata.name}') -- mysql -u root -p
 ```
 After you have logged in, check that the same data is in the new database:
-```bash
+```
 mysql> use fsxdatabase;
 mysql> select * from fsx;
 +------------+----------+-----------+
