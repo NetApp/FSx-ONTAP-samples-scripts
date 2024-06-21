@@ -3,6 +3,11 @@ variable "aws_region" {
   description = "aws region where you want the resources deployed."
 }
 
+variable "aws_secrets_region" {
+  default     = "us-west-2"
+  description = "The region where you want the FSxN secret stored within AWS Secrets Manager."
+}
+
 variable "fsx_name" {
   default     = "eksfs"
   description = "The name you want assigned to the FSxN file system."
@@ -10,17 +15,7 @@ variable "fsx_name" {
 
 variable "fsx_password_secret_name" {
   default     = "fsx-eks-secret"
-  description = "The basename of the secret to create within the AWS Secrets Manager that will contain the FSxN password. A random string will be appended to the end of the secreate name to ensure no name conflict."
-}
-
-variable "aws_secrets_region" {
-  default     = "us-west-2"
-  description = "The region where you want the secret stored within AWS Secrets Manager."
-}
-
-variable "trident_version" {
-  default     = "v24.2.0-eksbuild.1"
-  description = "The version of Astra Trident to 'add-on' to the EKS cluster."
+  description = "The base name of the secret to create within the AWS Secrets Manager that will contain the FSxN password. A random string will be appended to the end of the secreate name to ensure no name conflict."
 }
 
 variable "fsxn_throughput_capacity" {
@@ -47,6 +42,11 @@ variable "secure_ips" {
 ################################################################################
 # Don't change any variables below this line.
 ################################################################################
+
+variable "trident_version" {
+  default     = "v24.2.0-eksbuild.1"
+  description = "The version of Astra Trident to 'add-on' to the EKS cluster."
+}
 
 variable "kubernetes_version" {
   default     = 1.29
