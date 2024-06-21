@@ -132,6 +132,7 @@ echo $user_ARN
 Note that if you are using an SSO to authenticate with AWS, then the actual username
 you need to add is slightly different than what is output from the above command.
 The following command will take the output from the above command and format it correctly:
+
 **ONLY RUN THIS COMMAND IF YOU ARE USING AN SSO TO AUTHENTICATE WITH AWS**
 ```bash
 user_ARN=$(aws sts get-caller-identity | jq -r '.Arn' | awk -F: '{split($6, parts, "/"); printf "arn:aws:iam::%s:role/aws-reserved/sso.amazonaws.com/%s\n", $5, parts[2]}')
@@ -258,6 +259,7 @@ The following command will get just the status messages:
 kubectl get tridentbackendconfig -n trident --output=json | jq '.items[] | .status.message'
 ```
 Once you have resolved any issues, you can remove the failed backend by running:
+
 **ONLY RUN THIS COMMAND IF THE STATUS IS FAILED**
 ```bash
 kubectl delete -n trident -f temp/backend-tbc-ontap-san.yaml
