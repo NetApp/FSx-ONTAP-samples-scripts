@@ -10,13 +10,19 @@ resource "random_string" "fsx_password" {
   special          = true
   override_special = "@$%^&*()_+="
 }
+
+provider "aws" {
+  alias = "secrets_provider"
+  region = var.aws_secrets_region
+}
 #
 # Store the password in AWS Secrets Manager
 resource "aws_secretsmanager_secret" "fsx_secret_password" {
- name = "${var.fsx_password_secret_name}-${random_id.id.hex}"
+  provider = aws.secrets_provider
+  name = "${var.fsx_password_secret_name}-${random_id.id.hex}"
 }
-#
 resource "aws_secretsmanager_secret_version" "fsx_secret_password" {
+  provider = aws.secrets_provider
   secret_id = aws_secretsmanager_secret.fsx_secret_password.id
   secret_string =  jsonencode({username = "vsadmin", password = random_string.fsx_password.result})
 }
