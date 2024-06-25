@@ -5,11 +5,11 @@
 * [Installation Oveerview](#Installation-Overview)
 * [Detailed Instructions](#Detailed-instructions)
   * [Clone the "NetApp/FSx-ONTAP-samples-scripts" repo from GitHub](#Clone-the-NetAppFSx-ONTAP-samples-scripts-repo-from-GitHub)
-  * [Make any desired changes to the variables.tf file](#Make-any-desired-changes-to-the-variables.tf-file)
+  * [Make any desired changes to the variables.tf file](#Make-any-desired-changes-to-the-variablestf-file)
   * [Initialize the Terraform environment](#Initialize-the-Terraform-environment)
   * [Deploy the resources](#Deploy-the-resources)
   * [SSH to the jump server to complete the setup](#SSH-to-the-jump-server-to-complete-the-setup)
-  * [Configure the 'aws' CLI](#Configure-the-'aws'-CLI)
+  * [Configure the 'aws' CLI](#Configure-the-aws-CLI)
   * [Allow access to the EKS cluster for your user id](#Allow-access-to-the-EKS-cluster-for-your-user-id)
   * [Configure kubectl to use the EKS cluster](#Configure-kubectl-to-use-the-EKS-cluster)
   * [Confirm Astra Trident is up and running](#Confirm-Astra-Trident-is-up-and-running)
@@ -17,7 +17,7 @@
   * [Create a Kubernetes storage class](#Create-a-Kubernetes-storage-class)
 * [Create a stateful application](#Create-a-stateful-application)
   * [Create a Persistent Volume Claim](#Create-a-Persistent-Volume-Claim)
-  * [Deploy a MySQL database using the storage created above](#Deploy-a-MySQL-database-using-the-storage-created-above)
+  * [Deploy a MySQL database using the PVC](#Deploy-a-MySQL-database-using-the-storage-created-above)
   * [Populate the MySQL database with data](#Populate-the-MySQL-database-with-data)
 * [Create a snapshot of the MySQL data](#Create-a-snapshot-of-the-MySQL-data)
   * [Install the Kubernetes Snapshot CRDs and Snapshot Controller](#Install-the-Kubernetes-Snapshot-CRDs-and-Snapshot-Controller)
@@ -25,7 +25,7 @@
   * [Create a snapshot of the MySQL data](#Create-a-snapshot-of-the-MySQL-data)
 * [Clone the MySQL data to a new storage persistent volume](#Clone-the-MySQL-data-to-a-new-storage-persistent-volume)
   * [Create a new MySQL database using the cloned volume](#Create-a-new-MySQL-database-using-the-cloned-volume)
-  * [To confirm that the new database is up and running, log into it and check the data](#To-confirm-that-the-new-database-is-up-and-running,-log-into-it-and-check-the-data)
+  * [Confirm that the new database is up and running](#Confirm-that-the-new-database-is-up-and-running)
 * [Final steps](#Final-steps)
 * [Author Information](#author-information)
 * [License](#license)
@@ -228,7 +228,7 @@ Astra Trident has several different drivers to choose from. You can read more ab
 drivers it supports in the
 [Astra Trident documentation.](https://docs.netapp.com/us-en/trident/trident-use/trident-fsx.html#fsx-for-ontap-driver-details)
 
-If you want to use an iSCSI LUN instead of an NFS file system, please refer to [these instructions](README-san.md#Configure-the-Trident-CSI-backend-to-use-FSx-for-NetApp-ONTAP).
+If you want to use an iSCSI LUN instead of an NFS file system, please refer to [these instructions](README-san.md#configure-the-trident-csi-backend-to-use-fsx-for-netapp-ontap).
 
 In the commands below you're going to need the FSxN ID, the FSX SVM name, and the
 secret ARN. All of that information can be obtained from the output
@@ -514,7 +514,8 @@ csi-snapshotter-0                     3/3     Running   0              22h
 mysql-fsx-nas-695b497757-8n6bb        1/1     Running   0              21h
 mysql-fsx-nas-clone-d66d9d4bf-2r9fw   1/1     Running   0              14s
 ```
-### To confirm that the new database is up and running, log into it and check the data
+### Confirm that the new database is up and running
+To confirm that hte new database is up and running log into it and check the data by running this command:
 ```bash
 kubectl exec -it $(kubectl get pod -l "app=mysql-fsx-nas-clone" --namespace=default -o jsonpath='{.items[0].metadata.name}') -- mysql -u root -p
 ```
