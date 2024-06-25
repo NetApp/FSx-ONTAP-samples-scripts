@@ -50,12 +50,6 @@ snap install helm --classic
 # Install the eks samples repo into the ubuntu home directory:
 cd /home/ubuntu
 git clone https://github.com/NetApp/FSx-ONTAP-samples-scripts.git
-#
-# The following three lines are only needed during development.
-cd FSx-ONTAP-samples-scripts
-git checkout origin/FSxN-as-PVC-for-EKS
-cd ..
-
 chown -R ubuntu:ubuntu FSx-ONTAP-samples-scripts
 EOF
 

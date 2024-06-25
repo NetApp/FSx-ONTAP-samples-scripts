@@ -163,7 +163,7 @@ Note that if you are using an SSO to authenticate with AWS, then the actual user
 you need to add is slightly different than what is output from the above command.
 The following command will take the output from the above command and format it correctly:
 
-:warning: Only run this command if you are using an sso to authenticate with aws
+**ONLY RUN THIS COMMAND IF YOU ARE USING AN SSO TO AUTHENTICATE WITH AWS**
 ```bash
 user_ARN=$(aws sts get-caller-identity | jq -r '.Arn' | awk -F: '{split($6, parts, "/"); printf "arn:aws:iam::%s:role/aws-reserved/sso.amazonaws.com/%s\n", $5, parts[2]}')
 echo $user_ARN
@@ -221,14 +221,12 @@ trident-operator-67d6fd899b-jrnt2     1/1     Running   0          20h
 ```
 
 ### Configure the Trident CSI backend to use FSx for NetApp ONTAP
-For the example below we are going to set up an NFS file system for a MySQL
+For the example below we are going to set up an iSCSI LUN for a MySQL
 database. To help facilitate that, we are going to set up Astra Trident as a backend provider.
-Since we are going to be creating an NFS file system, we are going to use its `ontap-nas` driver.
+Since we are going to be creating an iSCSI LUN, we are going to use its `ontap-san` driver.
 Astra Trident has several different drivers to choose from. You can read more about the
 drivers it supports in the
 [Astra Trident documentation.](https://docs.netapp.com/us-en/trident/trident-use/trident-fsx.html#fsx-for-ontap-driver-details)
-
-If you want to use an iSCSI LUN instead of an NFS file system, please refer to [these instructions](README-san.md#Configure-the-Trident-CSI-backend-to-use-FSx-for-NetApp-ONTAP).
 
 In the commands below you're going to need the FSxN ID, the FSX SVM name, and the
 secret ARN. All of that information can be obtained from the output
@@ -255,11 +253,12 @@ mkdir temp
 export FSX_ID=<fsx-id>
 export FSX_SVM_NAME=<fsx-svm-name>
 export SECRET_ARN=<secret-arn>
-envsubst < manifests/backend-tbc-ontap-nas.tmpl > temp/backend-tbc-ontap-nas.yaml
-kubectl create -n trident -f temp/backend-tbc-ontap-nas.yaml
+envsubst < manifests/backend-tbc-ontap-san.tmpl > temp/backend-tbc-ontap-san.yaml
+kubectl create -n trident -f temp/backend-tbc-ontap-san.yaml
 ```
+
 To get more information regarding how the backed was configured, look at the
-`temp/backend-tbc-ontap-nas.yaml` file.
+`temp/backend-tbc-ontap-san.yaml` file.
 
 To confirm that the backend has been appropriately configured, run this command:
 ```bash
@@ -268,7 +267,7 @@ kubectl get tridentbackendconfig -n trident
 The output should look similar to this:
 ```bash
 NAME                    BACKEND NAME            BACKEND UUID                           PHASE   STATUS
-backend-fsx-ontap-nas   backend-fsx-ontap-nas   7a551921-997c-4c37-a1d1-f2f4c87fa629   Bound   Success
+backend-fsx-ontap-san   backend-fsx-ontap-san   7a551921-997c-4c37-a1d1-f2f4c87fa629   Bound   Success
 ```
 If the status is `Failed`, then you can add the "--output=json" flag to the `kubectl get tridentbackendconfig`
 command to get more information as to why it failed. Specifically, look at the "message" field in the output.
@@ -278,19 +277,19 @@ kubectl get tridentbackendconfig -n trident --output=json | jq '.items[] | .stat
 ```
 Once you have resolved any issues, you can remove the failed backend by running:
 
-:warning: Only run this command if the backend is in a failed state.
+**ONLY RUN THIS COMMAND IF THE STATUS IS FAILED**
 ```bash
-kubectl delete -n trident -f temp/backend-tbc-ontap-nas.yaml
+kubectl delete -n trident -f temp/backend-tbc-ontap-san.yaml
 ```
-Now you can re-run the `kubectl create -n trident -f temp/backend-tbc-ontap-nas.yaml` command.
+Then, you can re-run the `kubectl create -n trident -f temp/backend-tbc-ontap-san.yaml` command.
 If the issues was with one of the variables that was substituted in, then you will need to
-rerun the `envsubst` command to create a new `temp/backend-tbc-ontap-nas.yaml` file
-before running the `kubectl create -n trident -f temp/backend-tbc-ontap-nas.yaml` command.
+rerun the `envsubst` command to create a new `temp/backend-tbc-ontap-san.yaml` file
+before running the `kubectl create -n trident -f temp/backend-tbc-ontap-san.yaml` command.
 
 ### Create a Kubernetes storage class
 The next step is to create a Kubernetes storage class by executing:
 ```bash
-kubectl create -f manifests/storageclass-fsxn-nas.yaml
+kubectl create -f manifests/storageclass-fsxn-san.yaml
 ```
 To confirm it worked run this command:
 ```bash
@@ -299,23 +298,22 @@ kubectl get storageclass
 The output should be similar to this:
 ```bash
 NAME              PROVISIONER             RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
-fsx-basic-nas     csi.trident.netapp.io   Delete          Immediate              true                   20h
+fsx-basic-san     csi.trident.netapp.io   Delete          Immediate              true                   20h
 gp2 (default)     kubernetes.io/aws-ebs   Delete          WaitForFirstConsumer   false                  44h
 ```
-To see more details on how the storage class was defined, look at the `manifests/storageclass-fsxn-nas.yaml`
+To see more details on how the storage class was defined, look at the `manifests/storageclass-fsxn-san.yaml`
 file.
 
 ## Create a stateful application
 Now that you have set up Kubernetes to use Trident to interface with FSxN for persistent
 storage, you are ready to create an application that will use it. In the example below,
-we are setting up a MySQL database that will use an NFS file system provisioned on the
-FSxN file system.
+we are setting up a MySQL database that will use an iSCSI LUN provisioned on the FSxN file system.
 
 ### Create a Persistent Volume Claim
-The first step is to create an NFS file system for the database by running:
+The first step is to create an iSCSI LUN for the database by running:
 
 ```bash
-kubectl create -f manifests/pvc-fsxn-nas.yaml
+kubectl create -f manifests/pvc-fsxn-san.yaml
 ```
 To check that it worked, run:
 ```bash
@@ -324,31 +322,37 @@ kubectl get pvc
 The output should look similar to this:
 ```bash
 NAME               STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS    VOLUMEATTRIBUTESCLASS   AGE
-mysql-volume-nas   Bound    pvc-1aae479e-4b27-4310-8bb2-71255134edf0   50Gi       RWO            fsx-basic-nas   <unset>                 114m
+mysql-volume-san   Bound    pvc-1aae479e-4b27-4310-8bb2-71255134edf0   50Gi       RWO            fsx-basic-san   <unset>                 114m
 ```
 
 If you want to see what was created on the FSxN file system, you can log into it and take a look.
 You will want to login as the 'fsxadmin' user, using the password stored in the AWS SecretsManager secret.
 You can find the IP address of the FSxN file system in the output from the `terraform apply` command, or
-from the AWS console. Here is an example of logging in and listing all the volumes on the system:
+from the AWS console. Here is an example of logging in and listing all the LUNs and volumes on the system:
 ```bash
 ubuntu@ip-10-0-4-125:~/FSx-ONTAP-samples-scripts/Solutions/FSxN-as-PVC-for-EKS$ ssh -l fsxadmin 198.19.255.174
 (fsxadmin@198.19.255.174) Password:
 
 Last login time: 6/21/2024 15:30:27
+FsxId0887a493c777c5122::> lun show
+Vserver   Path                            State   Mapped   Type        Size
+--------- ------------------------------- ------- -------- -------- --------
+ekssvm    /vol/trident_pvc_1aae479e_4b27_4310_8bb2_71255134edf0/lun0
+                                          online  mapped   linux        50GB
+
 FsxId0887a493c777c5122::> volume show
 Vserver   Volume       Aggregate    State      Type       Size  Available Used%
 --------- ------------ ------------ ---------- ---- ---------- ---------- -----
 ekssvm    ekssvm_root  aggr1        online     RW          1GB    972.4MB    0%
 ekssvm    trident_pvc_1aae479e_4b27_4310_8bb2_71255134edf0
-                       aggr1        online     RW         50GB       50GB    0%
+                       aggr1        online     RW         55GB    54.90GB    0%
 2 entries were displayed.
 ```
 
 ### Deploy a MySQL database using the storage created above
 Now you can deploy a MySQL database by running:
 ```bash
-kubectl create -f manifests/mysql-nas.yaml
+kubectl create -f manifests/mysql-san.yaml
 ```
 To check that it is up run:
 ```bash
@@ -357,11 +361,11 @@ kubectl get pods
 The output should look similar to this:
 ```bash
 NAME                             READY   STATUS    RESTARTS   AGE
-mysql-fsx-nas-79cdb57b58-m2lgr   1/1     Running   0          31s
+mysql-fsx-san-79cdb57b58-m2lgr   1/1     Running   0          31s
 ```
 Note that it might take a minute or two for the pod to get to the Running status.
 
-To see how the MySQL was configured, check out the `manifests/mysql-nas.yaml` file.
+To see how the MySQL was configured, check out the `manifests/mysql-san.yaml` file.
 
 ### Populate the MySQL database with data
 
@@ -370,8 +374,9 @@ to put some data in the database. Do that by first logging into the MySQL instan
 command below. It will prompt for a password. In the yaml file used to create the database,
 you'll see that we set that to `Netapp1!`
 ```bash
-kubectl exec -it $(kubectl get pod -l "app=mysql-fsx-nas" --namespace=default -o jsonpath='{.items[0].metadata.name}') -- mysql -u root -p
+kubectl exec -it $(kubectl get pod -l "app=mysql-fsx-san" --namespace=default -o jsonpath='{.items[0].metadata.name}') -- mysql -u root -p
 ```
+
 After you have logged in, here is a session showing an example of creating a database, then creating a table, then inserting
 some values into the table:
 ```
@@ -434,15 +439,17 @@ The output should look like:
 ```bash
 volumesnapshotclass.snapshot.storage.k8s.io/fsx-snapclass created
 ```
+Note that this storage class works for both LUNs and NFS volumes, so there aren't different versions
+of this file based on the storage type you are testing with.
 
 ### Create a snapshot of the MySQL data
 Now you can create a snapshot by running:
 ```bash
-kubectl create -f manifests/volume-snapshot-nas.yaml
+kubectl create -f manifests/volume-snapshot-san.yaml
 ```
 The output should look like:
 ```bash
-volumesnapshot.snapshot.storage.k8s.io/mysql-volume-nas-snap-01 created
+volumesnapshot.snapshot.storage.k8s.io/mysql-volume-san-snap-01 created
 ```
 To confirm that the snapshot was created, run:
 ```bash
@@ -451,7 +458,7 @@ kubectl get volumesnapshot
 The output should look like:
 ```bash
 NAME                       READYTOUSE   SOURCEPVC          SOURCESNAPSHOTCONTENT   RESTORESIZE   SNAPSHOTCLASS   SNAPSHOTCONTENT                                    CREATIONTIME   AGE
-mysql-volume-nas-snap-01   true         mysql-volume-nas                           50Gi          fsx-snapclass   snapcontent-bdce9310-9698-4b37-9f9b-d1d802e44f17   2m18s          2m18s
+mysql-volume-san-snap-01   true         mysql-volume-san                           50Gi          fsx-snapclass   snapcontent-bdce9310-9698-4b37-9f9b-d1d802e44f17   2m18s          2m18s
 ```
 
 You can log onto the FSxN file system to see that the snapshot was created there:
@@ -473,7 +480,7 @@ shared data blocks of the volume it is being cloned from.
 
 The first step is to create a Persistent Volume Claim from the snapshot by executing:
 ```bash
-kubectl create -f manifests/pvc-from-nas-snapshot.yaml
+kubectl create -f manifests/pvc-from-san-snapshot.yaml
 ```
 To check that it worked, run:
 ```bash
@@ -483,8 +490,8 @@ The output should look similar to this:
 ```bash
 $ kubectl get pvc
 NAME                     STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS    VOLUMEATTRIBUTESCLASS   AGE
-mysql-volume-nas         Bound    pvc-1aae479e-4b27-4310-8bb2-71255134edf0   50Gi       RWO            fsx-basic-nas   <unset>                 125m
-mysql-volume-nas-clone   Bound    pvc-ceb1b2c2-de35-4011-8d6e-682b6844bf02   50Gi       RWO            fsx-basic-nas   <unset>                 2m22s
+mysql-volume-san         Bound    pvc-1aae479e-4b27-4310-8bb2-71255134edf0   50Gi       RWO            fsx-basic-san   <unset>                 125m
+mysql-volume-san-clone   Bound    pvc-ceb1b2c2-de35-4011-8d6e-682b6844bf02   50Gi       RWO            fsx-basic-san   <unset>                 2m22s
 ```
 
 To check it on the FSxN side, you can run:
@@ -501,7 +508,7 @@ ekssvm  trident_pvc_ceb1b2c2_de35_4011_8d6e_682b6844bf02
 ### Create a new MySQL database using the cloned volume
 Now that you have a new storage volume, you can create a new MySQL database that uses it by executing:
 ```bash
-kubectl create -f manifests/mysql-nas-clone.yaml
+kubectl create -f manifests/mysql-san-clone.yaml
 ```
 To check that it is up run:
 ```bash
@@ -511,12 +518,12 @@ The output should look similar to this:
 ```bash
 NAME                                  READY   STATUS    RESTARTS       AGE
 csi-snapshotter-0                     3/3     Running   0              22h
-mysql-fsx-nas-695b497757-8n6bb        1/1     Running   0              21h
-mysql-fsx-nas-clone-d66d9d4bf-2r9fw   1/1     Running   0              14s
+mysql-fsx-san-695b497757-8n6bb        1/1     Running   0              21h
+mysql-fsx-san-clone-d66d9d4bf-2r9fw   1/1     Running   0              14s
 ```
 ### To confirm that the new database is up and running, log into it and check the data
 ```bash
-kubectl exec -it $(kubectl get pod -l "app=mysql-fsx-nas-clone" --namespace=default -o jsonpath='{.items[0].metadata.name}') -- mysql -u root -p
+kubectl exec -it $(kubectl get pod -l "app=mysql-fsx-san-clone" --namespace=default -o jsonpath='{.items[0].metadata.name}') -- mysql -u root -p
 ```
 After you have logged in, check that the same data is in the new database:
 ```
