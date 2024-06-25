@@ -92,7 +92,7 @@ Read the "description" of the variable to see valid values.
 - key_pair_name - The name of the EC2 key pair to use to access the jump server.
 - secure_ips - The IP address ranges to allow SSH access to the jump server. The default is wide open.
 
-:warning: You must change the key_pair_name variable, otherwise the deployment will not complete succesfully.
+:warning: **NOTE:** You must change the key_pair_name variable, otherwise the deployment will not complete succesfully.
 ### Initialize the Terraform environment
 Run the following command to initialize the terraform environment.
 ```bash
@@ -164,7 +164,7 @@ Note that if you are using an SSO to authenticate with AWS, then the actual user
 you need to add is slightly different than what is output from the above command.
 The following command will take the output from the above command and format it correctly:
 
-:warning: Only run this command if you are using an SSO to authenticate with aws.
+:warning: **Warning:** Only run this command if you are using an SSO to authenticate with aws.
 ```bash
 user_ARN=$(aws sts get-caller-identity | jq -r '.Arn' | awk -F: '{split($6, parts, "/"); printf "arn:aws:iam::%s:role/aws-reserved/sso.amazonaws.com/%s\n", $5, parts[2]}')
 echo $user_ARN
@@ -281,7 +281,7 @@ kubectl get tridentbackendconfig -n trident --output=json | jq '.items[] | .stat
 ```
 Once you have resolved any issues, you can remove the failed backend by running:
 
-:warning: Only run this command if the backend is in a failed state.
+:warning: **Warning:** Only run this command if the backend is in a failed state and you are ready to get rid of it.
 ```bash
 kubectl delete -n trident -f temp/backend-tbc-ontap-nas.yaml
 ```
@@ -329,7 +329,6 @@ The output should look similar to this:
 NAME               STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS    VOLUMEATTRIBUTESCLASS   AGE
 mysql-volume-nas   Bound    pvc-1aae479e-4b27-4310-8bb2-71255134edf0   50Gi       RWO            fsx-basic-nas   <unset>                 114m
 ```
-
 To see more details on how the PVC was defined, look at the `manifests/pvc-fsxn-nas.yaml` file.
 
 If you want to see what was created on the FSxN file system, you can log into it and take a look.
@@ -525,7 +524,7 @@ mysql-fsx-nas-695b497757-8n6bb        1/1     Running   0              21h
 mysql-fsx-nas-clone-d66d9d4bf-2r9fw   1/1     Running   0              14s
 ```
 ### Confirm that the new database is up and running
-To confirm that hte new database is up and running log into it and check the data by running this command:
+To confirm that the new database is up and running log into it by running this command:
 ```bash
 kubectl exec -it $(kubectl get pod -l "app=mysql-fsx-nas-clone" --namespace=default -o jsonpath='{.items[0].metadata.name}') -- mysql -u root -p
 ```

@@ -3,7 +3,7 @@ For the example below we are going to set up an iSCSI LUN for a MySQL
 database. To help facilitate that, we are going to set up Astra Trident as a backend provider.
 Since we are going to be creating an iSCSI LUN, we are going to use its `ontap-san` driver.
 Astra Trident has several different drivers to choose from. You can read more about the
-drivers it supports in the
+different drivers it supports in the
 [Astra Trident documentation.](https://docs.netapp.com/us-en/trident/trident-use/trident-fsx.html#fsx-for-ontap-driver-details)
 
 In the commands below you're going to need the FSxN ID, the FSX SVM name, and the
@@ -15,7 +15,7 @@ state that there aren't any changes to be made and simply show the output again.
 Note that a copy of this repo has been put into ubuntu's home directory on the
 jump server for you. Don't be confused with this copy of the repo and the one you
 used to create the environment with earlier. This copy will not have the terraform
-state information, nor your changes to the variables.tf file, but it does have
+state database, nor your changes to the variables.tf file, but it does have
 other files you'll need to complete the setup.
 
 After making the following substitutions in the commands below:
@@ -34,6 +34,7 @@ export SECRET_ARN=<secret-arn>
 envsubst < manifests/backend-tbc-ontap-san.tmpl > temp/backend-tbc-ontap-san.yaml
 kubectl create -n trident -f temp/backend-tbc-ontap-san.yaml
 ```
+:bulb: **Tip:** Put the above commands in your favorite text editor and make the substitutions there. Then copy and paste the commands into the terminal.
 
 To get more information regarding how the backed was configured, look at the
 `temp/backend-tbc-ontap-san.yaml` file.
@@ -47,7 +48,7 @@ The output should look similar to this:
 NAME                    BACKEND NAME            BACKEND UUID                           PHASE   STATUS
 backend-fsx-ontap-san   backend-fsx-ontap-san   7a551921-997c-4c37-a1d1-f2f4c87fa629   Bound   Success
 ```
-If the status is `Failed`, then you can add the "--output=json" flag to the `kubectl get tridentbackendconfig`
+If the status is `Failed`, then you can add the "--output=json" option to the `kubectl get tridentbackendconfig`
 command to get more information as to why it failed. Specifically, look at the "message" field in the output.
 The following command will get just the status messages:
 ```bash
@@ -55,7 +56,7 @@ kubectl get tridentbackendconfig -n trident --output=json | jq '.items[] | .stat
 ```
 Once you have resolved any issues, you can remove the failed backend by running:
 
-**ONLY RUN THIS COMMAND IF THE STATUS IS FAILED**
+:warning: **Warning:** Only run this command if the backend is in a failed state and you are ready to get rid of it.
 ```bash
 kubectl delete -n trident -f temp/backend-tbc-ontap-san.yaml
 ```
@@ -102,6 +103,7 @@ The output should look similar to this:
 NAME               STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS    VOLUMEATTRIBUTESCLASS   AGE
 mysql-volume-san   Bound    pvc-1aae479e-4b27-4310-8bb2-71255134edf0   50Gi       RWO            fsx-basic-san   <unset>                 114m
 ```
+To see more details on how the PVC was defined, look at the `manifests/pvc-fsxn-san.yaml` file.
 
 If you want to see what was created on the FSxN file system, you can log into it and take a look.
 You will want to login as the 'fsxadmin' user, using the password stored in the AWS SecretsManager secret.
@@ -125,6 +127,9 @@ ekssvm    ekssvm_root  aggr1        online     RW          1GB    972.4MB    0%
 ekssvm    trident_pvc_1aae479e_4b27_4310_8bb2_71255134edf0
                        aggr1        online     RW         55GB    54.90GB    0%
 2 entries were displayed.
+
+FsxId0887a493c777c5122::> quit
+Goodbye
 ```
 
 ### Deploy a MySQL database using the storage created above
@@ -147,14 +152,13 @@ To see how the MySQL was configured, check out the `manifests/mysql-san.yaml` fi
 
 ### Populate the MySQL database with data
 
-Now to confirm that the database can read and write to the persistent storage you need
+To confirm that the database can read and write to the persistent storage you need
 to put some data in the database. Do that by first logging into the MySQL instance using the
 command below. It will prompt for a password. In the yaml file used to create the database,
 you'll see that we set that to `Netapp1!`
 ```bash
 kubectl exec -it $(kubectl get pod -l "app=mysql-fsx-san" --namespace=default -o jsonpath='{.items[0].metadata.name}') -- mysql -u root -p
 ```
-
 After you have logged in, here is a session showing an example of creating a database, then creating a table, then inserting
 some values into the table:
 ```
@@ -208,7 +212,7 @@ kubectl -n kube-system kustomize deploy/kubernetes/snapshot-controller | kubectl
 kubectl kustomize deploy/kubernetes/csi-snapshotter | kubectl create -f - 
 cd ..
 ```
-### Create a snapshot class based on the CRD instsalled
+### Create a snapshot class based on the CRD installed
 Create a snapshot class by executing:
 ```bash
 kubectl create -f manifests/volume-snapshot-class.yaml 
@@ -217,11 +221,9 @@ The output should look like:
 ```bash
 volumesnapshotclass.snapshot.storage.k8s.io/fsx-snapclass created
 ```
-Note that this storage class works for both LUNs and NFS volumes, so there aren't different versions
-of this file based on the storage type you are testing with.
-
+To see how the snapshot class was defined, look at the `manifests/volume-snapshot-class.yaml` file.
 ### Create a snapshot of the MySQL data
-Now you can create a snapshot by running:
+Now that you have defined the snapshot class you can create a snapshot by running:
 ```bash
 kubectl create -f manifests/volume-snapshot-san.yaml
 ```
@@ -240,7 +242,7 @@ mysql-volume-san-snap-01   true         mysql-volume-san                        
 ```
 
 You can log onto the FSxN file system to see that the snapshot was created there:
-```bash
+```
 FsxId0887a493c777c5122::> snapshot show -volume trident_pvc_*
                                                                  ---Blocks---
 Vserver  Volume   Snapshot                                  Size Total% Used%
@@ -249,7 +251,7 @@ ekssvm   trident_pvc_1aae479e_4b27_4310_8bb2_71255134edf0
                   snapshot-bdce9310-9698-4b37-9f9b-d1d802e44f17
                                                            140KB     0%    0%
 ```
-## Clone the MySQL data to a new storage persistent volume
+## Clone the MySQL data to a new persistent volume
 Now that you have a snapshot of the data, you can use it to create a read/write version
 of it. This can be used as a new storage volume for another mysql database. This operation
 creates a new FlexClone volume in FSx for ONTAP.  Note that initially a FlexClone volume
@@ -271,6 +273,7 @@ NAME                     STATUS   VOLUME                                     CAP
 mysql-volume-san         Bound    pvc-1aae479e-4b27-4310-8bb2-71255134edf0   50Gi       RWO            fsx-basic-san   <unset>                 125m
 mysql-volume-san-clone   Bound    pvc-ceb1b2c2-de35-4011-8d6e-682b6844bf02   50Gi       RWO            fsx-basic-san   <unset>                 2m22s
 ```
+To see more details on how the PVC was defined, look at the `manifests/pvc-from-san-snapshot.yaml` file.
 
 To check it on the FSxN side, you can run:
 ```bash
@@ -299,7 +302,8 @@ csi-snapshotter-0                     3/3     Running   0              22h
 mysql-fsx-san-695b497757-8n6bb        1/1     Running   0              21h
 mysql-fsx-san-clone-d66d9d4bf-2r9fw   1/1     Running   0              14s
 ```
-### To confirm that the new database is up and running, log into it and check the data
+### Confirm that the new database is up and running
+To confirm that the new database is up and running log into it by running this command:
 ```bash
 kubectl exec -it $(kubectl get pod -l "app=mysql-fsx-san-clone" --namespace=default -o jsonpath='{.items[0].metadata.name}') -- mysql -u root -p
 ```
@@ -322,7 +326,7 @@ mysql> select * from fsx;
 
 ## Final steps
 
-At this point you don't need the jump server created to configure the EKS environment for
+At this point you don't need the jump server used to configure the EKS environment for
 the FSxN File System, so feel free to `terminate` it (i.e. destroy it).
 
 Other than that, you are welcome to deploy other applications that need persistent storage.
