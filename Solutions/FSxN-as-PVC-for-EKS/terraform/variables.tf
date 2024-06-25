@@ -21,17 +21,29 @@ variable "fsx_password_secret_name" {
 variable "fsxn_throughput_capacity" {
   default = 128
   description = "The throughput capacity to be allocated to the FSxN cluster. Must be 128, 256, 512, 1024, 2048, 4096."
+  validation {
+    condition = var.fsxn_throughput_capacity in [128, 256, 512, 1024, 2048, 4096]
+    error_message = "The throughput capacity must be 128, 256, 512, 1024, 2048, or 4096."
+  }
 }
 
 variable "fsxn_storage_capacity" {
   default = 1024
   description = "The storage capacity, in GiBs, to be allocated to the FSxN clsuter. Must be at least 1024, and less than 196608."
+  validation {
+    condition = var.fsxn_storage_capacity >= 1024 && var.fsxn_storage_capacity < 196608
+    error_message = "The storage capacity must be at least 1024, and less than 196608."
+  }
 }
 #
 # Keep in mind that key pairs are regional, so pick one that is in the region specified above.
 variable "key_pair_name" {
   default = "MUST REPLACE WITH YOUR KEY PAIR NAME"
   description = "The key pair to associate with the jump server."
+  validation {
+    condition = var.key_pair_name != "MUST REPLACE WITH YOUR KEY PAIR NAME"
+    error_message = "You must specify a key pair name."
+  }
 }
 
 variable "secure_ips" {
