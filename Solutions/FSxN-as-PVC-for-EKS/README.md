@@ -119,10 +119,10 @@ fsx-svm-name = "ekssvm"
 region = "us-west-2"
 vpc-id = "vpc-03ed6b1867d76e1a9"
 ```
-:blub: **Tip:** You will use the values in the commands below, so probably a good idea to copy the output somewhere
+:bulb: **Tip:** You will use the values in the commands below, so probably a good idea to copy the output somewhere
 so you can easily reference it later.
 
-> [NOTE!]
+> [!NOTE]
 > Note that an FSxN File System was created, with a vserver (a.k.a. SVM). The default username
 > for the FSxN File System is 'fsxadmin'. And the default username for the vserver is 'vsadmin'. The
 > password for both of these users is the same and is what is stored in the AWS SecretsManager secret
