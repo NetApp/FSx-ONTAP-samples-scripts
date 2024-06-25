@@ -228,7 +228,7 @@ Astra Trident has several different drivers to choose from. You can read more ab
 drivers it supports in the
 [Astra Trident documentation.](https://docs.netapp.com/us-en/trident/trident-use/trident-fsx.html#fsx-for-ontap-driver-details)
 
-If you want to use an iSCSI LUN instead of an NFS file system, please refer to [these instructions](README-san.md#configure-the-trident-csi-backend-to-use-fsx-for-netapp-ontap).
+If you want to use an iSCSI LUN instead of an NFS file system, please refer to [these instructions](README-san.md).
 
 In the commands below you're going to need the FSxN ID, the FSX SVM name, and the
 secret ARN. All of that information can be obtained from the output
