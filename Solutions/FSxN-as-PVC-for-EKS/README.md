@@ -23,7 +23,7 @@
   * [Install the Kubernetes Snapshot CRDs and Snapshot Controller](#Install-the-Kubernetes-Snapshot-CRDs-and-Snapshot-Controller)
   * [Create a snapshot class based on the CRD instsalled](#Create-a-snapshot-class-based-on-the-CRD-installed)
   * [Create a snapshot of the MySQL data](#Create-a-snapshot-of-the-MySQL-data)
-* [Clone the MySQL data to a new storage persistent volume](#Clone-the-MySQL-data-to-a-new-storage-persistent-volume)
+* [Clone the MySQL data to a new persistent volume](#Clone-the-MySQL-data-to-a-new-persistent-volume)
   * [Create a new MySQL database using the cloned volume](#Create-a-new-MySQL-database-using-the-cloned-volume)
   * [Confirm that the new database is up and running](#Confirm-that-the-new-database-is-up-and-running)
 * [Final steps](#Final-steps)
@@ -55,14 +55,14 @@ A Unix based system with the following installed:
 The overall process is as follows:
 - Ensure the prerequisites have been installed and configured.
 - Clone this repo from GitHub.
-- Make changes to the variables.tf file.
+- Make changes to the variables.tf file. Only one change is really required.
 - Run 'terraform init' to initialize the terraform environment.
 - Run 'terraform apply -auto-approve' to:
   - Create a new VPC with public and private subnets.
   - Deploy a FSx for NetApp ONTAP File System.
   - Create a secret in AWS SecretsManager to hold the FSxN password.
   - Deploy an EKS cluster.
-  - Deploy an EC2 Linux based instance.
+  - Deploy an EC2 Linux based instance. Used as a jump server to complete the setup.
   - Create policies, roles and security groups to protect the new environment.
 - SSH to the Linux based instance to complete the setup:
   - Install the FSx for NetApp ONTAP Trident CSI driver.
@@ -81,17 +81,17 @@ cd FSx-ONTAP-samples-scripts/Solutions/FSxN-as-PVC-for-EKS/terraform
 ### Make any desired changes to the variables.tf file.
 Variables that can be changed include:
 - aws_region - The AWS region where you want to deploy the resources.
-- aws_secrets_region - The region where the fsx_password_secret will be created.
+- aws_secrets_region - The region where the fsx password secret will be created.
 - fsx_name - The name you want applied to the FSx for NetApp ONTAP File System. Must not already exist.
 - fsx_password_secret_name - A base name of the AWS SecretsManager secret that will hold the FSxN password.
 A random string will be appended to this name to ensure uniqueness.
-- fsx_throughput_capacity - The throughput capacity of the FSx for NetApp ONTAP File System.
-Read the "description" of the variable to see valid values.
 - fsx_storage_capacity - The storage capacity of the FSx for NetApp ONTAP File System.
 Read the "description" of the variable to see the valid range.
+- fsx_throughput_capacity - The throughput capacity of the FSx for NetApp ONTAP File System.
+Read the "description" of the variable to see valid values.
 - key_pair_name - The name of the EC2 key pair to use to access the jump server.
-**Note:** You must set this variable, otherwise the deployment will fail.
 - secure_ips - The IP address ranges to allow SSH access to the jump server. The default is wide open.
+:warning: You must change the key_pair_name variable, otherwise the deployment will fail.
 
 ### Initialize the Terraform environment
 Run the following command to initialize the terraform environment.
@@ -119,20 +119,21 @@ fsx-svm-name = "ekssvm"
 region = "us-west-2"
 vpc-id = "vpc-03ed6b1867d76e1a9"
 ```
-You will use the values in the commands below, so probably a good idea to copy the output somewhere
+:blub: **Tip:** You will use the values in the commands below, so probably a good idea to copy the output somewhere
 so you can easily reference it later.
 
-Note that an FSxN File System was created, with a vserver (a.k.a. SVM). The default username
-for the FSxN File System is 'fsxadmin'. And the default username for the vserver is 'vsadmin'. The
-password for both of these users is the same and is what is stored in the AWS SecretsManager secret
-shown above. Note that since Terraform was used to create the secret, the password is stored in
-plain text and therefore it is **HIGHLY** recommended that you change the password to something else
-by first changing the passwords via the AWS Management Console and then updating the password in
-the AWS SecretsManager secret. You can update the 'username' key in the secret if you want, but
-it must be a vserver admin user, not a system level user. This secret is used by Astra
-Trident and it will always login via the vserver management LIF and therefore it must be a
-vserver admin user. If you want to create a separate secret for the 'fsxadmin' user, feel free
-to do so.
+> [NOTE!]
+> Note that an FSxN File System was created, with a vserver (a.k.a. SVM). The default username
+> for the FSxN File System is 'fsxadmin'. And the default username for the vserver is 'vsadmin'. The
+> password for both of these users is the same and is what is stored in the AWS SecretsManager secret
+> shown above. Note that since Terraform was used to create the secret, the password is stored in
+> plain text in its "state" database and therefore it is **HIGHLY** recommended that you change
+> the password to something else by first changing the passwords via the AWS Management Console and
+> then updating the password in the AWS SecretsManager secret. You can update the 'username' key in
+> the secret if you want, but it must be a vserver admin user, not a system level user. This secret
+> is used by Astra Trident and it will always login via the vserver management LIF and therefore it
+> must be a vserver admin user. If you want to create a separate secret for the 'fsxadmin' user,
+> feel free to do so.
 
 ### SSH to the jump server to complete the setup
 Use the following command to 'ssh' to the jump server:
@@ -178,7 +179,7 @@ cluster_name=<EKS_CLUSTER_NAME>
 ```
 Of course, replace <AWS_REGION> with the region where the resources were deployed. And replace
 <EKS_CLUSTER_NAME> with the name of your EKS cluster. Both of these values can be found
-from the output of the `terraform plan` command.
+from the output of the `terraform apply` command.
 
 Once you have your variables set, add the EKS access-entry by running these commands:
 ```bash
@@ -225,10 +226,10 @@ For the example below we are going to set up an NFS file system for a MySQL
 database. To help facilitate that, we are going to set up Astra Trident as a backend provider.
 Since we are going to be creating an NFS file system, we are going to use its `ontap-nas` driver.
 Astra Trident has several different drivers to choose from. You can read more about the
-drivers it supports in the
+different drivers it supports in the
 [Astra Trident documentation.](https://docs.netapp.com/us-en/trident/trident-use/trident-fsx.html#fsx-for-ontap-driver-details)
 
-If you want to use an iSCSI LUN instead of an NFS file system, please refer to [these instructions](README-san.md).
+:memo: **Tip:** If you want to use an iSCSI LUN instead of an NFS file system, please refer to [these instructions](README-san.md).
 
 In the commands below you're going to need the FSxN ID, the FSX SVM name, and the
 secret ARN. All of that information can be obtained from the output
@@ -239,7 +240,7 @@ state that there aren't any changes to be made and simply show the output again.
 Note that a copy of this repo has been put into ubuntu's home directory on the
 jump server for you. Don't be confused with this copy of the repo and the one you
 used to create the environment with earlier. This copy will not have the terraform
-state information, nor your changes to the variables.tf file, but it does have
+state database, nor your changes to the variables.tf file, but it does have
 other files you'll need to complete the setup.
 
 After making the following substitutions in the commands below:
@@ -258,6 +259,8 @@ export SECRET_ARN=<secret-arn>
 envsubst < manifests/backend-tbc-ontap-nas.tmpl > temp/backend-tbc-ontap-nas.yaml
 kubectl create -n trident -f temp/backend-tbc-ontap-nas.yaml
 ```
+:memo: **Tip:** Put the above commands in your favorite text editor and make the substitutions there. Then copy and paste the commands into the terminal.
+
 To get more information regarding how the backed was configured, look at the
 `temp/backend-tbc-ontap-nas.yaml` file.
 
@@ -270,7 +273,7 @@ The output should look similar to this:
 NAME                    BACKEND NAME            BACKEND UUID                           PHASE   STATUS
 backend-fsx-ontap-nas   backend-fsx-ontap-nas   7a551921-997c-4c37-a1d1-f2f4c87fa629   Bound   Success
 ```
-If the status is `Failed`, then you can add the "--output=json" flag to the `kubectl get tridentbackendconfig`
+If the status is `Failed`, then you can add the "--output=json" option to the `kubectl get tridentbackendconfig`
 command to get more information as to why it failed. Specifically, look at the "message" field in the output.
 The following command will get just the status messages:
 ```bash
@@ -283,7 +286,7 @@ Once you have resolved any issues, you can remove the failed backend by running:
 kubectl delete -n trident -f temp/backend-tbc-ontap-nas.yaml
 ```
 Now you can re-run the `kubectl create -n trident -f temp/backend-tbc-ontap-nas.yaml` command.
-If the issues was with one of the variables that was substituted in, then you will need to
+If the issue was with one of the variables that was substituted in, then you will need to
 rerun the `envsubst` command to create a new `temp/backend-tbc-ontap-nas.yaml` file
 before running the `kubectl create -n trident -f temp/backend-tbc-ontap-nas.yaml` command.
 
@@ -365,7 +368,7 @@ To see how the MySQL was configured, check out the `manifests/mysql-nas.yaml` fi
 
 ### Populate the MySQL database with data
 
-Now to confirm that the database can read and write to the persistent storage you need
+To confirm that the database can read and write to the persistent storage you need
 to put some data in the database. Do that by first logging into the MySQL instance using the
 command below. It will prompt for a password. In the yaml file used to create the database,
 you'll see that we set that to `Netapp1!`
@@ -464,7 +467,7 @@ ekssvm   trident_pvc_1aae479e_4b27_4310_8bb2_71255134edf0
                   snapshot-bdce9310-9698-4b37-9f9b-d1d802e44f17
                                                            140KB     0%    0%
 ```
-## Clone the MySQL data to a new storage persistent volume
+## Clone the MySQL data to a new persistent volume
 Now that you have a snapshot of the data, you can use it to create a read/write version
 of it. This can be used as a new storage volume for another mysql database. This operation
 creates a new FlexClone volume in FSx for ONTAP.  Note that initially a FlexClone volume
