@@ -91,8 +91,8 @@ Read the "description" of the variable to see the valid range.
 Read the "description" of the variable to see valid values.
 - key_pair_name - The name of the EC2 key pair to use to access the jump server.
 - secure_ips - The IP address ranges to allow SSH access to the jump server. The default is wide open.
-:warning: You must change the key_pair_name variable, otherwise the deployment will fail.
 
+:warning: You must change the key_pair_name variable, otherwise the deployment will not complete succesfully.
 ### Initialize the Terraform environment
 Run the following command to initialize the terraform environment.
 ```bash
@@ -126,7 +126,7 @@ so you can easily reference it later.
 > Note that an FSxN File System was created, with a vserver (a.k.a. SVM). The default username
 > for the FSxN File System is 'fsxadmin'. And the default username for the vserver is 'vsadmin'. The
 > password for both of these users is the same and is what is stored in the AWS SecretsManager secret
-> shown above. Note that since Terraform was used to create the secret, the password is stored in
+> shown above. Since Terraform was used to create the secret, the password is stored in
 > plain text in its "state" database and therefore it is **HIGHLY** recommended that you change
 > the password to something else by first changing the passwords via the AWS Management Console and
 > then updating the password in the AWS SecretsManager secret. You can update the 'username' key in
@@ -164,7 +164,7 @@ Note that if you are using an SSO to authenticate with AWS, then the actual user
 you need to add is slightly different than what is output from the above command.
 The following command will take the output from the above command and format it correctly:
 
-:warning: Only run this command if you are using an sso to authenticate with aws
+:warning: Only run this command if you are using an SSO to authenticate with aws.
 ```bash
 user_ARN=$(aws sts get-caller-identity | jq -r '.Arn' | awk -F: '{split($6, parts, "/"); printf "arn:aws:iam::%s:role/aws-reserved/sso.amazonaws.com/%s\n", $5, parts[2]}')
 echo $user_ARN
@@ -229,7 +229,7 @@ Astra Trident has several different drivers to choose from. You can read more ab
 different drivers it supports in the
 [Astra Trident documentation.](https://docs.netapp.com/us-en/trident/trident-use/trident-fsx.html#fsx-for-ontap-driver-details)
 
-:memo: **Tip:** If you want to use an iSCSI LUN instead of an NFS file system, please refer to [these instructions](README-san.md).
+:memo: **Note:** If you want to use an iSCSI LUN instead of an NFS file system, please refer to [these instructions](README-san.md).
 
 In the commands below you're going to need the FSxN ID, the FSX SVM name, and the
 secret ARN. All of that information can be obtained from the output
@@ -259,7 +259,7 @@ export SECRET_ARN=<secret-arn>
 envsubst < manifests/backend-tbc-ontap-nas.tmpl > temp/backend-tbc-ontap-nas.yaml
 kubectl create -n trident -f temp/backend-tbc-ontap-nas.yaml
 ```
-:memo: **Tip:** Put the above commands in your favorite text editor and make the substitutions there. Then copy and paste the commands into the terminal.
+:bulb: **Tip:** Put the above commands in your favorite text editor and make the substitutions there. Then copy and paste the commands into the terminal.
 
 To get more information regarding how the backed was configured, look at the
 `temp/backend-tbc-ontap-nas.yaml` file.
@@ -330,6 +330,8 @@ NAME               STATUS   VOLUME                                     CAPACITY 
 mysql-volume-nas   Bound    pvc-1aae479e-4b27-4310-8bb2-71255134edf0   50Gi       RWO            fsx-basic-nas   <unset>                 114m
 ```
 
+To see more details on how the PVC was defined, look at the `manifests/pvc-fsxn-nas.yaml` file.
+
 If you want to see what was created on the FSxN file system, you can log into it and take a look.
 You will want to login as the 'fsxadmin' user, using the password stored in the AWS SecretsManager secret.
 You can find the IP address of the FSxN file system in the output from the `terraform apply` command, or
@@ -346,6 +348,9 @@ ekssvm    ekssvm_root  aggr1        online     RW          1GB    972.4MB    0%
 ekssvm    trident_pvc_1aae479e_4b27_4310_8bb2_71255134edf0
                        aggr1        online     RW         50GB       50GB    0%
 2 entries were displayed.
+
+FsxId0887a493c777c5122::> quit
+Goodbye
 ```
 
 ### Deploy a MySQL database using the storage created above
@@ -428,7 +433,7 @@ kubectl -n kube-system kustomize deploy/kubernetes/snapshot-controller | kubectl
 kubectl kustomize deploy/kubernetes/csi-snapshotter | kubectl create -f - 
 cd ..
 ```
-### Create a snapshot class based on the CRD instsalled
+### Create a snapshot class based on the CRD installed
 Create a snapshot class by executing:
 ```bash
 kubectl create -f manifests/volume-snapshot-class.yaml 
@@ -437,9 +442,9 @@ The output should look like:
 ```bash
 volumesnapshotclass.snapshot.storage.k8s.io/fsx-snapclass created
 ```
-
+To see how the snapshot class was defined, look at the `manifests/volume-snapshot-class.yaml` file.
 ### Create a snapshot of the MySQL data
-Now you can create a snapshot by running:
+Now that you have defined the snapshot class you can create a snapshot by running:
 ```bash
 kubectl create -f manifests/volume-snapshot-nas.yaml
 ```
@@ -456,9 +461,10 @@ The output should look like:
 NAME                       READYTOUSE   SOURCEPVC          SOURCESNAPSHOTCONTENT   RESTORESIZE   SNAPSHOTCLASS   SNAPSHOTCONTENT                                    CREATIONTIME   AGE
 mysql-volume-nas-snap-01   true         mysql-volume-nas                           50Gi          fsx-snapclass   snapcontent-bdce9310-9698-4b37-9f9b-d1d802e44f17   2m18s          2m18s
 ```
+To see more details on how the snapshot was defined, look at the `manifests/volume-snapshot-nas.yaml` file.
 
 You can log onto the FSxN file system to see that the snapshot was created there:
-```bash
+```
 FsxId0887a493c777c5122::> snapshot show -volume trident_pvc_*
                                                                  ---Blocks---
 Vserver  Volume   Snapshot                                  Size Total% Used%
@@ -489,6 +495,7 @@ NAME                     STATUS   VOLUME                                     CAP
 mysql-volume-nas         Bound    pvc-1aae479e-4b27-4310-8bb2-71255134edf0   50Gi       RWO            fsx-basic-nas   <unset>                 125m
 mysql-volume-nas-clone   Bound    pvc-ceb1b2c2-de35-4011-8d6e-682b6844bf02   50Gi       RWO            fsx-basic-nas   <unset>                 2m22s
 ```
+To see more details on how the PVC was defined, look at the `manifests/pvc-from-nas-snapshot.yaml` file.
 
 To check it on the FSxN side, you can run:
 ```bash
@@ -541,7 +548,7 @@ mysql> select * from fsx;
 
 ## Final steps
 
-At this point you don't need the jump server created to configure the EKS environment for
+At this point you don't need the jump server used to configure the EKS environment for
 the FSxN File System, so feel free to `terminate` it (i.e. destroy it).
 
 Other than that, you are welcome to deploy other applications that need persistent storage.
