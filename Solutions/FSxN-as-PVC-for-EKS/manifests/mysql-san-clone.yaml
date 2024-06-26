@@ -18,15 +18,15 @@ spec:
         ports:
         - containerPort: 3306
         env:
-          - name: MYSQL_ROOT_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: mysql-secret-san
-                key: password
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret-san
+              key: password
         volumeMounts:
-        - mountPath: /var/lib/mysql
-          name: mysqlvol
-      volumes:
         - name: mysqlvol
-          persistentVolumeClaim:
-            claimName: mysql-volume-san-clone
+          mountPath: /var/lib/mysql
+      volumes:
+      - name: mysqlvol
+        persistentVolumeClaim:
+          claimName: mysql-volume-san-clone
