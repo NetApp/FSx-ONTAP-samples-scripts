@@ -1,4 +1,3 @@
-
 terraform {
   required_providers {
     aws = {
@@ -6,27 +5,32 @@ terraform {
       version = "5.25.0"
     }
   }
-
 }
-
+#
+# Define a default provider.
 provider "aws" {
-  region = "us-west-2"
+  region = var.fsx_region
+}
+#
+# Since the Secrets Manager might be in a different region, create a separate provider for it.
+provider "aws" {
+  alias  = "secrets"
+  region = var.aws_secretsmanager_region
 }
 
 /* 
-  The following resources are a Security Group followed by ingress and egress rules for FSx ONTAP. 
-  The Security Group is not required for deploying FSx ONTAP, but is included here for completeness.
-
-  - If you wish to skip this resource, comment out the resource blocks of the Security Group and the rules.
-
-  - If you wish to use the Security Group, choose the relevant source for the ingress rules (can be either cidr block or security group id)
-    and modify/uncomment the relevant line in the resource block. Make sure you add your specific value as well. 
-    Note that currently all rules are configured for source cidr: 10.0.0.0/8
-
-  Note that a source reference for a Security Group is optional, but is considered to be a best practice.
-  Feel free to add, remove, or change the rules as needed. The rules below are just a suggestion for basic functionality.
-*/
-
+ * The following resources are a Security Group followed by ingress and egress rules for FSx ONTAP. 
+ * The Security Group is not required for deploying FSx ONTAP, but is included here for completeness.
+ *
+ * - If you wish to skip this resource, comment out the resource blocks of the Security Group and the rules.
+ *
+ * - If you wish to use the Security Group, choose the relevant source for the ingress rules (can be either cidr block or security group id)
+ *   and modify/uncomment the relevant line in the resource block. Make sure you add your specific value as well. 
+ *   Note that currently all rules are configured for source cidr: 10.0.0.0/8
+ *
+ * Note that a source reference for a Security Group is optional, but is considered to be a best practice.
+ * Feel free to add, remove, or change the rules as needed. The rules below are just a suggestion for basic functionality.
+ */
 resource "aws_security_group" "fsx_sg" {
   name        = "fsx_sg"
   description = "Allow FSx ONTAP required ports"
@@ -129,21 +133,20 @@ resource "aws_vpc_security_group_egress_rule" "allow_all_traffic" {
 }
 
 /*
-  The following resources are for deploying a complete FSx ONTAP file system. 
-  The code below deploys the following resources in this order:
-  1. A file system 
-  2. A storage virtual machine
-  3. A volume within the storage virtual machine
-
-  Every resource include both optional and required parameters, separated by a comment line.
-  Feel free to add or remove optional parameters as needed.
-  The current settings are just a suggestion for basic functionality.
-*/
-
+ * The following resources are for deploying a complete FSx ONTAP file system. 
+ * The code below deploys the following resources in this order:
+ * 1. A file system 
+ * 2. A storage virtual machine
+ * 3. A volume within the storage virtual machine
+ *
+ * Every resource include both optional and required parameters, separated by a comment line.
+ * Feel free to add or remove optional parameters as needed.
+ * The current settings are just a suggestion for basic functionality.
+ */
 resource "aws_fsx_ontap_file_system" "terraform-fsxn" {
 // REQUIRED PARAMETERS 
-  // for SINGLE_AZ deployment, remove the "secondarysub" from the list of subnet_ids
-  subnet_ids          = [var.fsx_subnets["primarysub"], var.fsx_subnets["secondarysub"]]
+  // For SINGLE_AZ deployment, only the primary subnet can be specified.
+  subnet_ids = var.fsx_deploy_type == "MULTI_AZ_1" ? [var.fsx_subnets["primarysub"], var.fsx_subnets["secondarysub"]] : [var.fsx_subnets["primarysub"]]
   preferred_subnet_id = var.fsx_subnets["primarysub"]
 
 // OPTIONAL PARAMETERS
@@ -151,10 +154,11 @@ resource "aws_fsx_ontap_file_system" "terraform-fsxn" {
   security_group_ids  = [aws_security_group.fsx_sg.id]
   deployment_type     = var.fsx_deploy_type
   throughput_capacity = var.fsx_tput_in_MBps
-  fsx_admin_password  = var.fsx_admin_password
+  fsx_admin_password  = data.aws_secretsmanager_secret_version.fsx_password.secret_string
   tags = {
 	  Name = var.fsx_name
   }
+// Additional optional parameters that you may want to specify:
   # weekly_maintenance_start_time = "00:00:00"
   # kms_key_id = ""
   # automatic_backup_retention_days = 0
@@ -166,7 +170,8 @@ resource "aws_fsx_ontap_file_system" "terraform-fsxn" {
   # route_table_ids = []
   # throughput_capacity_per_ha_pair = 0
 }
-
+#
+# Define a storage virtual machine.
 resource "aws_fsx_ontap_storage_virtual_machine" "mysvm" {
 // REQUIRED PARAMETERS
   file_system_id      = aws_fsx_ontap_file_system.terraform-fsxn.id
@@ -175,9 +180,10 @@ resource "aws_fsx_ontap_storage_virtual_machine" "mysvm" {
 // OPTIONAL PARAMETERS
   # root_volume_security_style = "
   # tags                       = {}
-  # # active_directory_configuration {}
+  # active_directory_configuration {}
 }
-
+#
+# Define a volume within the storage virtual machine.
 resource "aws_fsx_ontap_volume" "myvol" {
 // REQUIRED PARAMETERS
   name                       = var.vol_info["vol_name"]
@@ -201,5 +207,13 @@ resource "aws_fsx_ontap_volume" "myvol" {
   # snapshot_policy {}
   # tags = {}  
 }
-
-
+#
+# The next two data blocks retrieve the secret from Secrets Manager.
+data "aws_secretsmanager_secret" "fsx_secret" {
+  provider = aws.secrets
+  name = var.fsx_secret_name
+}
+data "aws_secretsmanager_secret_version" "fsx_password" {
+  provider = aws.secrets
+  secret_id = data.aws_secretsmanager_secret.fsx_secret.id
+}
