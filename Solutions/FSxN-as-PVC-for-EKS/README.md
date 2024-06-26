@@ -2,7 +2,7 @@
 
 ## Table of Contents
 * [Introduction](#introduction)
-* [Installation Oveerview](#Installation-Overview)
+* [Installation Overview](#Installation-Overview)
 * [Detailed Instructions](#Detailed-instructions)
   * [Clone the "NetApp/FSx-ONTAP-samples-scripts" repo from GitHub](#Clone-the-NetAppFSx-ONTAP-samples-scripts-repo-from-GitHub)
   * [Make any desired changes to the variables.tf file](#Make-any-desired-changes-to-the-variablestf-file)
