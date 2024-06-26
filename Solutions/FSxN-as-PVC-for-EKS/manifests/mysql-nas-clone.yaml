@@ -13,20 +13,20 @@ spec:
         app: mysql-fsx-nas-clone
     spec:
       containers:
-      - image: mysql:8.0.20
-        name: mysql
-        ports:
-        - containerPort: 3306
-        env:
-        - name: MYSQL_ROOT_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: mysql-secret-nas
-              key: password
-        volumeMounts:
-        - mountPath: /var/lib/mysql
-          name: mysqlvol
+        - image: mysql:8.0.20
+          name: mysql
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret-nas
+                  key: password
+          volumeMounts:
+            - mountPath: /var/lib/mysql
+              name: mysqlvol
       volumes:
-      - name: mysqlvol
-        persistentVolumeClaim:
-          claimName: mysql-volume-nas-clone
+        - name: mysqlvol
+          persistentVolumeClaim:
+            claimName: mysql-volume-nas-clone
