@@ -125,7 +125,7 @@ Vserver   Volume       Aggregate    State      Type       Size  Available Used%
 --------- ------------ ------------ ---------- ---- ---------- ---------- -----
 ekssvm    ekssvm_root  aggr1        online     RW          1GB    972.4MB    0%
 ekssvm    trident_pvc_1aae479e_4b27_4310_8bb2_71255134edf0
-                       aggr1        online     RW         55GB    54.90GB    0%
+                       aggr1        online     RW         55GB    55.00GB    0%
 2 entries were displayed.
 
 FsxId0887a493c777c5122::> quit

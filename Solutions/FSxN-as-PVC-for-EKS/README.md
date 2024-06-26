@@ -122,7 +122,7 @@ vpc-id = "vpc-03ed6b1867d76e1a9"
 :bulb: **Tip:** You will use the values in the commands below, so probably a good idea to copy the output somewhere
 so you can easily reference it later.
 
-> [!NOTE]
+> [!IMPORTANT]
 > Note that an FSxN File System was created, with a vserver (a.k.a. SVM). The default username
 > for the FSxN File System is 'fsxadmin'. And the default username for the vserver is 'vsadmin'. The
 > password for both of these users is the same and is what is stored in the AWS SecretsManager secret
@@ -339,13 +339,12 @@ from the AWS console. Here is an example of logging in and listing all the volum
 ubuntu@ip-10-0-4-125:~/FSx-ONTAP-samples-scripts/Solutions/FSxN-as-PVC-for-EKS$ ssh -l fsxadmin 198.19.255.174
 (fsxadmin@198.19.255.174) Password:
 
-Last login time: 6/21/2024 15:30:27
 FsxId0887a493c777c5122::> volume show
 Vserver   Volume       Aggregate    State      Type       Size  Available Used%
 --------- ------------ ------------ ---------- ---- ---------- ---------- -----
 ekssvm    ekssvm_root  aggr1        online     RW          1GB    972.4MB    0%
 ekssvm    trident_pvc_1aae479e_4b27_4310_8bb2_71255134edf0
-                       aggr1        online     RW         50GB       50GB    0%
+                       aggr1        online     RW         50GB    50.00GB    0%
 2 entries were displayed.
 
 FsxId0887a493c777c5122::> quit
@@ -458,7 +457,7 @@ kubectl get volumesnapshot
 The output should look like:
 ```bash
 NAME                       READYTOUSE   SOURCEPVC          SOURCESNAPSHOTCONTENT   RESTORESIZE   SNAPSHOTCLASS   SNAPSHOTCONTENT                                    CREATIONTIME   AGE
-mysql-volume-nas-snap-01   true         mysql-volume-nas                           50Gi          fsx-snapclass   snapcontent-bdce9310-9698-4b37-9f9b-d1d802e44f17   2m18s          2m18s
+mysql-volume-nas-snap-01   true         mysql-volume-nas                           63908Ki       fsx-snapclass   snapcontent-bdce9310-9698-4b37-9f9b-d1d802e44f17   2m18s          2m18s
 ```
 To see more details on how the snapshot was defined, look at the `manifests/volume-snapshot-nas.yaml` file.
 
