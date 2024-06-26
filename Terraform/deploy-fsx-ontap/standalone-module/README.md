@@ -1,26 +1,23 @@
 # Deploy an ONTAP FSx file-system using Terraform
-This sample demonstrates how to deploy an FSx for NetApp ONTAP file system, including an SVM and a FlexVolume in that file system, using AWS Terraform provider in a standalone Terraform module. 
-Follow the instructions below to use this sample in your own environment.
-
 ## Table of Contents
 * [Introduction](#introduction)
+* [Repository Overview](#repository-overview)
+* [What to expect](#what-to-expect)
 * [Prerequisites](#prerequisites)
 * [Usage](#usage)
-* [Repository Overview](#repository-overview-1)
 * [Author Information](#author-information)
 * [License](#license)
 
 ## Introduction
+This sample demonstrates how to deploy an FSx for NetApp ONTAP file system, including an SVM and a FlexVolume in that file system, using AWS Terraform provider in a standalone Terraform module. 
+Follow the instructions below to use this sample in your own environment.
 ### Repository Overview
-This is a standalone Terraform configutation repository that contains the following files:
+This is a standalone Terraform configuration repository that contains the following files:
 * **main.tf** - The main set of configuration for this terraform sample
-
 * **variables.tf** - Contains the variable definitions and assignments for this sample. Exported values will override any of the variables in this file. 
-
 * **output.tf** - Contains output declarations of the resources created by this Terraform module. Terraform stores output values in the configuration's state file
 
 ### What to expect
-
 Running this terraform sample will result the following:
 * Create a new AWS Security Group in your VPC with the following rules:
     - **Ingress** allow all ICMP traffic
@@ -33,7 +30,7 @@ Running this terraform sample will result the following:
 * Create a new FSx for Netapp ONTAP file-system in your AWS account named "_terraform-fsxn_". The file-system will be created with the following configuration parameters:
     * 1024Gb of storage capacity
     * Multi AZ deployment type
-    * 256Mbps of throughput capacity 
+    * 128Mbps of throughput capacity 
 
 * Create a Storage Virtual Maching (SVM) in this new file-system named "_first_svm_"
 * Create a new FlexVol volume in this SVM named "_vol1_" with the following configuration parameters:
@@ -43,7 +40,7 @@ Running this terraform sample will result the following:
     * post-delete backup disabled 
 
 > [!NOTE]
-> All of the above configuration parameters can be modified for your preference by assigning your own values in the `variables.tf` file! 
+> Even though this Terraform code is set up to use AWS SecretsManager to retrieve the FSxN password, it will store the password in its `state database`. Therefore, it is assumed you have properly secured that database so that unauthorized personal can't access the password.
 
 ## Prerequisites
 
@@ -54,8 +51,8 @@ Running this terraform sample will result the following:
 
 | Name | Version |
 |------|---------|
-| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.6.6 |
-| <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 5.25 |
+| terraform | >= 1.6.6 |
+| aws provider | >= 5.25 |
 
 ### AWS Account Setup
 
@@ -73,41 +70,41 @@ Running this terraform sample will result the following:
 > [!NOTE]
 > In this sample, the AWS Credentials were configured through [AWS CLI](https://aws.amazon.com/cli/), which adds them to a shared configuration file (option 4 above). Therefore, this documentation only provides guidance on setting-up the AWS credentials with shared configuration file using AWS CLI.
 
-    #### Configure AWS Credentials using AWS CLI
+#### Configure AWS Credentials using AWS CLI
 
-    The AWS Provider can source credentials and other settings from the shared configuration and credentials files. By default, these files are located at `$HOME/.aws/config` and `$HOME/.aws/credentials` on Linux and macOS, and `"%USERPROFILE%\.aws\credentials"` on Windows.
+The AWS Provider can source credentials and other settings from the shared configuration and credentials files. By default, these files are located at `$HOME/.aws/config` and `$HOME/.aws/credentials` on Linux and macOS, and `"%USERPROFILE%\.aws\credentials"` on Windows.
 
-    There are several ways to set your credentials and configuration setting using AWS CLI. We will use [`aws configure`](https://docs.aws.amazon.com/cli/latest/reference/configure/index.html) command:
+There are several ways to set your credentials and configuration setting using AWS CLI. We will use [`aws configure`](https://docs.aws.amazon.com/cli/latest/reference/configure/index.html) command:
 
-    Run the following command to quickly set and view your credentails, region, and output format. The following example shows sample values:
+Run the following command to quickly set and view your credentails, region, and output format. The following example shows sample values:
 
-    ```shell
-    $ aws configure
-    AWS Access Key ID [None]: < YOUR-ACCESS-KEY-ID >
-    AWS Secret Access Key [None]: < YOUR-SECRET-ACCESS-KE >
-    Default region name [None]: < YOUR-PREFERRED-REGION >
-    Default output format [None]: json
-    ```
+```shell
+$ aws configure
+AWS Access Key ID [None]: < YOUR-ACCESS-KEY-ID >
+AWS Secret Access Key [None]: < YOUR-SECRET-ACCESS-KE >
+Default region name [None]: < YOUR-PREFERRED-REGION >
+Default output format [None]: json
+```
 
-    To list configuration data, use the [`aws configire list`](https://docs.aws.amazon.com/cli/latest/reference/configure/list.html) command. This command lists the profile, access key, secret key, and region configuration information used for the specified profile. For each configuration item, it shows the value, where the configuration value was retrieved, and the configuration variable name.
-
-
+To list configuration data, use the [`aws configire list`](https://docs.aws.amazon.com/cli/latest/reference/configure/list.html) command. This command lists the profile,
+access key, secret key, and region configuration information used for the specified profile. For each configuration item, it shows the value, where the configuration
+value was retrieved, and the configuration variable name.
 
 ## Usage
 
-#### 1. Clone the repository
+### 1. Clone the repository
 In your server's terminal, navigate to the location where you wish to store this Terraform repository, and clone the repository using your preferred authentication type. In this example we are using HTTPS clone:
 
 ```shell 
-git clone https://github.com/NetApp/FSxN-Samples.git
+git clone https://github.com/NetApp/FSx-ONTAP-samples-scripts.git
 ```
 
-#### 2. Navigate to the directory
+### 2. Navigate to the directory
 ```shell
-cd terraform_deployment
+cd Terraform/fsx-ontap-filesystem/standalone-module
 ```
 
-#### 3. Initialize Terraform
+### 3. Initialize Terraform
 This directory represents a standalone Terraform module. Run the following command to initialize the module and install all dependencies:
 ```shell
 terraform init
@@ -134,22 +131,23 @@ commands will detect it and remind you to do so if necessary.
 ```
 You can see that Terraform recognizes the modules required by our configuration: `hashicorp/aws`.
 
-#### 4. Update Variables
+### 4. Update Variables
 
-a. Open the **`variables.tf`** file in your preferred text editor. Update the values of the variables to match your preferences and save the file. This will ensure that the Terraform code deploys resources according to your specifications.
+- Open the **`variables.tf`** file in your preferred text editor. Update the values of the variables to match your
+preferences and save the file. This will ensure that the Terraform code deploys resources according to your specifications.
 
 **Make sure to replace the values with ones that match your AWS environment and needs.**
 
-b. modify the remaining optional variables in the **`main.tf`** file and remove commenting where needed according to the explenations in-line.
+- Modify the remaining optional variables in the **`main.tf`** file and remove commenting where needed according to the explanations in-line.
 
-#### 5. Create a Terraform plan
+### 5. Create a Terraform plan
 Run the following command to create an execution plan, which lets you preview the changes that Terraform plans to make to your infrastructure:
 ```shell
 terraform plan
 ```
 Ensure that the proposed changes match what you expected before you apply the changes!
 
-#### 6. Apply the Terraform plan
+### 6. Apply the Terraform plan
 Run the following command to execute the Terrafom code and apply the changes proposed in the `plan` step:
 ```shell
 terraform apply
@@ -164,20 +162,23 @@ terraform apply
 | Name | Version |
 |------|---------|
 | aws | 5.25.0 |
+| aws.secrets | 5.25.0 |
 
 ### Inputs
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
-| fsx_admin_password | The ONTAP administrative password for the fsxadmin user that you can use to administer your file system using the ONTAP CLI and REST API | `string` | `"password"` | no |
-| fsx_capacity_size_gb | The storage capacity (GiB) of the FSxN file system. Valid values between 1024 and 196608 | `number` | `1024` | no |
+| aws_secretsmanager_region | The AWS region where the secret is stored. | `string` | `"us-east-2"` | no |
+| fsx_capacity_size_gb | The storage capacity (GiB) of the FSxN file system. Valid values between 1024 and 196608. | `number` | `1024` | no |
 | fsx_deploy_type | The filesystem deployment type. Supports MULTI_AZ_1 and SINGLE_AZ_1 | `string` | `"MULTI_AZ_1"` | no |
 | fsx_name | The deployed filesystem name | `string` | `"terraform-fsxn"` | no |
-| fsx_subnets | A list of IDs for the subnets that the file system will be accessible from. Up to 2 subnets can be provided. | `map(any)` | <pre>{<br>  "primarysub": "",<br>  "secondarysub": ""<br>}</pre> | no |
-| fsx_tput_in_MBps | The throughput capacity (in MBps) for the file system. Valid values are 128, 256, 512, 1024, 2048, and 4096. | `number` | `256` | no |
+| fsx_region | The AWS region where the FSxN file system to be deployed. | `string` | `"us-west-2"` | no |
+| fsx_secret_name | The name of the AWS SecretManager secret that holds the ONTAP administrative password for the fsxadmin user that you can use to administer your file system using the ONTAP CLI and REST API. | `string` | `"fsx_secret"` | no |
+| fsx_subnets | A list of IDs for the subnets that the file system will be accessible from. Up to 2 subnets can be provided. | `map(any)` | <pre>{<br>  "primarysub": "subnet-22222222",<br>  "secondarysub": "subnet-22222222"<br>}</pre> | no |
+| fsx_tput_in_MBps | The throughput capacity (in MBps) for the file system. Valid values are 128, 256, 512, 1024, 2048, and 4096. | `number` | `128` | no |
 | svm_name | The name of the Storage Virtual Machine | `string` | `"first_svm"` | no |
 | vol_info | Details for the volume creation | `map(any)` | <pre>{<br>  "cooling_period": 31,<br>  "efficiency": true,<br>  "junction_path": "/vol1",<br>  "size_mg": 1024,<br>  "tier_policy_name": "AUTO",<br>  "vol_name": "vol1"<br>}</pre> | no |
-| vpc_id | The ID of the VPC in which the FSxN fikesystem should be deployed | `string` | `"vpc-111111111"` | no |
+| vpc_id | The ID of the VPC in which the FSxN fikesystem should be deployed | `string` | `"vpc-11111111"` | no |
 
 ### Outputs
 

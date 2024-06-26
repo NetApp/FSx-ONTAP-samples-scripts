@@ -1,7 +1,10 @@
 ## Repository Overview
+This repostory contians two different ways of leveraging Terraform to deploy an FSx ONTAP instance in AWS.
+The first method is a standalone module that can be cloned and run locally.
+The second method is a callable module that can be used in a larger Terraform project.
 
-- [Callable terraform module for FSxN creation](/Terraform/deploy-fsx-ontap/module)
 - [Standalone terraform module to clone and run locally](/Terraform/deploy-fsx-ontap/standalone-module)
+- [Callable terraform module for FSxN creation](/Terraform/deploy-fsx-ontap/module)
 
 ## Author Information
 
