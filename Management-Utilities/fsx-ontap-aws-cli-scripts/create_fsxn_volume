@@ -21,12 +21,13 @@
 ################################################################################
 usage () {
 cat 1>&2 <<EOF
-Usage: $(basename $0) -i svmID -n volumeName [-r region] [-s size]
+Usage: $(basename $0) -i svmID -n volumeName [-r region] [-s size] [-w]
 where
   svmID: is the SVM ID in the filesystem you want to create the volume.
   volumeName: is the name you want to assign the volume.
   region: is the AWS region where the FSxN filesystem resides.
   size: is size, in megabytes, you want the filesystem. Default is 20.
+  -w : wait for the volume to be created before returning.
 EOF
   exit 1
 }
@@ -42,7 +43,7 @@ size=20
 region=$(aws configure list | egrep '^.*egion ' | awk '{print $2}')
 #
 # Process command line arguments.
-while getopts "hi:n:r:s:" option; do
+while getopts "hi:n:r:s:w" option; do
   case $option in
     i) svmId=$OPTARG
       ;;
@@ -51,6 +52,8 @@ while getopts "hi:n:r:s:" option; do
     r) region=$OPTARG
       ;;
     s) size=$OPTARG
+      ;;
+    w) wait=1
       ;;
     *) usage
       ;;
@@ -80,7 +83,18 @@ if [ $? != "0" ]; then
 else
   status=$(jq -r .Volume.Lifecycle $tmpout 2> /dev/null)
   if [ "$status" == "CREATING" -o "$status" == "PENDING" ]; then
-    echo "FSxN volume '$volumeName'($(jq -r .Volume.VolumeId $tmpout)) is being created."
+    volumeId=$(jq -r .Volume.VolumeId $tmpout)
+    echo "FSxN volume '$volumeName'($volumeId) is being created."
+    if [ ! -z "$wait" ]; then
+      echo -n "Waiting for volume to be created."
+      while [ $status == "CREATING" -o $status == "PENDING" ]; do
+        sleep 4
+        aws fsx describe-volumes --volume-ids $volumeId --region=$region --output=json > $tmpout 2>&1
+        status=$(jq -r .Volumes[0].Lifecycle $tmpout 2> /dev/null)
+        echo -n "."
+      done
+      printf "\nVolume as been $status.\n"
+    fi
     exit 0
   else
     echo "Unknown status '$status'. Complete output returned from the AWS api:" 1>&2
