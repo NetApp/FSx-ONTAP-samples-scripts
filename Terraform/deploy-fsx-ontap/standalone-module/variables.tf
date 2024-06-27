@@ -1,5 +1,5 @@
 variable "aws_secretsmanager_region" {
-   description = "The AWS region where the secret is stored."
+   description = "The AWS region where the secret is stored. Can be different from the region where the FSxN file system is deployed."
    type        = string
    default     = "us-east-2"
 }
@@ -43,11 +43,11 @@ variable "fsx_region" {
 }
 
 variable "fsx_subnets" {
-   description = "A list of IDs for the subnets that the file system will be accessible from. Up to 2 subnets can be provided."
+   description = "A list of subnets IDs that the file system will be accessible from. For MULTI_AZ_1 deployment type, provide both subnets. For SINGLE_AZ_1 deployment type, only the primary subnet is used."
    type        = map(any)
    default = {
       "primarysub"   = "subnet-22222222"
-      "secondarysub" = "subnet-22222222"
+      "secondarysub" = "subnet-33333333"
    }
 }
 
