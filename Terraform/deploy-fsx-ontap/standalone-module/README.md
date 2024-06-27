@@ -5,6 +5,7 @@
 * [What to expect](#what-to-expect)
 * [Prerequisites](#prerequisites)
 * [Usage](#usage)
+* [Terraform Overview](#terraform-overview)
 * [Author Information](#author-information)
 * [License](#license)
 
@@ -101,7 +102,7 @@ git clone https://github.com/NetApp/FSx-ONTAP-samples-scripts.git
 
 ### 2. Navigate to the directory
 ```shell
-cd Terraform/fsx-ontap-filesystem/standalone-module
+cd FSx-ONTAP-samples-scripts/Terraform/deploy-fsx-ontap/standalone-module
 ```
 
 ### 3. Initialize Terraform
@@ -137,17 +138,28 @@ You can see that Terraform recognizes the modules required by our configuration:
 preferences and save the file. This will ensure that the Terraform code deploys resources according to your specifications.
 
 **Make sure to replace the values with ones that match your AWS environment and needs.**
+Modify the remaining optional variables (e.g. defining AD) in the **`main.tf`** file and remove commenting
+where needed according to the explanations in-line.
 
-- Modify the remaining optional variables in the **`main.tf`** file and remove commenting where needed according to the explanations in-line.
+### 5. Update Security Group
+A default security group is defined in the "security_groups.tf" file. At the top of
+that file you can see where you can specify either a CIDR block or a security group ID
+to allow access to the FSxN file system. Do not specify both, as it will cause
+the terraform deployment to fail.
 
-### 5. Create a Terraform plan
+If you decide you don't want to use the security group, you can either delete the security_groups.tf file,
+or just rename it such that it doesn't end with ".tf" (e.g. security_groups.tf.kep). You will also need
+to update the `security_group_ids  = [aws_security_group.fsx_sg.id]` line in the main.tf file
+to reference the security group(s) you want to use.
+
+### 6. Create a Terraform plan
 Run the following command to create an execution plan, which lets you preview the changes that Terraform plans to make to your infrastructure:
 ```shell
 terraform plan
 ```
 Ensure that the proposed changes match what you expected before you apply the changes!
 
-### 6. Apply the Terraform plan
+### 7. Apply the Terraform plan
 Run the following command to execute the Terrafom code and apply the changes proposed in the `plan` step:
 ```shell
 terraform apply
