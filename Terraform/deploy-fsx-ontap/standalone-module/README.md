@@ -162,22 +162,23 @@ terraform apply
 | Name | Version |
 |------|---------|
 | aws | 5.25.0 |
+| aws.secrets | 5.25.0 |
 
 ### Inputs
 
-| Name | Description | Type | Default | 
-|------|-------------|------|---------|
-| aws_secret_region | The region where the AWS SecretManager secret is stored | `string` | `"us-west-2"` |
-| fsx_admin_secret | The name of the AWS SecretManager secret where the ONTAP administrative password for the fsxadmin user that you can use to administer your file system using the ONTAP CLI and REST API | `string` | `"password"` |
-| fsx_capacity_size_gb | The storage capacity (GiB) of the FSxN file system. Valid values between 1024 and 196608 | `number` | `1024` |
-| fsx_deploy_type | The filesystem deployment type. Supports MULTI_AZ_1 and SINGLE_AZ_1 | `string` | `"MULTI_AZ_1"` |
-| fsx_name | The deployed filesystem name | `string` | `"terraform-fsxn"` |
-| fsx_subnets | A list of IDs for the subnets that the file system will be accessible from. Up to 2 subnets can be provided. | `map(any)` | <pre>{<br>  "primarysub": "subnet-22222222",<br>  "secondarysub": "subnet-22222222"<br>}</pre> |
-| fsx_region | The region where the FSxN file system will be deployed | `string` | `"us-west-2"` |
-| fsx_tput_in_MBps | The throughput capacity (in MBps) for the file system. Valid values are 128, 256, 512, 1024, 2048, and 4096. | `number` | `128` |
-| svm_name | The name of the Storage Virtual Machine | `string` | `"first_svm"` |
-| vol_info | Details for the volume creation | `map(any)` | <pre>{<br>  "cooling_period": 31,<br>  "efficiency": true,<br>  "junction_path": "/vol1",<br>  "size_mg": 1024,<br>  "tier_policy_name": "AUTO",<br>  "vol_name": "vol1"<br>}</pre> |
-| vpc_id | The ID of the VPC in which the FSxN fikesystem should be deployed | `string` | `"vpc-111111111"` |
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| aws_secretsmanager_region | The AWS region where the secret is stored. | `string` | `"us-east-2"` | no |
+| fsx_capacity_size_gb | The storage capacity (GiB) of the FSxN file system. Valid values between 1024 and 196608. | `number` | `1024` | no |
+| fsx_deploy_type | The filesystem deployment type. Supports MULTI_AZ_1 and SINGLE_AZ_1 | `string` | `"MULTI_AZ_1"` | no |
+| fsx_name | The deployed filesystem name | `string` | `"terraform-fsxn"` | no |
+| fsx_region | The AWS region where the FSxN file system to be deployed. | `string` | `"us-west-2"` | no |
+| fsx_secret_name | The name of the AWS SecretManager secret that holds the ONTAP administrative password for the fsxadmin user that you can use to administer your file system using the ONTAP CLI and REST API. | `string` | `"fsx_secret"` | no |
+| fsx_subnets | A list of IDs for the subnets that the file system will be accessible from. Up to 2 subnets can be provided. | `map(any)` | <pre>{<br>  "primarysub": "subnet-22222222",<br>  "secondarysub": "subnet-22222222"<br>}</pre> | no |
+| fsx_tput_in_MBps | The throughput capacity (in MBps) for the file system. Valid values are 128, 256, 512, 1024, 2048, and 4096. | `number` | `128` | no |
+| svm_name | The name of the Storage Virtual Machine | `string` | `"first_svm"` | no |
+| vol_info | Details for the volume creation | `map(any)` | <pre>{<br>  "cooling_period": 31,<br>  "efficiency": true,<br>  "junction_path": "/vol1",<br>  "size_mg": 1024,<br>  "tier_policy_name": "AUTO",<br>  "vol_name": "vol1"<br>}</pre> | no |
+| vpc_id | The ID of the VPC in which the FSxN fikesystem should be deployed | `string` | `"vpc-11111111"` | no |
 
 ### Outputs
 
