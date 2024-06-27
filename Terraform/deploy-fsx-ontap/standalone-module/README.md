@@ -5,6 +5,7 @@
 * [What to expect](#what-to-expect)
 * [Prerequisites](#prerequisites)
 * [Usage](#usage)
+* [Terraform Overview](#terraform-overview)
 * [Author Information](#author-information)
 * [License](#license)
 
@@ -101,7 +102,7 @@ git clone https://github.com/NetApp/FSx-ONTAP-samples-scripts.git
 
 ### 2. Navigate to the directory
 ```shell
-cd Terraform/fsx-ontap-filesystem/standalone-module
+cd FSx-ONTAP-samples-scripts/Terraform/deploy-fsx-ontap/standalone-module
 ```
 
 ### 3. Initialize Terraform
@@ -137,17 +138,28 @@ You can see that Terraform recognizes the modules required by our configuration:
 preferences and save the file. This will ensure that the Terraform code deploys resources according to your specifications.
 
 **Make sure to replace the values with ones that match your AWS environment and needs.**
+Modify the remaining optional variables (e.g. defining AD) in the **`main.tf`** file and remove commenting
+where needed according to the explanations in-line.
 
-- Modify the remaining optional variables in the **`main.tf`** file and remove commenting where needed according to the explanations in-line.
+### 5. Update Security Group
+A default security group is defined in the "security_groups.tf" file. At the top of
+that file you can see where you can specify either a CIDR block or a security group ID
+to allow access to the FSxN file system. Do not specify both, as it will cause
+the terraform deployment to fail.
 
-### 5. Create a Terraform plan
+If you decide you don't want to use the security group, you can either delete the security_groups.tf file,
+or just rename it such that it doesn't end with ".tf" (e.g. security_groups.tf.kep). You will also need
+to update the `security_group_ids  = [aws_security_group.fsx_sg.id]` line in the main.tf file
+to reference the security group(s) you want to use.
+
+### 6. Create a Terraform plan
 Run the following command to create an execution plan, which lets you preview the changes that Terraform plans to make to your infrastructure:
 ```shell
 terraform plan
 ```
 Ensure that the proposed changes match what you expected before you apply the changes!
 
-### 6. Apply the Terraform plan
+### 7. Apply the Terraform plan
 Run the following command to execute the Terrafom code and apply the changes proposed in the `plan` step:
 ```shell
 terraform apply
@@ -155,17 +167,31 @@ terraform apply
 
 <!-- BEGIN_TF_DOCS -->
 
-## Repository Overview
+## Terraform Overview
 
 ### Providers
 
 | Name | Version |
 |------|---------|
 | aws | 5.25.0 |
-| aws.secrets | 5.25.0 |
 
 ### Inputs
 
+<<<<<<< HEAD
+| Name | Description | Type | Default | Must be changed |
+|------|-------------|------|---------|-----------------|
+| aws_secretsmanager_region | The AWS region where the secret is stored. | `string` | `"us-east-2"` | No |
+| fsx_capacity_size_gb | The storage capacity (GiB) of the FSxN file system. Valid values between 1024 and 196608. | `number` | `1024` | No |
+| fsx_deploy_type | The filesystem deployment type. Supports MULTI_AZ_1 and SINGLE_AZ_1 | `string` | `"MULTI_AZ_1"` | No |
+| fsx_name | The deployed filesystem name | `string` | `"terraform-fsxn"` | No |
+| fsx_region | The AWS region where the FSxN file system to be deployed. | `string` | `"us-west-2"` | No |
+| fsx_secret_name | The name of the AWS SecretManager secret that holds the ONTAP administrative password for the fsxadmin user that you can use to administer your file system using the ONTAP CLI and REST API. | `string` | `"fsx_secret"` | Yes |
+| fsx_subnets | A list of IDs for the subnets that the file system will be accessible from. Up to 2 subnets can be provided. | `map(any)` | <pre>{<br>  "primarysub": "subnet-22222222",<br>  "secondarysub": "subnet-22222222"<br>}</pre> | Yes |
+| fsx_tput_in_MBps | The throughput capacity (in MBps) for the file system. Valid values are 128, 256, 512, 1024, 2048, and 4096. | `number` | `128` | No |
+| svm_name | The name of the Storage Virtual Machine | `string` | `"first_svm"` | No |
+| vol_info | Details for the volume creation | `map(any)` | <pre>{<br>  "cooling_period": 31,<br>  "efficiency": true,<br>  "junction_path": "/vol1",<br>  "size_mg": 1024,<br>  "tier_policy_name": "AUTO",<br>  "vol_name": "vol1"<br>}</pre> | No |
+| vpc_id | The ID of the VPC in which the FSxN fikesystem should be deployed | `string` | `"vpc-11111111"` | Yes |
+=======
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
 | aws_secretsmanager_region | The AWS region where the secret is stored. Can be different from the region where the FSxN file system is deployed. | `string` | `"us-east-2"` | no |
@@ -179,6 +205,7 @@ terraform apply
 | svm_name | The name of the Storage Virtual Machine | `string` | `"first_svm"` | no |
 | vol_info | Details for the volume creation | `map(any)` | <pre>{<br>  "cooling_period": 31,<br>  "efficiency": true,<br>  "junction_path": "/vol1",<br>  "size_mg": 1024,<br>  "tier_policy_name": "AUTO",<br>  "vol_name": "vol1"<br>}</pre> | no |
 | vpc_id | The ID of the VPC in which the FSxN fikesystem should be deployed | `string` | `"vpc-11111111"` | no |
+>>>>>>> db6ff98f8c57b29a0b7cfbeb1257e3580918651f
 
 ### Outputs
 
