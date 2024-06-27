@@ -241,7 +241,7 @@ resource "aws_vpc_security_group_ingress_rule" "ssh" {
   ip_protocol       = "tcp"
 }
 
-resource "aws_vpc_security_group_ingress_rule" "s3_API" {
+resource "aws_vpc_security_group_ingress_rule" "s3_and_api" {
   security_group_id = aws_security_group.fsx_sg.id
   description       = "Allow the s3 and ONTAP API traffic"
   cidr_ipv4         = (local.ciddr_block != "" ? local.ciddr_block : null)
