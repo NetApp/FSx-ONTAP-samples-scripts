@@ -167,31 +167,17 @@ terraform apply
 
 <!-- BEGIN_TF_DOCS -->
 
-## Terraform Overview
+## Repository Overview
 
 ### Providers
 
 | Name | Version |
 |------|---------|
 | aws | 5.25.0 |
+| aws.secrets | 5.25.0 |
 
 ### Inputs
 
-<<<<<<< HEAD
-| Name | Description | Type | Default | Must be changed |
-|------|-------------|------|---------|-----------------|
-| aws_secretsmanager_region | The AWS region where the secret is stored. | `string` | `"us-east-2"` | No |
-| fsx_capacity_size_gb | The storage capacity (GiB) of the FSxN file system. Valid values between 1024 and 196608. | `number` | `1024` | No |
-| fsx_deploy_type | The filesystem deployment type. Supports MULTI_AZ_1 and SINGLE_AZ_1 | `string` | `"MULTI_AZ_1"` | No |
-| fsx_name | The deployed filesystem name | `string` | `"terraform-fsxn"` | No |
-| fsx_region | The AWS region where the FSxN file system to be deployed. | `string` | `"us-west-2"` | No |
-| fsx_secret_name | The name of the AWS SecretManager secret that holds the ONTAP administrative password for the fsxadmin user that you can use to administer your file system using the ONTAP CLI and REST API. | `string` | `"fsx_secret"` | Yes |
-| fsx_subnets | A list of IDs for the subnets that the file system will be accessible from. Up to 2 subnets can be provided. | `map(any)` | <pre>{<br>  "primarysub": "subnet-22222222",<br>  "secondarysub": "subnet-22222222"<br>}</pre> | Yes |
-| fsx_tput_in_MBps | The throughput capacity (in MBps) for the file system. Valid values are 128, 256, 512, 1024, 2048, and 4096. | `number` | `128` | No |
-| svm_name | The name of the Storage Virtual Machine | `string` | `"first_svm"` | No |
-| vol_info | Details for the volume creation | `map(any)` | <pre>{<br>  "cooling_period": 31,<br>  "efficiency": true,<br>  "junction_path": "/vol1",<br>  "size_mg": 1024,<br>  "tier_policy_name": "AUTO",<br>  "vol_name": "vol1"<br>}</pre> | No |
-| vpc_id | The ID of the VPC in which the FSxN fikesystem should be deployed | `string` | `"vpc-11111111"` | Yes |
-=======
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
 | aws_secretsmanager_region | The AWS region where the secret is stored. Can be different from the region where the FSxN file system is deployed. | `string` | `"us-east-2"` | no |
@@ -205,7 +191,6 @@ terraform apply
 | svm_name | The name of the Storage Virtual Machine | `string` | `"first_svm"` | no |
 | vol_info | Details for the volume creation | `map(any)` | <pre>{<br>  "cooling_period": 31,<br>  "efficiency": true,<br>  "junction_path": "/vol1",<br>  "size_mg": 1024,<br>  "tier_policy_name": "AUTO",<br>  "vol_name": "vol1"<br>}</pre> | no |
 | vpc_id | The ID of the VPC in which the FSxN fikesystem should be deployed | `string` | `"vpc-11111111"` | no |
->>>>>>> db6ff98f8c57b29a0b7cfbeb1257e3580918651f
 
 ### Outputs
 
