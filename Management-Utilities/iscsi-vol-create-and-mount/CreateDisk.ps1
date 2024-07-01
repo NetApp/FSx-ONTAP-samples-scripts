@@ -63,8 +63,7 @@ Set-Service -Name msiscsi -StartupType Automatic
 
 #### Connect to FSX ####
 Write-Host "Connectiong to FSx filesystem" -ForegroundColor Yellow
-$PWord = ConvertTo-SecureString -String $password -AsPlainText -Force
-$credntials = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $user, $PWord
+$credntials = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $user, $password
 try {
  Connect-NcController $ip -Credential $credntials -ErrorAction Stop
 }
