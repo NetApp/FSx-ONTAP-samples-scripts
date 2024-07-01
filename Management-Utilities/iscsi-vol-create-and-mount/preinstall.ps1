@@ -1,4 +1,6 @@
- #### Installing ONTAP module #####
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '', Justification='This script intentinally uses Write-Host to display messages to the user.')]
+####
+#### Installing ONTAP module #####
 Write-Host "Installing/ Import ONTAP module" -ForegroundColor Yellow
 $m = "NetApp.ONTAP"
 if (Get-Module | Where-Object {$_.Name -eq $m}) {
@@ -40,4 +42,3 @@ if(($res.Installed))
 else {
    Install-WindowsFeature -name Multipath-IO -Restart
 }
- 
