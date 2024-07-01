@@ -8,8 +8,8 @@ to obtain the required information to detect certain conditions, and when found,
 This program was initially created to forward EMS messages to an AWS service outside of the FSxN file system since
 there was no way to do that from the FSxN file system itself (i.e. the syslog forwarding didn't work at the time). As it turns out this is
 no longer the case, in that as of Data ONTAP 9.13.1 you can now forward EMS messages to a 'syslog' server. However, once this program was created,
-other funtionality was added to monitor other Data ONTAP services that AWS didn't provide a way to trigger an alert when
-something was outside of an expected realm. For example, if the lag time between SnapMirror synchroniation were more
+other functionality was added to monitor other Data ONTAP services that AWS didn't provide a way to trigger an alert when
+something was outside of an expected realm. For example, if the lag time between SnapMirror synchronization were more
 than a specified amount of time. Or, if a SnapMirror update was stalled. This program can alert on all these things and more.
 Here is an itemized list of the services that this program can monitor:
 - If the file system is available.
@@ -46,16 +46,18 @@ permissions and assigning that role to the Lambda function.
 |:-----------------------------|:----------------|
 |secretsmanager:GetSecretValue  | Needs to be able to retrieve the FSxN administrator credentials. |
 |sns:Publish                    | Since it sends messages (alerts) via SNS, it needs to be able to do so. |
-|s3:PutObjecct                  | The program stores its state information in various s3 objects.|
+|s3:PutObject                   | The program stores its state information in various s3 objects.|
 |s3:GetObject                   | The program reads previous state information, as well as configuration from various s3 objects. |
 |s3:ListBucket                  | To allow the program to know if an object exist or not. |
+|ec2:CreateNetworkInterface     | Since the program runs as a Lambda function within your VPC, it needs to be able to create a network interface in your VPC. |
+|ec2:DescribeNetworkInterfaces  | So it can check to see if an network interface already exist. |
 
 ### Create an S3 Bucket
 One of the goals of the program is to not send multiple messages for the same event. It does this by storing the event
 information in an s3 object so it can be compared against before sending a second message for the same event.
 Note that it doesn't keep every event indefinitely, it only stores them while the condition is true. So, say for
 example it sends an alert for a SnapMirror relationship that has a lag time that is too long. It will
-send the alert and store the event. Once a successful SnapMirror synchronization has happen, the event will be removed
+send the alert and store the event. Once a successful SnapMirror synchronization has happened, the event will be removed
 from the s3 object allowing for a new event to be created and alarmed on.
 
 So, for the program to function, you will need to provide an S3 bucket for it to store event history. It is recommended to
@@ -111,10 +113,11 @@ filename, then set the configFilename environment variable to the name of your c
 **NOTE:** Parameter names are case sensitive. 
 
 |Parameter Name | Required | Required as an Environment Variable | Default Value | Description |
-|:--------------|:---------|:------------------------------------|:--------------|:------------|
-|s3BucketName   | Yes | Yes | None | Set to the name of the S3 bucket you want the program to store events to. It will also read the matching configuration file from this bucket. |
-|s3BucketRegion | Yes | Yes | None | Set to the region the S3 bucket resides in. |
-|configFilename | No | Yes | OntapAdminServer + "-config" | Set to the filename (S3 object) that contains parameter assignments. It's okay if it doesn't exist, as long as there are environment variables for all the required parameters. |
+|:--------------|:--------:|:-----------------------------------:|:--------------|:------------|
+| s3BucketName   | Yes | Yes | None | Set to the name of the S3 bucket you want the program to store events to. It will also read the matching configuration file from this bucket. |
+| s3BucketRegion | Yes | Yes | None | Set to the region the S3 bucket resides in. |
+| OntapAdminServer | Yes | Yes | None | Set to the DNS name,or IP address of the ONTAP server you wish to monitor. |
+| configFilename | No | No | OntapAdminServer + "-config" | Set to the filename (S3 object) that contains parameter assignments. It's okay if it doesn't exist, as long as there are environment variables for all the required parameters. |
 | emsEventsFilename | No | No | OntapAdminServer + "-emsEvents" | Set to the filename (S3 object) that you want the program to store the EMS events that it alerts on into. This file will be created as necessary. |
 | smEventsFilesname | No | No | OntapAdminServer + "-smEvents" | Set to the filename (S3 object) that you want the program to store the SnapMirror alerts into. This file will be created as necessary.  |
 | smRelationshipsFilename | No | No | OntapAdminServer + "-smRelationships" | Set to the filename (S3 object) that you want the program to store the SnapMirror relationships into. This file will be created as necessary. |
@@ -142,14 +145,14 @@ matching conditions (rules) for. The second key is "rules" which is an array of 
 matching conditions. Note that each service's rules has its own unique schema. The following is the unique schema
 for each of the service's rules.
 
-##### Matching condition schema for System Health
+##### Matching condition schema for System Health (systemHealth)
 Each rule should be an object with one, or more, of the following keys:
 
 - versionChange - Is a Boolean (true, false) and if 'true' will send an alert when the ONTAP version changes. If it is set to false, it will not report on version changes.
 - failover - Is a Boolean (true, false) and if 'true' will send an alert if the FSxN cluster is running on its standby node. If it is set to false, it will not report on failover status.
 - networkInterfaces - Is a Boolean (true, false) and if 'true' will send an alert if any of the network interfaces are down.  If it is set to false, it will not report on any network interfaces that are down.
 
-##### Matching condition schema for EMS Messages
+##### Matching condition schema for EMS Messages (ems)
 Each rule should be an object with three keys:
 
 - "name" - Which will match on the EMS event name.
@@ -157,14 +160,14 @@ Each rule should be an object with three keys:
 - "severity" - Which will match on the severity of the EMS event (debug, informational, notice, error, alert or emergency).
 Note that all values to each of the keys are used as a regular expressions against the associated EMS component. So, for example, if you want to match on any event message text that starts with “snapmirror” then you would put “^snapmirror”. The “^” character matches the beginning on the string. If you want to match on a specific EMS event name, then you should anchor it with an regular express that starts with “^” for the beginning of the string and ends with “$” for the end of the string. For example, “^arw.volume.state$’.  For a complete explanation of the regular expression syntax and special characters, please see the Python documentation found here Regular expression operations.
 
-##### Matching condition schema for SnapMirror relationships
+##### Matching condition schema for SnapMirror relationships (snapmirror)
 Each rule should be an object with one, or more, of the following keys:
 
 - maxLagTime - Specifies the maximum allowable time, in seconds, since the last successful SnapMirror update before an alert will be sent.
 - stalledTransferSeconds - Specifies the minimum number of seconds that have to transpire before a SnapMirror transfer will be considered stalled.
 - health - Is a Boolean (true, false) which specifies if you want to alert on a healthy relationship (true) or an unhealthy relationship (false).
 
-##### Matching condition schema for Storage
+##### Matching condition schema for Storage (storage)
 Each rule should be an object with one, or more, of the following keys:
 
 - aggrWarnPercentUsed - Specifies the maximum allowable physical storage (aggregate) utilization (between 0 and 100) before an alert is sent.
@@ -172,7 +175,7 @@ Each rule should be an object with one, or more, of the following keys:
 - volumeWarnPercentUsed  - Specifies the maximum allowable volume utilization (between 0 and 100) before an alert is sent.
 - volumeCriticalPercentUsed - Specifies the maximum allowable volume utilization (between 0 and 100) before an alert is sent. 
 
-##### Matching condition schema for Quota
+##### Matching condition schema for Quota (quota)
 Each rule should be an object with one, or more, of the following keys:
 
 - maxHardQuotaSpacePercentUsed - Specifies the maximum allowable storage utilization (between 0 and 100) against the hard quota limit before an alert is sent.
