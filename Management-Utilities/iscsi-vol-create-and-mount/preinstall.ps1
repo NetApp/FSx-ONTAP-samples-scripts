@@ -1,5 +1,6 @@
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '', Justification='This script intentinally uses Write-Host to display messages to the user.')]
-####
+Param()
+#
 #### Installing ONTAP module #####
 Write-Host "Installing/ Import ONTAP module" -ForegroundColor Yellow
 $m = "NetApp.ONTAP"
