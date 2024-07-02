@@ -29,11 +29,17 @@ resource "aws_fsx_ontap_file_system" "terraform-fsxn" {
   fsx_admin_password                = data.aws_secretsmanager_secret_version.fsx_password.secret_string
   route_table_ids                   = var.route_table_ids
   tags                              = var.tags
-  disk_iops_configuration           = var.disk_iops_configuration
+  dynamic "disk_iops_configuration" {
+    for_each = var.disk_iops_configuration != null ? [var.disk_iops_configuration] : []
+    content {
+      iops = disk_iops_configuration.value["iops"]
+      mode = disk_iops_configuration.value["mode"]
+    }
+  }
 
   lifecycle {
     precondition {
-      condition = !var.create_sg || (var.cidr_block != "" && var.source_security_group_id == "" || var.cidr_block == "" && var.source_security_group_id != "")
+      condition = !var.create_sg || (var.cidr_for_sg != "" && var.source_security_group_id == "" || var.cidr_for_sg == "" && var.source_security_group_id != "")
       error_message = "You must specify EITHER cidr_block OR source_security_group_id when creating a security group, not both."
     }
     precondition {
