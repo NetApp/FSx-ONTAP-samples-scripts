@@ -243,7 +243,7 @@ resource "aws_vpc_security_group_ingress_rule" "ssh" {
 
 resource "aws_vpc_security_group_ingress_rule" "s3_and_api" {
   security_group_id = aws_security_group.fsx_sg.id
-  description       = "Provice acccess to S3 and the ONTAP REST API"
+  description       = "Allow the s3 protocol and ONTAP API traffic"
   cidr_ipv4         = (local.ciddr_block != "" ? local.ciddr_block : null)
   referenced_security_group_id = (local.security_group_id != "" ? local.security_group_id : null)
   from_port         = 443
