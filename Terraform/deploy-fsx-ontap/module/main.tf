@@ -28,7 +28,7 @@ resource "aws_fsx_ontap_file_system" "terraform-fsxn" {
   daily_automatic_backup_start_time = var.daily_backup_start_time
   fsx_admin_password                = data.aws_secretsmanager_secret_version.fsx_password.secret_string
   route_table_ids                   = (var.fsx_deploy_type == "MULTI_AZ_1" ? var.route_table_ids : null)
-  tags                              = var.tags
+  tags                              = merge(var.tags, {Name = var.fsx_name })
   dynamic "disk_iops_configuration" {
     for_each = length(var.disk_iops_configuration) > 0 ? [var.disk_iops_configuration] : []
 
@@ -57,7 +57,6 @@ resource "aws_fsx_ontap_storage_virtual_machine" "mysvm" {
 
   // OPTIONAL PARAMETERS
   root_volume_security_style = var.root_vol_sec_style
-  # active_directory_configuration {}
 }
 
 resource "aws_fsx_ontap_volume" "myvol" {
@@ -74,12 +73,10 @@ resource "aws_fsx_ontap_volume" "myvol" {
     name           = var.vol_info["tier_policy_name"]
     cooling_period = var.vol_info["cooling_period"]
   }
-  bypass_snaplock_enterprise_retention = var.vol_info["bypass_sl_retention"]
-  copy_tags_to_backups                 = var.vol_info["copy_tags_to_backups"]
-  security_style                       = var.vol_info["sec_style"]
-  skip_final_backup                    = var.vol_info["skip_final_backup"]
-  # snaplock_configuration {}
-  # snapshot_policy {}
+  copy_tags_to_backups       = var.vol_info["copy_tags_to_backups"]
+  security_style             = var.vol_info["sec_style"]
+  skip_final_backup          = var.vol_info["skip_final_backup"]
+  snapshot_policy            = var.vol_info["snapshot_policy"]
 }
 #
 # The next two data blocks retrieve the secret from Secrets Manager.

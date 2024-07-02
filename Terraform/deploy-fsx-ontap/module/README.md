@@ -133,9 +133,9 @@ module "fsxontap" {
         primarysub   = "<YOUR-PRIMARY-SUBNET>"
         secondarysub = "<YOUR-SECONDAY-SUBNET>"
     }
-    create_sg = <true / false> // true to create Security Group for the Fs / false otherwise
+    create_sg = true // true to create Security Group for the Fs / false otherwise
     cidr_for_sg = "<YOUR-CIDR-BLOCK>"
-    fsx_admin_password = "<YOUR_PASSWORD>"
+    fsx_secret_name = "<YOUR_SECRET>" // The name of a secret in AWS Secrets Manager that contains the FSxN admin password.
     tags = {
         Terraform   = "true"
         Environment = "dev"
@@ -147,7 +147,7 @@ module "fsxontap" {
 > To Override default values assigned to other variables in this module, add them to this source block as well. The above source block includes the minimum requirements only.
 
 > [!NOTE]
-> The default deployment type is: MULTI_AZ_1. For SINGLE AZ deployment, override the `fsx_deploy_type` variable in the module block, and make sure to only provide one subnet as `primarysub`
+> The default deployment type is: MULTI_AZ_1. For SINGLE AZ deployment, set the `fsx_deploy_type` variable to SINGLE_AZ_1 in the module block.
 
 Please read the vriables descriptions in `variables.tf` file for more information regarding the variables passed to the module block.
 
@@ -166,14 +166,14 @@ terraform {
 }
 
 provider "aws" {
-    shared_config_files      = ["$HOME/.aws/conf"]
-    shared_credentials_files = ["$HOME/.aws/credentials"]
     region = "us-west-2"
 }
 
 
 module "fsxontap" {
     source = "github.com/Netapp/FSx-ONTAP-samples-scripts/Terraform/deploy-fsx-ontap/module"
+
+    name = "fsxontap"
 
     vpc_id = "vpc-111111111"
     fsx_subnets = {
@@ -182,15 +182,13 @@ module "fsxontap" {
     }
     create_sg = true
     cidr_for_sg = "10.0.0.0/8"
-    fsx_admin_password = "yourpassword"
+    fsx_secret_name = "fsx_secret"
     route_table_ids = ["rtb-111111"]
     tags = {
         Terraform   = "true"
         Environment = "dev"
     }
 }
-
-
 ```
 
 ### Install the module
@@ -240,7 +238,7 @@ Ensure that the proposed changes match what you expected before you apply the ch
 
 Once confirmed, run the `terraform apply` command followed by `yes` to execute the Terrafom code and apply the changes proposed in the `plan` step:
 ```shell
-terraform apply -y
+terraform apply
 ```
 
 <!-- BEGIN_TF_DOCS -->

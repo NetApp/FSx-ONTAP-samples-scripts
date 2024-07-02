@@ -81,7 +81,7 @@ variable "vol_info" {
 }
 
 variable "vpc_id" {
-   description = "The ID of the VPC in which the FSxN fikesystem should be deployed"
+   description = "The ID of the VPC in which the security group will be created."
    type        = string
    default     = "vpc-11111111"
 }

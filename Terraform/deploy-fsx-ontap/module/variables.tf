@@ -1,23 +1,23 @@
-/*
- * If you want to set the nam eof your FSxN file system, you must set a "Name"
- * tag equal to the desired name. Feel free to add additional tags as needed.
- */
 variable "tags" {
-  description = "Tags to be applied to the resources"
+  description = "Tags to be applied to the FSxN file system."
   type        = map(any)
-  default = {
-     "Name" = "terraform-fsxn"
-  }
+  default = {}
+}
+
+variable "fsx_name" {
+  description = "The name to assigne to the FSxN file system."
+  type        = string
+  default     = "fsx1"
 }
 
 variable "create_sg" {
-  description = "Determines whether the SG should be deployed as part of this execution or not"
+  description = "Determines whether the SG should be deployed as part of this deployment or not."
   type        = bool
   default     = true
 }
 
 variable "security_group_id" {
-  description = "If you are not creating the SG, provide the ID of the SG to be used"
+  description = "If you are not creating the security group, provide the ID of the security group to be used."
   type        = string
   default     = ""
 }
@@ -41,20 +41,16 @@ variable "source_security_group_id" {
 }
 
 variable "vpc_id" {
-  description = "The ID of the VPC in which the FSxN fikesystem should be deployed"
+  description = "The ID of the VPC in where the security group will be created."
   type        = string
   default     = ""
-  validation  {
-    condition = var.vpc_id != ""
-    error_message = "You must provide the ID of the VPC in which the FSxN file system should be deployed."
-  }
 }
 
 variable "fsx_subnets" {
   description = "The subnets from where the file system will be accessible from. For MULTI_AZ_1 deployment type, provide both primvary and secondary subnets. For SINGLE_AZ_1 deployment type, only the primary subnet is used."
   type        = map(string)
   default = {
-       "primarysub" = "subnet-111111111"
+       "primarysub"   = "subnet-111111111"
        "secondarysub" = "subnet-222222222"
   }
 }
@@ -105,6 +101,10 @@ variable "backup_retention_days" {
   description = "The number of days to retain automatic backups. Setting this to 0 disables automatic backups. You can retain automatic backups for a maximum of 90 days."
   type        = number
   default     = 0
+  validation {
+    condition = var.backup_retention_days >= 0 && var.backup_retention_days <= 90
+    error_message = "Invalid backup retention days. Valid values are between 0 and 90."
+  }
 }
 
 variable "daily_backup_start_time" {
@@ -120,7 +120,7 @@ variable "disk_iops_configuration" {
 }
 
 variable "fsx_secret_name" {
-  description = "The name of the secure where the FSxN passwood is stored"
+  description = "The name of the secure where the FSxN passwood is stored."
   type        = string
   default     = ""
   validation {
@@ -136,7 +136,7 @@ variable "route_table_ids" {
 }
 
 variable "svm_name" {
-  description = "The name of the Storage Virtual Machine"
+  description = "The name of the Storage Virtual Machine, (a.k.a. vserver)."
   type        = string
   default     = "first_svm"
 }
@@ -151,17 +151,17 @@ variable "vol_info" {
   description = "Details for the volume creation"
   type = map(any)
   default = {
-   "vol_name"              = "vol1"
-   "junction_path"         = "/vol1"
-	 "size_mg"               = 1024
-	 "efficiency"            = true
-	 "tier_policy_name"      = "AUTO"
-	 "cooling_period"        = 31
+    "vol_name"              = "vol1"
+    "junction_path"         = "/vol1"
+    "size_mg"               = 1024
+    "efficiency"            = true
+    "tier_policy_name"      = "AUTO"
+    "cooling_period"        = 31
     "vol_type"             = "RW"
-    "bypass_sl_retention"  = false
     "copy_tags_to_backups" = false
     "sec_style"            = "UNIX"
     "skip_final_backup"    = false
+    "snapshot_policy"      = "default"
   }
 }
 
