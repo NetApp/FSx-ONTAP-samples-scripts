@@ -114,11 +114,9 @@ variable "daily_backup_start_time" {
 }
 
 variable "disk_iops_configuration" {
-  description = "The SSD IOPS configuration for the file system. Valid modes are 'AUTOMATIC' (3 iops per GB provided) or 'USER_PROVISIONED'. If you choose USER_PROVISIONED, you must also provide the 'iops' variable set to the desired number of iops."
+  description = "The SSD IOPS configuration for the file system. Valid modes are 'AUTOMATIC' (3 iops per GB provided) or 'USER_PROVISIONED'. NOTE: Due to a bug in the AWS FSx provider, if you want AUTOMATIC, then leave this variable empty. If you want USER_PROVIDEDED, then add a 'mode=USER_PROVISIONED' (with USER_PROVISIONED enclosed in doube quotes) and 'iops=number' where number is between 1 and 160000."
   type        = map(any)
-  default     = {
-    mode = "AUTOMATIC"
-  }
+  default     = {}
 }
 
 variable "fsx_secret_name" {
