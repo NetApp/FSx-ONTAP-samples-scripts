@@ -64,7 +64,7 @@ resource "aws_fsx_ontap_storage_virtual_machine" "mysvm" {
   name                = var.svm_name
 
 // OPTIONAL PARAMETERS
-  # root_volume_security_style = "
+  # root_volume_security_style = ""
   # tags                       = {}
   # active_directory_configuration {}
 }
@@ -88,7 +88,7 @@ resource "aws_fsx_ontap_volume" "myvol" {
   skip_final_backup = true
   # bypass_snaplock_enterprise_retention = true
   # copy_tags_to_backups = false
-  # security_style = "MIXED"
+  # security_style = "UNIX"
   # snaplock_configuration {}
   # snapshot_policy {}
   # tags = {}  
