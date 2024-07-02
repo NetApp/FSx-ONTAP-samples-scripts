@@ -1,3 +1,4 @@
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '', Justification='This script intentinally uses Write-Host to display messages to the user.')]
 #### Getting param ####
 param(
 [Parameter(Mandatory=$true,HelpMessage="Enter FSxN filesystem management IP")]
@@ -5,7 +6,7 @@ param(
 [Parameter(Mandatory=$true,HelpMessage="Enter FSxN username")]
 [string]$user,
 [Parameter(Mandatory=$true,HelpMessage="Enter FSx filesystem password")]
-[string]$password,
+[SecureString]$password,
 [Parameter(Mandatory=$true,HelpMessage="Enter volume size (in GB)")]
 [string]$volSize,
 [Parameter(Mandatory=$true,HelpMessage="Enter drive letter")]
@@ -15,7 +16,7 @@ param(
 [string]$format_disk)
 
 Write-Host "Getting disks numbers before startig..." -ForegroundColor yellow
-$totaldisks = (get-disk | Sort-Object -Property number | Select -Last 1 -ExpandProperty number)
+$totaldisks = (get-disk | Sort-Object -Property number | Select-Object -Last 1 -ExpandProperty number)
 Write-Host "Getting local disks before startig..." -ForegroundColor yellow
 Write-Host "There are $totaldisks disks" -ForegroundColor yellow
 
@@ -25,7 +26,7 @@ $lun_name = "drive_" + $vol_number
 $igroup_name = "winhost_ig_" + $vol_number
 
 #### check if letter drive already in used and in the correct format ####
-if($drive_letter.Length > 1)
+if($drive_letter.Length -gt 1)
 {
  Write-Host "Drive letter not in the correct format" -ForegroundColor Red
  break
@@ -62,10 +63,9 @@ Set-Service -Name msiscsi -StartupType Automatic
 
 #### Connect to FSX ####
 Write-Host "Connectiong to FSx filesystem" -ForegroundColor Yellow
-$PWord = ConvertTo-SecureString -String $password -AsPlainText -Force
-$credntials = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $user, $PWord
+$credntials = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $user, $password
 try {
-$controller = Connect-NcController $ip -Credential $credntials -ErrorAction Stop
+ Connect-NcController $ip -Credential $credntials -ErrorAction Stop
 }
 catch {
  Write-Host "Failed connect to FSx filesystem, due to: $_" -ForegroundColor Red
@@ -149,14 +149,14 @@ Write-host 'Online, Initialize and format disks' -ForegroundColor Yellow
 Start-Sleep -Seconds 10
 $maxRetries = 5
 $counter = 0
-$diskNum = (get-disk | Sort-Object -Property number | Select -Last 1 -ExpandProperty number)
+$diskNum = (get-disk | Sort-Object -Property number | Select-Object -Last 1 -ExpandProperty number)
 while ($diskNum -eq $totaldisks -and $counter -lt $maxRetries)
 {
 
   Write-host 'retry..'
   $counter += 1
   Start-Sleep -Seconds 10
-  $diskNum = (get-disk | Sort-Object -Property number | Select -Last 1 -ExpandProperty number)
+  $diskNum = (get-disk | Sort-Object -Property number | Select-Object -Last 1 -ExpandProperty number)
 }
 
 if($counter -eq $maxRetries)

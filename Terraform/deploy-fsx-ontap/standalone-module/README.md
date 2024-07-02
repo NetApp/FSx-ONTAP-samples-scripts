@@ -176,13 +176,14 @@ terraform apply
 
 <!-- BEGIN_TF_DOCS -->
 
-## Terraform Overview
+## Repository Overview
 
 ### Providers
 
 | Name | Version |
 |------|---------|
 | aws | 5.25.0 |
+| aws.secrets | 5.25.0 |
 
 ### Inputs
 
