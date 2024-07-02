@@ -27,13 +27,14 @@ resource "aws_fsx_ontap_file_system" "terraform-fsxn" {
   automatic_backup_retention_days   = var.backup_retention_days
   daily_automatic_backup_start_time = var.daily_backup_start_time
   fsx_admin_password                = data.aws_secretsmanager_secret_version.fsx_password.secret_string
-  route_table_ids                   = var.route_table_ids
+  route_table_ids                   = (var.fsx_deploy_type == "MULTI_AZ_1" ? var.route_table_ids : null)
   tags                              = var.tags
   dynamic "disk_iops_configuration" {
-    for_each = var.disk_iops_configuration != null ? [var.disk_iops_configuration] : []
+    for_each = length(var.disk_iops_configuration) > 0 ? [var.disk_iops_configuration] : []
+
     content {
-      iops = disk_iops_configuration.value["iops"]
-      mode = disk_iops_configuration.value["mode"]
+      iops = try(disk_iops_configuration.value.iops, null)
+      mode = try(disk_iops_configuration.value.mode, null)
     }
   }
 
