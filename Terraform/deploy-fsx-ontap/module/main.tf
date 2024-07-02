@@ -30,6 +30,17 @@ resource "aws_fsx_ontap_file_system" "terraform-fsxn" {
   route_table_ids                   = var.route_table_ids
   tags                              = var.tags
   disk_iops_configuration           = var.disk_iops_configuration
+
+  lifecycle {
+    precondition {
+      condition = !var.create_sg || (var.cidr_block != "" && var.source_security_group_id == "" || var.cidr_block == "" && var.source_security_group_id != "")
+      error_message = "You must specify EITHER cidr_block OR source_security_group_id when creating a security group, not both."
+    }
+    precondition {
+      condition = var.create_sg || var.security_group_id != ""
+      error_message = "You must specify a security group ID when not creating a security group."
+    }
+  }
 }
 
 resource "aws_fsx_ontap_storage_virtual_machine" "mysvm" {

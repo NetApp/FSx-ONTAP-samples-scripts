@@ -20,10 +20,6 @@ variable "security_group_id" {
   description = "If you are not creating the SG, provide the ID of the SG to be used"
   type        = string
   default     = ""
-  validation {
-    condition = !var.create_sg and var.security_group_id != ""
-    error_message = "You must provide the ID of the security group to be used."
-  }
 }
 
 /*
@@ -36,20 +32,12 @@ variable "cidr_for_sg" {
   description = "cidr block to be used for the created security ingress rules."
   type        = string
   default     = "10.0.0.0/8"
-  validation  {
-    condition = var.create_sg and var.source_security_group_id == "" and var.cidr_for_sg != "" 
-    error_message = "You can't specify both source_security_group_id and cidr_for_sg. Please specify only one."
-  }
 }
 
 variable "source_security_group_id" {
-  description = "The ID of the security group to allow access to the FSxN file system.
+  description = "The ID of the security group to allow access to the FSxN file system."
   type        = string
   default     = ""
-  validation  {
-    condition = var.create_sg and var.source_security_group_id != "" and var.cidr_for_sg == "" 
-    error_message = "You can't specify both source_security_group_id and cidr_for_sg. Please specify only one."
-  }
 }
 
 variable "vpc_id" {
@@ -137,7 +125,7 @@ variable "fsx_secret_name" {
   description = "The name of the secure where the FSxN passwood is stored"
   type        = string
   default     = ""
-  validataion {
+  validation {
     condition = var.fsx_secret_name != ""
     error_message = "You must provide the name of the secret where the FSxN password is stored."
   }
