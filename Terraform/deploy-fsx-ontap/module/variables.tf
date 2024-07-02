@@ -114,10 +114,11 @@ variable "daily_backup_start_time" {
 }
 
 variable "disk_iops_configuration" {
-  description = "The SSD IOPS configuration for the Amazon FSx for NetApp ONTAP file system"
+  description = "The SSD IOPS configuration for the file system. Valid modes are 'AUTOMATIC' (3 iops per GB provided) or 'USER_PROVISIONED' with a maxmimum of 160,000 iops. Note, both 'mode' and 'iops' are required, so if setting to AUTOMATIC, set iops to null."
   type        = map(any)
   default     = {
     mode = "AUTOMATIC"
+    iops = null
   }
 }
 

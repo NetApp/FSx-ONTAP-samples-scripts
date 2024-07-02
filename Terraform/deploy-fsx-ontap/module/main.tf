@@ -32,7 +32,7 @@ resource "aws_fsx_ontap_file_system" "terraform-fsxn" {
   dynamic "disk_iops_configuration" {
     for_each = var.disk_iops_configuration != null ? [var.disk_iops_configuration] : []
     content {
-      iops = (disk_iops_configuration.value["iops"] != null ? disk_iops_configuration.value["iops"] : 0)
+      iops = disk_iops_configuration.value["iops"]
       mode = disk_iops_configuration.value["mode"]
     }
   }
