@@ -199,7 +199,7 @@ terraform apply
 | fsx_tput_in_MBps | The throughput capacity (in MBps) for the file system. Valid values are 128, 256, 512, 1024, 2048, and 4096. | `number` | `128` | no |
 | svm_name | The name of the Storage Virtual Machine | `string` | `"first_svm"` | no |
 | vol_info | Details for the volume creation | `map(any)` | <pre>{<br>  "cooling_period": 31,<br>  "efficiency": true,<br>  "junction_path": "/vol1",<br>  "size_mg": 1024,<br>  "tier_policy_name": "AUTO",<br>  "vol_name": "vol1"<br>}</pre> | no |
-| vpc_id | The ID of the VPC in which the FSxN fikesystem should be deployed | `string` | `"vpc-11111111"` | no |
+| vpc_id | The ID of the VPC in which the security group will be created. | `string` | `"vpc-11111111"` | no |
 
 ### Outputs
 
