@@ -17,7 +17,7 @@ Follow the instructions below to use this sample in your environment.
 
 ### What to expect
 
-Calling this terraform module will result the following: 
+Calling this terraform module will result the following:
 * Create a new AWS Security Group in your VPC with the following rules:
     - **Ingress** allow all ICMP traffic
     - **Ingress** allow nfs port 111 (both TCP and UDP)
