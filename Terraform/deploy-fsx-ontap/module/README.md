@@ -259,7 +259,7 @@ terraform apply
 | cidr_for_sg | cidr block to be used for the created security ingress rules. | `string` | `"10.0.0.0/8"` | no |
 | create_sg | Determines whether the SG should be deployed as part of this execution or not | `bool` | `true` | no |
 | daily_backup_start_time | A recurring daily time, in the format HH:MM. HH is the zero-padded hour of the day (0-23), and MM is the zero-padded minute of the hour. Requires automatic_backup_retention_days to be set. | `string` | `"00:00"` | no |
-| disk_iops_configuration | The SSD IOPS configuration for the file system. Valid modes are 'AUTOMATIC' (3 iops per GB provided) or 'USER_PROVISIONED'. If you choose USER_PROVISIONED, you must also provide the 'iops' variable set to the desired number of iops. | `map(any)` | <pre>{<br>  "mode": "AUTOMATIC"<br>}</pre> | no |
+| disk_iops_configuration | The SSD IOPS configuration for the file system. Valid modes are 'AUTOMATIC' (3 iops per GB provided) or 'USER_PROVISIONED'. NOTE: Due to a bug in the AWS FSx provider, if you want AUTOMATIC, then leave this variable empty. If you want USER_PROVIDEDED, then add a 'mode=USER_PROVISIONED' (with USER_PROVISIONED enclosed in doube quotes) and 'iops=number' where number is between 1 and 160000. | `map(any)` | `{}` | no |
 | fsx_capacity_size_gb | The storage capacity (GiB) of the FSxN file system. Valid values between 1024 and 196608 | `number` | `1024` | no |
 | fsx_deploy_type | The filesystem deployment type. Supports MULTI_AZ_1 and SINGLE_AZ_1 | `string` | `"MULTI_AZ_1"` | no |
 | fsx_maintenance_start_time | The preferred start time (in d:HH:MM format) to perform weekly maintenance, in the UTC time zone. | `string` | `"1:00:00"` | no |
