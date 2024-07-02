@@ -114,11 +114,10 @@ variable "daily_backup_start_time" {
 }
 
 variable "disk_iops_configuration" {
-  description = "The SSD IOPS configuration for the file system. Valid modes are 'AUTOMATIC' (3 iops per GB provided) or 'USER_PROVISIONED' with a maxmimum of 160,000 iops. Note, both 'mode' and 'iops' are required, so if setting to AUTOMATIC, set iops to null."
+  description = "The SSD IOPS configuration for the file system. Valid modes are 'AUTOMATIC' (3 iops per GB provided) or 'USER_PROVISIONED'. If you choose USER_PROVISIONED, you must also provide the 'iops' variable set to the desired number of iops."
   type        = map(any)
   default     = {
     mode = "AUTOMATIC"
-    iops = null
   }
 }
 
@@ -133,7 +132,7 @@ variable "fsx_secret_name" {
 }
 
 variable "route_table_ids" {
-  description = "Specifies the VPC route tables in which your file system's endpoints will be created. You should specify all VPC route tables associated with the subnets in which your clients are located. By default, Amazon FSx selects your VPC's default route table."
+  description = "Specifies the VPC route tables in which your file system's endpoints will be created. You should specify all VPC route tables associated with the subnets in which your clients are located. By default, Amazon FSx selects your VPC's default route table. Note, this variable is only used for MULTI_AZ_1 type deployments."
   type        = list(any)
   default     = null
 }
