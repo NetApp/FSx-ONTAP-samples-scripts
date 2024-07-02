@@ -21,15 +21,23 @@ Calling this terraform module will result the following:
 * Create a new AWS Security Group in your VPC with the following rules:
     - **Ingress** allow all ICMP traffic
     - **Ingress** allow nfs port 111 (both TCP and UDP)
-    - **Ingress** allow cifc TCP port 139
+    - **Ingress** allow cifs TCP port 139
     - **Ingress** allow snmp ports 161-162 (both TCP and UDP)
     - **Ingress** allow smb cifs TCP port 445
-    - **Ingress** alloe bfs mount port 635 (both TCP and UDP)
+    - **Ingress** allow nfs mount port 635 (both TCP and UDP)
+    - **Ingress** allow kerberos TCP port 749
+    - **Ingress** allow nfs port 2049 (both TCP and UDP)
+    - **Ingress** allow nfs lock and monitoring 4045-4046 (both TCP and UDP)
+    - **Ingress** allow nfs quota TCP 4049
+    - **Ingress** allow Snapmirror Intercluster communication TCP port 11104
+    - **Ingress** allow Snapmirror data transfer TCP port 11105
+    - **Ingress** allow ssh port 22
+    - **Ingress** allow https port 443
     - **Egress** allow all traffic
 * Create a new FSx for Netapp ONTAP file-system in your AWS account named "_terraform-fsxn_". The file-system will be created with the following configuration parameters:
     * 1024Gb of storage capacity
     * Multi AZ deployment type
-    * 256Mbps of throughput capacity 
+    * 128Mbps of throughput capacity 
 
 * Create a Storage Virtual Maching (SVM) in this new file-system named "_first_svm_"
 * Create a new FlexVol volume in this SVM named "_vol1_" with the following configuration parameters:
@@ -49,8 +57,8 @@ Calling this terraform module will result the following:
 
 | Name | Version |
 |------|---------|
-| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.6.6 |
-| <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 5.25 |
+| terraform | >= 1.6.6 |
+| aws provider | >= 5.25 |
 
 ### AWS Account Setup
 
@@ -68,24 +76,23 @@ Calling this terraform module will result the following:
 > [!NOTE]
 > In this sample, the AWS Credentials were configured through [AWS CLI](https://aws.amazon.com/cli/), which adds them to a shared configuration file (option 4 above). Therefore, this documentation only provides guidance on setting-up the AWS credentials with shared configuration file using AWS CLI.
 
-    #### Configure AWS Credentials using AWS CLI
+#### Configure AWS Credentials using AWS CLI
 
-    The AWS Provider can source credentials and other settings from the shared configuration and credentials files. By default, these files are located at `$HOME/.aws/config` and `$HOME/.aws/credentials` on Linux and macOS, and `"%USERPROFILE%\.aws\credentials"` on Windows.
+The AWS Provider can source credentials and other settings from the shared configuration and credentials files. By default, these files are located at `$HOME/.aws/config` and `$HOME/.aws/credentials` on Linux and macOS, and `"%USERPROFILE%\.aws\credentials"` on Windows.
 
-    There are several ways to set your credentials and configuration setting using AWS CLI. We will use [`aws configure`](https://docs.aws.amazon.com/cli/latest/reference/configure/index.html) command:
+There are several ways to set your credentials and configuration setting using AWS CLI. We will use [`aws configure`](https://docs.aws.amazon.com/cli/latest/reference/configure/index.html) command:
 
-    Run the following command to quickly set and view your credentails, region, and output format. The following example shows sample values:
+Run the following command to quickly set and view your credentails, region, and output format. The following example shows sample values:
 
-    ```shell
-    $ aws configure
-    AWS Access Key ID [None]: < YOUR-ACCESS-KEY-ID >
-    AWS Secret Access Key [None]: < YOUR-SECRET-ACCESS-KE >
-    Default region name [None]: < YOUR-PREFERRED-REGION >
-    Default output format [None]: json
-    ```
+```shell
+$ aws configure
+AWS Access Key ID [None]: < YOUR-ACCESS-KEY-ID >
+AWS Secret Access Key [None]: < YOUR-SECRET-ACCESS-KE >
+Default region name [None]: < YOUR-PREFERRED-REGION >
+Default output format [None]: json
+```
 
-    To list configuration data, use the [`aws configire list`](https://docs.aws.amazon.com/cli/latest/reference/configure/list.html) command. This command lists the profile, access key, secret key, and region configuration information used for the specified profile. For each configuration item, it shows the value, where the configuration value was retrieved, and the configuration variable name.
-
+To list configuration data, use the [`aws configire list`](https://docs.aws.amazon.com/cli/latest/reference/configure/list.html) command. This command lists the profile, access key, secret key, and region configuration information used for the specified profile. For each configuration item, it shows the value, where the configuration value was retrieved, and the configuration variable name.
 
 ## Usage
 
@@ -250,7 +257,7 @@ terraform apply -y
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
-| fsx_admin_password | The ONTAP administrative password for the fsxadmin user that you can use to administer your file system using the ONTAP CLI and REST API | `string` | n/a | yes |
+| aws_secretsmanager_region | The AWS region where the secret is stored. | `string` | `"us-east-2"` | No |
 | backup_retention_days | The number of days to retain automatic backups. Setting this to 0 disables automatic backups. You can retain automatic backups for a maximum of 90 days. | `number` | `0` | no |
 | cidr_for_sg | cide block to be used for the ingress rules | `string` | `"0.0.0.0/0"` | no |
 | create_sg | Determines whether the SG should be deployed as part of this execution or not | `bool` | `false` | no |
@@ -260,6 +267,7 @@ terraform apply -y
 | fsx_deploy_type | The filesystem deployment type. Supports MULTI_AZ_1 and SINGLE_AZ_1 | `string` | `"MULTI_AZ_1"` | no |
 | fsx_maintenance_start_time | The preferred start time (in d:HH:MM format) to perform weekly maintenance, in the UTC time zone. | `string` | `"1:00:00"` | no |
 | fsx_name | The deployed filesystem name | `string` | `"terraform-fsxn"` | no |
+| fsx_secret_name | The name of the AWS SecretManager secret that holds the ONTAP administrative password for the fsxadmin user that you can use to administer your file system using the ONTAP CLI and REST API. | `string` | `"fsx_secret"` | Yes |
 | fsx_subnets | A list of IDs for the subnets that the file system will be accessible from. Up to 2 subnets can be provided. | `map(any)` | <pre>{<br>  "primarysub": "",<br>  "secondarysub": ""<br>}</pre> | no |
 | fsx_tput_in_MBps | The throughput capacity (in MBps) for the file system. Valid values are 128, 256, 512, 1024, 2048, and 4096. | `number` | `256` | no |
 | kms_key_id | ARN for the KMS Key to encrypt the file system at rest, Defaults to an AWS managed KMS Key. | `string` | `null` | no |

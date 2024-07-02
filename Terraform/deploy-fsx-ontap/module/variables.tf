@@ -1,33 +1,73 @@
+/*
+ * If you want to set the nam eof your FSxN file system, you must set a "Name"
+ * tag equal to the desired name. Feel free to add additional tags as needed.
+ */
+variable "tags" {
+  description = "Tags to be applied to the resources"
+  type        = map(any)
+  default = {
+     "Name" = "terraform-fsxn"
+  }
+}
+
 variable "create_sg" {
   description = "Determines whether the SG should be deployed as part of this execution or not"
   type        = bool
-  default     = false
+  default     = true
 }
 
+variable "security_group_id" {
+  description = "If you are not creating the SG, provide the ID of the SG to be used"
+  type        = string
+  default     = ""
+  validation {
+    condition = !var.create_sg and var.security_group_id != ""
+    error_message = "You must provide the ID of the security group to be used."
+  }
+}
+
+/*
+ * If you decide to allow this module to create a security group, you can specify
+ * either a CIDR block to be used for the security group ingress rules OR the ID of
+ * an security group to be used as the source to the ingress rules.
+ * You can't specify both.
+ */
 variable "cidr_for_sg" {
-  description = "cide block to be used for the ingress rules"
+  description = "cidr block to be used for the created security ingress rules."
   type        = string
-  default     = "0.0.0.0/0"
+  default     = "10.0.0.0/8"
+  validation  {
+    condition = var.create_sg and var.source_security_group_id == "" and var.cidr_for_sg != "" 
+    error_message = "You can't specify both source_security_group_id and cidr_for_sg. Please specify only one."
+  }
 }
 
-variable "fsx_name" {
-  description = "The deployed filesystem name"
+variable "source_security_group_id" {
+  description = "The ID of the security group to allow access to the FSxN file system.
   type        = string
-  default     = "terraform-fsxn"
+  default     = ""
+  validation  {
+    condition = var.create_sg and var.source_security_group_id != "" and var.cidr_for_sg == "" 
+    error_message = "You can't specify both source_security_group_id and cidr_for_sg. Please specify only one."
+  }
 }
 
 variable "vpc_id" {
   description = "The ID of the VPC in which the FSxN fikesystem should be deployed"
   type        = string
-  default     = "vpc-111111111"
+  default     = ""
+  validation  {
+    condition = var.vpc_id != ""
+    error_message = "You must provide the ID of the VPC in which the FSxN file system should be deployed."
+  }
 }
 
 variable "fsx_subnets" {
-  description = "A list of IDs for the subnets that the file system will be accessible from. Up to 2 subnets can be provided."
-  type        = map(any)
+  description = "The subnets from where the file system will be accessible from. For MULTI_AZ_1 deployment type, provide both primvary and secondary subnets. For SINGLE_AZ_1 deployment type, only the primary subnet is used."
+  type        = map(string)
   default = {
-       "primarysub" = ""
-       "secondarysub" = ""
+       "primarysub" = "subnet-111111111"
+       "secondarysub" = "subnet-222222222"
   }
 }
 
@@ -35,18 +75,30 @@ variable "fsx_capacity_size_gb" {
   description = "The storage capacity (GiB) of the FSxN file system. Valid values between 1024 and 196608"
   type        = number
   default     = 1024
+  validation {
+    condition = var.fsx_capacity_size_gb >= 1024 && var.fsx_capacity_size_gb <= 196608
+    error_message = "Invalid capacity size. Valid values are between 1024 and 196608."
+  }
 }
 
 variable "fsx_deploy_type" {
   description = "The filesystem deployment type. Supports MULTI_AZ_1 and SINGLE_AZ_1"
   type        = string 
   default     = "MULTI_AZ_1"
+  validation {
+    condition = contains(["MULTI_AZ_1", "SINGLE_AZ_1"], var.fsx_deploy_type)
+    error_message = "Invalid deployment type. Valid values are MULTI_AZ_1 and SINGLE_AZ_1."
+  }
 }
        
 variable "fsx_tput_in_MBps" {
   description = "The throughput capacity (in MBps) for the file system. Valid values are 128, 256, 512, 1024, 2048, and 4096."
   type        = number
-  default     = 256
+  default     = 128
+  validation {
+    condition = contains([128, 256, 512, 1024, 2048, 4096], var.fsx_tput_in_MBps)
+    error_message = "Invalid throughput value. Valid values are 128, 256, 512, 1024, 2048, and 4096."
+ }
 }
 
 variable "fsx_maintenance_start_time" {
@@ -76,18 +128,19 @@ variable "daily_backup_start_time" {
 variable "disk_iops_configuration" {
   description = "The SSD IOPS configuration for the Amazon FSx for NetApp ONTAP file system"
   type        = map(any)
-  default     = null
+  default     = {
+    mode = "AUTOMATIC"
+  }
 }
 
-variable "fsx_admin_password" {
-  description = "The ONTAP administrative password for the fsxadmin user that you can use to administer your file system using the ONTAP CLI and REST API"
+variable "fsx_secret_name" {
+  description = "The name of the secure where the FSxN passwood is stored"
   type        = string
-}
-
-variable "storage_type" {
-  description = "The filesystem storage type"
-  type        = string
-  default     = "SSD"
+  default     = ""
+  validataion {
+    condition = var.fsx_secret_name != ""
+    error_message = "You must provide the name of the secret where the FSxN password is stored."
+  }
 }
 
 variable "route_table_ids" {
@@ -103,21 +156,21 @@ variable "svm_name" {
 }
 
 variable "root_vol_sec_style" {
-  description = "Specifies the root volume security style, Valid values are UNIX, NTFS, and MIXED. All volumes created under this SVM will inherit the root security style unless the security style is specified on the volume."
+  description = "Specifies the root volume security style, Valid values are UNIX, NTFS, and MIXED (although MIXED is not recommended). All volumes created under this SVM will inherit the root security style unless the security style is specified on the volume."
   type        = string
   default     = "UNIX"
 }
 
 variable "vol_info" {
   description = "Details for the volume creation"
-  type        = map(any)
+  type = map(any)
   default = {
-   "vol_name"             = "vol1"
-   "junction_path"        = "/vol1"
-	 "size_mg"              = 1024
-	 "efficiency"           = true
-	 "tier_policy_name"     = "AUTO"
-	 "cooling_period"       = 31
+   "vol_name"              = "vol1"
+   "junction_path"         = "/vol1"
+	 "size_mg"               = 1024
+	 "efficiency"            = true
+	 "tier_policy_name"      = "AUTO"
+	 "cooling_period"        = 31
     "vol_type"             = "RW"
     "bypass_sl_retention"  = false
     "copy_tags_to_backups" = false
@@ -129,13 +182,5 @@ variable "vol_info" {
 variable "vol_snapshot_policy" {
   description = "Specifies the snapshot policy for the volume"
   type        = map(any)
-  default = null
-}
-
-variable "tags" {
-  description = "Tags to be applied to the resources"
-  type        = map(any)
-  default = {
-     "Name" = "terraform-fsxn"
-  }
+  default     = null
 }
