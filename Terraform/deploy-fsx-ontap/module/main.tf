@@ -19,7 +19,7 @@ resource "aws_fsx_ontap_file_system" "terraform-fsxn" {
 
   // OPTIONAL PARAMETERS
   storage_capacity                  = var.capacity_size_gb
-  security_group_ids                = var.create_sg ? [element(aws_security_group.fsx_sg.*.id, 0)] : [var.security_group_id]
+  security_group_ids                = var.create_sg ? [element(aws_security_group.fsx_sg[*].id, 0)] : [var.security_group_id]
   deployment_type                   = var.deployment_type
   throughput_capacity               = var.throughput_in_MBps
   weekly_maintenance_start_time     = var.maintenance_start_time
