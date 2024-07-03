@@ -256,26 +256,25 @@ terraform apply
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
 | backup_retention_days | The number of days to retain automatic backups. Setting this to 0 disables automatic backups. You can retain automatic backups for a maximum of 90 days. | `number` | `0` | no |
-| cidr_for_sg | cidr block to be used for the created security ingress rules. | `string` | `"10.0.0.0/8"` | no |
+| capacity_size_gb | The storage capacity (GiB) of the FSxN file system. Valid values between 1024 and 196608 | `number` | `1024` | no |
+| cidr_for_sg | cidr block to be used for the created security ingress rules. Set to an empty string if you want to use the source_sg_id as the source. | `string` | `""` | no |
 | create_sg | Determines whether the SG should be deployed as part of this deployment or not. | `bool` | `true` | no |
 | daily_backup_start_time | A recurring daily time, in the format HH:MM. HH is the zero-padded hour of the day (0-23), and MM is the zero-padded minute of the hour. Requires automatic_backup_retention_days to be set. | `string` | `"00:00"` | no |
+| deployment_type | The filesystem deployment type. Supports MULTI_AZ_1 and SINGLE_AZ_1 | `string` | `"MULTI_AZ_1"` | no |
 | disk_iops_configuration | The SSD IOPS configuration for the file system. Valid modes are 'AUTOMATIC' (3 iops per GB provided) or 'USER_PROVISIONED'. NOTE: Due to a bug in the AWS FSx provider, if you want AUTOMATIC, then leave this variable empty. If you want USER_PROVIDEDED, then add a 'mode=USER_PROVISIONED' (with USER_PROVISIONED enclosed in doube quotes) and 'iops=number' where number is between 1 and 160000. | `map(any)` | `{}` | no |
-| fsx_capacity_size_gb | The storage capacity (GiB) of the FSxN file system. Valid values between 1024 and 196608 | `number` | `1024` | no |
-| fsx_deploy_type | The filesystem deployment type. Supports MULTI_AZ_1 and SINGLE_AZ_1 | `string` | `"MULTI_AZ_1"` | no |
-| fsx_maintenance_start_time | The preferred start time (in d:HH:MM format) to perform weekly maintenance, in the UTC time zone. | `string` | `"1:00:00"` | no |
-| fsx_name | The name to assigne to the FSxN file system. | `string` | `"fsx1"` | no |
-| fsx_secret_name | The name of the secure where the FSxN passwood is stored. | `string` | `""` | no |
-| fsx_subnets | The subnets from where the file system will be accessible from. For MULTI_AZ_1 deployment type, provide both primvary and secondary subnets. For SINGLE_AZ_1 deployment type, only the primary subnet is used. | `map(string)` | <pre>{<br>  "primarysub": "subnet-111111111",<br>  "secondarysub": "subnet-222222222"<br>}</pre> | no |
-| fsx_tput_in_MBps | The throughput capacity (in MBps) for the file system. Valid values are 128, 256, 512, 1024, 2048, and 4096. | `number` | `128` | no |
 | kms_key_id | ARN for the KMS Key to encrypt the file system at rest, Defaults to an AWS managed KMS Key. | `string` | `null` | no |
+| maintenance_start_time | The preferred start time (in d:HH:MM format) to perform weekly maintenance, in the UTC time zone. | `string` | `"1:00:00"` | no |
+| name | The name to assigne to the FSxN file system. | `string` | `"fsx1"` | no |
 | root_vol_sec_style | Specifies the root volume security style, Valid values are UNIX, NTFS, and MIXED (although MIXED is not recommended). All volumes created under this SVM will inherit the root security style unless the security style is specified on the volume. | `string` | `"UNIX"` | no |
 | route_table_ids | Specifies the VPC route tables in which your file system's endpoints will be created. You should specify all VPC route tables associated with the subnets in which your clients are located. By default, Amazon FSx selects your VPC's default route table. Note, this variable is only used for MULTI_AZ_1 type deployments. | `list(any)` | `null` | no |
+| secret_name | The name of the secure where the FSxN passwood is stored. | `string` | `""` | no |
 | security_group_id | If you are not creating the security group, provide the ID of the security group to be used. | `string` | `""` | no |
-| source_security_group_id | The ID of the security group to allow access to the FSxN file system. | `string` | `""` | no |
+| source_sg_id | The ID of the security group to allow access to the FSxN file system. Set to an empty string if you want to use the cidr_for_sg as the source. | `string` | `""` | no |
+| subnets | The subnets from where the file system will be accessible from. For MULTI_AZ_1 deployment type, provide both primvary and secondary subnets. For SINGLE_AZ_1 deployment type, only the primary subnet is used. | `map(string)` | <pre>{<br>  "primarysub": "subnet-111111111",<br>  "secondarysub": "subnet-222222222"<br>}</pre> | no |
 | svm_name | The name of the Storage Virtual Machine, (a.k.a. vserver). | `string` | `"first_svm"` | no |
 | tags | Tags to be applied to the FSxN file system. | `map(any)` | `{}` | no |
+| throughput_in_MBps | The throughput capacity (in MBps) for the file system. Valid values are 128, 256, 512, 1024, 2048, and 4096. | `number` | `128` | no |
 | vol_info | Details for the volume creation | `map(any)` | <pre>{<br>  "cooling_period": 31,<br>  "copy_tags_to_backups": false,<br>  "efficiency": true,<br>  "junction_path": "/vol1",<br>  "sec_style": "UNIX",<br>  "size_mg": 1024,<br>  "skip_final_backup": false,<br>  "snapshot_policy": "default",<br>  "tier_policy_name": "AUTO",<br>  "vol_name": "vol1",<br>  "vol_type": "RW"<br>}</pre> | no |
-| vol_snapshot_policy | Specifies the snapshot policy for the volume | `map(any)` | `null` | no |
 | vpc_id | The ID of the VPC in where the security group will be created. | `string` | `""` | no |
 
 ### Outputs
