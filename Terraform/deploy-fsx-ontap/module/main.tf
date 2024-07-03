@@ -14,21 +14,21 @@
 
 resource "aws_fsx_ontap_file_system" "terraform-fsxn" {
   // REQUIRED PARAMETERS 
-  subnet_ids = (var.fsx_deploy_type == "MULTI_AZ_1" ? [var.fsx_subnets["primarysub"], var.fsx_subnets["secondarysub"]] : [var.fsx_subnets["primarysub"]])
-  preferred_subnet_id = var.fsx_subnets["primarysub"]
+  subnet_ids = (var.deployment_type == "MULTI_AZ_1" ? [var.subnets["primarysub"], var.subnets["secondarysub"]] : [var.subnets["primarysub"]])
+  preferred_subnet_id = var.subnets["primarysub"]
 
   // OPTIONAL PARAMETERS
-  storage_capacity                  = var.fsx_capacity_size_gb
+  storage_capacity                  = var.capacity_size_gb
   security_group_ids                = var.create_sg ? [element(aws_security_group.fsx_sg.*.id, 0)] : [var.security_group_id]
-  deployment_type                   = var.fsx_deploy_type
-  throughput_capacity               = var.fsx_tput_in_MBps
-  weekly_maintenance_start_time     = var.fsx_maintenance_start_time
+  deployment_type                   = var.deployment_type
+  throughput_capacity               = var.throughput_in_MBps
+  weekly_maintenance_start_time     = var.maintenance_start_time
   kms_key_id                        = var.kms_key_id
   automatic_backup_retention_days   = var.backup_retention_days
   daily_automatic_backup_start_time = var.daily_backup_start_time
   fsx_admin_password                = data.aws_secretsmanager_secret_version.fsx_password.secret_string
-  route_table_ids                   = (var.fsx_deploy_type == "MULTI_AZ_1" ? var.route_table_ids : null)
-  tags                              = merge(var.tags, {Name = var.fsx_name })
+  route_table_ids                   = (var.deployment_type == "MULTI_AZ_1" ? var.route_table_ids : null)
+  tags                              = merge(var.tags, {Name = var.name })
   dynamic "disk_iops_configuration" {
     for_each = length(var.disk_iops_configuration) > 0 ? [var.disk_iops_configuration] : []
 
@@ -40,8 +40,8 @@ resource "aws_fsx_ontap_file_system" "terraform-fsxn" {
 
   lifecycle {
     precondition {
-      condition = !var.create_sg || (var.cidr_for_sg != "" && var.source_security_group_id == "" || var.cidr_for_sg == "" && var.source_security_group_id != "")
-      error_message = "You must specify EITHER cidr_block OR source_security_group_id when creating a security group, not both."
+      condition = !var.create_sg || (var.cidr_for_sg != "" && var.source_sg_id == "" || var.cidr_for_sg == "" && var.source_sg_id != "")
+      error_message = "You must specify EITHER cidr_block OR source_sg_id when creating a security group, not both."
     }
     precondition {
       condition = var.create_sg || var.security_group_id != ""
@@ -81,7 +81,7 @@ resource "aws_fsx_ontap_volume" "myvol" {
 #
 # The next two data blocks retrieve the secret from Secrets Manager.
 data "aws_secretsmanager_secret" "fsx_secret" {
-  name = var.fsx_secret_name
+  name = var.secret_name
 }
 data "aws_secretsmanager_secret_version" "fsx_password" {
   secret_id = data.aws_secretsmanager_secret.fsx_secret.id

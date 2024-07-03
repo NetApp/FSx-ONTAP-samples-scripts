@@ -4,7 +4,7 @@ variable "tags" {
   default = {}
 }
 
-variable "fsx_name" {
+variable "name" {
   description = "The name to assigne to the FSxN file system."
   type        = string
   default     = "fsx1"
@@ -29,13 +29,13 @@ variable "security_group_id" {
  * You can't specify both.
  */
 variable "cidr_for_sg" {
-  description = "cidr block to be used for the created security ingress rules."
+  description = "cidr block to be used for the created security ingress rules. Set to an empty string if you want to use the source_sg_id as the source."
   type        = string
-  default     = "10.0.0.0/8"
+  default     = ""
 }
 
-variable "source_security_group_id" {
-  description = "The ID of the security group to allow access to the FSxN file system."
+variable "source_sg_id" {
+  description = "The ID of the security group to allow access to the FSxN file system. Set to an empty string if you want to use the cidr_for_sg as the source."
   type        = string
   default     = ""
 }
@@ -46,7 +46,7 @@ variable "vpc_id" {
   default     = ""
 }
 
-variable "fsx_subnets" {
+variable "subnets" {
   description = "The subnets from where the file system will be accessible from. For MULTI_AZ_1 deployment type, provide both primvary and secondary subnets. For SINGLE_AZ_1 deployment type, only the primary subnet is used."
   type        = map(string)
   default = {
@@ -55,37 +55,37 @@ variable "fsx_subnets" {
   }
 }
 
-variable "fsx_capacity_size_gb" {
+variable "capacity_size_gb" {
   description = "The storage capacity (GiB) of the FSxN file system. Valid values between 1024 and 196608"
   type        = number
   default     = 1024
   validation {
-    condition = var.fsx_capacity_size_gb >= 1024 && var.fsx_capacity_size_gb <= 196608
+    condition = var.capacity_size_gb >= 1024 && var.capacity_size_gb <= 196608
     error_message = "Invalid capacity size. Valid values are between 1024 and 196608."
   }
 }
 
-variable "fsx_deploy_type" {
+variable "deployment_type" {
   description = "The filesystem deployment type. Supports MULTI_AZ_1 and SINGLE_AZ_1"
   type        = string 
   default     = "MULTI_AZ_1"
   validation {
-    condition = contains(["MULTI_AZ_1", "SINGLE_AZ_1"], var.fsx_deploy_type)
+    condition = contains(["MULTI_AZ_1", "SINGLE_AZ_1"], var.deployment_type)
     error_message = "Invalid deployment type. Valid values are MULTI_AZ_1 and SINGLE_AZ_1."
   }
 }
        
-variable "fsx_tput_in_MBps" {
+variable "throughput_in_MBps" {
   description = "The throughput capacity (in MBps) for the file system. Valid values are 128, 256, 512, 1024, 2048, and 4096."
   type        = number
   default     = 128
   validation {
-    condition = contains([128, 256, 512, 1024, 2048, 4096], var.fsx_tput_in_MBps)
+    condition = contains([128, 256, 512, 1024, 2048, 4096], var.throughput_in_MBps)
     error_message = "Invalid throughput value. Valid values are 128, 256, 512, 1024, 2048, and 4096."
  }
 }
 
-variable "fsx_maintenance_start_time" {
+variable "maintenance_start_time" {
   description = "The preferred start time (in d:HH:MM format) to perform weekly maintenance, in the UTC time zone."
   type        = string
   default     = "1:00:00"
@@ -119,12 +119,12 @@ variable "disk_iops_configuration" {
   default     = {}
 }
 
-variable "fsx_secret_name" {
+variable "secret_name" {
   description = "The name of the secure where the FSxN passwood is stored."
   type        = string
   default     = ""
   validation {
-    condition = var.fsx_secret_name != ""
+    condition = var.secret_name != ""
     error_message = "You must provide the name of the secret where the FSxN password is stored."
   }
 }
@@ -163,10 +163,4 @@ variable "vol_info" {
     "skip_final_backup"    = false
     "snapshot_policy"      = "default"
   }
-}
-
-variable "vol_snapshot_policy" {
-  description = "Specifies the snapshot policy for the volume"
-  type        = map(any)
-  default     = null
 }
