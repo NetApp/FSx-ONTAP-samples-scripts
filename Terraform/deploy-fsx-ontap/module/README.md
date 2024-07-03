@@ -21,15 +21,23 @@ Calling this terraform module will result the following:
 * Create a new AWS Security Group in your VPC with the following rules:
     - **Ingress** allow all ICMP traffic
     - **Ingress** allow nfs port 111 (both TCP and UDP)
-    - **Ingress** allow cifc TCP port 139
+    - **Ingress** allow cifs TCP port 139
     - **Ingress** allow snmp ports 161-162 (both TCP and UDP)
     - **Ingress** allow smb cifs TCP port 445
-    - **Ingress** alloe bfs mount port 635 (both TCP and UDP)
+    - **Ingress** allow nfs mount port 635 (both TCP and UDP)
+    - **Ingress** allow kerberos TCP port 749
+    - **Ingress** allow nfs port 2049 (both TCP and UDP)
+    - **Ingress** allow nfs lock and monitoring 4045-4046 (both TCP and UDP)
+    - **Ingress** allow nfs quota TCP 4049
+    - **Ingress** allow Snapmirror Intercluster communication TCP port 11104
+    - **Ingress** allow Snapmirror data transfer TCP port 11105
+    - **Ingress** allow ssh port 22
+    - **Ingress** allow https port 443
     - **Egress** allow all traffic
 * Create a new FSx for Netapp ONTAP file-system in your AWS account named "_terraform-fsxn_". The file-system will be created with the following configuration parameters:
     * 1024Gb of storage capacity
     * Multi AZ deployment type
-    * 256Mbps of throughput capacity 
+    * 128Mbps of throughput capacity 
 
 * Create a Storage Virtual Maching (SVM) in this new file-system named "_first_svm_"
 * Create a new FlexVol volume in this SVM named "_vol1_" with the following configuration parameters:
@@ -49,8 +57,8 @@ Calling this terraform module will result the following:
 
 | Name | Version |
 |------|---------|
-| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.6.6 |
-| <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 5.25 |
+| terraform | >= 1.6.6 |
+| aws provider | >= 5.25 |
 
 ### AWS Account Setup
 
@@ -68,24 +76,23 @@ Calling this terraform module will result the following:
 > [!NOTE]
 > In this sample, the AWS Credentials were configured through [AWS CLI](https://aws.amazon.com/cli/), which adds them to a shared configuration file (option 4 above). Therefore, this documentation only provides guidance on setting-up the AWS credentials with shared configuration file using AWS CLI.
 
-    #### Configure AWS Credentials using AWS CLI
+#### Configure AWS Credentials using AWS CLI
 
-    The AWS Provider can source credentials and other settings from the shared configuration and credentials files. By default, these files are located at `$HOME/.aws/config` and `$HOME/.aws/credentials` on Linux and macOS, and `"%USERPROFILE%\.aws\credentials"` on Windows.
+The AWS Provider can source credentials and other settings from the shared configuration and credentials files. By default, these files are located at `$HOME/.aws/config` and `$HOME/.aws/credentials` on Linux and macOS, and `"%USERPROFILE%\.aws\credentials"` on Windows.
 
-    There are several ways to set your credentials and configuration setting using AWS CLI. We will use [`aws configure`](https://docs.aws.amazon.com/cli/latest/reference/configure/index.html) command:
+There are several ways to set your credentials and configuration setting using AWS CLI. We will use [`aws configure`](https://docs.aws.amazon.com/cli/latest/reference/configure/index.html) command:
 
-    Run the following command to quickly set and view your credentails, region, and output format. The following example shows sample values:
+Run the following command to quickly set and view your credentails, region, and output format. The following example shows sample values:
 
-    ```shell
-    $ aws configure
-    AWS Access Key ID [None]: < YOUR-ACCESS-KEY-ID >
-    AWS Secret Access Key [None]: < YOUR-SECRET-ACCESS-KE >
-    Default region name [None]: < YOUR-PREFERRED-REGION >
-    Default output format [None]: json
-    ```
+```shell
+$ aws configure
+AWS Access Key ID [None]: < YOUR-ACCESS-KEY-ID >
+AWS Secret Access Key [None]: < YOUR-SECRET-ACCESS-KE >
+Default region name [None]: < YOUR-PREFERRED-REGION >
+Default output format [None]: json
+```
 
-    To list configuration data, use the [`aws configire list`](https://docs.aws.amazon.com/cli/latest/reference/configure/list.html) command. This command lists the profile, access key, secret key, and region configuration information used for the specified profile. For each configuration item, it shows the value, where the configuration value was retrieved, and the configuration variable name.
-
+To list configuration data, use the [`aws configire list`](https://docs.aws.amazon.com/cli/latest/reference/configure/list.html) command. This command lists the profile, access key, secret key, and region configuration information used for the specified profile. For each configuration item, it shows the value, where the configuration value was retrieved, and the configuration variable name.
 
 ## Usage
 
@@ -126,9 +133,9 @@ module "fsxontap" {
         primarysub   = "<YOUR-PRIMARY-SUBNET>"
         secondarysub = "<YOUR-SECONDAY-SUBNET>"
     }
-    create_sg = <true / false> // true to create Security Group for the Fs / false otherwise
+    create_sg = true // true to create Security Group for the Fs / false otherwise
     cidr_for_sg = "<YOUR-CIDR-BLOCK>"
-    fsx_admin_password = "<YOUR_PASSWORD>"
+    fsx_secret_name = "<YOUR_SECRET>" // The name of a secret in AWS Secrets Manager that contains the FSxN admin password.
     tags = {
         Terraform   = "true"
         Environment = "dev"
@@ -140,7 +147,7 @@ module "fsxontap" {
 > To Override default values assigned to other variables in this module, add them to this source block as well. The above source block includes the minimum requirements only.
 
 > [!NOTE]
-> The default deployment type is: MULTI_AZ_1. For SINGLE AZ deployment, override the `fsx_deploy_type` variable in the module block, and make sure to only provide one subnet as `primarysub`
+> The default deployment type is: MULTI_AZ_1. For SINGLE AZ deployment, set the `fsx_deploy_type` variable to SINGLE_AZ_1 in the module block.
 
 Please read the vriables descriptions in `variables.tf` file for more information regarding the variables passed to the module block.
 
@@ -159,14 +166,14 @@ terraform {
 }
 
 provider "aws" {
-    shared_config_files      = ["$HOME/.aws/conf"]
-    shared_credentials_files = ["$HOME/.aws/credentials"]
     region = "us-west-2"
 }
 
 
 module "fsxontap" {
     source = "github.com/Netapp/FSx-ONTAP-samples-scripts/Terraform/deploy-fsx-ontap/module"
+
+    name = "fsxontap"
 
     vpc_id = "vpc-111111111"
     fsx_subnets = {
@@ -175,15 +182,13 @@ module "fsxontap" {
     }
     create_sg = true
     cidr_for_sg = "10.0.0.0/8"
-    fsx_admin_password = "yourpassword"
+    fsx_secret_name = "fsx_secret"
     route_table_ids = ["rtb-111111"]
     tags = {
         Terraform   = "true"
         Environment = "dev"
     }
 }
-
-
 ```
 
 ### Install the module
@@ -233,7 +238,7 @@ Ensure that the proposed changes match what you expected before you apply the ch
 
 Once confirmed, run the `terraform apply` command followed by `yes` to execute the Terrafom code and apply the changes proposed in the `plan` step:
 ```shell
-terraform apply -y
+terraform apply
 ```
 
 <!-- BEGIN_TF_DOCS -->
@@ -250,27 +255,27 @@ terraform apply -y
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
-| fsx_admin_password | The ONTAP administrative password for the fsxadmin user that you can use to administer your file system using the ONTAP CLI and REST API | `string` | n/a | yes |
 | backup_retention_days | The number of days to retain automatic backups. Setting this to 0 disables automatic backups. You can retain automatic backups for a maximum of 90 days. | `number` | `0` | no |
-| cidr_for_sg | cide block to be used for the ingress rules | `string` | `"0.0.0.0/0"` | no |
-| create_sg | Determines whether the SG should be deployed as part of this execution or not | `bool` | `false` | no |
+| capacity_size_gb | The storage capacity (GiB) of the FSxN file system. Valid values between 1024 and 196608 | `number` | `1024` | no |
+| cidr_for_sg | cidr block to be used for the created security ingress rules. Set to an empty string if you want to use the source_sg_id as the source. | `string` | `""` | no |
+| create_sg | Determines whether the SG should be deployed as part of this deployment or not. | `bool` | `true` | no |
 | daily_backup_start_time | A recurring daily time, in the format HH:MM. HH is the zero-padded hour of the day (0-23), and MM is the zero-padded minute of the hour. Requires automatic_backup_retention_days to be set. | `string` | `"00:00"` | no |
-| disk_iops_configuration | The SSD IOPS configuration for the Amazon FSx for NetApp ONTAP file system | `map(any)` | `null` | no |
-| fsx_capacity_size_gb | The storage capacity (GiB) of the FSxN file system. Valid values between 1024 and 196608 | `number` | `1024` | no |
-| fsx_deploy_type | The filesystem deployment type. Supports MULTI_AZ_1 and SINGLE_AZ_1 | `string` | `"MULTI_AZ_1"` | no |
-| fsx_maintenance_start_time | The preferred start time (in d:HH:MM format) to perform weekly maintenance, in the UTC time zone. | `string` | `"1:00:00"` | no |
-| fsx_name | The deployed filesystem name | `string` | `"terraform-fsxn"` | no |
-| fsx_subnets | A list of IDs for the subnets that the file system will be accessible from. Up to 2 subnets can be provided. | `map(any)` | <pre>{<br>  "primarysub": "",<br>  "secondarysub": ""<br>}</pre> | no |
-| fsx_tput_in_MBps | The throughput capacity (in MBps) for the file system. Valid values are 128, 256, 512, 1024, 2048, and 4096. | `number` | `256` | no |
+| deployment_type | The filesystem deployment type. Supports MULTI_AZ_1 and SINGLE_AZ_1 | `string` | `"MULTI_AZ_1"` | no |
+| disk_iops_configuration | The SSD IOPS configuration for the file system. Valid modes are 'AUTOMATIC' (3 iops per GB provided) or 'USER_PROVISIONED'. NOTE: Due to a bug in the AWS FSx provider, if you want AUTOMATIC, then leave this variable empty. If you want USER_PROVIDEDED, then add a 'mode=USER_PROVISIONED' (with USER_PROVISIONED enclosed in doube quotes) and 'iops=number' where number is between 1 and 160000. | `map(any)` | `{}` | no |
 | kms_key_id | ARN for the KMS Key to encrypt the file system at rest, Defaults to an AWS managed KMS Key. | `string` | `null` | no |
-| root_vol_sec_style | Specifies the root volume security style, Valid values are UNIX, NTFS, and MIXED. All volumes created under this SVM will inherit the root security style unless the security style is specified on the volume. | `string` | `"UNIX"` | no |
-| route_table_ids | Specifies the VPC route tables in which your file system's endpoints will be created. You should specify all VPC route tables associated with the subnets in which your clients are located. By default, Amazon FSx selects your VPC's default route table. | `list(any)` | `null` | no |
-| storage_type | The filesystem storage type | `string` | `"SSD"` | no |
-| svm_name | The name of the Storage Virtual Machine | `string` | `"first_svm"` | no |
-| tags | Tags to be applied to the resources | `map(any)` | <pre>{<br>  "Name": "terraform-fsxn"<br>}</pre> | no |
-| vol_info | Details for the volume creation | `map(any)` | <pre>{<br>  "bypass_sl_retention": false,<br>  "cooling_period": 31,<br>  "copy_tags_to_backups": false,<br>  "efficiency": true,<br>  "junction_path": "/vol1",<br>  "sec_style": "UNIX",<br>  "size_mg": 1024,<br>  "skip_final_backup": false,<br>  "tier_policy_name": "AUTO",<br>  "vol_name": "vol1",<br>  "vol_type": "RW"<br>}</pre> | no |
-| vol_snapshot_policy | Specifies the snapshot policy for the volume | `map(any)` | `null` | no |
-| vpc_id | The ID of the VPC in which the FSxN fikesystem should be deployed | `string` | `"vpc-111111111"` | no |
+| maintenance_start_time | The preferred start time (in d:HH:MM format) to perform weekly maintenance, in the UTC time zone. | `string` | `"1:00:00"` | no |
+| name | The name to assigne to the FSxN file system. | `string` | `"fsx1"` | no |
+| root_vol_sec_style | Specifies the root volume security style, Valid values are UNIX, NTFS, and MIXED (although MIXED is not recommended). All volumes created under this SVM will inherit the root security style unless the security style is specified on the volume. | `string` | `"UNIX"` | no |
+| route_table_ids | Specifies the VPC route tables in which your file system's endpoints will be created. You should specify all VPC route tables associated with the subnets in which your clients are located. By default, Amazon FSx selects your VPC's default route table. Note, this variable is only used for MULTI_AZ_1 type deployments. | `list(any)` | `null` | no |
+| secret_name | The name of the secure where the FSxN passwood is stored. | `string` | `""` | no |
+| security_group_id | If you are not creating the security group, provide the ID of the security group to be used. | `string` | `""` | no |
+| source_sg_id | The ID of the security group to allow access to the FSxN file system. Set to an empty string if you want to use the cidr_for_sg as the source. | `string` | `""` | no |
+| subnets | The subnets from where the file system will be accessible from. For MULTI_AZ_1 deployment type, provide both primvary and secondary subnets. For SINGLE_AZ_1 deployment type, only the primary subnet is used. | `map(string)` | <pre>{<br>  "primarysub": "subnet-111111111",<br>  "secondarysub": "subnet-222222222"<br>}</pre> | no |
+| svm_name | The name of the Storage Virtual Machine, (a.k.a. vserver). | `string` | `"first_svm"` | no |
+| tags | Tags to be applied to the FSxN file system. | `map(any)` | `{}` | no |
+| throughput_in_MBps | The throughput capacity (in MBps) for the file system. Valid values are 128, 256, 512, 1024, 2048, and 4096. | `number` | `128` | no |
+| vol_info | Details for the volume creation | `map(any)` | <pre>{<br>  "cooling_period": 31,<br>  "copy_tags_to_backups": false,<br>  "efficiency": true,<br>  "junction_path": "/vol1",<br>  "sec_style": "UNIX",<br>  "size_mg": 1024,<br>  "skip_final_backup": false,<br>  "snapshot_policy": "default",<br>  "tier_policy_name": "AUTO",<br>  "vol_name": "vol1",<br>  "vol_type": "RW"<br>}</pre> | no |
+| vpc_id | The ID of the VPC in where the security group will be created. | `string` | `""` | no |
 
 ### Outputs
 

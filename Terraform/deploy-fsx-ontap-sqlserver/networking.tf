@@ -28,11 +28,11 @@ resource "aws_eip" "nat_eip" {
 # NAT
 resource "aws_nat_gateway" "nat" {
   allocation_id = aws_eip.nat_eip.id
-  subnet_id     = element(aws_subnet.public_subnet.*.id, 0)
+  subnet_id     = element(aws_subnet.public_subnet[*].id, 0)
 
   tags = {
     Name        = "nat"
-    Environment = "${var.environment}"
+    Environment = var.environment
   }
 }
 
@@ -46,7 +46,7 @@ resource "aws_subnet" "public_subnet" {
 
   tags = {
     Name        = "${var.creator_tag}-${var.environment}-${element(var.availability_zones, count.index)}-public-subnet"
-    Environment = "${var.environment}"
+    Environment = var.environment
   }
 }
 
@@ -61,7 +61,7 @@ resource "aws_subnet" "private_subnet" {
 
   tags = {
     Name        = "${var.creator_tag}-${var.environment}-${element(var.availability_zones, count.index)}-private-subnet"
-    Environment = "${var.environment}"
+    Environment = var.environment
   }
 }
 
@@ -72,7 +72,7 @@ resource "aws_route_table" "private" {
 
   tags = {
     Name        = "${var.creator_tag}-${var.environment}-private-route-table"
-    Environment = "${var.environment}"
+    Environment = var.environment
   }
 }
 
@@ -82,7 +82,7 @@ resource "aws_route_table" "public" {
 
   tags = {
     Name        = "${var.creator_tag}-${var.environment}-public-route-table"
-    Environment = "${var.environment}"
+    Environment = var.environment
   }
 }
 
@@ -103,13 +103,13 @@ resource "aws_route" "private_nat_gateway" {
 # Route table associations for both Public & Private Subnets
 resource "aws_route_table_association" "public" {
   count          = length(var.public_subnets_cidr)
-  subnet_id      = element(aws_subnet.public_subnet.*.id, count.index)
+  subnet_id      = element(aws_subnet.public_subnet[*].id, count.index)
   route_table_id = aws_route_table.public.id
 }
 
 resource "aws_route_table_association" "private" {
   count          = length(var.private_subnets_cidr)
-  subnet_id      = element(aws_subnet.private_subnet.*.id, count.index)
+  subnet_id      = element(aws_subnet.private_subnet[*].id, count.index)
   route_table_id = aws_route_table.private.id
 }
 
@@ -137,7 +137,7 @@ resource "aws_security_group" "default" {
   }
 
   tags = {
-    Environment = "${var.environment}"
+    Environment = var.environment
   }
 }
 
