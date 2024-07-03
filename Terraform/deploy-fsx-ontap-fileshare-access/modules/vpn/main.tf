@@ -6,12 +6,18 @@ resource "aws_acm_certificate" "server_vpn_cert" {
   certificate_body  = var.server_cert
   private_key       = var.server_private_key
   certificate_chain = var.ca_crt
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_acm_certificate" "client_vpn_cert" {
   certificate_body  = var.client_cert
   private_key       = var.client_private_key
   certificate_chain = var.ca_crt
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_ec2_client_vpn_endpoint" "my_client_vpn" {

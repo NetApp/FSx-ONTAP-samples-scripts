@@ -81,7 +81,7 @@ resource "aws_iam_policy" "trident_policy" {
         {
             "Action": "secretsmanager:GetSecretValue",
             "Effect": "Allow",
-            "Resource": "${aws_secretsmanager_secret_version.fsx_secret_password.arn}"
+            "Resource": aws_secretsmanager_secret_version.fsx_secret_password.arn
         }
     ],
   })
