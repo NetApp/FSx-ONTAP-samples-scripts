@@ -1,7 +1,3 @@
-tflint {
-  required_version = ">= 0.50"
-}
-
 config {
   rule "terraform_typed_variables" {
     enabled = false
