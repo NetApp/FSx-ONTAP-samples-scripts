@@ -1,0 +1,7 @@
+# Default values for Harvest-insallation-chart.
+# This is a YAML-formatted file.
+fsx:
+  password: 
+  managment_lif: 
+
+promethues: 
