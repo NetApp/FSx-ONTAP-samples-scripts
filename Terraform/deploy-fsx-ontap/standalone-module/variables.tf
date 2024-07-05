@@ -4,12 +4,6 @@ variable "aws_secretsmanager_region" {
    default     = "us-east-2"
 }
 
-variable "fsx_secret_name" {
-   description = "The name of the AWS SecretManager secret that holds the ONTAP administrative password for the fsxadmin user that you can use to administer your file system using the ONTAP CLI and REST API."
-   type        = string
-   default     = "fsx_secret"
-}
-
 variable "fsx_capacity_size_gb" {
    description = "The storage capacity (GiB) of the FSxN file system. Valid values between 1024 and 196608."
    type        = number
@@ -40,6 +34,12 @@ variable "fsx_region" {
    description = "The AWS region where the FSxN file system to be deployed."
    type        = string
    default     = "us-west-2"
+}
+
+variable "fsx_secret_name" {
+   description = "The name of the AWS SecretManager secret that holds the ONTAP administrative password for the fsxadmin user that you can use to administer your file system using the ONTAP CLI and REST API."
+   type        = string
+   default     = "fsx_secret"
 }
 
 variable "fsx_subnets" {
@@ -81,7 +81,7 @@ variable "vol_info" {
 }
 
 variable "vpc_id" {
-   description = "The ID of the VPC in which the FSxN fikesystem should be deployed"
+   description = "The ID of the VPC in which the security group will be created."
    type        = string
    default     = "vpc-11111111"
 }

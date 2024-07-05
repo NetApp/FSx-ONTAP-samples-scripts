@@ -15,18 +15,27 @@ Follow the instructions below to use this sample in your own environment.
 ### Repository Overview
 This is a standalone Terraform configuration repository that contains the following files:
 * **main.tf** - The main set of configuration for this terraform sample
-* **variables.tf** - Contains the variable definitions and assignments for this sample. Exported values will override any of the variables in this file. 
 * **output.tf** - Contains output declarations of the resources created by this Terraform module. Terraform stores output values in the configuration's state file
+* **security_groups.tf** - Contains security group configurations for the FSxN file system. This file is optional and can be removed if you don't want to use the provided security group.
+* **variables.tf** - Contains the variable definitions and assignments for this sample. Exported values will override any of the variables in this file. 
 
 ### What to expect
 Running this terraform sample will result the following:
 * Create a new AWS Security Group in your VPC with the following rules:
     - **Ingress** allow all ICMP traffic
     - **Ingress** allow nfs port 111 (both TCP and UDP)
-    - **Ingress** allow cifc TCP port 139
+    - **Ingress** allow cifs TCP port 139
     - **Ingress** allow snmp ports 161-162 (both TCP and UDP)
     - **Ingress** allow smb cifs TCP port 445
-    - **Ingress** alloe bfs mount port 635 (both TCP and UDP)
+    - **Ingress** allow nfs mount port 635 (both TCP and UDP)
+    - **Ingress** allow kerberos TCP port 749
+    - **Ingress** allow nfs port 2049 (both TCP and UDP)
+    - **Ingress** allow nfs lock and monitoring 4045-4046 (both TCP and UDP)
+    - **Ingress** allow nfs quota TCP 4049
+    - **Ingress** allow Snapmirror Intercluster communication TCP port 11104
+    - **Ingress** allow Snapmirror data transfer TCP port 11105
+    - **Ingress** allow ssh port 22
+    - **Ingress** allow https port 443
     - **Egress** allow all traffic
 * Create a new FSx for Netapp ONTAP file-system in your AWS account named "_terraform-fsxn_". The file-system will be created with the following configuration parameters:
     * 1024Gb of storage capacity
@@ -190,7 +199,7 @@ terraform apply
 | fsx_tput_in_MBps | The throughput capacity (in MBps) for the file system. Valid values are 128, 256, 512, 1024, 2048, and 4096. | `number` | `128` | no |
 | svm_name | The name of the Storage Virtual Machine | `string` | `"first_svm"` | no |
 | vol_info | Details for the volume creation | `map(any)` | <pre>{<br>  "cooling_period": 31,<br>  "efficiency": true,<br>  "junction_path": "/vol1",<br>  "size_mg": 1024,<br>  "tier_policy_name": "AUTO",<br>  "vol_name": "vol1"<br>}</pre> | no |
-| vpc_id | The ID of the VPC in which the FSxN fikesystem should be deployed | `string` | `"vpc-11111111"` | no |
+| vpc_id | The ID of the VPC in which the security group will be created. | `string` | `"vpc-11111111"` | no |
 
 ### Outputs
 
