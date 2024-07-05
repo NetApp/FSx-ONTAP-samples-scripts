@@ -12,17 +12,22 @@ Have a great idea? We'd love to hear it! Please share it via the Discussions tab
 
 ## Table of Contents
 
-* [FSx for NetApp ONTAP as persistent storage for EKS](/EKS/FSx-as-PVC-for-EKS)
-* [Auto Create SnapMirror Relationships](/Management-Utilities/auto_create_sm_relationships)
-* [Auto Set FsxN Auto Grow](/Management-Utilities/auto_set_fsxn_auto_grow)
-* [AWS CLI management scripts for FSx ONTAP](/Management-Utilities/fsx-ontap-aws-cli-scripts)
-* [FSx ONTAP iscsi volume creation automation for Windows](/Management-Utilities/iscsi-vol-create-and-mount)
-* [Export LUN metrics from an FSx ONTAP to Amazon CloudWatch](/Monitoring/LUN-monitoring)
-* [Monitor ONTAP metrics from FSx ONTAP using python Lambda function](/Monitoring/monitor-ontap-services)
-* [k8s applications non-stdout logs collection into ELK](/Solutions/EKS-logs-to-ELK)
-* [FSx ONTAP deployment using Terraform](/Terraform/deploy-fsx-ontap)
-* [Deployment of SQL Server on EC2 with FSx ONTAP](/Terraform/deploy-fsx-ontap-sqlserver)
-* [Deployment of FSx ONTAP with VPN for File Share Access](/Terraform/deploy-fsx-ontap-fileshare-access)
+* [EKS](/EKS)
+    * [FSx for NetApp ONTAP as persistent storage for EKS](/EKS/FSxN-as-PVC-for-EKS)
+* [Management Utilities](/Management-Utilities)
+    * [Auto Create SnapMirror Relationships](/Management-Utilities/auto_create_sm_relationships)
+    * [Auto Set FsxN Auto Grow](/Management-Utilities/auto_set_fsxn_auto_grow)
+    * [AWS CLI management scripts for FSx ONTAP](/Management-Utilities/fsx-ontap-aws-cli-scripts)
+    * [FSx ONTAP iscsi volume creation automation for Windows](/Management-Utilities/iscsi-vol-create-and-mount)
+* [Monitoring](/Monitoring)
+    * [Export LUN metrics from an FSx ONTAP to Amazon CloudWatch](/Monitoring/LUN-monitoring)
+    * [Monitor ONTAP metrics from FSx ONTAP using python Lambda function](/Monitoring/monitor-ontap-services)
+* [Solutions](/Solutions)
+    * [k8s applications non-stdout logs collection into ELK](/Solutions/EKS-logs-to-ELK)
+* [Terraform](/Terraform)
+    * [FSx ONTAP deployment using Terraform](/Terraform/deploy-fsx-ontap)
+    * [Deployment of SQL Server on EC2 with FSx ONTAP](/Terraform/deploy-fsx-ontap-sqlserver)
+    * [Deployment of FSx ONTAP with VPN for File Share Access](/Terraform/deploy-fsx-ontap-fileshare-access)
 
 ## Author Information
 
