@@ -8,37 +8,37 @@ Harvest helm chart for monitoring Amazon FSxN on existing monitoring stack.
 
 Harvest Helm chart installation will result the following:
 * Install NetApp Harvest with latest version on your EKS
-* Collecting metrics about your FSxN and adding existing Grafana dashboards for better visualizion.
+* Collecting metrics about your FSxN and adding existing Grafana dashboards for better visualization.
 
 ### Prerequisites
 * `Helm` - for resources installation.
-* NetApp FSxN running on the same EKS vpc.
-* Existing `Promethues` running on your EKS cluster.
+* NetApp FSxN running on the same EKS VPC.
+* Existing `Prometheus` running on your EKS cluster.
 * Existing `Grafana` running on your EKS cluster.
 
 ### Deployment
 ### User Input
 
-Parameter | Description | 
---- | --- | 
-fsx.managment_lif | FSx for NetApp ONTAP filesystem management IP. |
-fsx.password | fsxadmin user password. |
-promethues | Existing Promethues name for discovering. |
+|Parameter|Description| 
+|:---|:---| 
+|fsx.managment_lif|FSx for NetApp ONTAP filesystem management IP.|
+|fsx.password|fsxadmin user password.|
+|prometheus|Existing Prometheus name for discovering.|
 
 ### Installation
 Install Harvest helm chart from this GitHub repository. The custom Helm chart includes:
-* `deplyment.yaml` - Harvest deployment using Harvest latest version image.
+* `deployment.yaml` - Harvest deployment using Harvest latest version image.
 * `harvest-config.yaml` - Harvest backend configuration.
-* `service-monitor.yaml` - Promethues ServiceMonitor for collecting Harvest metrics.
+* `service-monitor.yaml` - Prometheus ServiceMonitor for collecting Harvest metrics.
 
 ```bash
-helm upgrade --install harvest  -f values.yaml ./ --namespace=harvest --create-namespace --set fsx.managment_lif=<managment_lif> --set fsx.password=<password> --set promethues=<promethues>
+helm upgrade --install harvest -f values.yaml ./ --namespace=harvest --create-namespace --set fsx.managment_lif=<managment_lif> --set fsx.password=<password> --set prometheus=<prometheus>
 ```
-The `--namespace harvest` and `--create-namespace` flags instructs to create the harvest namespace (if needed), and deploy the Harvest on it.
-The --set `fsx.managment_lif=<managment_lif>` and --set `fsx.password=<password>` flags instructs Harvest to use your FSxN credentials for collecting metrics.
-The --set `promethues=<promethues>` will use for Promethues ServiceMonitor.
+The `--namespace harvest` and `--create-namespace` flags instruct helm to create the harvest namespace (if needed), and deploy the Harvest on it.
+The --set `fsx.managment_lif=<managment_lif>` and --set `fsx.password=<password>` flags instruct Harvest to use your FSxN credentials for collecting metrics.
+The --set `prometheus=<prometheus>` will use for Prometheus ServiceMonitor.
 
-Once the deployment is complete, Harvest should be listed as a target on Promethues.
+Once the deployment is complete, Harvest should be listed as a target on Prometheus.
     
 ### Adding Grafana dashboards and visualize your FSxN metrics on Grafana
 Import existing dashboards into your Grafana:

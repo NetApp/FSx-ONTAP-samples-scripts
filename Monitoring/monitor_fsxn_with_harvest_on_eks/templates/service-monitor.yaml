@@ -5,7 +5,7 @@ metadata:
     release-name: harvest
     release-namespace: harvest
   labels:
-    release: {{ .Values.promethues }}
+    release: {{ .Values.prometheus }}
   name: harvest-exporter
   namespace: harvest
 spec:
