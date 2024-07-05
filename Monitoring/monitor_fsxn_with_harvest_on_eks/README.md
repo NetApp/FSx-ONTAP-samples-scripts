@@ -47,10 +47,11 @@ Import existing dashboards into your Grafana:
 * Example dashboards for Grafana are located in the dashboards folder.
 ### Notes
 1. Currently, Harvest only supports one FSxN per deployment. If you have more than one FSxN, you should create a separate deployment for each.
-2. The fsxadmin user password exists on Harvest config map due to Harvest limitation (i.e. it can't be configured to use AWS secret manager).
-3. The FSxN fsxadmin user does not have full permission to collect all metrics by default. So, some dashboards may not full populate.
+2. The fsxadmin user password exists in the Harvest config map due to Harvest limitation (i.e. it can't be configured to use an AWS secret).
+3. The FSxN fsxadmin user does not have full permission to collect all metrics. So, some traditional ONTAP dashboards may not fully populate.
 
 ### Screenshots
 
 ![Screenshots 1](./images/image1.png)
+
 ![Screenshots 2](./images/image2.png)
