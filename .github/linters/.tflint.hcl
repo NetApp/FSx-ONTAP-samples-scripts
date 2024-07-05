@@ -1,18 +1,15 @@
-tflint {
-  required_version = ">= 0.50"
+rule "terraform_typed_variables" {
+  enabled = false
 }
 
-config {
-  rule "terraform_typed_variables" {
+rule "terraform_module_version" {
+  enabled = false
+}
+
+rule "terraform_required_providers" {
     enabled = false
-  }
-  rule "terraform_module_version" {
-    enabled = false
-  }
-  rule "terraform_required_providers" {
-    enabled = false
-  }
-  rule "terraform_unused_declarations" {
-    enabled = false
-  }
+}
+
+rule "terraform_unused_declarations" {
+  enabled = false
 }
