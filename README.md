@@ -8,7 +8,7 @@ This GitHub repository contains comprehensive code samples and automation script
 
 We welcome contributions from the community! Please read our [contribution guidelines](CONTRIBUTING.md) before getting started.
 
-Have a great idea? We'd love to hear it! Please share it via the Discussions tab under the Ideas catagory.
+Have a great idea? We'd love to hear it! Please share it via the Discussions tab under the Ideas category.
 
 ## Table of Contents
 
@@ -16,7 +16,7 @@ Have a great idea? We'd love to hear it! Please share it via the Discussions tab
     * [FSx for NetApp ONTAP as persistent storage for EKS](/EKS/FSxN-as-PVC-for-EKS)
 * [Management Utilities](/Management-Utilities)
     * [Auto Create SnapMirror Relationships](/Management-Utilities/auto_create_sm_relationships)
-    * [Auto Set FsxN Auto Grow](/Management-Utilities/auto_set_fsxn_auto_grow)
+    * [Auto Set FSxN Auto Grow](/Management-Utilities/auto_set_fsxn_auto_grow)
     * [AWS CLI management scripts for FSx ONTAP](/Management-Utilities/fsx-ontap-aws-cli-scripts)
     * [FSx ONTAP iscsi volume creation automation for Windows](/Management-Utilities/iscsi-vol-create-and-mount)
 * [Monitoring](/Monitoring)
