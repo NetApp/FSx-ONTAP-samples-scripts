@@ -76,7 +76,7 @@ Run the following commands to clone the repo and change into the directory where
 terraform files are located:
 ```bash
 git clone https://github.com/NetApp/FSx-ONTAP-samples-scripts.git
-cd FSx-ONTAP-samples-scripts/Solutions/FSxN-as-PVC-for-EKS/terraform
+cd FSx-ONTAP-samples-scripts/EKS/FSxN-as-PVC-for-EKS/terraform
 ```
 ### Make any desired changes to the variables.tf file.
 Variables that can be changed include:
@@ -251,7 +251,7 @@ After making the following substitutions in the commands below:
 Run them to configure Trident to use the FSxN file system that was
 created earlier using the `terraform --apply` command:
 ```
-cd ~/FSx-ONTAP-samples-scripts/Solutions/FSxN-as-PVC-for-EKS
+cd ~/FSx-ONTAP-samples-scripts/EKS/FSxN-as-PVC-for-EKS
 mkdir temp
 export FSX_ID=<fsx-id>
 export FSX_SVM_NAME=<fsx-svm-name>
@@ -336,7 +336,7 @@ You will want to login as the 'fsxadmin' user, using the password stored in the 
 You can find the IP address of the FSxN file system in the output from the `terraform apply` command, or
 from the AWS console. Here is an example of logging in and listing all the volumes on the system:
 ```bash
-ubuntu@ip-10-0-4-125:~/FSx-ONTAP-samples-scripts/Solutions/FSxN-as-PVC-for-EKS$ ssh -l fsxadmin 198.19.255.174
+ubuntu@ip-10-0-4-125:~/FSx-ONTAP-samples-scripts/EKS/FSxN-as-PVC-for-EKS$ ssh -l fsxadmin 198.19.255.174
 (fsxadmin@198.19.255.174) Password:
 
 FsxId0887a493c777c5122::> volume show
