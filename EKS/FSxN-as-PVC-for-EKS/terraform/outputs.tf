@@ -24,7 +24,7 @@ output "fsx-management-ip" {
 }
 
 output "eks-cluster-name" {
-  value = data.aws_eks_cluster.eks.id
+  value = module.eks.cluster_name
 }
 
 output "vpc-id" {
