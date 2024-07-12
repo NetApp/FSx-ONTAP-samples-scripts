@@ -1,10 +1,14 @@
 # FSx-ONTAP-samples-scripts
 
-FSx for NetApp ONTAP is an AWS service providing a comprehensive set of advanced storage features purposely built to maximize cost performance, resilience, and accessibility in business-critical workloads.
+FSx for NetApp ONTAP is an AWS service providing a comprehensive set of advanced storage features purposely
+built to maximize cost performance, resilience, and accessibility in business-critical workloads.
 
 ## Overview
 
-This GitHub repository contains comprehensive code samples and automation scripts for FSx for Netapp ONTAP operations, promoting the use of Infrastructure as Code (IAC) tools and encouraging developers to extend the product's functionalities through code.
+This GitHub repository contains comprehensive code samples and automation scripts for FSx for Netapp ONTAP operations,
+promoting the use of Infrastructure as Code (IAC) tools and encouraging developers to extend the product's
+functionalities through code. The samples here go alongside the automation, management and monitoring that
+[BlueXP Workload Factory](https://www.netapp.com/bluexp/workload-factory/) provides.
 
 We welcome contributions from the community! Please read our [contribution guidelines](CONTRIBUTING.md) before getting started.
 
@@ -39,7 +43,8 @@ Licensed under the Apache License, Version 2.0 (the "License").
 
 You may obtain a copy of the License at [apache.org/licenses/LICENSE-2.0](http://www.apache.org/licenses/LICENSE-2.0).
 
-Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an _"AS IS"_ basis, without WARRANTIES or conditions of any kind, either express or implied.
+Unless required by applicable law or agreed to in writing, software distributed under the License
+is distributed on an _"AS IS"_ basis, without WARRANTIES or conditions of any kind, either express or implied.
 
 See the License for the specific language governing permissions and limitations under the License.
 
