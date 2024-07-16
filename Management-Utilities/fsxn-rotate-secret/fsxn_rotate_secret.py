@@ -8,6 +8,7 @@
 
 import boto3
 import logging
+import os
 
 charactersToExcludeInPassword = '/"\'\\'
 
@@ -30,7 +31,10 @@ def create_secret(secretsClient, arn, token):
     global logger
     #
     # Make sure the current secret exists
-    secretsClient.get_secret_value(SecretId=arn, VersionStage="AWSCURRENT")
+    #
+    # *NOTE:* The next line is commented out since it breaks if a secret is created
+    # without a value.
+    # secretsClient.get_secret_value(SecretId=arn, VersionStage="AWSCURRENT")
     #
     # Now try to get the secret version, if that fails, put a new secret
     try:
@@ -128,8 +132,12 @@ def lambda_handler(event, context):
     token = event['ClientRequestToken']
     step = event['Step']
 
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
+    logger = logging.getLogger('fsxn_rotate_secret')
+    loggingLevel =  os.environ.get("loggingLevel")
+    if loggingLevel is not None:
+        logger.setLevel(loggingLevel)
+    else:
+        logger.setLevel(logging.WARNING)
     #
     # Set the logging level higher for these noisy modules to mute thier messages.
     logging.getLogger("boto3").setLevel(logging.WARNING)
@@ -157,13 +165,15 @@ def lambda_handler(event, context):
     #
     # Now check that the version hasn't already been promoted to AWSCURRENT and if not
     # that a AWSPENDING staging exist.
-    if "AWSCURRENT" in versions[token]:
-        logger.info(f"Secret version {token} already set as AWSCURRENT for secret {arn}.")
-        return
-    elif "AWSPENDING" not in versions[token]:
-        message = f"Secret version {token} not set as AWSPENDING for rotation of secret {arn}."
-        logger.error(message)
-        raise Exception(message)
+    # *NOTE:* The following is commented out since it breaks if the secret was created
+    # without a value and this Lambda function is called before a value is set.
+    #if "AWSCURRENT" in versions[token]:
+    #    logger.info(f"Secret version {token} already set as AWSCURRENT for secret {arn}.")
+    #    return
+    #elif "AWSPENDING" not in versions[token]:
+    #    message = f"Secret version {token} not set as AWSPENDING for rotation of secret {arn}."
+    #    logger.error(message)
+    #    raise Exception(message)
     #
     # At this point we are ready to process the request.
     if step == "createSecret":
