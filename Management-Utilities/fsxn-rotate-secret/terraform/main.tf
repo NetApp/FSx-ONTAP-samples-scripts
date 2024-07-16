@@ -74,7 +74,7 @@ locals {
 # Create the IAM role for the Lambda function.
 resource "aws_iam_role" "iam_for_lambda" {
   name               = "iam_for_lambda-${random_id.id.hex}"
-  decription         = "IAM role for the Rotate FSxN Secret Lambda function."
+  description        = "IAM role for the Rotate FSxN Secret Lambda function."
   assume_role_policy = data.aws_iam_policy_document.assume_role.json
   inline_policy {
     name   = "required_policy"
@@ -92,6 +92,7 @@ data "archive_file" "lambda" {
 # Create the Lambda function.
 resource "aws_lambda_function" "rotateLambdaFunction" {
   function_name    = local.lambdaName
+  description      = "Lambda function to rotate the FSxN secret."
   role             = aws_iam_role.iam_for_lambda.arn
   runtime          = "python3.12"
   handler          = "fsxn_rotate_secret.lambda_handler"
@@ -110,7 +111,8 @@ resource "aws_lambda_permission" "allowSecretsManager" {
 #
 # Create the secret with the required tags.
 resource "aws_secretsmanager_secret" "secret" {
-  name = "${var.secretNamePrefix}-${random_id.id.hex}"
+  name         = "${var.secretNamePrefix}-${random_id.id.hex}"
+  description  = "Secret for the FSxN file system (${var.fsxId})."
 
   tags = {
     fsxId  = var.fsxId

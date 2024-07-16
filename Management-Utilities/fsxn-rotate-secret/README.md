@@ -7,7 +7,7 @@ The Secrets Manager should invoke the function four times, each time with the `s
 
 | Stage      | Description |
 |------------|-------------|
-|createSecret|The function will create a new version of the secret with a "Version Staging ID" of "AWSPENDING". At this point the original secret is still be left as is, and will be the default secret returned if no versionStagingID is provided.|
+|createSecret|The function will create a new version of the secret with a "Version Staging ID" of "AWSPENDING". At this point the original secret is still be left as is and will be the default secret returned if no Version Staging ID is provided.|
 |setSecret   |The function will update the password for the FSxN file system using the new version of the secret.|
 |testSecret  |Currently no testing is performed. The Lambda function would have to be attached to the same VPC as the FSxN file system to test the password. Since that would potentially make it where you'd have to have a separate function for each FSxN deployment, and potentially have to setup AWS Endpoints for AWS services, a decision was made to not do that. If the Lambda function fails to set the password correctly, you can always use the AWS console, or API, to set it to whatever you need.|
 |finishSecret|The function will promote the new password to the "AWSCURRENT" Version Staging ID. This will set the Version Staging ID of the old password to "AWSPREVIOUS".|
@@ -27,10 +27,10 @@ relationship with the AWS Lambda service.
 | secretsManager:UpdateSecretVersionStage | \<secretARN> | \<secretARN> is the AWS ARN of the secret to rotate. |
 | secretsManager:DescribeSecret | \<secretARN> | \<secretARN> is the AWS ARN of the secret to rotate. |
 | secretsmanager:GetRandomPassword | \* | The scope doesn't matter, since this function doesn't have anything to do with any AWS resources. |
-| fsx:UpdateFileSystem | \<fileSystemARN> | \<fileSytemARN> is the AWS ARN of the FSxN file system to manage. |
-| logs:CreateLogGroup | arn:aws:logs:\<region>:\<accountID>:\* | This allows the Lambda function to create a log group in CloudWatch. This is optional, but allows you to get diagnostic information from the Lambda function. |
-| logs:CreateLogStream | arn:aws:logs:\<region>:\<accountID>:log-group:/aws/lambda/\<Lambda_function_name>:\* | This allows the Lambda function to create a log streams in CloudWatch. This is optional, but allows you to get diagnostic information from the function.|
-| logs:PutLogEvents | arn:aws:logs:\<region>:\<accountID>:log-group:/aws/lambda/\<Lambda_function_name>:\* | This allows the Lambda function to write log events to a log stream in CloudWatch. This is optional, but allows you to get diagnostic information from the function.|
+| fsx:UpdateFileSystem | \<fileSystemARN> | \<fileSystemARN> is the AWS ARN of the FSxN file system to manage. |
+| logs:CreateLogGroup | arn:aws:logs:\<region>:\<accountID>:\* | This allows the Lambda function to create a log group in CloudWatch. This is optional but allows you to get diagnostic information from the Lambda function. |
+| logs:CreateLogStream | arn:aws:logs:\<region>:\<accountID>:log-group:/aws/lambda/\<Lambda_function_name>:\* | This allows the Lambda function to create a log stream in CloudWatch. This is optional but allows you to get diagnostic information from the function.|
+| logs:PutLogEvents | arn:aws:logs:\<region>:\<accountID>:log-group:/aws/lambda/\<Lambda_function_name>:\* | This allows the Lambda function to write log events to a log stream in CloudWatch. This is optional but allows you to get diagnostic information from the function.|
 
 #### Step 2 - Create the Lambda Function
 ##### Step 2.1
@@ -43,7 +43,7 @@ Create a Lambda function with the following parameters:
 After you create the function, you will be able to insert the code included with this 
 sample into the code box and click "Deployed" to save it.
 
-##### Step 2.3 - Change permisisons
+##### Step 2.3 - Change permissisons
 Change to the `Configuration` tab and select `Permissions` and add a `Resource-based policy` statement that will allow the
 secretsmanager AWS service to invoke the Lambda function. Do that do the following:
 
@@ -62,9 +62,9 @@ want. The default is 30 days.
 ### Terraform Method
 The Terraform module provided in the `terraform` directory can be used to create the Secrets Manager
 secret setup to use a rotation policy that uses the Lambda function. It will create the following resources:
-- Lambda function used to rotate the secret.
-- IAM role that allows the Lambda function to rotate the secret.
-- A Secrets Manager secret with a rotation schedule of 30 days.
+- A Lambda function used to rotate the secret.
+- An IAM role that allows the Lambda function to rotate the secret.
+- A Secrets Manager secret with a rotation enabled.
 
 #### Prerequisites
 
