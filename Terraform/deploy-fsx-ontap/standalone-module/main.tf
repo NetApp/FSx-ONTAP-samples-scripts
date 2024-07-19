@@ -14,7 +14,7 @@ provider "aws" {
 #
 # Instantiate a secret for the FSx ONTAP file system. It will set the initial password for the file system.
 module "fsxn_rotate_secret" {
-    source = "../DevelopersAdocacy/FSx-ONTAP-samples-scripts/Management-Utilities/fsxn-rotate-secret/terraform/"
+    source = "github.com/Netapp/FSx-ONTAP-samples-scripts/Management-Utilities/fsxn-rotate-secret/terraform"
     fsx_region = var.fsx_region
     secret_region = var.secret_region
     aws_account_id = var.aws_account_id
