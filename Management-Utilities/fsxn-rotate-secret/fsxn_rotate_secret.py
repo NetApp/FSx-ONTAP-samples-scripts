@@ -13,7 +13,7 @@ import os
 charactersToExcludeInPassword = '/"\'\\'
 
 ################################################################################
-# THis function is used to get the value of a tag from a list of tags.
+# This function is used to get the value of a tag from a list of tags.
 ################################################################################
 def getTagValue(tags, key):
     for tag in tags:
@@ -67,20 +67,27 @@ def set_secret(secretsClient, arn, token):
 
     password = secretValueResponse['SecretString']
     #
-    # Get the FSx file system ID and region from the secret's tags.
+    # Get the FSx file system ID, SVM ID and region from the secret's tags.
     secretMetadata = secretsClient.describe_secret(SecretId=arn)
     tags = secretMetadata['Tags']
-    fsxId = getTagValue(tags, 'fsxId')
+    fsxId = getTagValue(tags, 'fsx_id')
     fsxRegion = getTagValue(tags, 'region')
-    if fsxId is None or fsxRegion is None:
-        message=f"Unable to retrieve the FSx file system ID ('fsxId') or region ('region') tags from secret {arn}."
+    svmId = getTagValue(tags, 'svm_id')
+    logging.info(f"fsxId={fsxId}, svmId={svmId}, fsxRegion={fsxRegion}")
+
+    if (fsxId is None and svmId is None) or fsxRegion is None:
+        message=f"Error, tags 'fsxId' or 'svmId' and the 'region' have to be set on the secret's ({arn}) resource."
         logger.error(message)
         raise Exception(message)   # Signal to the Secrets Manager that the rotation failed.
     #
-    # Update the FSx file system with the new password.
+    # Update the FSx file system, or SVM, with the new password.
     fsxClient = boto3.client(service_name='fsx', region_name=fsxRegion)
-    fsxClient.update_file_system(OntapConfiguration={"FsxAdminPassword": password}, FileSystemId=fsxId)
-    logger.info(f"Successfully set the FSxN ({fsxId}) password to secret stored in {arn} with a VersionStage = 'AWSPENDING'.")
+    if svmId is None or svmId == "":
+        fsxClient.update_file_system(OntapConfiguration={"FsxAdminPassword": password}, FileSystemId=fsxId)
+        logger.info(f"Successfully set the FSxN ({fsxId}) password to secret stored in {arn} with a VersionStage = 'AWSPENDING'.")
+    else:
+        fsxClient.update_storage_virtual_machine(StorageVirtualMachineId=svmId, SvmAdminPassword=password)
+        logger.info(f"Successfully set the SVM ({svmId}) password to secret stored in {arn} with a VersionStage = 'AWSPENDING'.")
 
 ################################################################################
 # Usually this function would be used to test that the service has been updated
@@ -142,7 +149,7 @@ def lambda_handler(event, context):
     # Set the logging level higher for these noisy modules to mute thier messages.
     logging.getLogger("boto3").setLevel(logging.WARNING)
     logging.getLogger("botocore").setLevel(logging.WARNING)
-    
+
     logger.info(f'arn={arn}, token={token}, step={step}.')
     #
     # Create a client to the secrets manager service.

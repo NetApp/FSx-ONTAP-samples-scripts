@@ -1,4 +1,11 @@
 #
+# To allow support for secrets to be stored in a separate region than the FSxN file system,
+# create a provider just for the Secrets Manager.
+provider "aws" {
+  alias = "secrets_provider"
+  region = var.secret_region
+}
+#
 # Create a random id to ensure no conflicts.
 resource "random_id" "id" {
   byte_length = 4
@@ -27,7 +34,7 @@ data "aws_iam_policy_document" "inline_permissions" {
         sid       = "Sid0"
         effect    = "Allow"
         actions   = ["logs:CreateLogGroup"]
-        resources = ["arn:aws:logs:${var.region}:${var.awsAccountId}:*"]
+        resources = ["arn:aws:logs:${var.secret_region}:${var.aws_account_id}:*"]
     }
     statement {
         sid       = "Sid1"
@@ -36,7 +43,7 @@ data "aws_iam_policy_document" "inline_permissions" {
             "logs:PutLogEvents",
             "logs:CreateLogStream"
         ]
-        resources = ["arn:aws:logs:${var.region}:${var.awsAccountId}:log-group:/aws/lambda/${local.lambdaName}:*"]
+        resources = ["arn:aws:logs:${var.secret_region}:${var.aws_account_id}:log-group:/aws/lambda/${local.lambdaName}:*"]
     }
     #
     # The third statement is required for the lambda function to rotate the secret.
@@ -49,11 +56,13 @@ data "aws_iam_policy_document" "inline_permissions" {
             "secretsmanager:DescribeSecret",
             "secretsmanager:PutSecretValue",
             "secretsmanager:UpdateSecretVersionStage",
-            "fsx:UpdateFileSystem"
+            "fsx:UpdateFileSystem",
+            "fsx:UpdateStorageVirtualMachine"
         ]
         resources = [
             aws_secretsmanager_secret.secret.arn,
-            "arn:aws:fsx:${var.region}:${var.awsAccountId}:file-system/${var.fsxId}"
+            "arn:aws:fsx:${var.fsx_region}:${var.aws_account_id}:storage-virtual-machine/*/${var.svm_id}",
+            "arn:aws:fsx:${var.fsx_region}:${var.aws_account_id}:file-system/${var.fsx_id}"
         ]
     }
     #
@@ -85,14 +94,15 @@ resource "aws_iam_role" "iam_for_lambda" {
 # Create the archive file for the Lambda function.
 data "archive_file" "lambda" {
   type        = "zip"
-  source_file = "${path.module}/../fsxn_rotate_secret.py"
+  source_file = "${path.module}/fsxn_rotate_secret.py"
   output_path = "fsxn_rotate_secret.zip"
 }
 #
 # Create the Lambda function.
 resource "aws_lambda_function" "rotateLambdaFunction" {
+  provider         = aws.secrets_provider
   function_name    = local.lambdaName
-  description      = "Lambda function to rotate the FSxN secret."
+  description      = var.svm_id != "" ? "Lambda function to rotate the secret for SVM (${var.svm_id})." : "Lambda function to rotate the secret for FSxN File System (${var.fsx_id})."
   role             = aws_iam_role.iam_for_lambda.arn
   runtime          = "python3.12"
   handler          = "fsxn_rotate_secret.lambda_handler"
@@ -102,6 +112,7 @@ resource "aws_lambda_function" "rotateLambdaFunction" {
 #
 # Allow Secrets Manager to invoke the Lambda function.
 resource "aws_lambda_permission" "allowSecretsManager" {
+  provider      = aws.secrets_provider
   statement_id  = "AllowExecutionFromSecretsManager"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.rotateLambdaFunction.function_name
@@ -111,21 +122,24 @@ resource "aws_lambda_permission" "allowSecretsManager" {
 #
 # Create the secret with the required tags.
 resource "aws_secretsmanager_secret" "secret" {
-  name         = "${var.secretNamePrefix}-${random_id.id.hex}"
-  description  = "Secret for the FSxN file system (${var.fsxId})."
+  provider     = aws.secrets_provider
+  name         = "${var.secret_name_prefix}-${random_id.id.hex}"
+  description  = var.svm_id != "" ? "Secret for the storage virtual machine (${var.svm_id})." : "Secret for the FSxN file system (${var.fsx_id})."
 
   tags = {
-    fsxId  = var.fsxId
-    region = var.region
+    fsx_id  = var.fsx_id
+    region = var.fsx_region
+    svm_id  = var.svm_id
   }
 }
 #
 # Add the rotation Lambda function and rule to the secret.
 resource "aws_secretsmanager_secret_rotation" "secretRotation" {
+  provider            = aws.secrets_provider
   secret_id           = aws_secretsmanager_secret.secret.id
   rotation_lambda_arn = aws_lambda_function.rotateLambdaFunction.arn
 
   rotation_rules {
-    schedule_expression = var.rotationFrequency
+    schedule_expression = var.rotation_frequency
   }
 }

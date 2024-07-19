@@ -1,8 +1,9 @@
 # Rotate FSxN File System Passwords
 
 ## Introduction
-This sample provides a way to rotate a Secrets Manager secret that is used to manage FSxN file system.
-It is a Lambda function that is expected to be triggered by the Secrets Manager rotation feature.
+This sample provides a way to rotate a Secrets Manager secret that is used to hold the
+password assigned to an FSxN file system or a FSxN Storage Virtual Machine.
+It is a Lambda function that is expected to be invoked by the Secrets Manager rotation feature.
 The Secrets Manager should invoke the function four times, each time with the `stage` field, in the `event` dictionary passed in, set to one of the following values:
 
 | Stage      | Description |
@@ -28,6 +29,7 @@ relationship with the AWS Lambda service.
 | secretsManager:DescribeSecret | \<secretARN> | \<secretARN> is the AWS ARN of the secret to rotate. |
 | secretsmanager:GetRandomPassword | \* | The scope doesn't matter, since this function doesn't have anything to do with any AWS resources. |
 | fsx:UpdateFileSystem | \<fileSystemARN> | \<fileSystemARN> is the AWS ARN of the FSxN file system to manage. |
+| fsx:UpdateStorageVirtualMachine | \<svmARN> | \<svmARN> is the AWS ARN of the Storage Virtual Machine to manage. |
 | logs:CreateLogGroup | arn:aws:logs:\<region>:\<accountID>:\* | This allows the Lambda function to create a log group in CloudWatch. This is optional but allows you to get diagnostic information from the Lambda function. |
 | logs:CreateLogStream | arn:aws:logs:\<region>:\<accountID>:log-group:/aws/lambda/\<Lambda_function_name>:\* | This allows the Lambda function to create a log stream in CloudWatch. This is optional but allows you to get diagnostic information from the function.|
 | logs:PutLogEvents | arn:aws:logs:\<region>:\<accountID>:log-group:/aws/lambda/\<Lambda_function_name>:\* | This allows the Lambda function to write log events to a log stream in CloudWatch. This is optional but allows you to get diagnostic information from the function.|
@@ -53,11 +55,25 @@ secretsmanager AWS service to invoke the Lambda function. Do that do the followi
 - The principal should already be set to `secretsmanager.amazonaws.com`
 - Set action to `lambda:InvokeFunction`
 
-##### Step 2.4 - Enable Secrets Manager Rotation
-To enable rotation of the secret, you will need to go to the Secrets Manager console and
-select the secret you want to rotate. Click on the "Edit rotation" button and select the
-Lambda function you created above. You can also set the rotation schedule to whatever you
-want. The default is 30 days.
+#### Step 3 - Enable Secrets Manager Rotation
+To enable the rotation of the secret, go will need to the Secrets Manager page of the AWS console
+and click on the secret you want to rotate, then:
+##### Step 3.1 - Set the tags
+The way Lambda function knows which FSxN file system, or which SVM, to update the password on is 
+via the tags associated with the secret. The following are the tags that the program looks for:
+|Tag Key|Tag Value|Description|
+|:------|:--------|:----------|
+|region|\<region\>|The region the FSxN file system resides in.|
+|fsx_id|\<file-System-id\>|The FSxN file system id.|
+|svm_id|\<svm-id\>|The Storage Virtual Machine id.|
+Note that the Lambda function can only manage one password, so either set the value for the `fsx_id` or the `svm_id` tag, both not both.
+:warning: **Warning:** If both the `fsx_id` and `svm_id` tags are set, the `svm_id` tag will be used and the fsx_id will be silently ignored.
+
+##### Step 3.2 - Enable rotation feature
+Click on the Rotation tab and then click on the "Edit rotation" button. That should bring up a 
+pop-up window. Click on the "Automatic rotation" slider to enable the feature and then configure
+the rotation schedule you want. The last step is to
+select the rotation function that you created in the steps above and click on the "Save" button.
 
 ### Terraform Method
 The Terraform module provided in the `terraform` directory can be used to create the Secrets Manager
@@ -128,13 +144,43 @@ Make sure to replace all values within `< >` with your own variables.
 module "fsxn_rotate_secret" {
     source = "github.com/NetApp/FSx-ONTAP-samples-scripts/Management-Utilities/fsxn-rotate-secret/terraform"
 
-    region = <region>
-    awsAccountId = <aws_account_id>
-    fsxId = <fsx_id>
+    fsx_region = <region>              # The region the FSxN file system resides in.
+    secret_region = <region>           # The region the secret resides in.
+    aws_account_id = <aws_account_id>  # The AWS account id that the FSxN file system resides in.
+    fsx_id = <fsx_id>
+    svm_id = <svm_id>
     secretNamePrefix = "fsx_admin_secret"
+    rotationFrequency = "rate(30 days)"
 }
 ```
-That's all there is to it!
+Note that the Lambda function can only manage one password, so either set the value for the `fsxId` or the `svmId` tag, both not both.
+:warning: **Warning:** If both the `fsxId` and `svmId` tags are set, the `svmId` tag will be used and the fsxId will be silently ignored.
+
+At this point, you can run `terraform init` and `terraform apply` to create the secret that will automatically rotate
+the password for the FSxN file system or SVM.
+
+#### Inputs
+The following are the inputs for the module:
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| fsx_region | The region where the FSxN file system resides in. | string | | yes |
+| secret_region | The region where the secret will resides in. | string | | yes |
+| aws_account_id | The AWS account id that the FSxN file system resides in. Used to create roles with least privilege. | string |\*| no |
+| fsx_id | The FSxN file system id. Note that either fsxId or svmId must be provided, but not both | string | | no |
+| svm_id | The Storage Virtual Machine id. Note that either fsxId or svmId must be provided, but not both | string | | no |
+| secret_name_prefix | The prefix to use for the secret name. | string | fsxn-secret | no |
+| rotation_frequency | The frequency to rotate the password in AWS's "rate" or "cron" notation. | string | rate(30 days) | yes |
+
+#### Outputs
+The following are the outputs for the module:
+| Name | Description |
+|------|-------------|
+| secret_arn | The ARN of the secret created. |
+| secret_name | The name of the secret created. |
+| lambda_arn | The ARN of the Lambda function created. |
+| lambda_name | The name of the Lambda function created. |
+| role_arn | The ARN of the IAM role created. |
+| role_name | The name of the IAM role created. |
 
 ## Author Information
 
