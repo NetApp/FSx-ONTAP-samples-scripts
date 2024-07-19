@@ -43,7 +43,7 @@ Create a Lambda function with the following parameters:
 
 ##### Step 2.2 - Insert code
 After you create the function, you will be able to insert the code included with this 
-sample into the code box and click "Deployed" to save it.
+sample into the code box and click "Deploy" to save it.
 
 ##### Step 2.3 - Change permissisons
 Change to the `Configuration` tab and select `Permissions` and add a `Resource-based policy` statement that will allow the
@@ -56,23 +56,25 @@ secretsmanager AWS service to invoke the Lambda function. Do that do the followi
 - Set action to `lambda:InvokeFunction`
 
 #### Step 3 - Enable Secrets Manager Rotation
-To enable the rotation of the secret, go will need to the Secrets Manager page of the AWS console
+To enable the rotation of the secret, you will need go to the Secrets Manager page of the AWS console
 and click on the secret you want to rotate, then:
 ##### Step 3.1 - Set the tags
-The way Lambda function knows which FSxN file system, or which SVM, to update the password on is 
+The way Lambda function knows which FSxN file system, or which SVM, to update the password for is 
 via the tags associated with the secret. The following are the tags that the program looks for:
 |Tag Key|Tag Value|Description|
 |:------|:--------|:----------|
 |region|\<region\>|The region the FSxN file system resides in.|
 |fsx_id|\<file-System-id\>|The FSxN file system id.|
 |svm_id|\<svm-id\>|The Storage Virtual Machine id.|
+
 Note that the Lambda function can only manage one password, so either set the value for the `fsx_id` or the `svm_id` tag, both not both.
+
 :warning: **Warning:** If both the `fsx_id` and `svm_id` tags are set, the `svm_id` tag will be used and the fsx_id will be silently ignored.
 
 ##### Step 3.2 - Enable rotation feature
 Click on the Rotation tab and then click on the "Edit rotation" button. That should bring up a 
 pop-up window. Click on the "Automatic rotation" slider to enable the feature and then configure
-the rotation schedule you want. The last step is to
+the rotation schedule the way you want. The last step is to
 select the rotation function that you created in the steps above and click on the "Save" button.
 
 ### Terraform Method
@@ -153,7 +155,8 @@ module "fsxn_rotate_secret" {
     rotationFrequency = "rate(30 days)"
 }
 ```
-Note that the Lambda function can only manage one password, so either set the value for the `fsxId` or the `svmId` tag, both not both.
+Note that the Lambda function can only manage one password, so either set the value for the `fsxId` or the `svmId` tag, but not both.
+
 :warning: **Warning:** If both the `fsxId` and `svmId` tags are set, the `svmId` tag will be used and the fsxId will be silently ignored.
 
 At this point, you can run `terraform init` and `terraform apply` to create the secret that will automatically rotate
@@ -161,8 +164,8 @@ the password for the FSxN file system or SVM.
 
 #### Inputs
 The following are the inputs for the module:
-| Name | Description | Type | Default | Required |
-|------|-------------|------|---------|:--------:|
+| Name | Description |  Type  |  Default  | Required |
+|:-----|:------------|:------:|:---------:|:--------:|
 | fsx_region | The region where the FSxN file system resides in. | string | | yes |
 | secret_region | The region where the secret will resides in. | string | | yes |
 | aws_account_id | The AWS account id that the FSxN file system resides in. Used to create roles with least privilege. | string |\*| no |
