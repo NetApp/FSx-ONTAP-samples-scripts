@@ -1,50 +1,91 @@
 # Deploy NetApp Harvest on EKS 
 
-Harvest helm chart for monitoring Amazon FSxN on existing monitoring stack.
+Harvest helm chart for monitoring Amazon FSx for ONTAP with Grafana and Prometheus on EKS.
 
 ## Introduction
+This sample shows how to deploy NetApp Harvest on EKS to monitor an Amazon FSx for NetApp ONTAP file system.
+Harvest is a data collector that collects metrics from a NetApp ONTAP storage systems and provides a REST API
+for accessing the collected data. Harvest can be used to monitor the performance of your FSx for ONTAP
+file system and visualize the metrics on Grafana.
 
-### What to expect
+## What to expect
 
 Harvest Helm chart installation will result the following:
 * Install NetApp Harvest with latest version on your EKS
-* Collecting metrics about your FSxN and adding existing Grafana dashboards for better visualization.
+* Collecting metrics about your FSx for ONTAP and adding existing Grafana dashboards for better visualization.
 
-### Prerequisites
-* `Helm` - for resources installation.
-* NetApp FSxN running on the same EKS VPC.
-* Existing `Prometheus` running on your EKS cluster.
-* Existing `Grafana` running on your EKS cluster.
+## Prerequisites
+* `helm` - for resources installation.
+* A NetApp FSx for ONTAP running on the same VPC as you EKS cluster.
+* If you want Promtetheus to have presistent storage, you will need a storage class defined. I would recommend 
+using NetApp's Astra Trident to offer up some storage from your FSx for ONTAP file system. You can install Trident from
+the AWS Marketplace into your EKS cluster. If you need help creating a storage class using Trident, please refer to the
+[Trident documentation](https://docs.netapp.com/us-en/trident/).
 
-### Deployment
+## Deployment of Prometheus and Grafana
+If you don't have Prometheus and Grafana running in your EKS cluster, you can deploy both of them
+using the following commands:
+```bash
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update
+helm install kube-prometheus-stack prometheus-community/kube-prometheus-stack --namespace prometheus --create-namespace \
+  --set prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.spec.storageClassName=*fsx-basic-nas*,prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.spec.resources.requests.storage=50Gi
+```
+Where: *fsx-basic-nas* is the storage class you want to use.  If you don't care about persistent storage, you can omit the second line of the given command.
+
+The above will create a 50Gib PVC for Prometheus to use. You can adjust the size as needed.
+
+## Deploy Harvest on EKS
+
 ### User Input
 
 |Parameter|Description| 
 |:---|:---| 
-|fsx.managment_lif|FSx for NetApp ONTAP filesystem management IP.|
-|fsx.password|fsxadmin user password.|
-|prometheus|Existing Prometheus name for discovering.|
+|fsx.managment\_lif|The FSx for NetApp ONTAP file system management IP.|
+|fsx.username|The username that Harvest will use to authenticate to the FSx for ONTAP file system with. It will default to 'fsxadmin'. Note that since Harvest does not support using AWS secrets it is recommended that you use an account that has been assgined the fsxadmin-readonly role.|
+|fsx.password|The password that Harvest will use to authenticate with the FSx for ONTAP file system. |
+|prometheus|Is the release name of the Prometheus instance you want to use to store the monitoring data.|
 
 ### Installation
-Install Harvest helm chart from this GitHub repository. The custom Helm chart includes:
-* `deployment.yaml` - Harvest deployment using Harvest latest version image.
-* `harvest-config.yaml` - Harvest backend configuration.
-* `service-monitor.yaml` - Prometheus ServiceMonitor for collecting Harvest metrics.
-
+To install Harvest helm chart from the Prometheus Community GitHub repository you will first need to copy the
+contents of this part of the repo to your system. It will probably be easier to just clone the entire repo by running
+the follow command as opposed to copying the files individually:
 ```bash
-helm upgrade --install harvest -f values.yaml ./ --namespace=harvest --create-namespace --set fsx.managment_lif=<managment_lif> --set fsx.password=<password> --set prometheus=<prometheus>
+git clone https://github.com/NetApp/FSx-ONTAP-samples-scripts.git
 ```
-The `--namespace harvest` and `--create-namespace` flags instruct helm to create the harvest namespace (if needed), and deploy the Harvest on it.
-The --set `fsx.managment_lif=<managment_lif>` and --set `fsx.password=<password>` flags instruct Harvest to use your FSxN credentials for collecting metrics.
-The --set `prometheus=<prometheus>` will use for Prometheus ServiceMonitor.
+Then navigate to the Harvest directory:
+```
+cd FSx-ONTAP-samples-scripts/Monitoring/monitoring\_fsxn\_with\_harvest\_on\_eks
+```
+Then run the following commands to install Harvest:
+```bash
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update
+helm upgrade --install harvest -f values.yaml ./ --namespace=harvest --create-namespace --set fsx.managment_lif=<managment_lif> \
+    --set fsx.username=<user>  --set fsx.password=<password> --set prometheus=<prometheus>
+```
+Where:
+    '--namespace=harvest' and '--create-namespace' flags instruct helm to create a namespace named 'harvest' (if needed), and deploy the Harvest on it.
+    '<username>' is the username you want Harvest to use to authenicate with the FSxN file system. The default is 'fsxadmin'.
+    '<password>' is the password you want Harvest to use to authenicate with the FSxN file system.
+    '<managment_lif>' should be the IP address, or DNS hostname, of the FSx for ONTAP file system management endpoint. You can get this information from the AWS console.
+    '<prometheus>' is the release name of the Prometheus instance you want to use to store the monitoring data. This should be the same as the Prometheus release name you used when you deployed Prometheus.
 
 Once the deployment is complete, Harvest should be listed as a target on Prometheus.
+
+After installation, you can access the Grafana dashboard by running the following command:
+```bash
+kubectl port-forward svc/harvest-grafana 3000:3000 -n harvest
+```
+Then open your browser and navigate to `http://localhost:3000` and login with the default username and password (admin/prom-operator).
+
+To provide a more permanent access, you can create a load balancer service for Grafana. It is beyond the scope of this document to provide instructions on how to do this.
     
 ### Adding Grafana dashboards and visualize your FSxN metrics on Grafana
 Import existing dashboards into your Grafana:
 * [How to import Grafana dashboards.](https://grafana.com/docs/grafana/latest/dashboards/build-dashboards/import-dashboards/)
 * [Supported Harvest Dashboards.](https://netapp.github.io/harvest/24.05/prepare-fsx-clusters/#supported-harvest-dashboards/)
-* Example dashboards for Grafana are located in the dashboards folder.
+* Example dashboards for Grafana are located in the `dashboards` folder.
 ### Notes
 1. Currently, Harvest only supports one FSxN per deployment. If you have more than one FSxN, you should create a separate deployment for each.
 2. The fsxadmin user password exists in the Harvest config map due to Harvest limitation (i.e. it can't be configured to use an AWS secret).

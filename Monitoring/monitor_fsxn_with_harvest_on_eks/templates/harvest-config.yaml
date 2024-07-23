@@ -22,7 +22,7 @@ data:
         fsx:
             datacenter: fsx
             addr: {{ .Values.fsx.managment_lif }}
-            username: fsxadmin
+            username: {{ .Values.fsx.username }}
             password: {{ .Values.fsx.password }}
             collectors:
                 - Zapi
