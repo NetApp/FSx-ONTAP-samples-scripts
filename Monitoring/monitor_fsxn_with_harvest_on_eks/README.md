@@ -4,7 +4,7 @@ Harvest helm chart for monitoring Amazon FSx for ONTAP with Harvest, Grafana and
 
 ## Introduction
 This sample shows how to deploy NetApp Harvest on EKS to monitor an Amazon FSx for NetApp ONTAP file system.
-Harvest is a data collector that collects metrics from a NetApp ONTAP storage systems and provides a REST API
+Harvest is a data collector that collects metrics from a NetApp ONTAP storage system and provides a REST API
 for accessing the collected data. Harvest can be used to monitor the performance of your FSx for ONTAP
 file system and visualize the metrics on Grafana. You can read more about Harvest [here](https://netapp.github.io/harvest/).
 
@@ -18,7 +18,7 @@ Harvest Helm chart installation will result the following:
 ## Prerequisites
 * `helm` - for resources installation.
 * A NetApp FSx for ONTAP accessible from the same VPC as you EKS cluster.
-* If you want Promtetheus to have presistent storage, you will need a storage class defined. I would recommend 
+* If you want Prometheus to have persistent storage, you will need a storage class defined. I would recommend 
 using NetApp's Astra Trident to offer up some storage from your FSx for ONTAP file system. You can install Trident from
 the AWS Marketplace into your EKS cluster. If you need help creating a storage class using Trident, please refer to the
 [Trident documentation](https://docs.netapp.com/us-en/trident/).
@@ -33,7 +33,8 @@ helm install kube-prometheus-stack prometheus-community/kube-prometheus-stack --
   --set prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.spec.storageClassName=<FSX-BASIC-NAS>, \
   --set prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.spec.resources.requests.storage=50Gi
 ```
-Where: <FSX-BASIC-NAS> is the storage class you want to use.  If you don't care about persistent storage, you can omit the
+Where:
+* \<FSX-BASIC-NAS\> is the storage class you want to use.  If you don't care about persistent storage, you can omit the
 second and third lines from the above command.
 
 The above will create a 50Gib PVC for Prometheus to use. You can adjust the size as needed.
@@ -45,7 +46,7 @@ The above will create a 50Gib PVC for Prometheus to use. You can adjust the size
 |Parameter|Description| 
 |:---|:---| 
 |fsx.managment\_lif|The FSx for NetApp ONTAP file system management IP.|
-|fsx.username|The username that Harvest will use to authenticate to the FSx for ONTAP file system with. It will default to 'fsxadmin'. Note that since Harvest does not support using AWS secrets it is recommended that you use an account that has been assgined the fsxadmin-readonly role.|
+|fsx.username|The username that Harvest will use to authenticate to the FSx for ONTAP file system with. It will default to 'fsxadmin'. Note that since Harvest does not support using AWS secrets it is recommended that you use an account that has been assigned the fsxadmin-readonly role.|
 |fsx.password|The password that Harvest will use to authenticate with the FSx for ONTAP file system. |
 |prometheus|Is the release name of the Prometheus instance you want to use to store the monitoring data.|
 
@@ -68,11 +69,11 @@ helm upgrade --install harvest -f values.yaml ./ --namespace=harvest --create-na
     --set fsx.username=<user>  --set fsx.password=<password> --set prometheus=<prometheus>
 ```
 Where:
-    * '--namespace=harvest' and '--create-namespace' flags instruct helm to create a namespace named 'harvest' (if needed), and deploy the Harvest on it.
-    * '<username>' is the username you want Harvest to use to authenicate with the FSxN file system. The default is 'fsxadmin'.
-    * '<password>' is the password you want Harvest to use to authenicate with the FSxN file system.
-    * '<managment_lif>' should be the IP address, or DNS hostname, of the FSx for ONTAP file system management endpoint. You can get this information from the AWS console.
-    * '<prometheus>' is the release name of the Prometheus instance you want to use to store the monitoring data. This should be the same as the Prometheus release name you used when you deployed Prometheus.
+* '--namespace=harvest' and '--create-namespace' flags instruct helm to create a namespace named 'harvest' (if needed), and deploy the Harvest on it.
+* '<username>' is the username you want Harvest to use to authenticate with the FSxN file system. The default is 'fsxadmin'.
+* '<password>' is the password you want Harvest to use to authenticate with the FSxN file system.
+* '<managment_lif>' should be the IP address, or DNS hostname, of the FSx for ONTAP file system management endpoint. You can get this information from the AWS console.
+* '<prometheus>' is the release name of the Prometheus instance you want to use to store the monitoring data. This should be the same as the Prometheus release name you used when you deployed Prometheus.
 
 Once the deployment is complete, Harvest should be listed as a target on Prometheus.
 
