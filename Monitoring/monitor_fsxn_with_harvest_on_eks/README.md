@@ -69,11 +69,11 @@ helm upgrade --install harvest -f values.yaml ./ --namespace=harvest --create-na
     --set fsx.username=<user>  --set fsx.password=<password> --set prometheus=<prometheus>
 ```
 Where:
-    * '--namespace=harvest' and '--create-namespace' flags instruct helm to create a namespace named 'harvest' (if needed), and deploy the Harvest on it.
-    * '\<username\>' is the username you want Harvest to use to authenticate with the FSxN file system. The default is 'fsxadmin'.
-    * '\<password\>' is the password you want Harvest to use to authenticate with the FSxN file system.
-    * '\<managment\_lif\>' should be the IP address, or DNS hostname, of the FSx for ONTAP file system management endpoint. You can get this information from the AWS console.
-    * '\<prometheus\>' is the release name of the Prometheus instance you want to use to store the monitoring data. This should be the same as the Prometheus release name you used when you deployed Prometheus.
+* '--namespace=harvest' and '--create-namespace' flags instruct helm to create a namespace named 'harvest' (if needed), and deploy the Harvest on it.
+* '\<username\>' is the username you want Harvest to use to authenticate with the FSxN file system. The default is 'fsxadmin'.
+* '\<password\>' is the password you want Harvest to use to authenticate with the FSxN file system.
+* '\<managment\_lif\>' should be the IP address, or DNS hostname, of the FSx for ONTAP file system management endpoint. You can get this information from the AWS console.
+* '\<prometheus\>' is the release name of the Prometheus instance you want to use to store the monitoring data. This should be the same as the Prometheus release name you used when you deployed Prometheus.
 
 Once the deployment is complete, Harvest should be listed as a target on Prometheus.
 
