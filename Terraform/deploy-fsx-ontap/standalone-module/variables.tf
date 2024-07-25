@@ -1,7 +1,7 @@
-variable "aws_secretsmanager_region" {
-   description = "The AWS region where the secret is stored. Can be different from the region where the FSxN file system is deployed."
-   type        = string
-   default     = "us-east-2"
+variable "aws_account_id" {
+  description = "The AWS account ID. Used to create very specific IAM policies."
+  type        = string
+  default     = "*"
 }
 
 variable "fsx_capacity_size_gb" {
@@ -36,10 +36,10 @@ variable "fsx_region" {
    default     = "us-west-2"
 }
 
-variable "fsx_secret_name" {
-   description = "The name of the AWS SecretManager secret that holds the ONTAP administrative password for the fsxadmin user that you can use to administer your file system using the ONTAP CLI and REST API."
+variable "secret_region" {
+   description = "The AWS region where the secets for the FSxN file system and SVM will be deployed."
    type        = string
-   default     = "fsx_secret"
+   default     = "us-west-2"
 }
 
 variable "fsx_subnets" {
@@ -59,6 +59,12 @@ variable "fsx_tput_in_MBps" {
       condition = contains([128, 256, 512, 1024, 2048, 4096], var.fsx_tput_in_MBps)
       error_message = "Invalid throughput value. Valid values are 128, 256, 512, 1024, 2048, and 4096."
    }
+}
+
+variable "secret_name_prefix" {
+  description = "The prefix to the secret name that will be created that will contain the FSxN passwords (system, and SVM)."
+  type        = string
+  default     = "fsxn-secret"
 }
 
 variable "svm_name" {

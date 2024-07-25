@@ -26,7 +26,6 @@ resource "aws_fsx_ontap_file_system" "terraform-fsxn" {
   kms_key_id                        = var.kms_key_id
   automatic_backup_retention_days   = var.backup_retention_days
   daily_automatic_backup_start_time = var.daily_backup_start_time
-  fsx_admin_password                = data.aws_secretsmanager_secret_version.fsx_password.secret_string
   route_table_ids                   = (var.deployment_type == "MULTI_AZ_1" ? var.route_table_ids : null)
   tags                              = merge(var.tags, {Name = var.name })
   dynamic "disk_iops_configuration" {
@@ -50,6 +49,19 @@ resource "aws_fsx_ontap_file_system" "terraform-fsxn" {
   }
 }
 
+data "aws_region" "current" {}
+
+#
+# Instantiate a secret for the FSx ONTAP file system. It will set the initial password for the file system.
+module "fsxn_rotate_secret" {
+    source = "github.com/Netapp/FSx-ONTAP-samples-scripts/Management-Utilities/fsxn-rotate-secret/terraform"
+    fsx_region = data.aws_region.current.name
+    secret_region = var.secrets_region != "" ? var.secrets_region : data.aws_region.current.name
+    aws_account_id = var.aws_account_id
+    secret_name_prefix = var.secret_name_prefix
+    fsx_id = aws_fsx_ontap_file_system.terraform-fsxn.id
+}
+
 resource "aws_fsx_ontap_storage_virtual_machine" "mysvm" {
   // REQUIRED PARAMETERS
   file_system_id = aws_fsx_ontap_file_system.terraform-fsxn.id
@@ -57,6 +69,16 @@ resource "aws_fsx_ontap_storage_virtual_machine" "mysvm" {
 
   // OPTIONAL PARAMETERS
   root_volume_security_style = var.root_vol_sec_style
+}
+#
+# Instantiate a secret for the FSx ONTAP file system. It will set the initial password for the SVM.
+module "svm_rotate_secret" {
+    source = "github.com/Netapp/FSx-ONTAP-samples-scripts/Management-Utilities/fsxn-rotate-secret/terraform"
+    fsx_region = data.aws_region.current.name
+    secret_region = var.secrets_region != "" ? var.secrets_region : data.aws_region.current.name
+    aws_account_id = var.aws_account_id
+    secret_name_prefix = var.secret_name_prefix
+    svm_id = aws_fsx_ontap_storage_virtual_machine.mysvm.id
 }
 
 resource "aws_fsx_ontap_volume" "myvol" {
@@ -77,12 +99,4 @@ resource "aws_fsx_ontap_volume" "myvol" {
   security_style             = var.vol_info["sec_style"]
   skip_final_backup          = var.vol_info["skip_final_backup"]
   snapshot_policy            = var.vol_info["snapshot_policy"]
-}
-#
-# The next two data blocks retrieve the secret from Secrets Manager.
-data "aws_secretsmanager_secret" "fsx_secret" {
-  name = var.secret_name
-}
-data "aws_secretsmanager_secret_version" "fsx_password" {
-  secret_id = data.aws_secretsmanager_secret.fsx_secret.id
 }
