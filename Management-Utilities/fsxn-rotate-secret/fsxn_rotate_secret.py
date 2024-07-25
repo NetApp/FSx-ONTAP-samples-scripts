@@ -6,6 +6,7 @@
 #   region: The region in which the FSx file system is located.
 ################################################################################
 
+import botocore
 import boto3
 import logging
 import os
@@ -59,11 +60,11 @@ def set_secret(secretsClient, arn, token):
 
     try:
         secretValueResponse = secretsClient.get_secret_value(SecretId=arn, VersionStage="AWSPENDING", VersionId=token)
-    except ClientError as e:
+    except botocore.exceptions.ClientError as e:
         logger.error(f"Unable to retrieve secret for {arn} in VersionStage = 'AWSPENDING'. Error={e}")
         #
         # Pass the exception on so the Secret Manager will know that the rotate failed.
-        raise Exception(e)
+        raise e
 
     password = secretValueResponse['SecretString']
     #
