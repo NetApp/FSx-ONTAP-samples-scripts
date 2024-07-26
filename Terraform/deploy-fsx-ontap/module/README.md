@@ -287,14 +287,16 @@ terraform apply
 
 | Name | Description |
 |------|-------------|
+| filesystem_id | The ID of the FSxN Filesystem |
+| filesystem_management_ip | The management IP of the FSxN Filesystem. |
 | fsxn_secret_arn | The ARN of the secret |
 | fsxn_secret_name | The Name of the secret |
-| my_filesystem_id | The ID of the FSxN Filesystem |
-| my_fsx_ontap_security_group_id | The ID of the FSxN Security Group |
-| my_svm_id | The ID of the FSxN Storage Virtual Machine |
-| my_vol_id | The ID of the ONTAP volume in the File System |
+| security_group_id | The ID of the FSxN Security Group |
+| svm_id | The ID of the FSxN Storage Virtual Machine |
+| svm_management_ip | The management IP of the Storage Virtual Machine. |
 | svm_secret_arn | The Name of the secret |
 | svm_secret_name | The Name of the secret |
+| vol_id | The ID of the ONTAP volume in the File System |
 
 ## Author Information
 
