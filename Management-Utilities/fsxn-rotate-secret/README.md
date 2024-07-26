@@ -71,6 +71,10 @@ Note that the Lambda function can only manage one password, so either set the va
 
 :warning: **Warning:** If both the `fsx_id` and `svm_id` tags are set, the `svm_id` tag will be used and the fsx_id will be silently ignored.
 
+Also note that the secret value will be a JSON object with the following fields:
+- `username` - The username will either be set to 'fsxadmin' or 'vsadmin' depending on whether the `fsx_id` or `svm_id` tag is set.
+- `password` - The password associated with the username.
+
 ##### Step 3.2 - Enable rotation feature
 Click on the Rotation tab and then click on the "Edit rotation" button. That should bring up a 
 pop-up window. Click on the "Automatic rotation" slider to enable the feature and then configure
@@ -184,6 +188,10 @@ The following are the outputs for the module:
 | lambda_name | The name of the Lambda function created. |
 | role_arn | The ARN of the IAM role created. |
 | role_name | The name of the IAM role created. |
+
+Note that the secret value will be a JSON object with the following fields:
+- `username` - The username will either be set to 'fsxadmin' or 'vsadmin' depending on whether the `fsx_id` or `svm_id` tag is set.
+- `password` - The password associated with the username.
 
 ## Author Information
 

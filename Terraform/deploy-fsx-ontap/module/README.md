@@ -34,12 +34,16 @@ Calling this terraform module will result the following:
     - **Ingress** allow ssh port 22
     - **Ingress** allow https port 443
     - **Egress** allow all traffic
+
+* Two new AWS secrets. One that contains the fsxadmin password and another that contains the SVM admin password.
+
 * Create a new FSx for Netapp ONTAP file-system in your AWS account named "_terraform-fsxn_". The file-system will be created with the following configuration parameters:
     * 1024Gb of storage capacity
     * Multi AZ deployment type
     * 128Mbps of throughput capacity 
 
 * Create a Storage Virtual Maching (SVM) in this new file-system named "_first_svm_"
+
 * Create a new FlexVol volume in this SVM named "_vol1_" with the following configuration parameters:
     * Size of 1024Mb
     * Storage efficiencies mechanism enabled

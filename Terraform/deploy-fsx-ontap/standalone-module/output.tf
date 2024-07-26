@@ -18,6 +18,11 @@ output "my_svm_id" {
   value       = aws_fsx_ontap_storage_virtual_machine.mysvm.id
 }
 
+output "my_svm_management_ip" {
+  description = "The management IP of the Storage Virtual Machine."
+  value       =  format(join("", aws_fsx_ontap_storage_virtual_machine.mysvm.endpoints[0].management[0].ip_addresses))
+}
+
 output "my_vol_id" {
   description = "The ID of the ONTAP volume in the File System"
   value       = aws_fsx_ontap_volume.myvol.id

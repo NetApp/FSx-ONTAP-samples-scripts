@@ -83,7 +83,7 @@ Variables that can be changed include:
 - aws_region - The AWS region where you want to deploy the resources.
 - aws_secrets_region - The region where the fsx password secret will be created.
 - fsx_name - The name you want applied to the FSx for NetApp ONTAP File System. Must not already exist.
-- fsx_password_secret_name - A base name of the AWS SecretsManager secret that will hold the FSxN password.
+- secret_name_prefix - The base name of the AWS SecretsManager secrets that will be created that will hold the FSxN adminstrator, and SVM, passwords.
 A random string will be appended to this name to ensure uniqueness.
 - fsx_storage_capacity - The storage capacity of the FSx for NetApp ONTAP File System.
 Read the "description" of the variable to see the valid range.
@@ -109,31 +109,22 @@ the following is an example of last part of the output of a successful deploymen
 ```bash
 Outputs:
 
-eks-cluster-name = "fsx-eks-DB0H69vL"
-eks-jump-server = "Instance ID: i-0e99a61431a39d327, Public IP: 54.244.16.198"
-fsx-id = "fs-0887a493cXXXXXXXX"
-fsx-management-ip = "198.19.255.174"
-fsx-password-secret-arn = "arn:aws:secretsmanager:us-west-2:759995400000:secret:fsx-eks-secret-3b8bde97-Fst5rj"
-fsx-password-secret-name = "fsx-eks-secret-3b8bde97"
+Outputs:
+
+eks-cluster-name = "eksfs-eks-lutuycvJ"
+eks-jump-server = "Instance ID: i-00de97f46e3c9a617, Public IP: 54.213.93.236"
+fsx-id = "fs-04f1b48f8da639a7f"
+fsx-management-ip = "198.19.255.245"
+fsx-password-secret-arn = "arn:aws:secretsmanager:us-west-2:759995470648:secret:keith-eksfs-fsxn-55fd4eb7-4Oy2ab"
+fsx-password-secret-name = "eksfs-fsxn-55fd4eb7"
 fsx-svm-name = "ekssvm"
 region = "us-west-2"
-vpc-id = "vpc-03ed6b1867d76e1a9"
+svm-password-secret-arn = "arn:aws:secretsmanager:us-west-2:759995470648:secret:keith-eksfs-svm-6ad11609-nApoUp"
+svm-password-secret-name = "eksfs-svm-6ad11609"
+vpc-id = "vpc-0791cc0566462082b"
 ```
 :bulb: **Tip:** You will use the values in the commands below, so probably a good idea to copy the output somewhere
 so you can easily reference it later.
-
-> [!IMPORTANT]
-> Note that an FSxN File System was created, with a vserver (a.k.a. SVM). The default username
-> for the FSxN File System is 'fsxadmin'. And the default username for the vserver is 'vsadmin'. The
-> password for both of these users is the same and is what is stored in the AWS SecretsManager secret
-> shown above. Since Terraform was used to create the secret, the password is stored in
-> plain text in its "state" database and therefore it is **HIGHLY** recommended that you change
-> the password to something else by first changing the passwords via the AWS Management Console and
-> then updating the password in the AWS SecretsManager secret. You can update the 'username' key in
-> the secret if you want, but it must be a vserver admin user, not a system level user. This secret
-> is used by Astra Trident and it will always login via the vserver management LIF and therefore it
-> must be a vserver admin user. If you want to create a separate secret for the 'fsxadmin' user,
-> feel free to do so.
 
 ### SSH to the jump server to complete the setup
 Use the following command to 'ssh' to the jump server:
@@ -164,7 +155,7 @@ Note that if you are using an SSO to authenticate with AWS, then the actual user
 you need to add is slightly different than what is output from the above command.
 The following command will take the output from the above command and format it correctly:
 
-:warning: **Warning:** Only run this command if you are using an SSO to authenticate with aws.
+:warning: **Caution:** Only run this command if you are using an SSO to authenticate with aws.
 ```bash
 user_ARN=$(aws sts get-caller-identity | jq -r '.Arn' | awk -F: '{split($6, parts, "/"); printf "arn:aws:iam::%s:role/aws-reserved/sso.amazonaws.com/%s\n", $5, parts[2]}')
 echo $user_ARN
@@ -246,7 +237,7 @@ other files you'll need to complete the setup.
 After making the following substitutions in the commands below:
 - \<fsx-id> with the FSxN ID.
 - \<fsx-svm-name> with the name of the SVM that was created.
-- \<secret-arn> with the ARN of the AWS SecretsManager secret that holds the FSxN password.
+- \<secret-arn> with the ARN of the AWS SecretsManager secret that holds the SVM password (not the FSxN password).
 
 Run them to configure Trident to use the FSxN file system that was
 created earlier using the `terraform --apply` command:
@@ -281,7 +272,7 @@ kubectl get tridentbackendconfig -n trident --output=json | jq '.items[] | .stat
 ```
 Once you have resolved any issues, you can remove the failed backend by running:
 
-:warning: **Warning:** Only run this command if the backend is in a failed state and you are ready to get rid of it.
+:warning: **Caution:** Only run this command if the backend is in a failed state and you are ready to get rid of it.
 ```bash
 kubectl delete -n trident -f temp/backend-tbc-ontap-nas.yaml
 ```
