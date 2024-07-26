@@ -227,6 +227,7 @@ terraform apply
 | my_fsx_ontap_security_group_id | The ID of the FSxN Security Group |
 | my_fsxn_secret_name | The name of the secret containing the ONTAP admin password |
 | my_svm_id | The ID of the FSxN Storage Virtual Machine |
+| my_svm_management_ip | The management IP of the Storage Virtual Machine. |
 | my_svm_secret_name | The name of the secret containing the SVM admin password |
 | my_vol_id | The ID of the ONTAP volume in the File System |
 
