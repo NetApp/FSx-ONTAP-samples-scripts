@@ -37,20 +37,21 @@ Running this terraform sample will result the following:
     - **Ingress** allow ssh port 22
     - **Ingress** allow https port 443
     - **Egress** allow all traffic
+
+* Two new AWS secrets. One that contains the fsxadmin password and another that contains the SVM admin password.
+
 * Create a new FSx for Netapp ONTAP file-system in your AWS account named "_terraform-fsxn_". The file-system will be created with the following configuration parameters:
     * 1024Gb of storage capacity
     * Multi AZ deployment type
     * 128Mbps of throughput capacity 
 
 * Create a Storage Virtual Maching (SVM) in this new file-system named "_first_svm_"
+
 * Create a new FlexVol volume in this SVM named "_vol1_" with the following configuration parameters:
     * Size of 1024Mb
     * Storage efficiencies mechanism enabled
     * Auto tiering policy with 31 cooling days
     * post-delete backup disabled 
-
-> [!NOTE]
-> Even though this Terraform code is set up to use AWS SecretsManager to retrieve the FSxN password, it will store the password in its `state database`. Therefore, it is assumed you have properly secured that database so that unauthorized personal can't access the password.
 
 ## Prerequisites
 
@@ -122,12 +123,28 @@ terraform init
 
 A succesfull initialization should display the following output:
 ```shell
-
 Initializing the backend...
+Initializing modules...
+Downloading git::https://github.com/Netapp/FSx-ONTAP-samples-scripts.git for fsxn_rotate_secret...
+- fsxn_rotate_secret in .terraform/modules/fsxn_rotate_secret/Management-Utilities/fsxn-rotate-secret/terraform
+Downloading git::https://github.com/Netapp/FSx-ONTAP-samples-scripts.git for svm_rotate_secret...
+- svm_rotate_secret in .terraform/modules/svm_rotate_secret/Management-Utilities/fsxn-rotate-secret/terraform
 
 Initializing provider plugins...
-- Reusing previous version of hashicorp/aws from the dependency lock file
-- Using previously-installed hashicorp/aws v5.25.0
+- Finding hashicorp/aws versions matching ">= 5.25.0"...
+- Finding latest version of hashicorp/random...
+- Finding latest version of hashicorp/archive...
+- Installing hashicorp/aws v5.59.0...
+- Installed hashicorp/aws v5.59.0 (signed by HashiCorp)
+- Installing hashicorp/random v3.6.2...
+- Installed hashicorp/random v3.6.2 (signed by HashiCorp)
+- Installing hashicorp/archive v2.4.2...
+- Installed hashicorp/archive v2.4.2 (signed by HashiCorp)
+
+Terraform has created a lock file .terraform.lock.hcl to record the provider
+selections it made above. Include this file in your version control repository
+so that Terraform can guarantee to make the same selections by default when
+you run "terraform init" in the future.
 
 Terraform has been successfully initialized!
 
@@ -210,6 +227,7 @@ terraform apply
 | my_fsx_ontap_security_group_id | The ID of the FSxN Security Group |
 | my_fsxn_secret_name | The name of the secret containing the ONTAP admin password |
 | my_svm_id | The ID of the FSxN Storage Virtual Machine |
+| my_svm_management_ip | The management IP of the Storage Virtual Machine. |
 | my_svm_secret_name | The name of the secret containing the SVM admin password |
 | my_vol_id | The ID of the ONTAP volume in the File System |
 

@@ -10,6 +10,7 @@ import botocore
 import boto3
 import logging
 import os
+import json
 
 charactersToExcludeInPassword = '/"\'\\'
 
@@ -46,8 +47,27 @@ def create_secret(secretsClient, arn, token):
         # Generate a random password.
         passwd = secretsClient.get_random_password(ExcludeCharacters=charactersToExcludeInPassword, PasswordLength=8, IncludeSpace=False)
         #
+        # Get the FSx file system ID, SVM ID and region from the secret's tags so we can figure out if this password
+        # is for the FSx file system or the SVM.
+        secretMetadata = secretsClient.describe_secret(SecretId=arn)
+        tags = secretMetadata['Tags']
+        fsxId = getTagValue(tags, 'fsx_id')
+        fsxRegion = getTagValue(tags, 'region')
+        svmId = getTagValue(tags, 'svm_id')
+        logging.info(f"fsxId={fsxId}, svmId={svmId}, fsxRegion={fsxRegion}")
+
+        if (fsxId is None and svmId is None) or fsxRegion is None:
+            message=f"Error, tags 'fsxId' or 'svmId' and the 'region' have to be set on the secret's ({arn}) resource."
+            logger.error(message)
+            raise Exception(message)   # Signal to the Secrets Manager that the rotation failed.
+
+        if svmId is None or svmId == "":
+            username="fsxadmin"
+        else:
+            username="vsadmin"
+        #
         # Put the secret.
-        secretsClient.put_secret_value(SecretId=arn, ClientRequestToken=token, SecretString=passwd['RandomPassword'], VersionStages=['AWSPENDING'])
+        secretsClient.put_secret_value(SecretId=arn, ClientRequestToken=token, SecretString='{"username": "' + username + '", "password": "' + passwd["RandomPassword"] + '"}', VersionStages=['AWSPENDING'])
         logger.info(f"create_secret: Successfully put secret for ARN {arn} with ClientRequestToken {token} and VersionStage = 'AWSPENDING'.")
 
 ################################################################################
@@ -66,7 +86,7 @@ def set_secret(secretsClient, arn, token):
         # Pass the exception on so the Secret Manager will know that the rotate failed.
         raise e
 
-    password = secretValueResponse['SecretString']
+    password = json.loads(secretValueResponse['SecretString'])['password']
     #
     # Get the FSx file system ID, SVM ID and region from the secret's tags.
     secretMetadata = secretsClient.describe_secret(SecretId=arn)
