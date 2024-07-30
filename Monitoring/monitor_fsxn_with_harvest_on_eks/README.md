@@ -3,7 +3,7 @@
 Harvest helm chart for monitoring Amazon FSx for ONTAP with Harvest, Grafana and Prometheus on EKS.
 
 ## Introduction
-This sample shows how to deploy NetApp Harvest on EKS to monitor an Amazon FSx for NetApp ONTAP file system.
+This sample shows how to deploy NetApp Harvest on an EKS cluster to monitor an Amazon FSx for NetApp ONTAP file system.
 Harvest is a data collector that collects metrics from a NetApp ONTAP storage system and provides a REST API
 for accessing the collected data. Harvest can be used to monitor the performance of your FSx for ONTAP
 file system and visualize the metrics on Grafana. You can read more about Harvest [here](https://netapp.github.io/harvest/).
@@ -11,21 +11,23 @@ file system and visualize the metrics on Grafana. You can read more about Harves
 ## What to expect
 
 Harvest Helm chart installation will result the following:
-* Install NetApp Harvest with latest version on your EKS
+* Installing the latest version fo NetApp Harvest into your EKS cluster.
 * Collecting metrics about your FSx for ONTAP.
-* Add Grafana dashboards for better visualization.
+* Add Grafana dashboards for visualization.
 
 ## Prerequisites
 * `helm` - for resources installation.
-* A NetApp FSx for ONTAP accessible from the same VPC as you EKS cluster.
-* If you want Prometheus to have persistent storage, you will need a storage class defined. I would recommend 
-using NetApp's Astra Trident to offer up some storage from your FSx for ONTAP file system. You can install Trident from
-the AWS Marketplace into your EKS cluster. If you need help creating a storage class using Trident, please refer to the
+* `kubectl` - for cluster interaction.
+* An EKS cluster. If you don't have one, you can use the instructions from another one of our samples [FSxN-as-PVC-for-EKS](https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/EKS/FSxN-as-PVC-for-EKS). Follow the instructions up to the point where it sugguests you creating a "stateful application."
+* A NetApp FSx for ONTAP accessible from the same VPC as your EKS cluster. If you don't already have one the sample above will create one for you.
+* If you want Prometheus to have persistent storage, you will need a storage class defined. The sample mentioned above
+will set one up for you. It leverages NetApp's Astra Trident to offer up storage from your FSx for ONTAP file system to a Kubernettes cluster.
+You can install Trident from the AWS Marketplace into your EKS cluster. For additional information on how to use Trident, please refer to the
 [Trident documentation](https://docs.netapp.com/us-en/trident/).
 
 ## Deployment of Prometheus and Grafana
-If you don't have Prometheus and Grafana running in your EKS cluster, you can deploy both of them
-using the following commands:
+If you don't alrady have Prometheus and Grafana running in your EKS cluster, you can deploy both of them
+from the prometheus community repository using the following commands:
 ```bash
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 helm repo update
@@ -77,13 +79,13 @@ prometheus-kube-prometheus-stack-prometheus-0               2/2     Running   0 
 Now that you have Prometheus and Grafana running, you are ready to deploy Harvest to monitor your FSx for ONTAP file system.
 
 ### Input Parameters
-
+These parameters can either be provided at the command line when you run the `helm upgrade` command, or by putting them in the `values.yaml` file.
 |Parameter|Description| 
 |:---|:---| 
-|fsx.managment\_lif|The FSx for NetApp ONTAP file system management IP.|
-|fsx.username|The username that Harvest will use to authenticate to the FSx for ONTAP file system with. It will default to 'fsxadmin'. Note that since Harvest does not support using AWS secrets it is recommended that you use an account that has been assigned the fsxadmin-readonly role.|
-|fsx.password|The password that Harvest will use to authenticate with the FSx for ONTAP file system. |
-|prometheus|Is the release name of the Prometheus instance you want to use to store the monitoring data.|
+|fsx.managment\_lif|The FSx for NetApp ONTAP file system management IP. You can get this information from the AWS console.|
+|fsx.username|The username that Harvest will use to authenticate wth to the FSx for ONTAP file system. It will default to 'fsxadmin'. Note that since Harvest does not support using AWS secrets it is recommended that you use an account that has been assigned the fsxadmin-readonly role.|
+|fsx.password|The password that Harvest will use to authenticate with to the FSx for ONTAP file system. |
+|prometheus|Is the release name of the Prometheus instance you want to use to store the monitoring data. If you installed it with the commands above, that will be `kube-prometheus-stack`|
 
 ### Installation
 To install Harvest helm chart from the Prometheus Community GitHub repository you will first need to copy the
@@ -92,15 +94,16 @@ entire repo by running the follow command as opposed to copying the files indivi
 ```bash
 git clone https://github.com/NetApp/FSx-ONTAP-samples-scripts.git
 ```
-Then navigate to this sample's directory:
+Then navigate to Helm Chart configuration files in this sample's directory:
 ```
 cd FSx-ONTAP-samples-scripts/Monitoring/monitor_fsxn_with_harvest_on_eks/HelmChart
 ```
-Ran the command below after making the following substitutions:
-* \<usernname> - The username you want Harvest to use to authenticate with the FSxN file system. The default is 'fsxadmin'.
+Either make the following substitutions to the command line, or update the `values.yaml` file with the following information.
+Additional information about the parameters can be found in the [Input Parameters](#input-parameters) section above.
+* \<usernname> - The username you want Harvest to use to authenticate with the FSxN file system.
 * \<password> - The password you want Harvest to use to authenticate with the FSxN file system.
-* \<managment\_lif> - The IP address, or DNS hostname, of the FSx for ONTAP file system management endpoint. You can get this information from the AWS console.
-* \<prometheus> - The release name of the Prometheus instance you want to use to store the monitoring data. If you used the command above to install Prometheus, this will be 'kube-prometheus-stack'.
+* \<managment\_lif> - The IP address, or DNS hostname, of the FSx for ONTAP file system management endpoint.
+* \<prometheus> - The release name of the Prometheus instance you want to use to store the monitoring data.
 
 ```bash
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
@@ -121,36 +124,39 @@ NAMESPACE: harvest
 STATUS: deployed
 REVISION: 1
 TEST SUITE: None
-```
 
 Once the deployment is complete, Harvest should be listed as a target on Prometheus.
 
-After installation, if you installed Grafana with the steps above, you can access it by running the following command:
+### Accessing Grafana
+
+If you installed Grafana with the steps above, you'll need a way to access it. The quick way to do that is by running the following command:
 ```bash
 kubectl port-forward -n prometheus $(kubectl -n prometheus get pods | grep kube-prometheus-stack-grafana | awk '{print $1}') 3000 &
 ```
-Then open your browser and navigate to `http://localhost:3000` and login with the default username and password (admin/prom-operator).
+This will forward port 3000 on your local machine to the Grafana instance running in the EKS cluster. At that point you can just open your browser and navigate to `http://localhost:3000` and login with the default username and password (admin/prom-operator).
 
-If you 'ssh'ed into the server where you ran the above command, you'll need to forward port 3000 to that server. You can do that by running the following command from your local machine:
+If you `ssh`ed into the server where you performed the installation, you'll need to forward port 3000 to that server from your local system. You can do that by running the following command from your local machine:
 ```bash
 ssh -L 3000:localhost:3000 -N -f <server>
 ```
 Where `<server>` is the server you are connecting to.
 
 Notes:
-* The -L option specifies the port forwarding. The first number is the port on the local machine. The second part is the hostname to setup the port forwarding on, where `localhost` means the local system. The third part is the port of the remote server.
+* The -L option specifies the port forwarding. The first number is the port on the local machine. The second part is the hostname where the forwarding will be setup, where `localhost` means the local system. The third part is the port of the remote server.
 * The -N option tells ssh not to execute a remote command.
-* The -f option tells ssh to go into the background just before command execution.
-* This works from a Linux or Mac system. If you are using Windows, you will need to have WSL installed and run the command from there.
-* If you also have to provide an -i option to provide authenticat, as well as an -l option to specify a specific user, you'll also need to provide those options as well.
+* The -f option tells ssh to go into the background after setting up the port forwarding.
+* This command works from a terminal window on a Linux or Mac system. If you are using Windows, you will need to have
+[WSL](https://learn.microsoft.com/en-us/windows/wsl/install) installed and run the command from there.
+* If you also have to provide an -i option to provide authentication, as well as an -l option to specify a specific user, you'll also need to provide those options as well.
 
-To provide a more permanent access, you can create a load balancer service for Grafana. You can read more about how to do that
+To provide a permanent access, you can create a load balancer service for Grafana. You can read more about how to do that
 [here](https://aws.amazon.com/blogs/containers/exposing-kubernetes-applications-part-1-service-and-ingress-resources/).
     
 ### Adding Grafana dashboards and visualize your FSxN metrics on Grafana
 There are a few sample dashboards in the `dashboards` folder that you can import into Grafana to visualize the metrics that Harvest is collecting.
 * [How to import Grafana dashboards.](https://grafana.com/docs/grafana/latest/dashboards/build-dashboards/import-dashboards/)
 * [Supported Harvest Dashboards.](https://netapp.github.io/harvest/24.05/prepare-fsx-clusters/#supported-harvest-dashboards/)
+
 ### Notes
 1. When importing the dashboard, be sure to select the Prometheus data source that you are using to store the metrics.
 2. The FSxN fsxadmin user does not have full permission to collect all metrics. Because of that some traditional ONTAP dashboards may not fully populate.
