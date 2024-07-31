@@ -64,6 +64,7 @@ alarmPrefixSSD="SSD_Utilization_for_fs_"
 # You shouldn't have to modify anything below here.
 ################################################################################
 
+import botocore
 import boto3
 import os
 import getopt
@@ -148,7 +149,6 @@ def delete_alarm(cw, alarmName):
         cw.delete_alarms(AlarmNames=[alarmName])
     else:
         print(f'Would have deleted alarm {alarmName}.')
-    return
 
 ################################################################################
 # This function checks to see if the alarm already exists.
@@ -236,13 +236,11 @@ def lambda_handler(event, context):
 
     if len(SNStopic) == 0:
         raise Exception("You must specify a SNS topic to send the alarm messages to.")
-        return
 
     if len(accountId) == 0:
         raise Exception("You must specify an accountId to run this program.")
-        return
 
-    if len(regions) == 0:
+    if len(regions) == 0:  # pylint: disable=E0601
         ec2Client = boto3.client('ec2')
         ec2Regions = ec2Client.describe_regions()['Regions']
         for region in ec2Regions:
@@ -382,7 +380,7 @@ if os.environ.get('AWS_LAMBDA_FUNCTION_NAME') == None:
             elif currentArgument in ("-a", "--accountID"):
                 accountId = currentValue
             elif currentArgument in ("-s", "--SNSTopic"):
-                snsTopic = currentValue
+                SNStopic = currentValue
             elif currentArgument in ("-C", "--CPUThreshold"):
                 defaultCPUThreshold = int(currentValue)
             elif currentArgument in ("-S", "--SSDThreshold"):
