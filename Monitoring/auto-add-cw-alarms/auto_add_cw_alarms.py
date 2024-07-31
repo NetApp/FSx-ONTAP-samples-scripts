@@ -327,7 +327,7 @@ def lambda_handler(event, context):
                         fsName = fsId.replace('fs-', 'FsxId')
                         alarmDescription = f"Volume utilization alarm for volumeId {volumeId}{customerId}, File System Name: {fsName}, Volume Name: {volumeName} in region {region}."
                         if(not contains_alarm(alarmName, alarms)):
-                            print(f'Adding volume utilization alarm for {volume["Name"]} in region {region}.')
+                            print(f'Adding volume utilization alarm for {volumeName} in region {region}.')
                             add_volume_alarm(cw, volumeId, alarmName, alarmDescription, fsId, threshold, region)
             #
             # Scan for volume alarms without volumes.
