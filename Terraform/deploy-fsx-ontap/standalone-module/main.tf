@@ -2,7 +2,7 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "5.25.0"
+      version = ">= 5.25.0"
     }
   }
 }
@@ -12,10 +12,14 @@ provider "aws" {
   region = var.fsx_region
 }
 #
-# Since the Secrets Manager might be in a different region, create a separate provider for it.
-provider "aws" {
-  alias  = "secrets"
-  region = var.aws_secretsmanager_region
+# Instantiate a secret for the FSx ONTAP file system. It will set the initial password for the file system.
+module "fsxn_rotate_secret" {
+    source = "github.com/Netapp/FSx-ONTAP-samples-scripts/Management-Utilities/fsxn-rotate-secret/terraform"
+    fsx_region = var.fsx_region
+    secret_region = var.secret_region
+    aws_account_id = var.aws_account_id
+    secret_name_prefix = var.secret_name_prefix
+    fsx_id = aws_fsx_ontap_file_system.terraform-fsxn.id
 }
 
 /*
@@ -40,7 +44,6 @@ resource "aws_fsx_ontap_file_system" "terraform-fsxn" {
   security_group_ids  = [aws_security_group.fsx_sg.id]
   deployment_type     = var.fsx_deploy_type
   throughput_capacity = var.fsx_tput_in_MBps
-  fsx_admin_password  = data.aws_secretsmanager_secret_version.fsx_password.secret_string
   tags = {
 	  Name = var.fsx_name
   }
@@ -55,6 +58,16 @@ resource "aws_fsx_ontap_file_system" "terraform-fsxn" {
   # ha_pairs = 1
   # route_table_ids = []
   # throughput_capacity_per_ha_pair = 0
+}
+#
+# Instantiate a rotating secret for the storage virtual machine. It will set the initial password for the SVM.
+module "svm_rotate_secret" {
+    source = "github.com/Netapp/FSx-ONTAP-samples-scripts/Management-Utilities/fsxn-rotate-secret/terraform"
+    fsx_region = var.fsx_region
+    secret_region = var.secret_region
+    aws_account_id = var.aws_account_id
+    secret_name_prefix = var.secret_name_prefix
+    svm_id = aws_fsx_ontap_storage_virtual_machine.mysvm.id
 }
 #
 # Define a storage virtual machine.
@@ -92,14 +105,4 @@ resource "aws_fsx_ontap_volume" "myvol" {
   # snaplock_configuration {}
   # snapshot_policy {}
   # tags = {}  
-}
-#
-# The next two data blocks retrieve the secret from Secrets Manager.
-data "aws_secretsmanager_secret" "fsx_secret" {
-  provider = aws.secrets
-  name = var.fsx_secret_name
-}
-data "aws_secretsmanager_secret_version" "fsx_password" {
-  provider = aws.secrets
-  secret_id = data.aws_secretsmanager_secret.fsx_secret.id
 }

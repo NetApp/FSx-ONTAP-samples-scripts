@@ -34,12 +34,16 @@ Calling this terraform module will result the following:
     - **Ingress** allow ssh port 22
     - **Ingress** allow https port 443
     - **Egress** allow all traffic
+
+* Two new AWS secrets. One that contains the fsxadmin password and another that contains the SVM admin password.
+
 * Create a new FSx for Netapp ONTAP file-system in your AWS account named "_terraform-fsxn_". The file-system will be created with the following configuration parameters:
     * 1024Gb of storage capacity
     * Multi AZ deployment type
     * 128Mbps of throughput capacity 
 
 * Create a Storage Virtual Maching (SVM) in this new file-system named "_first_svm_"
+
 * Create a new FlexVol volume in this SVM named "_vol1_" with the following configuration parameters:
     * Size of 1024Mb
     * Storage efficiencies mechanism enabled
@@ -255,6 +259,7 @@ terraform apply
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
+| aws_account_id | The AWS account ID. Used to create very specific permissions. | `string` | n/a | yes |
 | backup_retention_days | The number of days to retain automatic backups. Setting this to 0 disables automatic backups. You can retain automatic backups for a maximum of 90 days. | `number` | `0` | no |
 | capacity_size_gb | The storage capacity (GiB) of the FSxN file system. Valid values between 1024 and 196608 | `number` | `1024` | no |
 | cidr_for_sg | cidr block to be used for the created security ingress rules. Set to an empty string if you want to use the source_sg_id as the source. | `string` | `""` | no |
@@ -267,7 +272,8 @@ terraform apply
 | name | The name to assigne to the FSxN file system. | `string` | `"fsx1"` | no |
 | root_vol_sec_style | Specifies the root volume security style, Valid values are UNIX, NTFS, and MIXED (although MIXED is not recommended). All volumes created under this SVM will inherit the root security style unless the security style is specified on the volume. | `string` | `"UNIX"` | no |
 | route_table_ids | Specifies the VPC route tables in which your file system's endpoints will be created. You should specify all VPC route tables associated with the subnets in which your clients are located. By default, Amazon FSx selects your VPC's default route table. Note, this variable is only used for MULTI_AZ_1 type deployments. | `list(any)` | `null` | no |
-| secret_name | The name of the secure where the FSxN passwood is stored. | `string` | `""` | no |
+| secret_name_prefix | The prefix to the secret name that will be created that will contain the FSxN passwords (system, and SVM). | `string` | `"fsxn-secret"` | no |
+| secrets_region | The AWS region where the secets for the FSxN file system and SVM will be deployed. | `string` | `""` | no |
 | security_group_id | If you are not creating the security group, provide the ID of the security group to be used. | `string` | `""` | no |
 | source_sg_id | The ID of the security group to allow access to the FSxN file system. Set to an empty string if you want to use the cidr_for_sg as the source. | `string` | `""` | no |
 | subnets | The subnets from where the file system will be accessible from. For MULTI_AZ_1 deployment type, provide both primvary and secondary subnets. For SINGLE_AZ_1 deployment type, only the primary subnet is used. | `map(string)` | <pre>{<br>  "primarysub": "subnet-111111111",<br>  "secondarysub": "subnet-222222222"<br>}</pre> | no |
@@ -281,10 +287,16 @@ terraform apply
 
 | Name | Description |
 |------|-------------|
-| my_filesystem_id | The ID of the FSxN Filesystem |
-| my_fsx_ontap_security_group_id | The ID of the FSxN Security Group |
-| my_svm_id | The ID of the FSxN Storage Virtual Machine |
-| my_vol_id | The ID of the ONTAP volume in the File System |
+| filesystem_id | The ID of the FSxN Filesystem |
+| filesystem_management_ip | The management IP of the FSxN Filesystem. |
+| fsxn_secret_arn | The ARN of the secret |
+| fsxn_secret_name | The Name of the secret |
+| security_group_id | The ID of the FSxN Security Group |
+| svm_id | The ID of the FSxN Storage Virtual Machine |
+| svm_management_ip | The management IP of the Storage Virtual Machine. |
+| svm_secret_arn | The Name of the secret |
+| svm_secret_name | The Name of the secret |
+| vol_id | The ID of the ONTAP volume in the File System |
 
 ## Author Information
 

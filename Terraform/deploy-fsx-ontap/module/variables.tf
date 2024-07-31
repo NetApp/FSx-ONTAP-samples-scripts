@@ -1,3 +1,20 @@
+variable "secrets_region" {
+  description = "The AWS region where the secets for the FSxN file system and SVM will be deployed."
+  type        = string
+  default     = ""
+}
+
+variable "secret_name_prefix" {
+  description = "The prefix to the secret name that will be created that will contain the FSxN passwords (system, and SVM)."
+  type        = string
+  default     = "fsxn-secret"
+}
+
+variable "aws_account_id" {
+  description = "The AWS account ID. Used to create very specific permissions."
+  type        = string
+}
+
 variable "tags" {
   description = "Tags to be applied to the FSxN file system."
   type        = map(any)
@@ -117,16 +134,6 @@ variable "disk_iops_configuration" {
   description = "The SSD IOPS configuration for the file system. Valid modes are 'AUTOMATIC' (3 iops per GB provided) or 'USER_PROVISIONED'. NOTE: Due to a bug in the AWS FSx provider, if you want AUTOMATIC, then leave this variable empty. If you want USER_PROVIDEDED, then add a 'mode=USER_PROVISIONED' (with USER_PROVISIONED enclosed in doube quotes) and 'iops=number' where number is between 1 and 160000."
   type        = map(any)
   default     = {}
-}
-
-variable "secret_name" {
-  description = "The name of the secure where the FSxN passwood is stored."
-  type        = string
-  default     = ""
-  validation {
-    condition = var.secret_name != ""
-    error_message = "You must provide the name of the secret where the FSxN password is stored."
-  }
 }
 
 variable "route_table_ids" {
