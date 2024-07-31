@@ -27,11 +27,11 @@
 ################################################################################
 #
 # Define which SNS topic you want "volume full" message to be sent to.
-SNStopic='keith-volume-full'
+SNStopic=''
 #
 # Provide the account id the SNS topic resides under:
 # MUST be a string.
-accountId='759995470648'
+accountId=''
 #
 # Set the customer ID associated with the AWS account. This is used to
 # as part of the alarm name prefix so a customer ID can be associated
@@ -233,6 +233,14 @@ def lambda_handler(event, context):
     # If the customer ID is set, reformat to be used in the alarm description.
     if customerId != '':
         customerId = f", CustomerID: {customerId}"
+
+    if len(SNStopic) == 0:
+        raise Exception("You must specify a SNS topic to send the alarm messages to.")
+        return
+
+    if len(accountId) == 0:
+        raise Exception("You must specify an accountId to run this program.")
+        return
 
     if len(regions) == 0:
         ec2Client = boto3.client('ec2')
