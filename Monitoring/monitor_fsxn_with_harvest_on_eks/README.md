@@ -32,8 +32,8 @@ from the Prometheus community repository by using the following commands:
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 helm repo update
 helm install kube-prometheus-stack prometheus-community/kube-prometheus-stack --namespace prometheus --create-namespace \
-  --set prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.spec.storageClassName=<FSX-BASIC-NAS>, \
-  --set prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.spec.resources.requests.storage=50Gi
+  --set prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.spec.resources.requests.storage=50Gi \
+  --set prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.spec.storageClassName=<FSX-BASIC-NAS> \
 ```
 Where:
 * \<FSX-BASIC-NAS\> is the storage class you want to use.  If you don't care about persistent storage, you can omit the
@@ -83,8 +83,19 @@ These parameters can either be provided on the command line when you run the `he
 |:---|:---| 
 |fsx.management\_lif|The FSx for NetApp ONTAP file system management IP. You can get this information from the AWS console.|
 |fsx.username|The username that Harvest will use when authenticating with to the FSx for ONTAP file system. It will default to 'fsxadmin'. Note that since Harvest does not support using AWS secrets it is recommended that you use an account that has been assigned the fsxadmin-readonly role.|
-|fsx.password|The password that Harvest will use when authenticating with to the FSx for ONTAP file system. |
+|fsx.password|The password that Harvest will use when authenticating with to the FSx for ONTAP file system. NOTE: Harvest does not support a password in a `*` in it.|
 |prometheus|Is the release name of the Prometheus instance you want to use to store the monitoring data. If you installed it with the commands above, that will be `kube-prometheus-stack`|
+
+> [!NOTE]
+> If you used the EKS Cluster sample mentioned above to create your FSx for ONTAP file system, its
+> default administrative account `fsxadmin` has its password managed by an AWS secret with
+> a password rotating function. Since Harvest does not support using AWS secrets, you will either need to
+> disable the rotation function of the AWS secret (not recommended) or be prepared to update the
+> password in the Harvest configuration when the password changes. As mentioned above, the recommended approach is to create a
+> new account with the `fsxadmin-readonly` role and use that account for Harvest. Then, you won't
+> have to worry about the password rotation, nor someone getting the password to an account
+> that can modify the file system. If you do need to update the password, you will need
+> to 'helm uninstall' the Harvest chart and then reinstall it, with the new password, using the command below.
 
 ### Installation
 To install Harvest helm chart from the Prometheus Community GitHub repository you will first need to copy the
@@ -112,6 +123,7 @@ helm upgrade --install harvest -f values.yaml ./ --namespace=harvest --create-na
 ```
 
 :bulb: **Tip:** Put the above commands in your favorite text editor and make the substitutions there. Then copy and paste the commands into the terminal.
+:warning: **Warning:** Harvest does not support a password with a `*` in it.
 
 A successful installation should look like this:
 ```bash
@@ -125,7 +137,43 @@ REVISION: 1
 TEST SUITE: None
 ```
 
-Once the deployment is complete, Harvest should be listed as a target on Prometheus.
+To confirm that the deployment was successful, you can run the following command:
+```bash
+kubectl get pods -n harvest
+```
+The output should look something like this:
+```bash
+$ kubectl -n harvest get pods
+NAME                       READY   STATUS    RESTARTS   AGE
+harvest-664cb76d98-464qr   1/1     Running   0          115m
+```
+If the status is not "Running", you can run this command to get more information about why it isn't running:
+```bash
+kubectl get pods -n harvest --output=json | jq '.items[] | .status.message'
+```
+Once the deployment is complete, Harvest should be listed as a target on Prometheus. If you want to check that,
+you'll first need forward TCP port 9090 to the prometheus service. You can do that by running the following command:
+```bash
+kubectl port-forward -n prometheus prometheus-kube-prometheus-stack-prometheus-0 9090 &
+```
+Then you can execute the following command:
+```bash
+curl -s http://localhost:9090/api/v1/targets | jq -r '.data.activeTargets[] | select(.labels.service == "harvest-service") | "Status = \(.health)"'
+```
+You should see `Status = up` if Prometheus is able to poll Harvest for data. You might also see a message about
+"Handling connection for 9090". That is coming from the port-forward command. You can ignore that message.
+If you don't see `Status = up`, then you can run this command to get the last error message:
+```bash
+curl -s http://localhost:9090/api/v1/targets | jq -r '.data.activeTargets[] | select(.labels.service == "harvest-service") | .lastError'
+```
+Since the command above used to start the port-forwarding put the command in the background, to kill it, just run the `fg` command, and
+then type '^c' to kill it. It should look like this:
+```bash
+$ fg
+kubectl port-forward -n prometheus prometheus-kube-prometheus-stack-prometheus-0 9090
+^c
+$
+```
 
 ### Accessing Grafana
 
@@ -133,23 +181,31 @@ If you installed Grafana with the steps above, you'll need a way to access it. T
 ```bash
 kubectl port-forward -n prometheus $(kubectl -n prometheus get pods | grep kube-prometheus-stack-grafana | awk '{print $1}') 3000 &
 ```
-This will forward port 3000 on the machine it was executed on to the Grafana instance running in the EKS cluster. If you did the installation on your local machine, you should be able to just open your browser and navigate to `http://localhost:3000` and login with the default credentials: admin/prom-operator.
+This will forward TCP port 3000 on the machine it was executed on to the Grafana instance running in the EKS cluster. If you did the
+installation on your local machine (e.g. your laptop), you should be able to just open your browser and navigate to `http://localhost:3000` and login
+with the default credentials: admin/prom-operator.
 
-If you `ssh` into another system to perform the installation, you'll need to forward port 3000 to that server from your local system. You can do that by running the following command from your local machine:
+However, if you did the installation from a "jump server" then you'll need to also forward TCP port 3000 from your local machine (e.g. your laptop)
+to the jump server. You can do that by running this command from your local machine:
 ```bash
 ssh -L 3000:localhost:3000 -N -f <server>
 ```
-Where `<server>` is the server you are connecting to.
+Where `<server>` is your jump server.
 
 Notes:
-* The -L option specifies the port forwarding. The first number is the port on the local machine. The second part is the hostname where the forwarding will be setup, where `localhost` means the local system. The third part is the port of the remote server.
+* The -L option specifies the port forwarding. The first number is the TCP port on the local machine. The second part is the hostname where the
+forwarding will be setup, where `localhost` means the local system. The third part is the TCP port of the remote server.
 * The -N option tells ssh not to execute a remote command.
 * The -f option tells ssh to go into the background after setting up the port forwarding.
 * This command works from a terminal window on a Linux or Mac system. If you are using Windows, you will need to have
 [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) installed and run the command from there.
-* If you also have to provide an -i option to provide authentication, as well as an -l option to specify a specific user, you'll also need to provide those options as well.
+* If you also have to provide an -i option to provide authentication, as well as an -l option to specify a specific user (or used the user@hostname notation),
+you'll also need to provide those options as well. For example:
+```bash
+$ ssh -L 3000:localhost:3000 -N -f -i ~/jump-server.pem ubuntu@10.1.1.25
+```
 
-To provide for a more consistent access, you can create a load balancer service for Grafana. You can read more about how to do that
+To provide for a more permanent access, you can create a load balancer service for Grafana. You can read more about how to do that
 [here](https://aws.amazon.com/blogs/containers/exposing-kubernetes-applications-part-1-service-and-ingress-resources/).
     
 ### Adding Grafana dashboards and visualize your FSxN metrics on Grafana
