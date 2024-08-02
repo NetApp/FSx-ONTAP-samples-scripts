@@ -123,6 +123,7 @@ helm upgrade --install harvest -f values.yaml ./ --namespace=harvest --create-na
 ```
 
 :bulb: **Tip:** Put the above commands in your favorite text editor and make the substitutions there. Then copy and paste the commands into the terminal.
+
 :warning: **Warning:** Harvest does not support a password with a `*` in it.
 
 A successful installation should look like this:
@@ -199,11 +200,12 @@ forwarding will be setup, where `localhost` means the local system. The third pa
 * The -f option tells ssh to go into the background after setting up the port forwarding.
 * This command works from a terminal window on a Linux or Mac system. If you are using Windows, you will need to have
 [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) installed and run the command from there.
-* If you also have to provide an -i option to provide authentication, as well as an -l option to specify a specific user (or used the user@hostname notation),
+* If you also have to provide an -i option to provide authentication, as well as an -l option to specify a specific user (or use the user@hostname notation),
 you'll also need to provide those options as well. For example:
 ```bash
 $ ssh -L 3000:localhost:3000 -N -f -i ~/jump-server.pem ubuntu@10.1.1.25
 ```
+At this you should be able to open your browser and navigate to `http://localhost:3000` and login with the default credentials: admin/prom-operator.
 
 To provide for a more permanent access, you can create a load balancer service for Grafana. You can read more about how to do that
 [here](https://aws.amazon.com/blogs/containers/exposing-kubernetes-applications-part-1-service-and-ingress-resources/).
@@ -213,8 +215,7 @@ There are a few sample dashboards in the `dashboards` folder that you can import
 * [How to import Grafana dashboards.](https://grafana.com/docs/grafana/latest/dashboards/build-dashboards/import-dashboards/)
 * [Supported Harvest Dashboards.](https://netapp.github.io/harvest/24.05/prepare-fsx-clusters/#supported-harvest-dashboards/)
 
-Notes:
-When importing the dashboard, be sure to select the Prometheus data source that you are using to store the metrics.
+:warning: **NOTE:** when importing the dashboard, be sure to select the Prometheus data source that you are using to store the metrics.
 
 ## Notes
 * The FSxN fsxadmin user does not have full permission to collect all metrics. Because of that some traditional ONTAP dashboards may not fully populate.
