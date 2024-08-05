@@ -41,13 +41,13 @@ This table list the properties that make up the DiskIopsConfiguration structure:
 There are two main ways of deploying a CloudFormation "Stack" using a template file. Either through the AWS web console, or via the aws CLI (Command Line Interface). The benefit of using the AWS Console, is that it will prompt you for the parameters, whereas the CLI will require you to pass the parameters via command line arguments.
 ### Using the AWS Console to deploy a CloudFormation Template
 To use the console, first log into the AWS console (https://console.aws.com) and then go the CloudFormation page. From there select "Stacks," then "Create stack" and finally "With new resources (standard)":
-![Create Stack](./images/create-stack-01.png)
+![Create Stack](./images/create_stack-01.png)
 On the next page, select "Choose an existing template." As you can see there are multiple ways to pass the template file to CloudFormation. If you stored your template file in an S3 bucket, click on "Amazon S3 URL" and filling the URL to the file. Otherwise, if you just are keeping the template as a file on your PC click on "Upload a template file" and then click on "Choose File." 
-![Choose Template](./images/create-stack-02.png)
+![Choose Template](./images/create_stack-02.png)
 That will bring up a file selection box. Find the file that holds your template and select it. After AWS has read in your file, click "Next."
 
 That should bring you to a page similar to one below, where you fill in the Stack Name and the parameters from your template:
-![Fill in Parameters](./images/create-stack-03.png)
+![Fill in Parameters](./images/create_stack-03.png)
 
 The list of parameters will depend on the template you are using. Once you have the parameters filled in, click "Next" at the bottom right of the page. This will bring you to a page where you can set some various options. For this exercise just leave everything with the defaults and click "Next" on the bottom right of the page.
 
