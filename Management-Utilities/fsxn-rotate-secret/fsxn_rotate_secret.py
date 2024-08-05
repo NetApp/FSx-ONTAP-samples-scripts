@@ -12,7 +12,7 @@ import logging
 import os
 import json
 
-charactersToExcludeInPassword = '/"\'\\'
+charactersToExcludeInPassword = '/"*\'\\'
 
 ################################################################################
 # This function is used to get the value of a tag from a list of tags.
