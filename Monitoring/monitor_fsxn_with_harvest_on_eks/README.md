@@ -106,7 +106,7 @@ or by putting the values in the `values.yaml` file.
 > default administrative account `fsxadmin` has its password managed by an AWS secret with
 > a password rotating function. Since Harvest does not support using AWS secrets, you will either need to
 > disable the rotation function of the AWS secret (not recommended) or be prepared to update the
-> password in the Harvest configuration when the password changes. There are also instructions on how
+> password in the Harvest configuration when the password changes. There are instructions on how
 > to change the password that Harvest uses in the "Notes" section below.
 
 Here are the commands to run to install Harvest if you have set all the values in a `values.yaml` file:
