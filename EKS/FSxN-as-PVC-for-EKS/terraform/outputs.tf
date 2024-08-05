@@ -1,14 +1,21 @@
 output "region" {
-  description = "AWS region"
   value       = var.aws_region
 }
 
 output "fsx-password-secret-name" {
-   value = aws_secretsmanager_secret.fsx_secret_password.name
+   value = module.fsxn_rotate_secret.secret_name
 }
 
 output "fsx-password-secret-arn" {
-  value = aws_secretsmanager_secret_version.fsx_secret_password.arn
+  value = module.fsxn_rotate_secret.secret_arn
+}
+
+output "svm-password-secret-name" {
+  value = module.svm_rotate_secret.secret_name
+}
+
+output "svm-password-secret-arn" {
+  value = module.svm_rotate_secret.secret_arn
 }
 
 output "fsx-svm-name" {
@@ -24,7 +31,7 @@ output "fsx-management-ip" {
 }
 
 output "eks-cluster-name" {
-  value = data.aws_eks_cluster.eks.id
+  value = module.eks.cluster_name
 }
 
 output "vpc-id" {

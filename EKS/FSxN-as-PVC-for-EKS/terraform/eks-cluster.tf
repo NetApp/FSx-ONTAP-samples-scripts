@@ -81,7 +81,7 @@ resource "aws_iam_policy" "trident_policy" {
         {
             "Action": "secretsmanager:GetSecretValue",
             "Effect": "Allow",
-            "Resource": aws_secretsmanager_secret_version.fsx_secret_password.arn
+            "Resource": module.svm_rotate_secret.secret_arn
         }
     ],
   })
@@ -121,12 +121,4 @@ data "cloudinit_config" "cloudinit" {
     content_type = "text/x-shellscript"
     content      = file("scripts/iscsi.sh")
   }
-}
-
-data "aws_eks_cluster" "eks" {
-  name = module.eks.cluster_name
-}
-
-data "aws_eks_cluster_auth" "eks" {
-  name = module.eks.cluster_name
 }
