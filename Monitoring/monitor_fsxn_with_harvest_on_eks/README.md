@@ -29,7 +29,7 @@ You can install Trident from the AWS Marketplace into your EKS cluster. For addi
 If you don't already have Prometheus and Grafana running in your EKS cluster, you can deploy both of them
 from the Prometheus community repository by using the following commands:
 
-[!NOTE] You need to make a substitution in the command below before running it.
+:memo: **NOTE:** You need to make a substitution in the command below before running it.
 ```bash
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 helm repo update
