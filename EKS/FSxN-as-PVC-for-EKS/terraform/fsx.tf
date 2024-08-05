@@ -4,7 +4,7 @@ module "fsxn_rotate_secret" {
     source = "github.com/Netapp/FSx-ONTAP-samples-scripts/Management-Utilities/fsxn-rotate-secret/terraform"
     fsx_region = var.aws_region
     secret_region = var.aws_secrets_region
-    aws_account_id = var.aws_account_id
+    aws_account_id = data.aws_caller_identity.current.account_id
     secret_name_prefix = var.secret_name_prefix
     fsx_id = aws_fsx_ontap_file_system.eksfs.id
 }
@@ -28,7 +28,7 @@ module "svm_rotate_secret" {
     source = "github.com/Netapp/FSx-ONTAP-samples-scripts/Management-Utilities/fsxn-rotate-secret/terraform"
     fsx_region = var.aws_region
     secret_region = var.aws_secrets_region
-    aws_account_id = var.aws_account_id
+    aws_account_id = data.aws_caller_identity.current.account_id
     secret_name_prefix = var.secret_name_prefix
     svm_id = aws_fsx_ontap_storage_virtual_machine.ekssvm.id
 }
