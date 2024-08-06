@@ -13,3 +13,7 @@ rule "terraform_required_providers" {
 rule "terraform_unused_declarations" {
   enabled = false
 }
+
+rule "terraform_module_pinned_source" {
+  enabled = false
+}

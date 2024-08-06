@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  annotations:
+    use-subpath: "true"
+  creationTimestamp: null
+  labels:
+    io.kompose.service: harvest-service
+  name: harvest-config
+  namespace: harvest
+data:
+  harvest.yml: |+
+    Tools:
+    Exporters:
+        prometheus1:
+            exporter: Prometheus
+            port_range: 12990-14000
+            add_meta_tags: false
+    Defaults:
+        use_insecure_tls: true
+    Pollers:
+        fsx:
+            datacenter: fsx
+            addr: {{ .Values.fsx.managment_lif }}
+            username: {{ .Values.fsx.username }}
+            password: {{ .Values.fsx.password }}
+            collectors:
+                - Zapi
+                - ZapiPerf
+                - Rest
+                - RestPerf
+                - Ems
+            exporters:
+                - prometheus1
+
