@@ -1,16 +1,13 @@
 variable "aws_region" {
   description = "The AWS region where you want the resources deployed."
   type        = string
+  default     = "us-west-2"
 }
 
 variable "aws_secrets_region" {
   description = "The AWS region where you want the FSxN and SVM secrets stored within AWS Secrets Manager."
   type        = string
-}
-
-variable "aws_account_id" {
-  description = "The AWS account ID. Used to create very specific permissions in the IAM role for the EKS cluster."
-  type       = string
+  default     = "us-west-2"
 }
 
 variable "fsx_name" {
@@ -36,9 +33,9 @@ variable "fsxn_storage_capacity" {
 variable "fsxn_throughput_capacity" {
   description = "The throughput capacity to be allocated to the FSxN cluster. Must be 128, 256, 512, 1024, 2048, 4096."
   type        = string   # Set to a string so it can be used in a "contains()" function.
-  default     = 128
+  default     = "128"
   validation {
-    condition = contains([128, 256, 512, 1024, 2048, 4096], var.fsxn_throughput_capacity)
+    condition = contains(["128", "256", "512", "1024", "2048", "4096"], var.fsxn_throughput_capacity)
     error_message = "The throughput capacity must be 128, 256, 512, 1024, 2048, or 4096."
   }
 }
