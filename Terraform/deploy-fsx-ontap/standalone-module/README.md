@@ -14,15 +14,15 @@ This sample demonstrates how to deploy an FSx for NetApp ONTAP file system, incl
 Follow the instructions below to use this sample in your own environment.
 ### Repository Overview
 This is a standalone Terraform configuration repository that contains the following files:
-* **main.tf** - The main set of configuration for this terraform sample
-* **output.tf** - Contains output declarations of the resources created by this Terraform module. Terraform stores output values in the configuration's state file
-* **security_groups.tf** - Contains security group configurations for the FSxN file system. This file is optional and can be removed if you don't want to use the provided security group.
-* **variables.tf** - Contains the variable definitions and assignments for this sample. Exported values will override any of the variables in this file. 
+* **main.tf** - Contains the configuration of the AWS FSx for ONTAP based on the variables set in the `variables.tf` file.
+* **output.tf** - Contains output declarations of the resources created by this Terraform configuration.
+* **security_groups.tf** - Contains security group configurations for the FSxN file system.
+* **variables.tf** - Contains the variable definitions that allows you to customize the deployment.
 
 ### What to expect
 Running this terraform sample will result the following:
-* Create a new AWS Security Group in your VPC with the following rules:
-    - **Ingress** allow all ICMP traffic
+* Optionally a new AWS Security Group in your VPC with the following rules:
+    - **Ingress** allow ICMP traffic
     - **Ingress** allow nfs port 111 (both TCP and UDP)
     - **Ingress** allow cifs TCP port 139
     - **Ingress** allow snmp ports 161-162 (both TCP and UDP)
@@ -36,22 +36,23 @@ Running this terraform sample will result the following:
     - **Ingress** allow Snapmirror data transfer TCP port 11105
     - **Ingress** allow ssh port 22
     - **Ingress** allow https port 443
-    - **Egress** allow all traffic
+    - **Egress** allow all out bound traffic
 
 * Two new AWS secrets. One that contains the fsxadmin password and another that contains the SVM admin password.
 
-* Create a new FSx for Netapp ONTAP file-system in your AWS account named "_terraform-fsxn_". The file-system will be created with the following configuration parameters:
+* A new FSx for Netapp ONTAP file-system. Much of the configuration is defined in the `variables.tf` file, but the following are the default values:
     * 1024Gb of storage capacity
-    * Multi AZ deployment type
+    * Generation 1 Multi AZ deployment type
     * 128Mbps of throughput capacity 
-
-* Create a Storage Virtual Maching (SVM) in this new file-system named "_first_svm_"
-
-* Create a new FlexVol volume in this SVM named "_vol1_" with the following configuration parameters:
-    * Size of 1024Mb
-    * Storage efficiencies mechanism enabled
-    * Auto tiering policy with 31 cooling days
-    * post-delete backup disabled 
+    * 1 HA pair
+    * 1 Storage Virtual Machine (SVM)
+    * 1 FlexVol volume with the following configuration parameters:
+        * Size of 2TB - Thin provisioned
+        * Junction path of /vol1
+        * Security style of UNIX
+        * Storage efficiencies enabled
+        * Auto tiering policy with 31 cooling days
+        * post-delete backup disabled 
 
 ## Prerequisites
 
@@ -121,7 +122,7 @@ This directory represents a standalone Terraform module. Run the following comma
 terraform init
 ```
 
-A succesfull initialization should display the following output:
+A successful initialization should display the following output:
 ```shell
 Initializing the backend...
 Initializing modules...
@@ -160,25 +161,10 @@ You can see that Terraform recognizes the modules required by our configuration:
 
 ### 4. Update Variables
 
-- Open the **`variables.tf`** file in your preferred text editor. Update the values of the variables to match your
+Open the **`variables.tf`** file in your preferred text editor. Update the values of the variables to match your
 preferences and save the file. This will ensure that the Terraform code deploys resources according to your specifications.
 
-**Make sure to replace the values with ones that match your AWS environment and needs.**
-Modify the remaining optional variables (e.g. defining AD) in the **`main.tf`** file and remove commenting
-where needed according to the explanations in-line.
-
-### 5. Update Security Group
-A default security group is defined in the "security_groups.tf" file. At the top of
-that file you can see where you can specify either a CIDR block or a security group ID
-to allow access to the FSxN file system. Do not specify both, as it will cause
-the terraform deployment to fail.
-
-If you decide you don't want to use the security group, you can either delete the security_groups.tf file,
-or just rename it such that it doesn't end with ".tf" (e.g. security_groups.tf.kep). You will also need
-to update the `security_group_ids  = [aws_security_group.fsx_sg.id]` line in the main.tf file
-to reference the security group(s) you want to use.
-
-### 6. Create a Terraform plan
+### 5. Create a Terraform plan
 Run the following command to create an execution plan, which lets you preview the changes that Terraform plans to make to your infrastructure:
 ```shell
 terraform plan
