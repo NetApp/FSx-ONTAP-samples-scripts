@@ -70,3 +70,19 @@ To run it as a Lambda function you will need to:
 - Create the AWS service endpoints mentioned above.
 - Adjust the default timeout from 4 seconds to at least 60 seconds.
 - Once you have tested that it run successfully, creating an eventBridge that will trigger it to run on a regular basis (e.g. once or twice a day).
+
+## Author Information
+
+This repository is maintained by the contributors listed on [GitHub](https://github.com/NetApp/FSx-ONTAP-samples-scripts/graphs/contributors).
+
+## License
+
+Licensed under the Apache License, Version 2.0 (the "License").
+
+You may obtain a copy of the License at [apache.org/licenses/LICENSE-2.0](http://www.apache.org/licenses/LICENSE-2.0).
+
+Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" basis, without WARRANTIES or conditions of any kind, either express or implied.
+
+See the License for the specific language governing permissions and limitations under the License.
+
+© 2024 NetApp, Inc. All Rights Reserved.
