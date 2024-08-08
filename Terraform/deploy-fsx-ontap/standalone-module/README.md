@@ -14,15 +14,15 @@ This sample demonstrates how to deploy an FSx for NetApp ONTAP file system, incl
 Follow the instructions below to use this sample in your own environment.
 ### Repository Overview
 This is a standalone Terraform configuration repository that contains the following files:
-* **main.tf** - The main set of configuration for this terraform sample
-* **output.tf** - Contains output declarations of the resources created by this Terraform module. Terraform stores output values in the configuration's state file
-* **security_groups.tf** - Contains security group configurations for the FSxN file system. This file is optional and can be removed if you don't want to use the provided security group.
-* **variables.tf** - Contains the variable definitions and assignments for this sample. Exported values will override any of the variables in this file. 
+* **main.tf** - Contains the configuration of the AWS FSx for ONTAP based on the variables set in the `variables.tf` file.
+* **output.tf** - Contains output declarations of the resources created by this Terraform configuration.
+* **security_groups.tf** - Contains security group configurations for the FSxN file system.
+* **variables.tf** - Contains the variable definitions that allows you to customize the deployment.
 
 ### What to expect
 Running this terraform sample will result the following:
-* Create a new AWS Security Group in your VPC with the following rules:
-    - **Ingress** allow all ICMP traffic
+* Optionally a new AWS Security Group in your VPC with the following rules:
+    - **Ingress** allow ICMP traffic
     - **Ingress** allow nfs port 111 (both TCP and UDP)
     - **Ingress** allow cifs TCP port 139
     - **Ingress** allow snmp ports 161-162 (both TCP and UDP)
@@ -36,22 +36,23 @@ Running this terraform sample will result the following:
     - **Ingress** allow Snapmirror data transfer TCP port 11105
     - **Ingress** allow ssh port 22
     - **Ingress** allow https port 443
-    - **Egress** allow all traffic
+    - **Egress** allow all out bound traffic
 
 * Two new AWS secrets. One that contains the fsxadmin password and another that contains the SVM admin password.
 
-* Create a new FSx for Netapp ONTAP file-system in your AWS account named "_terraform-fsxn_". The file-system will be created with the following configuration parameters:
+* A new FSx for Netapp ONTAP file-system. Much of the configuration is defined in the `variables.tf` file, but the following are the default values:
     * 1024Gb of storage capacity
-    * Multi AZ deployment type
+    * Generation 1 Multi AZ deployment type
     * 128Mbps of throughput capacity 
-
-* Create a Storage Virtual Maching (SVM) in this new file-system named "_first_svm_"
-
-* Create a new FlexVol volume in this SVM named "_vol1_" with the following configuration parameters:
-    * Size of 1024Mb
-    * Storage efficiencies mechanism enabled
-    * Auto tiering policy with 31 cooling days
-    * post-delete backup disabled 
+    * 1 HA pair
+    * 1 Storage Virtual Machine (SVM)
+    * 1 FlexVol volume with the following configuration parameters:
+        * Size of 2TB - Thin provisioned
+        * Junction path of /vol1
+        * Security style of UNIX
+        * Storage efficiencies enabled
+        * Auto tiering policy with 31 cooling days
+        * post-delete backup disabled 
 
 ## Prerequisites
 
@@ -121,7 +122,7 @@ This directory represents a standalone Terraform module. Run the following comma
 terraform init
 ```
 
-A succesfull initialization should display the following output:
+A successful initialization should display the following output:
 ```shell
 Initializing the backend...
 Initializing modules...
@@ -160,25 +161,10 @@ You can see that Terraform recognizes the modules required by our configuration:
 
 ### 4. Update Variables
 
-- Open the **`variables.tf`** file in your preferred text editor. Update the values of the variables to match your
+Open the **`variables.tf`** file in your preferred text editor. Update the values of the variables to match your
 preferences and save the file. This will ensure that the Terraform code deploys resources according to your specifications.
 
-**Make sure to replace the values with ones that match your AWS environment and needs.**
-Modify the remaining optional variables (e.g. defining AD) in the **`main.tf`** file and remove commenting
-where needed according to the explanations in-line.
-
-### 5. Update Security Group
-A default security group is defined in the "security_groups.tf" file. At the top of
-that file you can see where you can specify either a CIDR block or a security group ID
-to allow access to the FSxN file system. Do not specify both, as it will cause
-the terraform deployment to fail.
-
-If you decide you don't want to use the security group, you can either delete the security_groups.tf file,
-or just rename it such that it doesn't end with ".tf" (e.g. security_groups.tf.kep). You will also need
-to update the `security_group_ids  = [aws_security_group.fsx_sg.id]` line in the main.tf file
-to reference the security group(s) you want to use.
-
-### 6. Create a Terraform plan
+### 5. Create a Terraform plan
 Run the following command to create an execution plan, which lets you preview the changes that Terraform plans to make to your infrastructure:
 ```shell
 terraform plan
@@ -205,18 +191,33 @@ terraform apply
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
-| aws_account_id | The AWS account ID. Used to create very specific IAM policies. | `string` | `"*"` | no |
-| fsx_capacity_size_gb | The storage capacity (GiB) of the FSxN file system. Valid values between 1024 and 196608. | `number` | `1024` | no |
-| fsx_deploy_type | The filesystem deployment type. Supports MULTI_AZ_1 and SINGLE_AZ_1 | `string` | `"MULTI_AZ_1"` | no |
-| fsx_name | The deployed filesystem name | `string` | `"terraform-fsxn"` | no |
+| aws_account_id | The AWS account ID. Used to create account specific permissions on the secrets that are created. Use the default for less specific permissions. | `string` | `"*"` | no |
+| backup_retention_days | The number of days to retain automatic backups. Setting this to 0 disables automatic backups. You can retain automatic backups for a maximum of 90 days. | `number` | `0` | no |
+| cidr_for_sg | The cidr block to be used for the created security ingress rules. Set to an empty string if you want to use the source_sg_id as the source. | `string` | `"10.0.0.0/8"` | no |
+| create_sg | Determines whether the Security Group should be created as part of this deployment or not. | `bool` | `true` | no |
+| daily_backup_start_time | A recurring daily time, in the format HH:MM. HH is the zero-padded hour of the day (0-23), and MM is the zero-padded minute of the hour. Requires automatic_backup_retention_days to be set. | `string` | `"00:00"` | no |
+| disk_iops_configuration | The SSD IOPS configuration for the file system. Valid modes are 'AUTOMATIC' (3 iops per GB provisioned) or 'USER_PROVISIONED'. NOTE: Due to a bug in the AWS FSx provider, if you want AUTOMATIC, then leave this variable empty. If you want USER_PROVISIONED, then add a 'mode=USER_PROVISIONED' (with USER_PROVISIONED enclosed in double quotes) and 'iops=number' where number is between 1 and 160000. | `map(any)` | `{}` | no |
+| endpoint_ip_address_range | The IP address range that the FSxN file system will be accessible from. This is only used for Multi AZ deployment types and must be left a null for Single AZ deployment types. | `string` | `null` | no |
+| fsx_capacity_size_gb | The storage capacity in GiBs of the FSxN file system. Valid values between 1024 (1 TiB) and 1048576 (1 PiB). Gen 1 deployment types are limited to 192 TiB. Gen 2 Multi AZ is limited to 512 TiB. Gen 2 Single AZ is limited to 1 PiB. | `number` | `1024` | no |
+| fsx_deploy_type | The file system deployment type. Supported values are 'MULTI_AZ_1', 'SINGLE_AZ_1', 'MULTI_AZ_2', and 'SINGLE_AZ_2'. MULTI_AZ_1 and SINGLE_AZ_1 are Gen 1. MULTI_AZ_2 and SINGLE_AZ_2 are Gen 2. | `string` | `"MULTI_AZ_1"` | no |
+| fsx_name | The name to assign to the FSxN file system. | `string` | `"terraform-fsxn"` | no |
 | fsx_region | The AWS region where the FSxN file system to be deployed. | `string` | `"us-west-2"` | no |
-| fsx_subnets | A list of subnets IDs that the file system will be accessible from. For MULTI_AZ_1 deployment type, provide both subnets. For SINGLE_AZ_1 deployment type, only the primary subnet is used. | `map(any)` | <pre>{<br>  "primarysub": "subnet-22222222",<br>  "secondarysub": "subnet-33333333"<br>}</pre> | no |
-| fsx_tput_in_MBps | The throughput capacity (in MBps) for the file system. Valid values are 128, 256, 512, 1024, 2048, and 4096. | `number` | `128` | no |
-| secret_name_prefix | The prefix to the secret name that will be created that will contain the FSxN passwords (system, and SVM). | `string` | `"fsxn-secret"` | no |
-| secret_region | The AWS region where the secets for the FSxN file system and SVM will be deployed. | `string` | `"us-west-2"` | no |
-| svm_name | The name of the Storage Virtual Machine | `string` | `"first_svm"` | no |
-| vol_info | Details for the volume creation | `map(any)` | <pre>{<br>  "cooling_period": 31,<br>  "efficiency": true,<br>  "junction_path": "/vol1",<br>  "size_mg": 1024,<br>  "tier_policy_name": "AUTO",<br>  "vol_name": "vol1"<br>}</pre> | no |
-| vpc_id | The ID of the VPC in which the security group will be created. | `string` | `"vpc-11111111"` | no |
+| fsx_subnets | The primary subnet ID, and secondary subnet ID if you are deploying in a Multi AZ environment, file system will be accessible from. For MULTI_AZ deployment types both subnets are required. For SINGLE_AZ deployment type, only the primary subnet is used. | `map(any)` | <pre>{<br>  "primarysub": "subnet-22222222",<br>  "secondarysub": "subnet-33333333"<br>}</pre> | no |
+| fsx_tput_in_MBps | The throughput capacity (in MBps) for the file system. Valid values are 128, 256, 512, 1024, 2048, and 4096 for Gen 1, and 384, 768, 1536, 3072 and 6144 for Gen 2. | `string` | `"128"` | no |
+| ha_pairs | The number of HA pairs in the file system. Valid values are from 1 through 12. Only single AZ Gen 2 deployment type supports more than 1 HA pair. | `number` | `1` | no |
+| kms_key_id | ARN for the KMS Key to encrypt the file system at rest. Defaults to an AWS managed KMS Key. | `string` | `null` | no |
+| maintenance_start_time | The preferred start time to perform weekly maintenance, in UTC time zone. The format is 'D:HH:MM' format. D is the day of the week, where 1=Monday and 7=Sunday. | `string` | `"7:00:00"` | no |
+| root_vol_sec_style | Specifies the root volume security style, Valid values are UNIX, NTFS, and MIXED (although MIXED is not recommended). All volumes created under this SVM will inherit the root security style unless the security style is specified on the volume. | `string` | `"UNIX"` | no |
+| route_table_ids | An array of routing table IDs that will be modified to allow access to the FSxN file system. This is only used for Multi AZ deployment types and must be left as null for Single AZ deployment types. | `list(string)` | `null` | no |
+| secret_name_prefix | The prefix to the secret names created that will contain the FSxN passwords (system, and SVM). | `string` | `"fsxn-secret"` | no |
+| secret_region | The AWS region where the secrets for the FSxN file system and SVM will be deployed. | `string` | `"us-west-2"` | no |
+| security_group_id | If you are not creating the security group, provide the ID of the security group to be used. | `string` | `""` | no |
+| security_group_name_prefix | The prefix to the security group name that will be created. | `string` | `"fsxn-sg"` | no |
+| source_sg_id | The ID of the security group to allow access to the FSxN file system. Set to an empty string if you want to use the cidr_for_sg as the source. | `string` | `""` | no |
+| svm_name | The name of the Storage Virtual Machine | `string` | `"fsx"` | no |
+| tags | Tags to be applied to the FSxN file system. The format is '{Name1 = value, Name2 = value}' where value should be enclosed in double quotes. | `map(any)` | `{}` | no |
+| vol_info | Details for the volume creation | `map(any)` | <pre>{<br>  "cooling_period": 31,<br>  "copy_tags_to_backups": false,<br>  "efficiency": true,<br>  "junction_path": "/vol1",<br>  "sec_style": "UNIX",<br>  "size_mg": 2048000,<br>  "skip_final_backup": true,<br>  "snapshot_policy": "default",<br>  "tier_policy_name": "AUTO",<br>  "vol_name": "vol1"<br>}</pre> | no |
+| vpc_id | The VPC ID where the security group will be created. | `string` | `""` | no |
 
 ### Outputs
 
