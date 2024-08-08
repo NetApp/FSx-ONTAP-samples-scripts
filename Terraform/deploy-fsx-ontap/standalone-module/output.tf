@@ -1,6 +1,6 @@
 output "my_fsx_ontap_security_group_id" {
   description = "The ID of the FSxN Security Group"
-  value       = aws_security_group.fsx_sg.id
+  value       = join(", ", aws_fsx_ontap_file_system.terraform-fsxn.security_group_ids)
 }
 
 output "my_filesystem_id" {
@@ -10,7 +10,7 @@ output "my_filesystem_id" {
 
 output "my_filesystem_management_ip" {
   description = "The management IP of the FSxN Filesystem."
-  value       =  format(join("", aws_fsx_ontap_file_system.terraform-fsxn.endpoints[0].management[0].ip_addresses))
+  value       =  join("", aws_fsx_ontap_file_system.terraform-fsxn.endpoints[0].management[0].ip_addresses)
 }
 
 output "my_svm_id" {
@@ -20,7 +20,7 @@ output "my_svm_id" {
 
 output "my_svm_management_ip" {
   description = "The management IP of the Storage Virtual Machine."
-  value       =  format(join("", aws_fsx_ontap_storage_virtual_machine.mysvm.endpoints[0].management[0].ip_addresses))
+  value       =  join("", aws_fsx_ontap_storage_virtual_machine.mysvm.endpoints[0].management[0].ip_addresses)
 }
 
 output "my_vol_id" {
