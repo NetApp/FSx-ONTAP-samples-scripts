@@ -41,7 +41,7 @@ variable "disk_iops_configuration" {
 }
 
 variable "ha_pairs" {
-   description = "The number of HA pairs in the file system. Valid values are from 1 through 12. Only single AZ Gen 2 deployment type supports more than 1 HA pair."
+   description = "The number of HA pairs in the file system. Valid values are from 1 through 12. Only the Single AZ Gen 2 deployment type supports more than 1 HA pair."
    type        = number
    default     = 1
    validation {
@@ -51,12 +51,8 @@ variable "ha_pairs" {
 }
 
 variable "subnets" {
-  description = "The primary subnet ID, and secondary subnet ID if you are deploying in a Multi AZ environment, the file system will be accessible from. For MULTI_AZ deployment types both subnets are required. For SINGLE_AZ deployment type, only the primary subnet is used."
+  description = "A map specifying the subnets where the management and data endpoints will be deployed. There are two suppoted keys: 'primarysub' which specfies where the 'active' node's endpoint will be located. 'secondarysub' where the standby node's endpoint will be located. Both must be specified if you are deploying a MULTI_AZ file system. Only the primary subnet is used for a SINGLE_AZ file system."
   type        = map(string)
-  default = {
-       "primarysub"   = "subnet-111111111"
-       "secondarysub" = "subnet-222222222"
-  }
 }
 
 variable "endpoint_ip_address_range" {
@@ -74,7 +70,7 @@ variable "route_table_ids" {
 variable "maintenance_start_time" {
   description = "The preferred start time to perform weekly maintenance, in UTC time zone. The format is 'D:HH:MM' format. D is the day of the week, where 1=Monday and 7=Sunday."
   type        = string
-  default     = "7:00:00"
+  default     = null
 }
 
 variable "kms_key_id" {
@@ -96,13 +92,13 @@ variable "backup_retention_days" {
 variable "daily_backup_start_time" {
   description = "A recurring daily time, in the format HH:MM. HH is the zero-padded hour of the day (0-23), and MM is the zero-padded minute of the hour. Requires automatic_backup_retention_days to be set."
   type        = string
-  default     = "00:00"
+  default     = null
 }
 
 variable "tags" {
-  description = "Tags to be applied to the FSxN file system. The format is '{Name1 = value, Name2 = value}'."
+  description = "A map defining tags to be applied to the FSxN file system. The format is '{Name1 = value, Name2 = value}'."
   type        = map(any)
-  default = {}
+  default = null
 }
 
 /*
@@ -142,11 +138,11 @@ variable "root_vol_sec_style" {
 }
 
 variable "vol_info" {
-  description = "Details for the volume creation"
+  description = "Details for the initial volume creation."
   type = object({
     vol_name              = optional(string, "vol1")
     junction_path         = optional(string, "/vol1")
-    size_mg               = optional(number,  1024)
+    size_mg               = optional(number,  2048000)
     efficiency            = optional(bool,    true)
     tier_policy_name      = optional(string, "AUTO")
     cooling_period        = optional(string,  31)
