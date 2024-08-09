@@ -1,5 +1,5 @@
 variable "name" {
-  description = "The name to assign to the FSxN file system."
+  description = "The name to assign to the FSx for ONTAP file system."
   type        = string
   default     = "fsxn"
 }
