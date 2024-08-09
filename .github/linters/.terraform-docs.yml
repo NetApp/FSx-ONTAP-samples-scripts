@@ -1,0 +1,7 @@
+sort:
+  enabled: false
+
+settings:
+  default: true
+  description: true
+  required: false

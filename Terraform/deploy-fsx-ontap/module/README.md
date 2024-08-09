@@ -2,8 +2,6 @@
 This is a Terraform module which creates an FSx for NetApp ONTAP file system in a multi-AZ fashion, including an SVM, a Security-Group and a FlexVolume in that file system, using AWS Terraform provider. 
 This repo should be sourced as a terraform module, and does not need to be cloned locally!
 Follow the instructions below to use this sample in your environment.
-> [!NOTE]
-> This module does not support scale-out! One ha pair per deployment. 
 
 ## Table of Contents
 * [Introduction](#introduction)
@@ -35,22 +33,24 @@ Calling this terraform module will result the following:
     - **Ingress** allow https port 443
     - **Egress** allow all traffic
 
-* Two new AWS secrets. One that contains the fsxadmin password and another that contains the SVM admin password.
+* Create two new AWS secrets. One that contains the fsxadmin password and another that contains the SVM admin password.
 
-* Create a new FSx for Netapp ONTAP file-system in your AWS account named "_terraform-fsxn_". The file-system will be created with the following configuration parameters:
+* Create a new FSx for Netapp ONTAP file-system. Much of the configuration has default values, but can be modified to your preference by providing your own values in the module block. The default configuration includes:
     * 1024Gb of storage capacity
-    * Multi AZ deployment type
-    * 128Mbps of throughput capacity 
-
-* Create a Storage Virtual Maching (SVM) in this new file-system named "_first_svm_"
-
-* Create a new FlexVol volume in this SVM named "_vol1_" with the following configuration parameters:
-    * Size of 1024Mb
-    * Storage efficiencies mechanism enabled
-    * Auto tiering policy with 31 cooling days
+    * Generation 1 Multi AZ deployment type
+    * 128Mbps of throughput capacity
+    * 1 HA pair
+    * 1 Storage Virtual Machine (SVM)
+    * 1 FlexVol volume with the following configuration parameters:
+        * Size of 2TB - Thin provisioned
+        * Junction path of /vol1
+        * Security style of UNIX
+        * Storage efficiencies enabled
+        * Auto tiering policy with 31 cooling days
+        * post-delete backup disabled
 
 > [!NOTE]
-> All of the above configuration parameters can be modified for your preference by assigning your own values in the module block!
+> All of the above configuration parameters can be modified for your preference by assigning your own values in the module block! See below for more information.
 
 ## Prerequisites
 
@@ -113,7 +113,7 @@ terraform {
   required_providers {
     aws = {
       source = "hashicorp/aws"
-      version = "5.25"
+      version >= "5.25"
     }
   }
 }
@@ -126,78 +126,37 @@ provider "aws" {
 ### Reference this module
 
 Add the following module block to your local `main.tf` file.
-Make sure to replace all values within `< >` with your own variables.
+Of course changing the subnets, route_table_ids, and other variables to match your environment.
+You will find below a complete list of all the parameters that can be passed to the module block.
 
 ```hcl
 module "fsxontap" {
-    source = "github.com/Netapp/FSx-ONTAP-samples-scripts/Terraform/deploy-fsx-ontap/module"
+    source = "/home/ckeith/DevelopersAdocacy/FSx-ONTAP-samples-scripts/Terraform/deploy-fsx-ontap/module"
 
-    vpc_id = "<YOUR-VPC-ID>"
-    fsx_subnets = {
-        primarysub   = "<YOUR-PRIMARY-SUBNET>"
-        secondarysub = "<YOUR-SECONDAY-SUBNET>"
+    name = "Development"
+
+    deployment_type = "MULTI_AZ_2"
+    ha_pairs = 1
+    throughput_in_MBps = 384
+
+    subnets = {
+      "primarysub"   = "subnet-11111111"
+      "secondarysub" = "subnet-22222222"
     }
-    create_sg = true // true to create Security Group for the Fs / false otherwise
-    cidr_for_sg = "<YOUR-CIDR-BLOCK>"
-    fsx_secret_name = "<YOUR_SECRET>" // The name of a secret in AWS Secrets Manager that contains the FSxN admin password.
-    tags = {
-        Terraform   = "true"
-        Environment = "dev"
-    }
-}
-```
+    route_table_ids = ["rtb-abcd1234"]
 
-> [!NOTE]
-> To Override default values assigned to other variables in this module, add them to this source block as well. The above source block includes the minimum requirements only.
-
-> [!NOTE]
-> The default deployment type is: MULTI_AZ_1. For SINGLE AZ deployment, set the `fsx_deploy_type` variable to SINGLE_AZ_1 in the module block.
-
-Please read the vriables descriptions in `variables.tf` file for more information regarding the variables passed to the module block.
-
-### Example main.tf file
-
-For a quick and easy start, copy and paste the below example to your main.tf file and modify the variables with your enviroonment's values.
-
-```hcl
-terraform {
-  required_providers {
-    aws = {
-      source = "hashicorp/aws"
-      version = "5.25"
-    }
-  }
-}
-
-provider "aws" {
-    region = "us-west-2"
-}
-
-
-module "fsxontap" {
-    source = "github.com/Netapp/FSx-ONTAP-samples-scripts/Terraform/deploy-fsx-ontap/module"
-
-    name = "fsxontap"
-
-    vpc_id = "vpc-111111111"
-    fsx_subnets = {
-        "primarysub" = "subnet-11111111"
-        "secondarysub" = "subnet-2222222"
-    }
     create_sg = true
+    security_group_name_prefix = "fsxn-sg"
+    vpc_id = "vpc-88888888"
     cidr_for_sg = "10.0.0.0/8"
-    fsx_secret_name = "fsx_secret"
-    route_table_ids = ["rtb-111111"]
-    tags = {
-        Terraform   = "true"
-        Environment = "dev"
-    }
 }
 ```
 
 ### Install the module
 
-Whenever you add a new module to a configuration, Terraform must install the module before it can be used. Both the `terraform get` and `terraform init` commands will install and update modules. The `terraform init` command will also initialize backends and install plugins.
+Whenever you add a new module to a configuration, Terraform must install the module before
+it can be used. Both the `terraform get` and `terraform init` commands will install and
+update modules. The `terraform init` command will also initialize backends and install plugins.
 
 Command:
 ```shell
