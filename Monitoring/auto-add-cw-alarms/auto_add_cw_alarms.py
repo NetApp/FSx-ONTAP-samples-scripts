@@ -82,6 +82,7 @@ import boto3
 import os
 import getopt
 import sys
+import time
 
 ################################################################################
 # This function adds the SSD Utilization CloudWatch alarm.
