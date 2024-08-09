@@ -231,7 +231,7 @@ terraform apply
 | ha_pairs | The number of HA pairs in the file system. Valid values are from 1 through 12. Only the Single AZ Gen 2 deployment type supports more than 1 HA pair. | `number` | `1` | no |
 | kms_key_id | ARN for the KMS Key to encrypt the file system at rest. Defaults to an AWS managed KMS Key. | `string` | `null` | no |
 | maintenance_start_time | The preferred start time to perform weekly maintenance, in UTC time zone. The format is 'D:HH:MM' format. D is the day of the week, where 1=Monday and 7=Sunday. | `string` | `null` | no |
-| name | The name to assign to the FSxN file system. | `string` | `"fsxn"` | no |
+| name | The name to assign to the FSx for ONTAP file system. | `string` | `"fsxn"` | no |
 | root_vol_sec_style | Specifies the root volume security style, Valid values are UNIX, NTFS, and MIXED (although MIXED is not recommended). All volumes created under this SVM will inherit the root security style unless the security style is specified on the volume. | `string` | `"UNIX"` | no |
 | route_table_ids | An array of routing table IDs that will be modified to allow access to the FSxN file system. This is only used for Multi AZ deployment types and must be left as null for Single AZ deployment types. | `list(string)` | `null` | no |
 | secret_name_prefix | The prefix to the secret name that will be created that will contain the FSxN passwords (system, and SVM). | `string` | `"fsxn-secret"` | no |
