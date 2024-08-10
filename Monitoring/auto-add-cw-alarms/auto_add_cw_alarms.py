@@ -257,9 +257,23 @@ def getFss(fsx):
 
     # The initial amount of time to sleep if there is a rate limit exception.
     sleep=.125
-    response = fsx.describe_file_systems()
-    fss = response['FileSystems']
-    nextToken = response.get('NextToken')
+    while True:
+        try:
+            response = fsx.describe_file_systems()
+            fss = response['FileSystems']
+            nextToken = response.get('NextToken')
+            sleep=.125
+            break
+        except botocore.exceptions.ClientError as e:
+            if e.response['Error']['Code'] == 'TooManyRequestsException':
+                sleep = sleep * 2   # Exponential backoff.
+                if sleep > 5:
+                    raise e
+                print(f"Sleeping for {sleep} seconds for initial file systems.")
+                time.sleep(sleep)
+            else:
+                raise e
+
     while nextToken:
         try:
             response = fsx.describe_file_systems(NextToken=nextToken)
@@ -271,7 +285,7 @@ def getFss(fsx):
                 sleep = sleep * 2   # Exponential backoff.
                 if sleep > 5:
                     raise e
-                print(f"Sleeping for {sleep} seconds for file systems.")
+                print(f"Sleeping for {sleep} seconds for additional file systems.")
                 time.sleep(sleep)
             else:
                 raise e
@@ -286,9 +300,23 @@ def getVolumes(fsx):
 
     # The initial amount of time to sleep if there is a rate limit exception.
     sleep=.125
-    response = fsx.describe_volumes()
-    volumes = response['Volumes']
-    nextToken = response.get('NextToken')
+    while True:
+        try:
+            response = fsx.describe_volumes()
+            volumes = response['Volumes']
+            nextToken = response.get('NextToken')
+            sleep=.125
+            break
+        except botocore.exceptions.ClientError as e:
+            if e.response['Error']['Code'] == 'TooManyRequestsException':
+                sleep = sleep * 2   # Exponential backoff.
+                if sleep > 5:
+                    raise e
+                print(f"Sleeping for {sleep} seconds for initial volumes.")
+                time.sleep(sleep)
+            else:
+                raise e
+
     while nextToken:
         try:
             response = fsx.describe_volumes(NextToken=nextToken)
@@ -300,7 +328,7 @@ def getVolumes(fsx):
                 sleep = sleep * 2   # Exponential backoff.
                 if sleep > 5:
                     raise e
-                print(f"Sleeping for {sleep} seconds for volumes.")
+                print(f"Sleeping for {sleep} seconds for additional volumes.")
                 time.sleep(sleep)
             else:
                 raise e
@@ -316,9 +344,23 @@ def getAlarms(cw):
 
     # The initial amount of time to sleep if there is a rate limit exception.
     sleep=.125
-    response = cw.describe_alarms()
-    alarms = response['MetricAlarms']
-    nextToken = response.get('NextToken')
+    while True:
+        try:
+            response = cw.describe_alarms()
+            alarms = response['MetricAlarms']
+            nextToken = response.get('NextToken')
+            sleep=.125
+            break
+        except botocore.exceptions.ClientError as e:
+            if e.response['Error']['Code'] == 'TooManyRequestsException':
+                sleep = sleep * 2
+                if sleep > 5:
+                    raise e
+                print(f"Sleeping for {sleep} seconds for initial alarms.")
+                time.sleep(sleep)
+            else:
+                raise e
+
     while nextToken:
         try:
             response = cw.describe_alarms(NextToken=nextToken)
@@ -330,7 +372,7 @@ def getAlarms(cw):
                 sleep = sleep * 2   # Exponential backoff.
                 if sleep > 5:
                     raise e
-                print(f"Sleeping for {sleep} seconds for alarms.")
+                print(f"Sleeping for {sleep} seconds for additional alarms.")
                 time.sleep(sleep)
             else:
                 raise e
