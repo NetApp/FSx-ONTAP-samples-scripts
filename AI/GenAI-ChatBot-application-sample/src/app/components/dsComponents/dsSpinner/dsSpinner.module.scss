@@ -1,0 +1,18 @@
+@keyframes loaderSpin {
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.base {
+  --internal-loader-size: var(--loader-size, 32px);
+  --icon-primary-color: var(--loader-color, var(--information));
+  animation: loaderSpin 1s linear infinite;
+
+  &.large {
+    --internal-loader-size: 88px;
+  }
+
+  width: var(--internal-loader-size);
+  height: var(--internal-loader-size);
+}

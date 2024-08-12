@@ -1,0 +1,20 @@
+.statusIcon {
+    &.errorIcon {
+        color: var(--error);
+    }
+
+    &.noStatusIcon {
+        width: 20px;
+        height: 20px;
+        color: var(--icon-secondary);
+    }
+
+    &.warningStatusIcon {
+        width: 20px;
+        height: 20px;
+
+        path {
+            fill: var(--warning);
+        }
+    }
+}

@@ -1,0 +1,19 @@
+@use "../../../styles/mixins.scss";
+
+.base {
+  transition: opacity 0.3s;
+  font-family: var(--default_font);
+  background-color: var(--content-background);
+  color: var(--text-primary);
+  border-radius: 4px;
+  box-shadow: 4px 4px 12px var(--drop-shadow);
+  border: none;
+  z-index: var(--zindex-tooltip);
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.tooltip-wrapper {
+  max-width: 320px;
+}

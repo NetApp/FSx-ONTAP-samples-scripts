@@ -1,0 +1,81 @@
+@import '../../../../styles/mixins.scss';
+
+.historyItem {
+    --iconColWidth: 55px;
+    @include fadeIn(.5s);
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    height: 104px;
+
+    &:hover,
+    &.active {
+        .historyItemContainer {
+            .baloonIconCol {
+                path {
+                    stroke: var(--text-button-light);
+                }
+            }
+
+            .historyCol {
+                div {
+                    color: var(--text-button-light);
+                }
+            }
+        }
+    }
+
+    &:hover {
+        background-color: var(--hover-background);
+
+        .historyMenu {
+            opacity: 1;
+        }
+    }
+
+    .historyItemContainer {
+        display: flex;
+        flex-direction: row;
+        gap: 12px;
+        width: calc(100% - var(--iconColWidth));
+        padding: 16px 0 16px 40px;
+        box-sizing: border-box;
+
+        .baloonIconCol {
+            position: relative;
+            top: 7px;
+
+            path {
+                stroke: var(--icon-secondary)
+            }
+        }
+
+        .historyCol {
+            @include fadeIn(.8s);
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+
+
+            .historyTitle {
+                @include ellipsisMultiLine(2);
+            }
+
+            .modeStatus {
+                color: var(--text-secondary);
+                margin-top: 5px;
+                white-space: nowrap;
+            }
+        }
+    }
+
+    .historyMenu {
+        @include transition(opacity 0.3s ease);
+        opacity: 0;
+        position: absolute;
+        right: 20px;
+        top: 20px;
+    }
+}
