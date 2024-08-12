@@ -83,52 +83,26 @@ Parameters:
 Conditions:
   MultiAZ:  !Or [!Equals [!Ref DeploymentType, MULTI_AZ_1 ], !Equals [!Ref DeploymentType, MULTI_AZ_2 ]]
 
-  SingleAZ: !Or [!Equals [!Ref DeploymentType, SINGLE_AZ_1], !Equals [!Ref DeploymentType, SINGLE_AZ_2]]
-
-  ScaleOut:       !Equals [!Ref DeploymentType, SINGLE_AZ_2]
-
-  ScaleUp:  !Not [!Equals [!Ref DeploymentType, SINGLE_AZ_2]]
+  ScaleOut: !Equals [!Ref DeploymentType, SINGLE_AZ_2]
 
   IpRange:  !Not [!Equals [!Ref EndpointIpAddressRange, ""]]
 
 Resources:
-#
-# Since there are properties (e.g. RouteTableIds) that can't be specified with a SAZ
-# deployment type we have to have two separate resources but only allow one to be deployed
-# based on the conditions set above.
   FileSystemMAZ:
     Type: "AWS::FSx::FileSystem"
-    Condition: MultiAZ
 
     Properties:
       FileSystemType: "ONTAP"
       StorageCapacity: !Ref StorageCapacity
-      SubnetIds: [!Ref PrimarySubnet, !Ref SecondarySubnet]
+      SubnetIds: [!Ref PrimarySubnet, !If [ MultiAZ, !Ref SecondarySubnet, !Ref "AWS::NoValue" ]]
       SecurityGroupIds: !Ref SecurityGroupIds
       OntapConfiguration:
         DeploymentType: !Ref DeploymentType
         ThroughputCapacityPerHAPair: !Ref ThroughputCapacity
         HAPairs: !If [ ScaleOut, !Ref HAPairs, 1 ]
         PreferredSubnetId: !Ref PrimarySubnet
-        RouteTableIds: !Ref RouteTableIds
+        RouteTableIds: !If [ MultiAZ, !Ref RouteTableIds, !Ref "AWS::NoValue" ]
         EndpointIpAddressRange: !If [ IpRange, !Ref EndpointIpAddressRange, !Ref "AWS::NoValue" ]
-      Tags:
-        - Key: Name
-          Value: !Ref Name
-
-  FileSystemSAZ:
-    Type: "AWS::FSx::FileSystem"
-    Condition: SingleAZ
-
-    Properties:
-      FileSystemType: "ONTAP"
-      StorageCapacity: !Ref StorageCapacity
-      SubnetIds: [!Ref PrimarySubnet]
-      SecurityGroupIds: !Ref SecurityGroupIds
-      OntapConfiguration:
-        DeploymentType: !Ref DeploymentType
-        ThroughputCapacityPerHAPair: !Ref ThroughputCapacity
-        HAPairs: !If [ ScaleOut, !Ref HAPairs, 1 ]
       Tags:
         - Key: Name
           Value: !Ref Name
