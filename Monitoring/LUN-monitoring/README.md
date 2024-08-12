@@ -16,46 +16,52 @@ The solution is based on a CloudFormation template that you need to deploy for e
 
 ## Prerequisites
 
-* You must have an AWS Account with the the following permissions:
+You must have an AWS Account with the the following permissions:
 
-- cloudformation:CreateStack
-- cloudformation:DescribeStackEvents
-- cloudformation:DescribeStackResources
-- cloudformation:GetTemplate
-- cloudformation:ListStackResources
-- cloudformation:UpdateStack
-- cloudformation:DeleteStack
+- CloudFormation
+    - cloudformation:CreateStack
+    - cloudformation:DescribeStackEvents
+    - cloudformation:DescribeStackResources
+    - cloudformation:GetTemplate
+    - cloudformation:ListStackResources
+    - cloudformation:UpdateStack
+    - cloudformation:DeleteStack
 
-- iam:CreateRole
-- iam:PutRolePolicy
-- iam:AttachRolePolicy
-- iam:PassRole
-- iam:DetachRolePolicy
-- iam:DeleteRolePolicy
-- iam:DeleteRole
+- IAM
+    - iam:CreateRole
+    - iam:PutRolePolicy
+    - iam:AttachRolePolicy
+    - iam:PassRole
+    - iam:DetachRolePolicy
+    - iam:DeleteRolePolicy
+    - iam:DeleteRole
 
-- lambda:CreateFunction
-- lambda:InvokeFunction
-- lambda:DeleteFunction
-- lambda:GetFunction
-- lambda:UpdateFunctionCode
-- lambda:UpdateFunctionConfiguration
+- Lambda
+    - lambda:CreateFunction
+    - lambda:InvokeFunction
+    - lambda:DeleteFunction
+    - lambda:GetFunction
+    - lambda:UpdateFunctionCode
+    - lambda:UpdateFunctionConfiguration
 
-- ec2:CreateVpcEndpoint
-- ec2:CreateNetworkInterface
-- ec2:DescribeNetworkInterfaces
-- ec2:DeleteNetworkInterface
-- ec2:AssignPrivateIpAddresses
-- ec2:UnassignPrivateIpAddresses
-- ec2:DeleteVpcEndpoints
+- EC2
+    - ec2:CreateVpcEndpoint
+    - ec2:CreateNetworkInterface
+    - ec2:DescribeNetworkInterfaces
+    - ec2:DeleteNetworkInterface
+    - ec2:AssignPrivateIpAddresses
+    - ec2:UnassignPrivateIpAddresses
+    - ec2:DeleteVpcEndpoints
 
-- secretsmanager:CreateSecret
-- secretsmanager:GetSecretValue
-- secretsmanager:DeleteSecret
+- Secrets Manager
+    - secretsmanager:CreateSecret
+    - secretsmanager:GetSecretValue
+    - secretsmanager:DeleteSecret
 
-- cloudwatch:PutMetricData
-- cloudwatch:PutDashboard
-- cloudwatch:DeleteDashboards
+- CloudWatch
+    - cloudwatch:PutMetricData
+    - cloudwatch:PutDashboard
+    - cloudwatch:DeleteDashboards
 
 ## Usage
 
