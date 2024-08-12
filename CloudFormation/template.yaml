@@ -1,0 +1,108 @@
+Description: "Deploy a FSx for ONTAP File System."
+#
+# This just formats the page that prompts for the parameters when using the AWS Console to deploy your stack.
+Metadata: 
+  AWS::CloudFormation::Interface: 
+    ParameterGroups:
+      - Label: 
+          default: "Common Parameters"
+        Parameters: 
+          - Name
+          - DeploymentType
+          - StorageCapacity
+          - ThroughputCapacity
+          - PrimarySubnet
+          - SecurityGroupIds
+      - Label:
+          default: "Scale Out Only Parameters"
+        Parameters:
+          - HAPairs
+      - Label:
+          default: "Multi AZ Only Parameters"
+        Parameters:
+          - SecondarySubnet
+          - RouteTableIds
+          - EndpointIpAddressRange
+
+Parameters:
+  Name:
+    Description: "Name of the File System."
+    Default: ""
+    Type: String
+
+  DeploymentType:
+    Description: "SINGLE_AZ_1 and MULTI_AZ_1 are Gen_1. SINGLE_AZ_2 and MULTI_AZ_2 are Gen_2. All are Scale Up except for SINGLE_AZ_2, which is Scale Out (i.e. can have more than 1 HA pair)."
+    Type: String
+    Default: MULTI_AZ_2
+    AllowedValues: [MULTI_AZ_1, MULTI_AZ_2, SINGLE_AZ_1, SINGLE_AZ_2]
+
+  HAPairs:
+    Description: "Number of HA pairs. Only used with Scale Out type deployments. Allowed values are from 1 to 12."
+    Type: Number
+    Default: 1
+    MinValue: 1
+    MaxValue: 12
+
+  StorageCapacity:
+    Description: "The amount of SSD storage to provision in GiB. Minimum of 1024 (1 TiB) PER HA pair. A maximum of 1048576 (1 PiB)"
+    Type: Number
+    Default: 1024
+    MinValue: 1024
+    MaxValue: 1048576
+
+  ThroughputCapacity:
+    Description: "The desired maximum throughput capacity. Valid choices are 128, 256, 512, 1024, 2048, 4086 for Gen_1 type deployments and 384, 768, 1536, 3072 and 6144 for Gen_2. 384 and 768 are only supported with 1 HA pair."
+    Type: String
+    Default: 384
+    AllowedValues: [128, 256, 384, 768, 512, 1024, 1536, 2048, 3072, 4086, 6144]
+
+  PrimarySubnet:
+    Description: "The primary subnet."
+    Type: "AWS::EC2::Subnet::Id"
+  #
+  # Unfortunately, has to be set to type String since it is an optional parameter.
+  SecondarySubnet:
+    Description: "The secondary subnet. Only used for Multi AZ deployments."
+    Type: String
+    Default: ""
+
+  SecurityGroupIds:
+    Description: "Security groups to associate with the file system."
+    Type: "List<AWS::EC2::SecurityGroup::Id>"
+
+  RouteTableIds:
+    Description: "Route tables to be modified to have access to the file system. Only used for Multi AZ deployments."  
+    Type: CommaDelimitedList
+    Default: ""
+
+  EndpointIpAddressRange:
+    Description: "Specifies the IP address range in which the endpoints to access your file system will be created."
+    Type: String
+    Default: ""
+
+Conditions:
+  MultiAZ: !Or [!Equals [!Ref DeploymentType, MULTI_AZ_1 ], !Equals [!Ref DeploymentType, MULTI_AZ_2 ]]
+
+  ScaleOut: !Equals [!Ref DeploymentType, SINGLE_AZ_2]
+
+  IpRange: !Not [!Equals [!Ref EndpointIpAddressRange, ""]]
+
+Resources:
+  FileSystemMAZ:
+    Type: "AWS::FSx::FileSystem"
+
+    Properties:
+      FileSystemType: "ONTAP"
+      StorageCapacity: !Ref StorageCapacity
+      SubnetIds: [!Ref PrimarySubnet, !If [ MultiAZ, !Ref SecondarySubnet, !Ref "AWS::NoValue" ]]
+      SecurityGroupIds: !Ref SecurityGroupIds
+      OntapConfiguration:
+        DeploymentType: !Ref DeploymentType
+        ThroughputCapacityPerHAPair: !Ref ThroughputCapacity
+        HAPairs: !If [ ScaleOut, !Ref HAPairs, 1 ]
+        PreferredSubnetId: !Ref PrimarySubnet
+        RouteTableIds: !If [ MultiAZ, !Ref RouteTableIds, !Ref "AWS::NoValue" ]
+        EndpointIpAddressRange: !If [ IpRange, !Ref EndpointIpAddressRange, !Ref "AWS::NoValue" ]
+      Tags:
+        - Key: Name
+          Value: !Ref Name
