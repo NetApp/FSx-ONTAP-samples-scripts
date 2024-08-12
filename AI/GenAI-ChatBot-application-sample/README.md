@@ -49,8 +49,21 @@ To get started, you need to configure one of the supported login providers. Conf
     - CLERK_SECRET_KEY=YOUR_CLERK_SECRET_KEY
     - NEXT_PUBLIC_CLERK_TEMPLATE=YOUR_CLERK_TEMPLATE
 
-## Install the application dependencies
-To install the supplemental middleware that the application depends on, run the following command:
+## Download the application
+To download the application, clone the GitHub repository. Then, change to the sample application directory so that you can build or run it:
+
+1. 
+    ```bash
+    git clone https://github.com/NetApp/FSx-ONTAP-samples-scripts
+    ```
+
+2. 
+    ```bash
+    cd FSx-ONTAP-samples-scripts/AI/GenAI-ChatBot-application-sample
+    ```
+
+## Install dependencies
+To install dependencies for the sample application, run the following command:
 
 ```bash
 npm install
@@ -79,7 +92,6 @@ npm run build
 - To learn more about Next.js, take a look at the following resources:
     - [Next.js documentation](https://nextjs.org/docs) - learn about Next.js features and API.
     - [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
 
 ## Author Information
 
