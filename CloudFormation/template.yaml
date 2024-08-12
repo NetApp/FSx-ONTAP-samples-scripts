@@ -59,8 +59,8 @@ Parameters:
   PrimarySubnet:
     Description: "The primary subnet."
     Type: "AWS::EC2::Subnet::Id"
-#
-# Unfortunately, has to be set to type String since it is an optional parameter.
+  #
+  # Unfortunately, has to be set to type String since it is an optional parameter.
   SecondarySubnet:
     Description: "The secondary subnet. Only used for Multi AZ deployments."
     Type: String
@@ -81,11 +81,11 @@ Parameters:
     Default: ""
 
 Conditions:
-  MultiAZ:  !Or [!Equals [!Ref DeploymentType, MULTI_AZ_1 ], !Equals [!Ref DeploymentType, MULTI_AZ_2 ]]
+  MultiAZ: !Or [!Equals [!Ref DeploymentType, MULTI_AZ_1 ], !Equals [!Ref DeploymentType, MULTI_AZ_2 ]]
 
   ScaleOut: !Equals [!Ref DeploymentType, SINGLE_AZ_2]
 
-  IpRange:  !Not [!Equals [!Ref EndpointIpAddressRange, ""]]
+  IpRange: !Not [!Equals [!Ref EndpointIpAddressRange, ""]]
 
 Resources:
   FileSystemMAZ:
