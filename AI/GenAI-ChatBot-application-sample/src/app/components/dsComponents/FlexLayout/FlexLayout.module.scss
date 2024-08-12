@@ -1,0 +1,42 @@
+@use "./../../../styles/mixins.scss";
+
+.base {
+  box-sizing: border-box;
+  @include mixins.standard-scroll();
+
+  --horizontal-padding: 120px;
+
+  &.small-resolution {
+    --horizontal-padding: 88px;
+  }
+
+  &:not(.container) {
+    flex-grow: 0;
+    flex-shrink: 0;
+
+    &.off-grid {
+      margin: 0 calc(-1 * var(--horizontal-padding));
+    }
+  }
+
+  &.container {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    flex-wrap: wrap;
+
+    &.default-padding {
+      padding: 0 var(--horizontal-padding);
+
+      &.small-resolution {
+        padding: 0 var(--horizontal-padding);
+      }
+    }
+
+    &.column-direction {
+      justify-content: stretch;
+      align-items: center;
+      flex-wrap: nowrap;
+    }
+  }
+}

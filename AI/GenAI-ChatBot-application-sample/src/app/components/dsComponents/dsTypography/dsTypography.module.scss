@@ -1,0 +1,113 @@
+@use '../../../styles/mixins.scss';
+
+.base {
+  
+  --semibold-font-weight: 500;
+  
+  margin: 0;
+  padding: 0;
+  text-align: left;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  color: #404040;
+
+  &.typographyPropsIsDisabled {
+    color: var(--text-disabled);
+    pointer-events: none;
+  }
+
+  &.Regular_40 {
+    font-size: 40px;
+    line-height: 56px;
+    font-weight: 300;
+  }
+
+  &.Semibold_32 {
+    font-size: 32px;
+    line-height: 56px;
+    font-weight: var(--semibold-font-weight);
+  }
+
+  &.Regular_32 {
+    font-size: 32px;
+    line-height: 56px;
+    font-weight: 300;
+  }
+
+  &.Semibold_24 {
+    font-size: 24px;
+    line-height: 56px;
+    font-weight: var(--semibold-font-weight);
+  }
+
+  &.Regular_24 {
+    font-size: 24px;
+    line-height: 56px;
+    font-weight: 300;
+  }
+
+  &.Semibold_20 {
+    font-size: 20px;
+    line-height: 32px;
+    font-weight: var(--semibold-font-weight);
+  }
+
+  &.Regular_20 {
+    font-size: 20px;
+    line-height: 32px;
+    font-weight: 300;
+  }
+
+  &.Semibold_16 {
+    font-size: 16px;
+    line-height: 28px;
+    font-weight: var(--semibold-font-weight);
+  }
+
+  &.Regular_16 {
+    font-size: 16px;
+    line-height: 28px;
+    font-weight: 300;
+  }
+
+  &.Semibold_14 {
+    font-size: 14px;
+    line-height: 24px;
+    font-weight: var(--semibold-font-weight);
+  }
+
+  &.Regular_14 {
+    font-size: 14px;
+    line-height: 24px;
+    font-weight: 300;
+  }
+
+  &.Semibold_13 {
+    font-size: 13px;
+    line-height: 20px;
+    font-weight: var(--semibold-font-weight);
+  }
+
+  &.Regular_13 {
+    font-size: 13px;
+    line-height: 20px;
+    font-weight: 300;
+  }
+
+  &.Regular_12 {
+    font-size: 12px;
+    line-height: 20px;
+    font-weight: 300;
+  }
+
+  &.c {
+    text-align: center;
+  }
+
+  &.ellipsis {
+    @include mixins.ellipsis(100%);
+  }
+
+  &.no-wrap {
+    white-space: nowrap;
+  }
+}

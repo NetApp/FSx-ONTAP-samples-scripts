@@ -1,0 +1,36 @@
+@use "./../../../styles/mixins.scss";
+
+.base {
+  width: 100%;
+  @include mixins.ellipsis(100%);
+  gap: 4px;
+  display: flex;
+  align-items: center;
+
+  .icon-error {
+    flex-shrink: 0;
+    --icon-primary-color: var(--error);
+    width: 16px;
+    height: 16px;
+  }
+  .icon-warning {
+    flex-shrink: 0;
+    --icon-primary-color: var(--warning);
+    width: 16px;
+    height: 16px;
+  }
+  .icon-info {
+    flex-shrink: 0;
+    --icon-primary-color: var(--information);
+    width: 16px;
+    height: 16px;
+  }
+  .tooltip {
+    flex-shrink: 0;
+  }
+  .right-widget {
+    flex: 1;
+    display: flex;
+    justify-content: flex-end;
+  }
+}

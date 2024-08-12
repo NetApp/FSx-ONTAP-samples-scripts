@@ -1,0 +1,33 @@
+.panelHeader {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 0 20px 0 40px;
+    height: var(--headerHight);
+    border-bottom: 1px solid var(--border);
+    justify-content: space-between;
+
+    .headerText {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .historyAction {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+
+      .historyMenu {
+        margin-right: 12px;
+      }
+
+      .close {
+        cursor: pointer;
+        color: var(--icon-secondary);
+        height: 20px;
+      }
+    }
+
+  }

@@ -1,0 +1,15 @@
+@use '../../styles/mixins.scss';
+
+.panel {
+  --panel-width: 564px;
+
+  @include mixins.transition(width 0.3s ease);
+  width: 0;
+  border-left: 1px solid var(--border);
+  overflow: hidden;
+
+  &.expanded {
+    width: var(--panel-width);
+    height: 100%;
+  }
+}
