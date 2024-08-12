@@ -7,7 +7,7 @@ import EnterpriseChatIcon from "@/app/svgs/chatbot/enterpriseChat.svg";
 import EmptyPromptIcon from '@/app/svgs/chatbot/emptyPrompt.svg';
 import LoadingIcon from '@/app/svgs/loaderMain.svg';
 import Prompt, { PromptItem, UserType } from './prompt/prompt';
-import { useGetMessagesQuery, useSendMessageMutation } from '@/lib/api/chatApi.slice';
+import { closeSocket, useGetMessagesQuery, useSendMessageMutation } from '@/lib/api/chatApi.slice';
 import { skip } from '@/lib/api/api.slice';
 import rootSelector from '@/lib/selectors/root.selector';
 import { ChatMessage } from '@/lib/store.types';
@@ -191,6 +191,7 @@ const Chatbot = () => {
     }, [isFetching, dispatch]);
 
     useEffect(() => {
+        closeSocket();
         resetQuestion();
         dispatch(resetMessages());
     }, [dispatch, chatId])
@@ -234,7 +235,7 @@ const Chatbot = () => {
 
     const isSendMessageDisabled = useMemo(() => {
         const isWriting = promptList[promptList.length - 1]?.isWriting;
-        const isDisabled = !knowledgebase || isLoading || !chatId || isWriting;
+        const isDisabled = !knowledgebase || !chatId || isWriting;
 
         if (!isDisabled) {
             setTimeout(() => {
@@ -246,11 +247,11 @@ const Chatbot = () => {
         }
 
         return isDisabled;
-    }, [knowledgebase, isLoading, chatId, promptList])
+    }, [knowledgebase, chatId, promptList])
 
     const setNewChatId = (chatId: string) => {
-        refetch();
         dispatch(setChatId(chatId));
+        refetch();
     }
 
     const ConversationStarterPrompts = () => {

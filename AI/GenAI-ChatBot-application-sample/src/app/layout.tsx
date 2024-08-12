@@ -24,16 +24,16 @@ export default function RootLayout({
     <html lang="en">
       <GenAiClerkProvider>
         <StoreProvider>
-          <ErrorBoundary>
-            <body className={`${styles.genAi} ${styles['font-variants']} light-theme`} style={{ margin: 0 }}>
-              <DialogContextProvider>
+          <body className={`${styles.genAi} ${styles['font-variants']} light-theme`} style={{ margin: 0 }}>
+            <DialogContextProvider>
+              <ErrorBoundary>
                 <RedirectProvider>
                   {children}
                 </RedirectProvider>
-              </DialogContextProvider>
-              <NotificationGroup />
-            </body>
-          </ErrorBoundary>
+                <NotificationGroup />
+              </ErrorBoundary>
+            </DialogContextProvider>
+          </body>
         </StoreProvider>
       </GenAiClerkProvider>
     </html>

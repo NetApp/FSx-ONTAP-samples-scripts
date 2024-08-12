@@ -16,7 +16,6 @@ import { NOTIFICATION_CONSTS } from '../NotificationGroup/notification.consts';
 import { setAuth } from '@/lib/slices/auth.slice';
 import { ClerkSignIn } from '@/app/services/clerk.service';
 import { SignInResult, LoginProvider } from '@/lib/api/api.types';
-import useRunOnce from '@/app/hooks/useRunOnce';
 import useRunUntil from '@/app/hooks/useRunUntil';
 
 const LoginForm = () => {

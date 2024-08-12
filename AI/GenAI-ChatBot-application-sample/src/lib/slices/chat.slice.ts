@@ -28,7 +28,10 @@ const chatSlice = createSlice({
             state.messages = [];
         },
         resetChat(state) {
-            return initialState
+            return {
+                ...initialState,
+                chatId: Date.now().toString()
+            }
         }
     }
 })

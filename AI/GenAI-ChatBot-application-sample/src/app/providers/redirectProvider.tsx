@@ -25,7 +25,7 @@ const RedirectProvider = ({ children }: RedirectProviderProps) => {
         const authFromStorage = localStorage.getItem('genAi');
         const auth = authFromStorage ? JSON.parse(authFromStorage) as Auth : authInitialState;
 
-        if (!auth.isSuccess) {
+        if (!auth.accessToken) {
             router.replace(ROUTES.BASE)
         } else {
             dispatch(setAuth(auth))
@@ -34,6 +34,8 @@ const RedirectProvider = ({ children }: RedirectProviderProps) => {
                 router.push(`${ROUTES.BASE}${ROUTES.CHAT}`)
             }
         }
+
+        dispatch(setAuth({ ...auth, isSuccess: true }));
     }, [router, pathname, dispatch])
 
     return children;

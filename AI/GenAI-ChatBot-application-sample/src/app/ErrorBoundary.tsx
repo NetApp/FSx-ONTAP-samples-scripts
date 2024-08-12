@@ -27,7 +27,7 @@ class ErrorBoundary extends Component<Props, State> {
   public render() {
     if (this.state.hasError) {
       //TODO: Rout to aiChat home page
-      return <h1>Sorry.. there was an error</h1>;
+      return <div>Sorry.. there was an error</div>;
     }
 
     return this.props.children;

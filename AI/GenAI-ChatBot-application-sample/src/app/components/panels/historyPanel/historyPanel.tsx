@@ -27,7 +27,7 @@ const HistoryPanel = ({ isExpanded, isLoading, promptList, historyList, toggleEx
         <div className={_Classes(styles.chatHistory, panelStyles.panel, { [panelStyles.expanded]: isExpanded })}>
             <PanelHeader title='History' isLoading={isLoading} panelType='history' toggleExpanded={toggleExpanded} />
             <div className={_Classes(styles.historyList, { [styles.emptyHistory]: promptList.length === 0 && historyList.size === 0 })}>
-                {promptList.length > 0 || (historyList.size > 0 && !isLoading) ? Array.from(historyList.keys()).sort((hist1, hist2) => hist2 - hist1).map(id => {
+                {promptList.length > 0 || historyList.size > 0 ? Array.from(historyList.keys()).sort((hist1, hist2) => hist2 - hist1).map(id => {
                     return (
                         <HistoryItem key={id}
                             history={{
