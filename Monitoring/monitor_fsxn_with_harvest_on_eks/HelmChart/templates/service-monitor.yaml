@@ -1,0 +1,21 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  annotations:
+    release-name: harvest
+    release-namespace: harvest
+  labels:
+    release: {{ .Values.prometheus }}
+  name: harvest-exporter
+  namespace: harvest
+spec:
+  endpoints:
+    - interval: 30s
+      port: "12990"
+      path: /metrics
+  namespaceSelector:
+    matchNames:
+      - harvest
+  selector:
+    matchLabels:
+      io.kompose.service: harvest-service

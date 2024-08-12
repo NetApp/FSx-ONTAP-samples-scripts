@@ -16,26 +16,27 @@
  */
 
 resource "aws_security_group" "fsx_sg" {
-  count       = var.create_sg ? 1 : 0
-  name        = "fsx_sg"
   description = "Allow FSx ONTAP required ports"
+  count       = var.create_sg ? 1 : 0
+  name_prefix = var.security_group_name_prefix
   vpc_id      = var.vpc_id
 }
 
 resource "aws_vpc_security_group_ingress_rule" "all_icmp" {
+  description       = "Allow ICMP traffic"
   count             = var.create_sg ? 1 : 0
   security_group_id = aws_security_group.fsx_sg[count.index].id
-  description       = "Allow all ICMP traffic"
-  cidr_ipv4         = "0.0.0.0/0"   // Allowing all ICMP traffic from all sources
+  cidr_ipv4         = var.cidr_for_sg != "" ? var.cidr_for_sg : null
+  referenced_security_group_id = (var.source_sg_id != "" ? var.source_sg_id : null)
   from_port         = -1
   to_port           = -1
   ip_protocol       = "icmp"
 }
 
 resource "aws_vpc_security_group_ingress_rule" "nfs_tcp" {
+  description       = "Remote procedure call for NFS"
   count             = var.create_sg ? 1 : 0
   security_group_id = aws_security_group.fsx_sg[count.index].id
-  description       = "Remote procedure call for NFS"
   cidr_ipv4         = (var.cidr_for_sg != "" ? var.cidr_for_sg : null)
   referenced_security_group_id = (var.source_sg_id != "" ? var.source_sg_id : null)
   from_port         = 111
@@ -44,9 +45,9 @@ resource "aws_vpc_security_group_ingress_rule" "nfs_tcp" {
 }
 
 resource "aws_vpc_security_group_ingress_rule" "nfs_udp" {
+  description       = "Remote procedure call for NFS"
   count             = var.create_sg ? 1 : 0
   security_group_id = aws_security_group.fsx_sg[count.index].id
-  description       = "Remote procedure call for NFS"
   cidr_ipv4         = (var.cidr_for_sg != "" ? var.cidr_for_sg : null)
   referenced_security_group_id = (var.source_sg_id != "" ? var.source_sg_id : null)
   from_port         = 111
@@ -55,9 +56,9 @@ resource "aws_vpc_security_group_ingress_rule" "nfs_udp" {
 }
 
 resource "aws_vpc_security_group_ingress_rule" "cifs" {
+  description       = "NetBIOS service session for CIFS"
   count             = var.create_sg ? 1 : 0
   security_group_id = aws_security_group.fsx_sg[count.index].id
-  description       = "NetBIOS service session for CIFS"
   cidr_ipv4         = (var.cidr_for_sg != "" ? var.cidr_for_sg : null)
   referenced_security_group_id = (var.source_sg_id != "" ? var.source_sg_id : null)
   from_port         = 139
@@ -66,9 +67,9 @@ resource "aws_vpc_security_group_ingress_rule" "cifs" {
 }
 
 resource "aws_vpc_security_group_ingress_rule" "snmp_tcp" {
+  description       = "Simple network management protocol for log collection"
   count             = var.create_sg ? 1 : 0
   security_group_id = aws_security_group.fsx_sg[count.index].id
-  description       = "Simple network management protocol for log collection"
   cidr_ipv4         = (var.cidr_for_sg != "" ? var.cidr_for_sg : null)
   referenced_security_group_id = (var.source_sg_id != "" ? var.source_sg_id : null)
   from_port         = 161
@@ -77,9 +78,9 @@ resource "aws_vpc_security_group_ingress_rule" "snmp_tcp" {
 }
 
 resource "aws_vpc_security_group_ingress_rule" "snmp_udp" {
+  description       = "Simple network management protocol for log collection"
   count             = var.create_sg ? 1 : 0
   security_group_id = aws_security_group.fsx_sg[count.index].id
-  description       = "Simple network management protocol for log collection"
   cidr_ipv4         = (var.cidr_for_sg != "" ? var.cidr_for_sg : null)
   referenced_security_group_id = (var.source_sg_id != "" ? var.source_sg_id : null)
   from_port         = 161
@@ -88,9 +89,9 @@ resource "aws_vpc_security_group_ingress_rule" "snmp_udp" {
 }
 
 resource "aws_vpc_security_group_ingress_rule" "smb_cifs" {
+  description       = "Microsoft SMB/CIFS over TCP with NetBIOS framing"
   count             = var.create_sg ? 1 : 0
   security_group_id = aws_security_group.fsx_sg[count.index].id
-  description       = "Microsoft SMB/CIFS over TCP with NetBIOS framing"
   cidr_ipv4         = (var.cidr_for_sg != "" ? var.cidr_for_sg : null)
   referenced_security_group_id = (var.source_sg_id != "" ? var.source_sg_id : null)
   from_port         = 445
@@ -99,9 +100,9 @@ resource "aws_vpc_security_group_ingress_rule" "smb_cifs" {
 }
 
 resource "aws_vpc_security_group_ingress_rule" "nfs_mount_tcp" {
+  description       = "NFS mount"
   count             = var.create_sg ? 1 : 0
   security_group_id = aws_security_group.fsx_sg[count.index].id
-  description       = "NFS mount"
   cidr_ipv4         = (var.cidr_for_sg != "" ? var.cidr_for_sg : null)
   referenced_security_group_id = (var.source_sg_id != "" ? var.source_sg_id : null)
   from_port         = 635
@@ -110,9 +111,9 @@ resource "aws_vpc_security_group_ingress_rule" "nfs_mount_tcp" {
 }
 
 resource "aws_vpc_security_group_ingress_rule" "kerberos" {
+  description       = "Kerberos authentication"
   count             = var.create_sg ? 1 : 0
   security_group_id = aws_security_group.fsx_sg[count.index].id
-  description       = "Kerberos authentication"
   cidr_ipv4         = (var.cidr_for_sg != "" ? var.cidr_for_sg : null)
   referenced_security_group_id = (var.source_sg_id != "" ? var.source_sg_id : null)
   from_port         = 749
@@ -121,9 +122,9 @@ resource "aws_vpc_security_group_ingress_rule" "kerberos" {
 }
 
 resource "aws_vpc_security_group_ingress_rule" "nfs_server_daemon" {
+  description       = "NFS server daemon"
   count             = var.create_sg ? 1 : 0
   security_group_id = aws_security_group.fsx_sg[count.index].id
-  description       = "NFS server daemon"
   cidr_ipv4         = (var.cidr_for_sg != "" ? var.cidr_for_sg : null)
   referenced_security_group_id = (var.source_sg_id != "" ? var.source_sg_id : null)
   from_port         = 2049
@@ -132,9 +133,9 @@ resource "aws_vpc_security_group_ingress_rule" "nfs_server_daemon" {
 }
 
 resource "aws_vpc_security_group_ingress_rule" "nfs_server_daemon_udp" {
+  description       = "NFS server daemon"
   count             = var.create_sg ? 1 : 0
   security_group_id = aws_security_group.fsx_sg[count.index].id
-  description       = "NFS server daemon"
   cidr_ipv4         = (var.cidr_for_sg != "" ? var.cidr_for_sg : null)
   referenced_security_group_id = (var.source_sg_id != "" ? var.source_sg_id : null)
   from_port         = 2049
@@ -143,9 +144,9 @@ resource "aws_vpc_security_group_ingress_rule" "nfs_server_daemon_udp" {
 }
 
 resource "aws_vpc_security_group_ingress_rule" "nfs_lock_daemon" {
+  description       = "NFS lock daemon"
   count             = var.create_sg ? 1 : 0
   security_group_id = aws_security_group.fsx_sg[count.index].id
-  description       = "NFS lock daemon"
   cidr_ipv4         = (var.cidr_for_sg != "" ? var.cidr_for_sg : null)
   referenced_security_group_id = (var.source_sg_id != "" ? var.source_sg_id : null)
   from_port         = 4045
@@ -154,9 +155,9 @@ resource "aws_vpc_security_group_ingress_rule" "nfs_lock_daemon" {
 }
 
 resource "aws_vpc_security_group_ingress_rule" "nfs_lock_daemon_udp" {
+  description       = "NFS lock daemon"
   count             = var.create_sg ? 1 : 0
   security_group_id = aws_security_group.fsx_sg[count.index].id
-  description       = "NFS lock daemon"
   cidr_ipv4         = (var.cidr_for_sg != "" ? var.cidr_for_sg : null)
   referenced_security_group_id = (var.source_sg_id != "" ? var.source_sg_id : null)
   from_port         = 4045
@@ -165,9 +166,9 @@ resource "aws_vpc_security_group_ingress_rule" "nfs_lock_daemon_udp" {
 }
 
 resource "aws_vpc_security_group_ingress_rule" "nfs_status_monitor" {
+  description       = "Status monitor for NFS"
   count             = var.create_sg ? 1 : 0
   security_group_id = aws_security_group.fsx_sg[count.index].id
-  description       = "Status monitor for NFS"
   cidr_ipv4         = (var.cidr_for_sg != "" ? var.cidr_for_sg : null)
   referenced_security_group_id = (var.source_sg_id != "" ? var.source_sg_id : null)
   from_port         = 4046
@@ -209,9 +210,9 @@ resource "aws_vpc_security_group_ingress_rule" "iscsi_tcp" {
 }
 
 resource "aws_vpc_security_group_ingress_rule" "Snapmirror_Intercluster_communication" {
+  description       = "Snapmirror Intercluster communication"
   count             = var.create_sg ? 1 : 0
   security_group_id = aws_security_group.fsx_sg[count.index].id
-  description       = "Snapmirror Intercluster communication"
   cidr_ipv4         = (var.cidr_for_sg != "" ? var.cidr_for_sg : null)
   referenced_security_group_id = (var.source_sg_id != "" ? var.source_sg_id : null)
   from_port         = 11104
@@ -220,9 +221,9 @@ resource "aws_vpc_security_group_ingress_rule" "Snapmirror_Intercluster_communic
 }
 
 resource "aws_vpc_security_group_ingress_rule" "Snapmirror_data_transfer" {
+  description       = "Snapmirror data transfer"
   count             = var.create_sg ? 1 : 0
   security_group_id = aws_security_group.fsx_sg[count.index].id
-  description       = "Snapmirror data transfer"
   cidr_ipv4         = (var.cidr_for_sg != "" ? var.cidr_for_sg : null)
   referenced_security_group_id = (var.source_sg_id != "" ? var.source_sg_id : null)
   from_port         = 11105
@@ -231,9 +232,9 @@ resource "aws_vpc_security_group_ingress_rule" "Snapmirror_data_transfer" {
 }
 
 resource "aws_vpc_security_group_ingress_rule" "nfs_mount_udp" {
+  description       = "NFS mount"
   count             = var.create_sg ? 1 : 0
   security_group_id = aws_security_group.fsx_sg[count.index].id
-  description       = "NFS mount"
   cidr_ipv4         = (var.cidr_for_sg != "" ? var.cidr_for_sg : null)
   referenced_security_group_id = (var.source_sg_id != "" ? var.source_sg_id : null)
   from_port         = 635
@@ -242,9 +243,9 @@ resource "aws_vpc_security_group_ingress_rule" "nfs_mount_udp" {
 }
 
 resource "aws_vpc_security_group_ingress_rule" "ssh" {
+  description       = "ssh"
   count             = var.create_sg ? 1 : 0
   security_group_id = aws_security_group.fsx_sg[count.index].id
-  description       = "ssh"
   cidr_ipv4         = (var.cidr_for_sg != "" ? var.cidr_for_sg : null)
   referenced_security_group_id = (var.source_sg_id != "" ? var.source_sg_id : null)
   from_port         = 22
@@ -253,9 +254,9 @@ resource "aws_vpc_security_group_ingress_rule" "ssh" {
 }
 
 resource "aws_vpc_security_group_ingress_rule" "s3_and_api" {
+  description       = "Provice acccess to S3 and the ONTAP REST API"
   count             = var.create_sg ? 1 : 0
   security_group_id = aws_security_group.fsx_sg[count.index].id
-  description       = "Provice acccess to S3 and the ONTAP REST API"
   cidr_ipv4         = (var.cidr_for_sg != "" ? var.cidr_for_sg : null)
   referenced_security_group_id = (var.source_sg_id != "" ? var.source_sg_id : null)
   from_port         = 443
@@ -264,6 +265,7 @@ resource "aws_vpc_security_group_ingress_rule" "s3_and_api" {
 }
 
 resource "aws_vpc_security_group_egress_rule" "allow_all_traffic" {
+  description       = "Allow all outbound traffic"
   count             = var.create_sg ? 1 : 0
   security_group_id = aws_security_group.fsx_sg[count.index].id
   cidr_ipv4         = "0.0.0.0/0"  // Allow all output traffic.

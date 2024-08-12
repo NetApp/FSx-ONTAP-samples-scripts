@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert --file harvest-compose.yml --volumes configMap -o kub.yaml
+    kompose.version: 1.28.0 (HEAD)
+  creationTimestamp: null
+  labels:
+    io.kompose.service: harvest-service
+  name: harvest
+  namespace: harvest
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: harvest-service
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert --file harvest-compose.yml --volumes configMap -o kub.yaml
+        kompose.version: 1.28.0 (HEAD)
+      creationTimestamp: null
+      labels:
+        io.kompose.network/harvest-default: "true"
+        io.kompose.service: harvest-service
+    spec:
+      containers:
+        - args:
+            - --poller
+            - fsx
+            - --promPort
+            - "12990"
+            - --config
+            - /opt/harvest.yml
+          image: ghcr.io/netapp/harvest:latest
+          name: poller-fsx
+          ports:
+            - containerPort: 12990
+          resources: {}
+          volumeMounts:
+            - mountPath: /opt/harvest/cert
+              name: harvest-cm
+            - mountPath: /opt/harvest.yml
+              name: harvest-config
+              subPath: harvest.yml
+      restartPolicy: Always
+      volumes:
+        - configMap:
+            name: harvest-cm
+          name: harvest-cm
+        - configMap:
+            items:
+              - key: harvest.yml
+                path: harvest.yml
+            name: harvest-config
+          name: harvest-config
+status: {}
