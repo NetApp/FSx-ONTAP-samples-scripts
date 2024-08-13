@@ -1,0 +1,273 @@
+@import '../../../styles/mixins.scss';
+
+.dsButtonContainer {
+    width: fit-content;
+    
+    .boundariesRef {
+        .dsButtons {
+            @include transition(background-color 0.3s ease);
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 12px;
+            height: 40px;
+            min-width: 152px;
+            padding: 0 24px;
+            box-sizing: border-box;
+            border-radius: 3px;
+            cursor: pointer;
+
+            .buttonContent {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                flex: 1;
+
+                .extenrnalIcon {
+                    display: flex;
+                }
+            }
+
+            svg {
+                color: var(--text-on-color);
+            }
+
+            &.isThin {
+                height: 32px;
+            }
+
+            &.isDisabled,
+            &.isLoading {
+                pointer-events: none;
+
+                .spinner {
+                    @include spin(1000ms);
+                }
+
+                .dropdownIndicator {
+                    border-left-color: var(--button-primary-disabled);
+                }
+            }
+
+            &.primary, &.Default {
+                background-color: var(--button-primary-bg);
+
+                &:hover {
+                    background-color: var(--button-primary-hover-bg);
+                }
+            }
+
+            &.destructive {
+                background-color: var(--button-destructive-bg);
+
+                &:hover {
+                    background-color: var(--button-destructive-hover-bg);
+                }
+            }
+
+            &.primary,
+            &.Default,
+            &.destructive {
+
+                &.isDisabled,
+                &.isLoading {
+                    background-color: var(--button-primary-bg-disabled);
+
+                    .primaryButton,
+                    svg {
+                        color: var(--button-primary-disabled);
+
+                        path {
+                            fill: var(--button-primary-disabled);
+                        }
+                    }
+
+                    &.text,
+                    &.link,
+                    &.icon {
+                        background-color: unset;
+
+                        svg {
+                            color: var(--text-button-disabled);
+                        }
+
+                        .primaryButton {
+                            color: var(--text-button-disabled);
+                        }
+
+                        .externalLink {
+                            color: var(--text-button-disabled);
+                        }
+                    }
+                }
+
+                &.text,
+                &.link,
+                &.icon {
+                    background-color: unset;
+
+                    &:hover {
+                        .buttonContent {
+                            .primaryButton, .externalLink, .buttonIcon {
+                                color: var(--text-button-primary-hover);
+
+                            }
+
+                            .extenrnalIcon {
+                                > * {
+                                    color: var(--text-button-primary-hover);
+                                }
+                            }
+                        }
+                    }
+
+                    svg {
+                        color: var(--button-secondary);
+                    }
+
+                    .primaryButton {
+                        color: var(--button-secondary);
+                    }
+
+                    .externalLink {
+                        color: var(--button-secondary);
+                    }
+                }
+            }
+
+            &.secondary {
+                background-color: var(--content-background);
+                border: 1px solid var(--button-secondary);
+
+                &:hover {
+                    background-color: var(--hover-background);
+                }
+
+                .primaryButton {
+                    color: var(--button-secondary);
+                }
+
+                svg {
+                    color: var(--button-secondary);
+                }
+
+                &.isDisabled,
+                &.isLoading {
+                    background-color: var(--content-background);
+                    border-color: var(--button-secondary-disabled);
+
+                    .primaryButton,
+                    svg {
+                        color: var(--button-primary-disabled);
+
+                        path {
+                            fill: var(--button-primary-disabled);
+                        }
+                    }
+
+                    &.text,
+                    &.link,
+                    &.icon {
+                        background-color: unset;
+
+                        svg {
+                            color: var(--text-button-disabled);
+                        }
+
+                        .primaryButton {
+                            color: var(--text-button-disabled);
+                        }
+
+                        .externalLink {
+                            color: var(--text-button-disabled);
+                        }
+
+                        .dropdownIndicator {
+                            border-left-color: var(--text-button-disabled);
+                        }
+                    }
+
+                    .dropdownIndicator {
+                        border-left-color: var(--text-button-disabled);
+                    }
+                }
+
+                &.text,
+                &.link,
+                &.icon {
+                    background-color: unset;
+                    border: none;
+
+                    svg {
+                        color: var(--text-button-secondary);
+                    }
+
+                    .primaryButton {
+                        color: var(--text-button-secondary);
+                    }
+
+                    .externalLink {
+                        color: var(--text-button-secondary);
+                    }
+
+                    .dropdownIndicator {
+                        border-left-color: var(--text-button-secondary);
+                    }
+                }
+
+                .dropdownIndicator {
+                    border-left-color: var(--button-secondary);
+                }
+            }
+
+            &.text,
+            &.link,
+            &.icon {
+                min-width: unset;
+                padding: 0;
+                height: unset;
+
+                .linkButton {
+                    display: flex;
+                    flex-direction: row;
+                    align-items: center;
+                    gap: 8px;
+                }
+
+                .externalLink {
+                    text-decoration: none;
+                }
+
+                .dropdownIndicator {
+                    border-left: none;
+                }
+            }
+
+            &.dropdown {
+                padding-right: 2px;
+            }
+
+            .primaryButton {
+                @include ellipsis(100%);
+                color: var(--text-on-color);
+            }
+
+            .dropdownIndicator {
+                display: flex;
+                justify-content: flex-end;
+                width: 22px;
+                border-left: 1px solid var(--text-on-color);
+                padding: 0 4px;
+
+                .chevronIcon {
+                    @include transition(transform 0.3s ease);
+
+                    &.isExpanded {
+                        @include rotate(180deg);
+                    }
+                }
+            }
+        }
+    }
+}
