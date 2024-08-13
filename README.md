@@ -8,7 +8,7 @@ built to maximize cost performance, resilience, and accessibility in business-cr
 This GitHub repository contains comprehensive code samples and automation scripts for FSx for Netapp ONTAP operations,
 promoting the use of Infrastructure as Code (IAC) tools and encouraging developers to extend the product's
 functionalities through code. The samples here go alongside the automation, management and monitoring that
-[BlueXP Workload Factory](https://www.netapp.com/bluexp/workload-factory/) provides.
+[BlueXP Workload Factory](https://console.workloads.netapp.com) provides.
 
 We welcome contributions from the community! Please read our [contribution guidelines](CONTRIBUTING.md) before getting started.
 
