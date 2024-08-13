@@ -12,20 +12,27 @@ functionalities through code. The samples here go alongside the automation, mana
 
 We welcome contributions from the community! Please read our [contribution guidelines](CONTRIBUTING.md) before getting started.
 
-Have a great idea? We'd love to hear it! Please share it via the Discussions tab under the Ideas category.
+Have a great idea? We'd love to hear it! Please email us at [ng-fsxn-github-samples@netapp.com](mailto:ng-fsxn-github-samples@netapp.com).
 
 ## Table of Contents
 
+* [AI](/AL)
+    * [GenAI ChatBot application sample](/AI/GenAI-ChatBot-application-sample)
+* [CloudFormation](/CloudFormation)
+    * [deploy-fsx-ontap](/CloudFormation/deploy-fsx-ontap)
 * [EKS](/EKS)
     * [FSx for NetApp ONTAP as persistent storage for EKS](/EKS/FSxN-as-PVC-for-EKS)
 * [Management Utilities](/Management-Utilities)
     * [Auto Create SnapMirror Relationships](/Management-Utilities/auto_create_sm_relationships)
     * [Auto Set FSxN Auto Grow](/Management-Utilities/auto_set_fsxn_auto_grow)
     * [AWS CLI management scripts for FSx ONTAP](/Management-Utilities/fsx-ontap-aws-cli-scripts)
+    * [Rotate AWS Secrets Manager Secret](/Management-Utilities/fsxn-rotate-secret)
     * [FSx ONTAP iscsi volume creation automation for Windows](/Management-Utilities/iscsi-vol-create-and-mount)
 * [Monitoring](/Monitoring)
     * [Export LUN metrics from an FSx ONTAP to Amazon CloudWatch](/Monitoring/LUN-monitoring)
+    * [Automatically Add CloudWatch Alarms for FSx Resources](/Monitoring/auto-add-cw-alarms)
     * [Monitor ONTAP metrics from FSx ONTAP using python Lambda function](/Monitoring/monitor-ontap-services)
+    * [Monitor FSx for ONTAP using Harvest on EKS](/Monitoring/monitor_fsxn_harvest_on_eks)
 * [Solutions](/Solutions)
     * [k8s applications non-stdout logs collection into ELK](/Solutions/EKS-logs-to-ELK)
 * [Terraform](/Terraform)
