@@ -29,7 +29,7 @@ import boto3
 #
 # Create a table of secret names and keys for the username and password for
 # each of the FSxIds. In the example below, it shows using the same
-# secret for four differnt FSxIds, but you can set it up to use
+# secret for four different FSxIds, but you can set it up to use
 # a different secret and/or keys for the username and password for each
 # of the FSxId.
 secretsTable = [
@@ -66,7 +66,7 @@ shrinkThresholdPercentage = 50
 # Set the minimum shirtk size for the volume in terms of the percentage of the provisioned size.
 minShrinkSizePercentage = 100
 #
-# Set the iime to wait for a volume to get created. This Lambda function will
+# Set the time to wait for a volume to get created. This Lambda function will
 # loop waiting for the volume to be created on the ONTAP side so it can set
 # the auto size parameters. It will wait up to the number of seconds specified
 # below before giving up. NOTE: You must set the timeout of this function
@@ -154,7 +154,9 @@ def lambda_handler(event, context):
 
     if 'secretsTable' not in globals():
         if 'dynamodbRegion' not in globals() or 'dynamodbSecretsTableName' not in globals():
-            raise Exception('Error, you must either define the secretsTable array at the top of this script, or define dynamodbRegion and dynamodbSecretsTableName.')
+            message = 'Error, you must either define the secretsTable array at the top of this script, or define dynamodbRegion and dynamodbSecretsTableName.'
+            logger.critcal(message)
+            raise Exception(message)
 
         table = dynamodbClient.Table(dynamodbSecretsTableName) # pylint: disable=E0602
 
@@ -170,7 +172,8 @@ def lambda_handler(event, context):
     if fsxId == "" or regionName == "" or volumeId == "" or volumeName == "" or volumeARN == "":
         message = "Couldn't obtain the fsxId, region, volume name, volume ID or volume ARN from the CloudWatch evevnt."
         logger.critcal(message)
-        raise Exception(message)
+#        raise Exception(message)
+        return
 
     logger.debug(f'Data from CloudWatch event: FSxID={fsxId}, Region={regionName}, VolumeName={volumeName}, volumeId={volumeId}.')
     #
@@ -179,7 +182,8 @@ def lambda_handler(event, context):
     if username == "" or password == "":
         message = f'No credentials for FSxN ID: {fsxId}.'
         logger.critical(message)
-        raise Exception(message)
+#        raise Exception(message)
+        return
     #
     # Build a header that is used for all the ONTAP API requests.
     auth = urllib3.make_headers(basic_auth=f'{username}:{password}')
@@ -192,14 +196,16 @@ def lambda_handler(event, context):
     if fsxnIp == "":
         message = f"Can't find management IP for FSxN file system with an ID of '{fsxId}'."
         logger.critical(message)
-        raise Exception(message)
+#        raise Exception(message)
+        return
     #
     # Get the volume UUID and volume size based on the volume ID.
     volumeData = getVolumeData(fsxClient, volumeId, volumeARN)
     if volumeData == None:
         message=f'Failed to get volume information for volumeID: {volumeId}.'
         logger.critical(message)
-        raise Exception(message)
+#        raise Exception(message)
+        return
     volumeUUID = volumeData["OntapConfiguration"]["UUID"]
     volumeSizeInMegabytes = volumeData["OntapConfiguration"]["SizeInMegabytes"]
     #
