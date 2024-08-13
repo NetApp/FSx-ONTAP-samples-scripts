@@ -16,7 +16,7 @@ Have a great idea? We'd love to hear it! Please email us at [ng-fsxn-github-samp
 
 ## Table of Contents
 
-* [AI](/AL)
+* [AI](/AI)
     * [GenAI ChatBot application sample](/AI/GenAI-ChatBot-application-sample)
 * [CloudFormation](/CloudFormation)
     * [deploy-fsx-ontap](/CloudFormation/deploy-fsx-ontap)
@@ -32,7 +32,7 @@ Have a great idea? We'd love to hear it! Please email us at [ng-fsxn-github-samp
     * [Export LUN metrics from an FSx ONTAP to Amazon CloudWatch](/Monitoring/LUN-monitoring)
     * [Automatically Add CloudWatch Alarms for FSx Resources](/Monitoring/auto-add-cw-alarms)
     * [Monitor ONTAP metrics from FSx ONTAP using python Lambda function](/Monitoring/monitor-ontap-services)
-    * [Monitor FSx for ONTAP using Harvest on EKS](/Monitoring/monitor_fsxn_harvest_on_eks)
+    * [Monitor FSx for ONTAP with Harvest on EKS](/Monitoring/monitor_fsxn_with_harvest_on_eks)
 * [Solutions](/Solutions)
     * [k8s applications non-stdout logs collection into ELK](/Solutions/EKS-logs-to-ELK)
 * [Terraform](/Terraform)
