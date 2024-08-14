@@ -72,7 +72,8 @@
         },
         "PasswordsSecretArn": {
             "Type": "String",
-            "Description": "The ARN of the AWS Secrets Manager secret containing fsxadmin passwords for ONTAP file systems. The secret should be structured as key-value pairs, where keys are file system IDs and values are their corresponding passwords. These credentials are required for ONTAP API calls, enabling functions like SnapMirror relation monitoring. If not provided, certain monitoring capabilities may be limited."
+            "Description": "The ARN of the AWS Secrets Manager secret containing fsxadmin passwords for ONTAP file systems. The secret should be structured as key-value pairs, where keys are file system IDs and values are their corresponding passwords. These credentials are required for ONTAP API calls, enabling functions like SnapMirror relation monitoring. If not provided, certain monitoring capabilities may be limited.",
+            "Default": ""
         },
         "CreateSecretManagerEndpoint": {
             "Type": "String",
@@ -111,7 +112,19 @@
                 },
                 "true"
             ]
-        }    
+        },
+        "NeedToCreateLambdaSecretPolicy": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "PasswordsSecretArn"
+                        },
+                        ""
+                    ]
+                }
+            ]
+        }
     },    
     "Resources": {
         "SecretManagerEndPoint": {
@@ -218,9 +231,36 @@
                                 },
                                 {
                                     "Effect": "Allow",
-                                    "Action": "secretsmanager:GetSecretValue",
-                                    "Resource": {"Ref": "PasswordsSecretArn" }
-                                }                                
+                                    "Action": [
+                                        "cloudwatch:DeleteAlarms"
+                                    ],
+                                    "Resource": {
+                                        "Fn::Join": [
+                                            "",
+                                            [
+                                                "arn:aws:cloudwatch:",
+                                                {"Ref": "AWS::Region"},
+                                                ":",
+                                                {"Ref": "AWS::AccountId"},
+                                                ":alarm:FSx-ONTAP*"
+                                            ]
+                                        ]
+                                    }
+                                },
+                                {
+                                    "Fn::If": [
+                                        "NeedToCreateLambdaSecretPolicy",
+                                        {
+                                            "Effect": "Allow",
+                                            "Action": "secretsmanager:GetSecretValue",
+                                            "Resource": {"Ref": "PasswordsSecretArn" }
+                                        },
+                                        {
+                                            "Ref": "AWS::NoValue"
+                                        }
+                                    ]
+                                    
+                                }  
                             ]
                         }
                     }
@@ -367,8 +407,10 @@
                     },
                     "Input": {
                         "Fn::ToJsonString": {
-                            "action": "createAlarmsCommand",
-                            "params": {}
+                            "action": "manageAlarmsCommand",
+                            "params": {
+                                "secretArn": {"Ref": "PasswordsSecretArn"}
+                            }
                         }
                     }
                 }
