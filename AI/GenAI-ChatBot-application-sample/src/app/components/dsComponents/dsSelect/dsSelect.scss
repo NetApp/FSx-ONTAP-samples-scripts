@@ -1,0 +1,116 @@
+@use '../../../styles/mixins.scss';
+
+.dsSelect {
+    position: relative;
+
+    &.isExpanded {
+        .dsTextFieldFrame {
+            .inputTextContainer {
+                .actionsContainer {
+                    .chevronIcon {
+                        @include mixins.rotate(180deg);
+                    }
+                }
+
+                .extraInfoContainer {
+                    opacity: 0;
+                    height: 0;
+                }
+            }
+        }
+
+        .dsDropDownList {
+            .actionListRef {
+                .actionListContainer {
+                    .itemsContainer {
+                        .singleItem {
+                            &.isSelected {
+                                color: var(--text-button-primary);
+                            }
+                        }
+
+                        .dsCheckBoxContainer {
+                            padding: 0;
+
+                            .dsCheckboxBoundriesContainer {
+                                .dsCheckbox {
+                                    padding: 12px 24px;
+                                    width: 100%;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    &.underline {
+        display: flex;
+        flex-direction: row;
+
+        .underlineTooltip {
+            height: 16px;
+            position: relative;
+            top: 7px;
+        }
+
+        .dsTextFieldFrame {
+            .textFieldHeader {
+                display: none;
+            }
+
+            .inputTextContainer {
+                .textFieldInput {
+                    border-width: 0 0 1px 0;
+                    border-radius: 0;
+                    background-color: transparent;
+                    padding-left: 0;
+
+                    &:hover,
+                    &:focus,
+                    &.isHoverActions {
+                        outline: none;
+                        border-bottom-width: 2px;
+                        margin-bottom: -1px;
+                    }
+                }
+            }
+        }
+    }
+
+    .dsDropDownList {
+        .actionListRef {
+            .actionListContainer {
+                .itemsContainer {
+                    .selectItem {
+                        padding: 12px 24px;
+                        cursor: pointer;
+
+                        &:hover {
+                            background-color: var(--hover-background);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    .dsTextFieldFrame {
+        .inputTextContainer {
+            padding-bottom: 1px;
+
+            .textFieldInput {
+                &.isInputSelect {
+                    padding-right: 45px;
+                }
+            }
+
+            .actionsContainer {
+                .chevronIcon {
+                    @include mixins.transition(transform 0.3s ease);
+                }
+            }
+        }
+    }
+}

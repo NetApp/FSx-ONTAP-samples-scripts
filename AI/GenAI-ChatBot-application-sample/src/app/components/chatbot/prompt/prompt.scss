@@ -1,0 +1,134 @@
+@import '../../../styles/mixins.scss';
+
+.promptItem {
+    @include fadeIn(.4s);
+    position: relative;
+    display: flex;
+    flex-direction: row;
+
+    .avatar {
+        box-shadow: 2px 2px 6px 0px var(--drop-shadow);
+        border-radius: 50%;
+        margin-right: 25px;
+        width: 43px;
+    }
+
+    .baloonContainer {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+
+        .baloon {
+            --baloon-max-width: 886px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            box-shadow: 2px 2px 6px 0px var(--drop-shadow);
+            border-radius: 4px;
+            padding: 12px 16px;
+            overflow-wrap: anywhere;
+            overflow: hidden;
+            max-width: var(--baloon-max-width);
+            min-height: 48px;
+            width: fit-content;
+            box-sizing: border-box;
+    
+            &.bot {
+                max-width: calc(var(--baloon-max-width) + 10px);
+                background-color: var(--content-background);
+            }
+    
+            &.user {
+                background-color: var(--table-header-background);
+            }
+    
+            &.botWriting {
+                width: 90%;
+            }
+    
+            .flashingDots, .textWriting {
+                margin-bottom: 10px;
+            }
+
+            .promptMessage {
+                flex: 1;
+            }
+
+            .messageContainer {
+                display: flex;
+                flex-direction: row;
+
+                &.withError {
+                    display: flex;
+                    flex-direction: row;
+                    gap: 8px;
+                    padding: 12px 16px;
+                }
+
+            }
+        }
+
+        .citation {
+            margin-top: 8px;
+            display: flex;
+            flex-direction: row;
+
+            .promptDateTime {
+                color: var(--text-secondary);
+            }
+
+            .citationTitle {
+                border-left: 1px solid var(--border);
+                color: var(--text-button-primary);
+                cursor: pointer;
+                padding-left: 8px;
+                margin-left: 8px;
+
+                &:hover {
+                    color: var(--text-button-primary-hover);
+                }
+            }
+
+            .citationPop {
+                width: 70%;
+                max-width: 520px;
+                left: 5px !important;
+                max-height: 50vh;
+                overflow-y: auto;
+
+                .citationComponent {
+                    padding: 16px;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 16px;
+                    
+                    .citationItem {
+                        display: flex;
+                        flex-direction: column;
+                        padding-bottom: 16px;
+                        border-bottom: 1px solid var(--border);
+                        gap: 8px;
+
+                        &:last-child {
+                            border-bottom: none;
+                            padding-bottom: 0;
+                        }
+
+                        .citationRow {
+                            display: flex;
+                            flex-direction: row;
+
+                            .citationPopTitle {
+                                white-space: nowrap;
+                            }
+
+                            .citationValue {
+                                @include ellipsis(100%);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

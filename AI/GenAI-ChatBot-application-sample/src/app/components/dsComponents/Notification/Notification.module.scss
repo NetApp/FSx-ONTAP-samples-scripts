@@ -1,0 +1,131 @@
+@use "./../../../styles/mixins.scss";
+
+.base {
+  font-family: var(--default_font);
+  box-shadow: 2px 2px 6px 0 var(--drop-shadow);
+  border-radius: 2px;
+  padding: 16px 0;
+  border-left: 12px solid transparent;
+
+  &.secondary {
+    border: none;
+    background-color: var(--group-item-bg);
+  }
+
+  &.success {
+    &.primary {
+      border-left: 12px solid var(--success);
+      background-color: var(--success-bg);
+    }
+
+    .main {
+      .type-icon {
+        --icon-primary-color: var(--success);
+      }
+    }
+  }
+
+  &.error, &.urgent {
+    &.primary {
+      border-left: 12px solid var(--error);
+      background-color: var(--error-bg);
+    }
+
+    .main {
+      .type-icon {
+        --icon-primary-color: var(--error);
+      }
+    }
+  }
+
+  &.warning {
+    &.primary {
+      border-left: 12px solid var(--warning);
+      background-color: var(--warning-bg);
+    }
+
+    .main {
+      .type-icon {
+        --icon-primary-color: var(--warning);
+      }
+    }
+  }
+
+  &.info {
+    &.primary {
+      border-left: 12px solid var(--information);
+      background-color: var(--information-bg);
+    }
+
+    .main {
+      .type-icon {
+        --icon-primary-color: var(--information);
+      }
+    }
+  }
+
+  .main {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    color: var(--text-primary);
+    padding: 0 24px 0 16px;
+    max-height: 70px;
+    overflow: hidden;
+
+    .type-icon {
+      height: 24px;
+      width: 24px;
+      --icon-primary-color: var(--error);
+
+      path {
+        fill: var(--icon-primary-color);
+      }
+    }
+
+    .content {
+      flex: 1;
+      overflow: hidden;
+      display: flex;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow-wrap: break-word;
+
+      .show-more {
+        margin-left: 8px;
+        color: var(--text-button-light);
+        text-align: left;
+      }
+    }
+
+    .delete-button {
+      background: transparent;
+      height: 24px;
+      width: 24px;
+
+      svg {
+        --icon-primary-color: var(--icon-secondary);
+      }
+    }
+
+  }
+
+  .more-wrapper {
+    @include mixins.standard-scroll();
+    @include mixins.transition(max-height 0.5s ease);
+
+    max-height: 0px;
+    overflow-y: auto;
+
+    &.expanded {
+      max-height: 100px;
+    }
+
+    .more {
+      padding: 0 56px;
+      margin-top: 8px;
+      word-break: break-word;
+    }
+  }
+
+}
