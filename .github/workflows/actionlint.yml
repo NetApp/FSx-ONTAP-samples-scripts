@@ -40,3 +40,4 @@ jobs:
           VALIDATE_TERRAFORM_TFLINT: true
           VALIDATE_YAML: true  
           VALIDATE_PYTHON_PYLINT: true
+          VALIDATE_TYPESCRIPT_ES: true

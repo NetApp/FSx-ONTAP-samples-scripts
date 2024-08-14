@@ -26,6 +26,10 @@
 #
 ################################################################################
 #
+# The following variable effect the behavior of the script. They can be
+# either be set here, overridden via the command line options, or
+# overridden by environment variables.
+#
 # Define which SNS topic you want "volume full" message to be sent to.
 SNStopic=''
 #
@@ -51,6 +55,15 @@ defaultSSDThreshold=90
 # Setting it to 100 will disable the creation of the alarm.
 defaultVolumeThreshold=80
 #
+#
+################################################################################
+# You can't change the following variables from the command line or environment
+# variables since changing them after the program has run once, would cause
+# all existing CloudWatch alarms to be abandoned, and all new alarms to be
+# created. So it is not recommended to change these variables unless you know
+# what you are doing.
+################################################################################
+#
 # Define the prefix for the volume utilization alarm name for the CloudWatch alarms.
 alarmPrefixVolume="Volume_Utilization_for_volume_"
 #
@@ -69,6 +82,7 @@ import boto3
 import os
 import getopt
 import sys
+import time
 
 ################################################################################
 # This function adds the SSD Utilization CloudWatch alarm.
@@ -184,21 +198,33 @@ def contains_fs(fsId, fss):
 ################################################################################
 def getAlarmThresholdTagValue(fsx, arn):
     #
+    # If there are a lot of volumes, we could get hit by the AWS rate limit,
+    # so we will sleep for a short period of time and then retry. We will
+    # double the sleep time each time we get a rate limit exception until
+    # we get to 5 seconds, then we will just raise the exception.
+    sleep=.125
+    #
     # This is put into a try block because it is possible that the volume
     # is deleted between the time we get the list of volumes and the time
     # we try to get the tags for the volume.
-    try:
-        tags = fsx.list_tags_for_resource(ResourceARN=arn)
-        for tag in tags['Tags']:
-            if(tag['Key'].lower() == "alarm_threshold"):
-                return(tag['Value'])
-    except botocore.exceptions.ClientError as e:
-        if e.response['Error']['Code'] == 'ResourceNotFound':
-            return(100) # Return 100 so we don't try to create an alarm.
-        else:
-            raise e
-
-    return(defaultVolumeThreshold)
+    while True:
+        try:
+            tags = fsx.list_tags_for_resource(ResourceARN=arn)
+            for tag in tags['Tags']:
+                if(tag['Key'].lower() == "alarm_threshold"):
+                    return(tag['Value'])
+            return(defaultVolumeThreshold)
+        except botocore.exceptions.ClientError as e:
+            if e.response['Error']['Code'] == 'ResourceNotFound':
+                return(100) # Return 100 so we don't try to create an alarm.
+            elif e.response['Error']['Code'] == 'TooManyRequestsException':
+                sleep = sleep * 2
+                if sleep > 5:
+                    raise e
+                print(f"Sleeping for {sleep} seconds.")
+                time.sleep(sleep)
+            else:
+                raise e
 
 ################################################################################
 # This function returns the value assigned to the "CPU_alarm_threshold" tag
@@ -223,12 +249,143 @@ def getSSDAlarmThresholdTagValue(tags):
     return(defaultSSDThreshold)
 
 ################################################################################
+# This function will return all the file systems in the region. It will handle the
+# case where there are more file systms than can be returned in a single call.
+# It will also handle the case where we get a rate limit exception.
+################################################################################
+def getFss(fsx):
+
+    # The initial amount of time to sleep if there is a rate limit exception.
+    sleep=.125
+    while True:
+        try:
+            response = fsx.describe_file_systems()
+            fss = response['FileSystems']
+            nextToken = response.get('NextToken')
+            sleep=.125
+            break
+        except botocore.exceptions.ClientError as e:
+            if e.response['Error']['Code'] == 'TooManyRequestsException':
+                sleep = sleep * 2   # Exponential backoff.
+                if sleep > 5:
+                    raise e
+                print(f"Sleeping for {sleep} seconds for initial file systems.")
+                time.sleep(sleep)
+            else:
+                raise e
+
+    while nextToken:
+        try:
+            response = fsx.describe_file_systems(NextToken=nextToken)
+            fss += response['FileSystems']
+            nextToken = response.get('NextToken')
+            sleep=.125
+        except botocore.exceptions.ClientError as e:
+            if e.response['Error']['Code'] == 'TooManyRequestsException':
+                sleep = sleep * 2   # Exponential backoff.
+                if sleep > 5:
+                    raise e
+                print(f"Sleeping for {sleep} seconds for additional file systems.")
+                time.sleep(sleep)
+            else:
+                raise e
+    return fss
+
+################################################################################
+# This function will return all the volumes in the region. It will handle the
+# case where there are more volumes than can be returned in a single call.
+# It will also handle the case where we get a rate limit exception.
+################################################################################
+def getVolumes(fsx):
+
+    # The initial amount of time to sleep if there is a rate limit exception.
+    sleep=.125
+    while True:
+        try:
+            response = fsx.describe_volumes()
+            volumes = response['Volumes']
+            nextToken = response.get('NextToken')
+            sleep=.125
+            break
+        except botocore.exceptions.ClientError as e:
+            if e.response['Error']['Code'] == 'TooManyRequestsException':
+                sleep = sleep * 2   # Exponential backoff.
+                if sleep > 5:
+                    raise e
+                print(f"Sleeping for {sleep} seconds for initial volumes.")
+                time.sleep(sleep)
+            else:
+                raise e
+
+    while nextToken:
+        try:
+            response = fsx.describe_volumes(NextToken=nextToken)
+            volumes += response['Volumes']
+            nextToken = response.get('NextToken')
+            sleep=.125
+        except botocore.exceptions.ClientError as e:
+            if e.response['Error']['Code'] == 'TooManyRequestsException':
+                sleep = sleep * 2   # Exponential backoff.
+                if sleep > 5:
+                    raise e
+                print(f"Sleeping for {sleep} seconds for additional volumes.")
+                time.sleep(sleep)
+            else:
+                raise e
+
+    return volumes
+
+################################################################################
+# This function will return all the alarms in the region. It will handle the
+# case where there are more alarms than can be returned in a single call.
+# It will also handle the case where we get a rate limit exception.
+################################################################################
+def getAlarms(cw):
+
+    # The initial amount of time to sleep if there is a rate limit exception.
+    sleep=.125
+    while True:
+        try:
+            response = cw.describe_alarms()
+            alarms = response['MetricAlarms']
+            nextToken = response.get('NextToken')
+            sleep=.125
+            break
+        except botocore.exceptions.ClientError as e:
+            if e.response['Error']['Code'] == 'TooManyRequestsException':
+                sleep = sleep * 2
+                if sleep > 5:
+                    raise e
+                print(f"Sleeping for {sleep} seconds for initial alarms.")
+                time.sleep(sleep)
+            else:
+                raise e
+
+    while nextToken:
+        try:
+            response = cw.describe_alarms(NextToken=nextToken)
+            alarms += response['MetricAlarms']
+            nextToken = response.get('NextToken')
+            sleep=.125
+        except botocore.exceptions.ClientError as e:
+            if e.response['Error']['Code'] == 'TooManyRequestsException':
+                sleep = sleep * 2   # Exponential backoff.
+                if sleep > 5:
+                    raise e
+                print(f"Sleeping for {sleep} seconds for additional alarms.")
+                time.sleep(sleep)
+            else:
+                raise e
+
+    return alarms
+
+################################################################################
 # This is the main logic of the program. It loops on all the regions then all
 # the fsx volumes within the region, checking to see if any of them already
 # have a CloudWatch alarm, and if not, add one.
 ################################################################################
 def lambda_handler(event, context):
-    global customerId, regions
+    global customerId, regions, SNStopic, accountId
     #
     # If the customer ID is set, reformat to be used in the alarm description.
     if customerId != '':
@@ -254,23 +411,9 @@ def lambda_handler(event, context):
             cw = boto3.client('cloudwatch', region_name=region)
             #
             # Get all the file systems, volumes and alarm in the region.
-            response = fsx.describe_file_systems()
-            fss = response['FileSystems']
-            while response.get('NextToken'):
-                response = fsx.describe_file_systems(NextToken=response['NextToken'])
-                fss += response['FileSystems']
-
-            response = fsx.describe_volumes()
-            volumes = response['Volumes']
-            while response.get('NextToken'):
-                response = fsx.describe_volumes(NextToken=response['NextToken'])
-                volumes += response['Volumes']
-
-            response = cw.describe_alarms()
-            alarms = response['MetricAlarms']
-            while response.get('NextToken'):
-                response = cw.describe_alarms(NextToken=response['NextToken'])
-                alarms += response['MetricAlarms']
+            fss     = getFss(fsx)
+            volumes = getVolumes(fsx)
+            alarms  = getAlarms(cw)
             #
             # Scan for filesystems without CPU Utilization Alarm.
             for fs in fss:
@@ -360,6 +503,14 @@ def usage():
 # Set some default values.
 regions = []
 dryRun = False
+#
+# Check to see if there any any environment variables set.
+customerID = os.environ.get('customerId', '')
+accountId  = os.environ.get('accountId', '')
+SNStopic   = os.environ.get('SNStopic', '')
+defaultCPUThreshold    = int(os.environ.get('defaultCPUThreshold',    defaultCPUThreshold))
+defaultSSDThreshold    = int(os.environ.get('defaultSSDThreshold',    defaultSSDThreshold))
+defaultVolumeThreshold = int(os.environ.get('defaultVolumeThreshold', defaultVolumeThreshold))
 #
 # Check to see if we are bring run from a command line or a Lmabda function.
 if os.environ.get('AWS_LAMBDA_FUNCTION_NAME') == None:

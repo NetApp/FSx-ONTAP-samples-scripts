@@ -1,0 +1,108 @@
+.dsBadge {
+    width: fit-content;
+    
+    &.number, &.Default {
+        padding: 2px 8px;
+        border-radius: 24px;
+        border: 2px solid var(--content-background);
+        color: var(--header-notification-text-2);
+        display: flex;
+        flex-direction: row;
+        gap: 3px;
+
+        &.error {
+            background-color: var(--error);
+        }
+
+        &.warning {
+            background-color: var(--chart-6);
+            color: var(--header-notification-text);
+
+            .labelText {
+                color: var(--header-notification-text);
+            }
+        }
+
+        &.info,
+        &.success {
+            background-color: var(--chart-5);
+            color: var(--header-notification-text);
+
+            .labelText {
+                color: var(--header-notification-text);
+            }
+        }
+
+        &.pending,
+        &.disabled {
+            background-color: var(--icon-secondary-disabled);
+            color: var(--header-notification-text);
+
+            .labelText {
+                color: var(--header-notification-text);
+            }
+        }
+
+        .iconContainer {
+            display: flex;
+            width: 16px;
+            height: 16px;
+        }
+    }
+
+    &.dot {
+        --dot-dimensions: 10px;
+
+        &.iconDotColor {
+            position: relative;
+
+            .dot {
+                position: absolute;
+                left: calc(100% - (var(--dot-dimensions) / 2));
+                top: 0;
+            }
+        }
+
+        .dot {
+            width: var(--dot-dimensions);
+            height: var(--dot-dimensions);
+            border-radius: 50%;
+        }
+
+        &.error {
+            .dot {
+                background-color: var(--error);
+            }
+        }
+
+        &.warning {
+            .dot {
+                background-color: var(--warning);
+            }
+        }
+
+        &.info,
+        &.success {
+            .dot {
+                background-color: var(--success);
+            }
+        }
+        
+        &.pending,
+        &.disabled {
+            .dot {
+                background-color: var(--icon-secondary-disabled);
+            }
+        }
+
+        .iconContainer {
+            display: flex;
+            width: 24px;
+            height: 24px;
+        }
+    }
+
+    .labelText {
+        color: var(--header-notification-text-2);
+    }
+}

@@ -1,0 +1,46 @@
+@use '../../../styles/mixins.scss';
+
+.dsMessageContainer {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+    text-wrap: nowrap;
+
+    .messageIcon {
+        // width: 16px;
+        // height: 16px;
+
+        &.errorIcon {
+            path {
+                fill: var(--error);
+            }
+        }
+
+        &.warningIcon {
+            path {
+                fill: var(--warning);
+            }
+        }
+
+        &.infoIcon {
+            path {
+                fill: var(--information);
+            }
+        }
+    }
+
+    .messageValue {
+        @include mixins.ellipsis(100%);
+        flex: 1;
+    }
+
+    .dsTooltipInfo {
+        .tooltipInfoTitleContainer {
+            .defaultTooltipIcon {
+                width: 12px;
+                top: 1px;
+            }
+        }
+    }
+}

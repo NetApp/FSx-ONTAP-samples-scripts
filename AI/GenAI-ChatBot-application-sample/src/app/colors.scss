@@ -1,0 +1,193 @@
+:root {
+    --white: #FFFFFF;
+    --black: #000000;
+    --grey-10: #F5F5F5;
+    --grey-15: #E0E0E0;
+    --grey-20: #CBD4DA;
+    --grey-25: #C8C8C8;
+    --grey-30: #A7A7A7;
+    --grey-40: #858C95;
+    --grey-45: #6F6F6F;
+    --grey-50: #404040;
+    --grey-55: #4D5765;
+    --grey-60: #3A4454;
+    --grey-65: #2B323D;
+    --grey-70: #111925;
+    --grey-75: #060B12;
+    --blue-10: #F4FBFF;
+    --blue-20: #DDF1FF;
+    --blue-25: #C9E7F5;
+    --blue-30: #B9D4FF;
+    --blue-40: #84B0FF;
+    --blue-50: #0860ED;
+    --blue-60: #405EBD;
+    --blue-70: #0067C5;
+    --blue-80: #1E4A93;
+    --red-10: #FFF5F5;
+    --red-20: #EB797B;
+    --red-30: #DA1E21;
+    --red-40: #A30D0F;
+    --orange-10: #FFFAF6;
+    --orange-12: #FFF2AD;
+    --orange-15: #FEAF58;
+    --orange-20: #EB9E41;
+    --orange-30: #E7BE36;
+    --orange-40: #FDC300;
+    --orange-50: #F7941D;
+    --orange-60: #EF6C01;
+    --orange-70: #FE5502;
+    --orange-80: #DF5A19;
+    --orange-90: #615200;
+    --green-10: #F2FCF9;
+    --green-20: #ACDA6F;
+    --green-30: #B2D234;
+    --green-40: #A3B94C;
+    --green-50: #68C6B3;
+    --green-60: #48A08B;
+    --cyan-10: #EDF6FF;
+    --cyan-20: #5E8DCD;
+    --cyan-30: #518BEC;
+    --cyan-40: #71B9E0;
+    --cyan-50: #0BAFFC;
+    --cyan-60: #4066DA;
+    --cyan-70: #012CAD;
+    --purple-01: #EADCFC;
+    --purple-02: #DEE0FA;
+    --purple-03: #E8EEFD;
+    --purple-10: #A855B8;
+    --purple-15: #DE9EFF;
+    --purple-20: #A815F3;
+    --purple-25: #6B31AB;
+    --purple-30: #550057;
+    --font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+}
+
+.light-theme {
+    --main-background: var(--grey-10); /* Default page background color. */
+    --content-background: var(--white); /* Background color for accordion cards, action menus, secondary buttons, cards, date pickers, drag &amp; drop, drop downs, input fields, text fields, dialogs, error messages, tables, left nav, right panels. */
+    --hover-background: var(--blue-10); /* Background color in hover states for accordion cards, action menu rows &amp; actions, secondary buttons, some cards, date picker dates, drop down rows and actions, drag &amp; drop rows, input fields actions, main nav category icons and inner links, table rows hover. */
+    --table-header-background: var(--blue-20); /* Fill color for table header. */
+    --mask-background: var(--grey-50); /* Dark background screen overlay. */
+    --text-primary: var(--grey-50); /* Used in page titles, section titles, body text, content text (tables, cards, tooltips, etc.), input text (text fields, dropdowns, etc.) */
+    --text-secondary: var(--grey-45); /* Used in main nav for categories and services names, cards, days and hours in date picker, optional label in dropdowns, ‘no data’ in empty table. */
+    --text-disabled: var(--grey-30); /* Used for placeholder text in dropdowns &amp; text fields, accordion cards, date picker invalid days, drag&amp;drop disabled rows. */
+    --text-title: var(--grey-50); /* Used in dialogs, cards, numbered list with title, service name on service bar. */
+    --text-button-primary: var(--blue-70); /* Used in text button primary, icon button primary. */
+    --text-button-primary-hover: var(--blue-80); /* Hover color for text and icons in primary buttons. */
+    --text-button-secondary: var(--grey-45); /* Used in text button secondary, icon button secondary. */
+    --text-button-secondary-hover: var(--grey-50); /* Hover color for text-button-secondary and icon-button-secondary. */
+    --text-button-disabled: var(--grey-30); /* Used in text button primary disabled, text button secondary disabled, icon button primary, icon button secondary. */
+    --text-button-light: var(--blue-70); /* Used when text links in dark mode are placed on background color of grey-60 or lighter, like show more/less in notifications. */
+    --text-on-color: var(--white); /* Used in buttons, tags, removable chips. */
+    --button-primary-bg: var(--blue-70); /* Primary button background color. */
+    --button-primary-hover-bg: var(--blue-80); /* Hover fill for button-primary. */
+    --button-primary-bg-disabled: var(--grey-15); /* Disabled fill for button-primary */
+    --button-primary-disabled: var(--grey-30); /* Disabled fill color for button-primary. */
+    --button-secondary: var(--blue-70); /* Border and text color for secondary button default state. */
+    --button-secondary-hover: var(--blue-80); /* Border and text color for secondary button hover state. */
+    --button-secondary-disabled: var(--grey-30); /* Border and text color for secondary button disabled state. */
+    --button-card-footer: var(--blue-10); /* Used in card footer for buttons unit. */
+    --button-card-footer-hover: var(--blue-20); /* Hover color for button-card-footer. */
+    --button-destructive-bg: var(--red-30); /* For destructive buttons like delete. */
+    --button-destructive-hover-bg: var(--red-40); /* Hover color for button-destructive-bg */
+    --selector-off-border: var(--grey-50); /* Border color for checkbox off enabled, radio button off enabled. */
+    --selector-off-border-hover: var(--grey-45); /* Border color for checkbox off on hover, radio button off on hover. */
+    --selector-off-border-disabled: var(--grey-30); /* Border color for checkbox off disabled, radio button off disabled. */
+    --selector-off-bg-disabled: var(--grey-10); /* BG color for checkbox off disabled. */
+    --selector-on-bg: var(--blue-70); /* BG color for checkbox on and partial in enabled state , radio button on enabled  and toggle on enabled. */
+    --selector-on-bg-disabled: var(--grey-30); /* BG color for checkbox on and partial in disabled state , radio button on disabled. */
+    --selector-on-bg-hover: var(--blue-80); /* BG color for checkbox on and partial in hover state, radio button on hover, toggle on hover. */
+    --toggle-off: var(--white); /* BG color for toggle off enabled and hover. */
+    --toggle-off-bg: var(--grey-25); /* BG color for toggle off enabled. */
+    --toggle-off-disabled: var(--grey-25); /* BG color for toggle off disabled. */
+    --toggle-off-bg-hover: var(--grey-30); /* BG color for toggle off hover. */
+    --date-picker-bg: var(--grey-10); /* Fill color for date picker data cell. */
+    --item-selection-bg: var(--grey-10); /* BG color for drag &amp; drop rows, drag &amp; drop files, File uploader rows. */
+    --item-selection-border: var(--white); /* Border color for drag &amp; drop rows, drag &amp; drop files, File uploader rows. */
+    --icon-primary: var(--blue-70); /* Primary icons. */
+    --icon-primary-hover: var(--blue-80); /* Hover color for icon-primary. */
+    --icon-primary-disabled: var(--grey-30); /* Disabled color for icon-primary. */
+    --icon-secondary: var(--grey-50); /* Secondary icons. */
+    --icon-secondary-hover: var(--grey-45); /* Hover color for icon-secondary. */
+    --icon-secondary-disabled: var(--grey-30); /* Disabled color for icon-secondary. */
+    --icon-tertiary: var(--grey-45); /* Tertiary icons. */
+    --icon-tertiary-hover: var(--grey-40); /* Hover color for icon-tertiary. */
+    --icon-tertiary-disabled: var(--grey-30); /* Disabled color for icon-tertiary. */
+    --icon-on-color-white: var(--white); /* Icons on block of color. */
+    --icon-on-color: var(--white); /* Icons on block of color. */
+    --icon-round-border: var(--grey-15); /* Border of round white icons with logos (like AWS). */
+    --chart-1: var(--cyan-70); /* Dashboards, infographic graph and pie charts. */
+    --chart-2: var(--cyan-20); /* Dashboards, infographic graph and pie charts. */
+    --chart-3: var(--cyan-50); /* Dashboards, infographic graph and pie charts. */
+    --chart-3-gradient: linear-gradient(180deg, var(--cyan-50) 0%, rgba(11, 175, 252, 0.00) 177.78%); /* Dashboards, infographic graph & pie charts. */
+    --chart-4: var(--green-50); /* Dashboards, infographic graph and pie charts. */
+    --chart-5: var(--green-30); /* Dashboards, infographic graph and pie charts. */
+    --chart-6: var(--orange-40); /* Dashboards, infographic graph and pie charts. */
+    --chart-7: var(--orange-50); /* Dashboards, infographic graph and pie charts. */
+    --chart-8: var(--orange-70); /* Dashboards, infographic graph and pie charts. */
+    --chart-9: var(--purple-20); /* Dashboards, infographic graph and pie charts. */
+    --chart-9-gradient: linear-gradient(180deg, var(--purple-20) 0%, rgba(168, 21, 243, 0.00) 168.42%); /* Dashboards, infographic graph & pie charts. */
+    --chart-10: var(--purple-30); /* Dashboards, infographic graph and pie charts. */
+    --chart-11: var(--purple-15); /* Dashboards, infographic graph & pie charts. */
+    --chart-disabled: var(--grey-15); /* Disabled color for dashboards, infographic graph &amp; pie charts. */
+    --chart-background: var(--purple-03); /* Dashboards, infographic graph & pie charts. */
+    --error: var(--red-30); /* Error icons and borders. */
+    --error-bg: var(--red-10); /* Error background. */
+    --warning: var(--orange-60); /* Warning icons and borders. */
+    --warning-bg: var(--orange-10); /* Warning background. */
+    --information: var(--cyan-30); /* Information icons and borders. */
+    --information-bg: var(--cyan-10); /* Information background. */
+    --success: var(--green-60); /* Success icons and borders. */
+    --success-bg: var(--green-10); /* Success background. */
+    --group-item-bg: var(--white); /* Grouped item notification background. */
+    --border: var(--grey-15); /* Stroke used for circle logos, date in date picker, separators in cards, dialogs and tables. */
+    --drop-shadow: var(--grey-15); /* Drop shadow used for cards, tables, dialogs, etc. Relevant for level1 and level2. */
+    --underline-default: var(--grey-30); /* Used as default underline in cards tabs table and side table. */
+    --underline-selected: var(--blue-70); /* Used as selected underline in cards tabs table and side table. */
+    --scroller: var(--grey-25); /* Used for page scroller and inner scroller inside components. */
+    --field-border: var(--grey-30); /* Used for dropdown, text field and input field, file uploader field and text area border color. */
+    --field-border-disabled: var(--grey-25); /* Disabled color for field-border token. */
+    --field-bg-disabled: var(--grey-10); /* Disabled background color for field-border token. */
+    --field-border-selected: var(--blue-70); /* Selected border color for field-border token. */
+    --field-icon: var(--grey-30); /* Used for arrow and close icons in dropdowns and close icon in file uploader and drag&amp;drop. */
+    --field-icon-disabled: var(--grey-25); /* Disabled color for field-icon buttons. */
+    --focus-outline: var(--blue-70); /* Used for keyboard focus outlines of elements */
+    --focus-outline-header: var(--white); /* Used for keyboard focus outlines of elements in the header bar */
+    --main-nav-bg: var(--white); /* Used in main nav BG color. */
+    --main-nav-bg-hover: var(--grey-10); /* Used in main nav BG hover color. */
+    --main-nav-bg-selected: var(--blue-10); /* Used in main nav BG selected color. */
+    --main-nav-icon-text: var(--grey-45); /* Used for text and icons in main nav: category link and icon, service link, service inner link, (when all are not selected), favorite icon. */
+    --main-nav-icon-text-selected: var(--blue-70); /* Used for main-nav-icon-text in selected mode. */
+    --browser-primary-bg: var(--grey-15); /* Used for browser component in prototypes. */
+    --browser-secondary-bg: var(--grey-15); /* Used for browser component in prototypes. */
+    --browser-bg-stroke: var(--grey-25); /* Used for browser component in prototypes. */
+    --browser-text-field: var(--white); /* Used for browser component in prototypes. */
+    --browser-nav-icons: var(--grey-30); /* Used for browser component in prototypes. */
+    --header-netapp-bg: var(--blue-70); /* Used for NetApp bar in UI shell. */
+    --header-service-bg: var(--white); /* Used for selected service bar in UI shell. */
+    --header-netapp-primary-text: var(--white); /* Used for primary text on NetApp bar in UI shell. */
+    --header-netapp-secondary-text: var(--blue-10); /* Used for secondary text on NetApp bar in UI shell. */
+    --header-netapp-icons: var(--white); /* Used for action icons on NetApp bar in UI shell. */
+    --header-netapp-text-hover: var(--blue-30); /* Used for primary andn secondary text hover on NetApp bar in UI shell. */
+    --header-notification-text: var(--blue-80); /* Used for warning, information, and success notifications number in NetApp bar. */
+    --header-notification-text-2: var(--white); /* Used for error and critical notifications number color and icon in NetApp bar. */
+    --header-separator-1: var(--white); /* Used for the separator between NetApp bar and selected service bar. */
+    --header-separator-2: var(--white); /* Used for the separator between selected service bar and the working area under it. */
+    --tooltip-icon-default: var(--grey-30); /* Used for tooltip icons in default state. */
+    --tooltip-icon-hover: var(--blue-70); /* Used for tooltip icons in hover state. */
+    --tooltip-icon-disabled: var(--grey-15); /* Used for tooltip icons in disabled state. */
+    --tooltip-info-bg: var(--white); /* Used for the tooltip info frame background. */
+    --loader-wheel-line: var(--blue-70); /* Used for wheel and line loaders. */
+    --loader-line-bg: var(--grey-15); /* Used for the line loader background. */
+    --loader-dot: var(--cyan-30); /* Used for dots loader. */
+    --loader-skeleton: var(--grey-15); /* Used for skeleton loading in tables and cards. */
+    --loader-skeleton-bg: var(--grey-10); /* Used for skeleton loading in tables and cards. */
+    --tag-1-text: var(--cyan-70); /*Used for “Private preview” tag text. Can be used in dashboards, infographic graph & pie charts.*/
+    --tag-1-bg: var(--blue-25); /*Used for “Private preview” tag BG. Can be used in dashboards, infographic graph & pie charts.*/
+    --tag-2-text: var(--purple-25); /*Used for “Coming soon” tag text. Can be used in dashboards, infographic graph & pie charts.*/
+    --tag-2-bg: var(--purple-01); /*Used for “Coming soon” tag BG. Can be used in dashboards, infographic graph & pie charts.*/
+    --tag-3-text: var(--blue-80); /*Used for “New” tag text. Can be used in dashboards, infographic graph & pie charts.*/
+    --tag-3-bg: var(--purple-02); /*Used for “New” tag BG. Can be used in dashboards, infographic graph & pie charts.*/
+    --tag-4-text: var(--orange-90); /*Used for “Best” tag text. Can be used in dashboards, infographic graph & pie charts.*/
+    --tag-4-bg: var(--orange-12); /*Used for “Best” tag BG. Can be used in dashboards, infographic graph & pie charts.*/
+}
