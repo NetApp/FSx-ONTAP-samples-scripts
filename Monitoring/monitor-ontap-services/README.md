@@ -126,7 +126,7 @@ filename, then set the configFilename environment variable to the name of your c
 | systemStatusFilename | No | No | OntapAdminServer + "-systemStatus" | Set to the filename (S3 object) that you want the program to store the overall system status information into. This file will be created as necessary. |
 | snsTopicArn  | Yes | No | None | Set to the ARN of the SNS topic you want the program to publish alert messages to. |
 | snsRegion | Yes | No | None | The region where the SNS topic resides. |
-| conditionsFilename | Yes | No | OntapAdminServer + "-conditions" | Set to the filename (S3 object) where you want the program to read the matching condition information from. |
+| conditionsFilename | No | No | OntapAdminServer + "-conditions" | Set to the filename (S3 object) where you want the program to read the matching condition information from. |
 | secretName | Yes | No | None | Set to the name of the secret within the AWS Secrets Manager that holds the ONTAP credentials. |
 | secretRegion | Yes | No | None | Set to the region where the secretName is stored. |
 | secretUsernameKey | Yes | No | None | Set to the key name within the secretName that holds the username portion of the ONTAP credentials. |
