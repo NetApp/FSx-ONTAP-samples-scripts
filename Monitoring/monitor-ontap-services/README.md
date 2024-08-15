@@ -208,7 +208,7 @@ Each rule should be an object with one, or more, of the following keys:
         },
         {
           "name": "",
-          "severity": "notice|info|error|alert|emergency",
+          "severity": "alert|emergency",
           "message": ""
         }
       ]
@@ -217,13 +217,13 @@ Each rule should be an object with one, or more, of the following keys:
       "name": "snapmirror",
       "rules": [
         {
-          "maxLagTime": 120
+          "maxLagTime": 86400
         },
         {
           "healthy": false
         },
         {
-          "stalledTransferSeconds": 60
+          "stalledTransferSeconds": 600
         }
       ]
     },
@@ -278,6 +278,7 @@ In the above example, it will alert on:
 - If any quota policies where the space utilization is more than 95% of the hard limit.
 - If any quota policies where the space utilization is more than 100% of the soft limit.
 - If any quota policies are showing any inode utilization more than 95%
+
 A matching conditions file must be created and stored in the S3 bucket with the name given as the "conditionsFilename" configuration variable. Feel free to use the example above as a starting point. Note that you should ensure it is in valid JSON format, otherwise the program will fail to load the file. There are various programs and websites that can validate a JSON file for you.
 
 ## Author Information
