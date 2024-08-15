@@ -83,7 +83,7 @@ are this is your problem.
 
 **NOTE:** The way the Lambda function is able to use the "local" (i.e. within the subnet) Interface endpoint, as
 opposed to the Internet facing one, is usually from the DNS resolution of the endpoint hostname
-"<AWS_Service_Name>.<Region>.amazonaws.com". In order for that to happen, you have to enable “Private DNS names”
+"\<AWS_Service_Name>.\<Region>.amazonaws.com". In order for that to happen, you have to enable “Private DNS names”
 for the endpoint. In order to do that, it is required to enable “DNS Hostnames” within the VPC settings. This VPC
 setting is not enabled by default. After making these changes, if you are using Route53 as your DNS resolver for
 your VPC, then it will automatically return the local endpoint IP address instead of the Internet facing one.
