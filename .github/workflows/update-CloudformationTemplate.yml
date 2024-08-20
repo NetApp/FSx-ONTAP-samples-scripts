@@ -29,9 +29,9 @@ jobs:
           ref: ${{ github.event.pull_request.head.ref }}
 
       - name: Update the Cloudformation Template
-          shell: bash
-          working-directory: Monitoring/monitor-ontap-services
-          run:  ./updateMonOntapServiceCFTemplate
+        shell: bash
+        working-directory: Monitoring/monitor-ontap-services
+        run:  ./updateMonOntapServiceCFTemplate
 
       - name: Commit the changes
         uses: stefanzweifel/git-auto-commit-action@v5
