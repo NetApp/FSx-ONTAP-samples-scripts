@@ -290,7 +290,7 @@ Each rule should be an object with one, or more, of the following keys:
         },
         {
           "name": "",
-          "severity": "notice|info|error|alert|emergency",
+          "severity": "alert|emergency",
           "message": ""
         }
       ]
