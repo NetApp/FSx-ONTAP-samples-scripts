@@ -25,11 +25,6 @@ if diff cloudformation.yaml cloudformation.yaml.tmp; then
     echo "No changes detected"
     exit 0
 fi
-#
-# Create a tag in git.
-latestHash=$(git log $file | head -1 | awk '{print $2}')
-echo "Creating tag ${file}-${version} for commit $latestHash"
-git tag -a "${file}-${version}" -m "${file}-${version}" $latestHash
 
 echo "Updating cloudformation.yaml"
 mv cloudformation.yaml.tmp cloudformation.yaml
