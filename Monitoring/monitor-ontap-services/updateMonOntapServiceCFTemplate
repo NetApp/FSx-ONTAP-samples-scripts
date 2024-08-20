@@ -1,12 +1,35 @@
 #!/bin/bash
+#
+# This script is used to update the CloudFormation template with the latest
+# version of the Lambda function. It will also update the version number in
+# the template as well as create a git tag for the version.
+#################################################################################
+
+majorVersionNum=2
+file="monitor_ontap_services.py"
+#
+# Get the number of commits in the git history for the file to calculate the minor version number.
+minorVersionNum="$(git log "$file" | egrep '^commit' | wc -l)"
+if [ -z "$minorVersionNum" ]; then
+  echo "Failed to calculate version number." 1>&2
+  exit 1
+fi
+
+version="v${majorVersionNum}.${minorVersionNum}"
 
 sed -e '/ZipFile/,$d' cloudformation.yaml > cloudformation.yaml.tmp
 echo "        ZipFile: |" >> cloudformation.yaml.tmp
-cat monitor_ontap_services.py | sed 's/^/          /' >> cloudformation.yaml.tmp
+cat "$file" | sed -e 's/^/          /' -e "s/%%VERSION%%/${version}/" -e "s/%%DATE%%/$(date +%Y-%m-%d-%H:%M:%S)/" >> cloudformation.yaml.tmp
 if diff cloudformation.yaml cloudformation.yaml.tmp; then
     rm -f cloudformation.yaml.tmp 
     echo "No changes detected"
     exit 0
 fi
+#
+# Create a tag in git.
+latestHash=$(git log $file | head -1 | awk '{print $2}')
+echo "Creating tag ${file}-${version} for commit $latestHash"
+git tag -a "${file}-${version}" -m "${file}-${version}" $latestHash
+
 echo "Updating cloudformation.yaml"
 mv cloudformation.yaml.tmp cloudformation.yaml

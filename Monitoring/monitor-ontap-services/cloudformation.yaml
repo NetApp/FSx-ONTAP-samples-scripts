@@ -7,20 +7,18 @@ Metadata:
       - Label: 
           default: "Configuration Parameters"
         Parameters: 
-          - s3BucketRegion
           - OntapAdminSever
-          - vpcId
           - subNetIds
           - securityGroupIds
           - snsTopicArn
-          - snsTopicRegion
           - secretArn
-          - secretRegion
           - secretUsernameKey
           - secretPasswordKey
           - createSecretManagerEndpoint
           - createSNSEndpoint
           - createS3Endpoint
+          - routeTableIds
+          - vpcId
           - checkInterval
       - Label: 
           default: "Alert Parameters"
@@ -40,19 +38,9 @@ Metadata:
           - inodeQuotaUtilizationAlert
 
 Parameters:
-  s3BucketRegion:
-    Description: "The region where you want the S3 bucket to be created."
-    Type: String
-    Default: ""
-
   OntapAdminSever:
     Description: "The DNS name, or IP address, of the management endpoint of the FSxN file system to be monitored."
     Type: String
-    Default: ""
-
-  vpcId:
-    Description: "The VPC ID where the FSxN file system is located."
-    Type: "AWS::EC2::VPC::Id"
     Default: ""
 
   subNetIds:
@@ -70,18 +58,8 @@ Parameters:
     Type: String
     Default: ""
 
-  snsTopicRegion:
-    Description: "The region where SNS topic resides."
-    Type: String
-    Default: ""
-
   secretArn:
     Description: "The ARN of the secret that holds the FSxN credentials to use."
-    Type: String
-    Default: ""
-
-  secretRegion:
-    Description: "The region where the secret resides."
     Type: String
     Default: ""
 
@@ -112,6 +90,16 @@ Parameters:
     Type: String
     Default: "false"
     AllowedValues: ["true", "false"]
+
+  routeTableIds:
+    Description: "The route table IDs to update to use the S3 endpoint. Since the S3 endpoint is of type 'Gateway' route tables have to be updated to use it. This parameter is only needed if createS3Endpoint is set to 'true'."
+    Type: CommaDelimitedList
+    Default: ""
+
+  vpcId:
+    Description: "The VPC ID where the FSxN file system is located. This is only needed if you are creating an endpoint."
+    Type: "AWS::EC2::VPC::Id"
+    Default: ""
 
   checkInterval:
     Description: "The interval, in minutes, between checks."
@@ -200,8 +188,8 @@ Resources:
     Condition: CreateSecretManagerEndpoint
     Properties:
       VpcId: !Ref vpcId
-      ServiceName: !Sub "com.amazonaws.${secretRegion}.secretsmanager"
-      VpcEndpointType: Interface
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.secretsmanager"
+      VpcEndpointType: 'Interface'
       PrivateDnsEnabled: true
       SubnetIds: !Ref subNetIds
 
@@ -210,8 +198,8 @@ Resources:
     Condition: CreateSNSEndpoint
     Properties:
       VpcId: !Ref vpcId
-      ServiceName: !Sub "com.amazonaws.${snsTopicRegion}.sns"
-      VpcEndpointType: Interface
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.sns"
+      VpcEndpointType: 'Interface'
       PrivateDnsEnabled: true
       SubnetIds: !Ref subNetIds
 
@@ -220,10 +208,9 @@ Resources:
     Condition: CreateS3Endpoint
     Properties:
       VpcId: !Ref vpcId
-      ServiceName: !Sub "com.amazonaws.${s3BucketRegion}.s3"
-      VpcEndpointType: Gateway
-      PrivateDnsEnabled: true
-      SubnetIds: !Ref subNetIds
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.s3"
+      VpcEndpointType: 'Gateway'
+      RouteTableIds: !Ref routeTableIds
 
   s3Bucket:
     Type: "AWS::S3::Bucket"
@@ -320,7 +307,7 @@ Resources:
       Timeout: 60
       Environment:
         Variables:
-          s3BucketRegion: !Ref s3BucketRegion
+          s3BucketRegion: !Ref AWS::Region
           s3BucketArn: !GetAtt s3Bucket.Arn
           OntapAdminServer: !Ref OntapAdminSever
           secretArn: !Ref secretArn
@@ -363,8 +350,8 @@ Resources:
           # "matching conditions."  It is intended to be run as a Lambda function, but
           # can be run as a standalone program.
           #
-          # Version: %%VERSION%%
-          # Date: %%DATE%%
+          # Version: v2.5
+          # Date: 2024-08-20-17:54:55
           ################################################################################
           
           import json

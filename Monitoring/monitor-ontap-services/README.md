@@ -54,20 +54,18 @@ To install the program using the CloudFormation template, you will need to do th
 |Parameter Name | Notes|
 |---|---|
 |Stackname|The name you want to assign to the CloudFormation stack. Note that this name is used as a base name for the resources it creates, so please keep it under 25 characters.|
-|BucketRegion|The region where you want the S3 bucket, that is used to store event information and the matching conditions file, to reside.|
 |OntapAdminServer|The DNS name, or IP address, of the management endpoint of the FSxN file system you wish to monitor.|
-|VpcId|The VPC ID that the Lambda function will run in. Note that since the Lambda function has to communicate with the FSxN file server, it has to run in a VPC that can communicate with FSxN file server you want to monitor.|
-|SubnetIds|The subnet IDs that the Lambda function will be attached to. These must be in the VPC specified above.|
-|SecurityGroupIds|The security group IDs that the Lambda function will be attached to. These must be in the VPC specified above.|
+|SubnetIds|The subnet IDs that the Lambda function will be attached to. Must have connectivity to the FSxN file system you wish to monitor.|
+|SecurityGroupIds|The security group IDs that the Lambda function will be attached to.|
 |SnsTopicArn|The ARN of the SNS topic you want the program to publish alert messages to.|
-|SnsRegion|The region where the SNS topic resides.|
-|SecretArn|The ARN of the secret within the AWS Secrets Manager that holds the FSxN file system credentials.|
-|SecretRegion|The region where the secret is stored.|
+|SecretArn|The ARN of the secret within the AWS Secrets Manager that holds the FSxN file system credentials. **NOTE:** The secret must be in the same region as the FSxN file system.|
 |SecretUsernameKey|The key name within the secret that holds the username portion of the FSxN file system credentials.|
 |SecretPasswordKey|The key name within the secret that holds the password portion of the FSxN file system credentials.|
 |CreateSNSEndpoint|Set to "true" if you want to create an SNS endpoint. Since the Lambda function will be running within your VPC it will most likely not have access to the Internet, therefore a endpoint will need to be created if you don't already have one. Please read the [Endpoints for AWS services](#endpoints-for-aws-services) for more information.|
 |CreateSecretsManagerEndpoint|Set to "true" if you want create a Secrets Manager endpoint. Please read the [Endpoints for AWS services](#endpoints-for-aws-services) for more information.|
 |CreateS3Endpoint|Set to "true" if you want create an S3 endpoint. Note that this will be a "Gateway" type endpoint, since they are free to use. Please read the [Endpoints for AWS services](#endpoints-for-aws-services) for more information.|
+|RoutetableIds|The route table IDs to update to use the S3 endpoint. Since the S3 endpoint is of type 'Gateway' route tables have to be updated to use it. This parameter is only needed if createS3Endpoint is set to 'true'.|
+|VpcId|The VPC ID where the FSxN file system is located. This is only needed if you are creating an endpoint.|
 |CheckInterval|The interval, in minutes, that the EventBridge schedule will trigger the Lambda function. The default is 15 minutes.|
 
 The remaining parameters are used to create the matching conditions file, which specify when the program will send an SNS alert.
@@ -76,24 +74,24 @@ so you don't have to set them if you don't want to. Note that if you enable EMS 
 send all EMS messages that have a severity of `Error`, `Alert` or `Emergency`. You can change the
 matching conditions at any time by updating the matching conditions file that is created in the S3 bucket.
 The name of the file will be \<OntapAdminServer\>-conditions where "\<OntapAdminServer\>" is the value you
-set for the OntapAdminServer parameter.
+set for the OntapAdminServer parameter. To find the name of the S3 bucket, or any of the resources that were
+created, you can go to the CloudFormation service in the AWS console, click on the stack you created
+(based on the name you provided as the first parameter above), and then click on the "Resources" tab.
 
-To find the name of the bucket, or any of the resources that were created, you can go to the CloudFormation service
-in the AWS console, click on the stack you created (based on the name you provided as the first parameter above),
-and then click on the "Resources" tab.
-
+### Post Installation Checks
 After the stack has been created, I would recommend checking the status of the Lambda function to make sure it is
-not in an error state. To find the Lambda function, as mentioned above, go to the Resources tab of the CloudFormation
+not in an error state. To find the Lambda function go to the Resources tab of the CloudFormation
 stack and click on the "Physical ID" of the Lambda function. This should bring you to the Lambda service in the AWS
 console. Once there, you can click on the "Monitoring" tab to see if the function has been invoked. Locate the
-"Error count and success rate(%)" chart, which is usually found at the top right corner of the dashboard. Within the "CheckInterval" number
-of minutes there should be at least one dot on that chart. Note that sometimes the chart is initially slow to reflect any
-status so you might have to be patient, and continue to press the "refresh" button (the icon with
-a circle on it) to see an status. Once you see a dot on the chart, when you hover you mouse over it, you should see the "success
-rate" and "number of errors." The success rate should be 100% and the number of errors should be 0. If it is not,
-then scroll down to the CloudWatch Logs section and click on the most recent log stream. This will show you the
-output of the Lambda function. If there are any errors, they will be displayed there. If you can't figure out
-what the error is, then please create an issue in this repository and someone will help you.
+"Error count and success rate(%)" chart, which is usually found at the top right corner of the monitoring dashboard.
+Within the "CheckInterval" number of minutes there should be at least one dot on that chart. Note that sometimes
+the chart is initially slow to reflect any status so you might have to be patient, and continue to press the "refresh"
+button (the icon with a circle on it) to see an status. Once you see a dot on the chart, when you hover you mouse
+over it, you should see the "success rate" and "number of errors." The success rate should be 100% and the number
+of errors should be 0. If it is not, then scroll down to the CloudWatch Logs section and click on the most recent
+log stream. This will show you the output of the Lambda function. If there are any errors, they will be displayed
+there. If you can't figure out what the error is, then please create an issue in this repository and someone will
+help you.
 
 ### Manual Installation
 If you want more control over the installation then you can install it manually by following the steps below. Note that these
@@ -133,9 +131,13 @@ overwrite the event files of another instance.
 
 This bucket is also used to store the Matching Condition file. You can read more about it in the [Matching Conditions File](#matching-conditions-file) below.
 
+**Note:** This bucket must be in the same region as the FSxN file system.
+
 #### Create an SNS Topic
 Since the way this program sends alerts is via an SNS topic, you need to either create SNS topic, or use an
 existing one.
+
+**Note:** This SNS topic must be in the same region as the FSxN file system.
 
 #### Endpoints for AWS Services
 If you deploy this as a Lambda function, you will have to attach it to the VPC that your FSx file system resides
@@ -163,8 +165,8 @@ them to the "local" DNS name of the respective endpoints.
 #### Lambda Function
 There are a few things you need to do to properly configure the Lambda function.
 - Give it the permissions listed above.
-- Put it in a VPC and subnet that has access to the FSxN file system management endpoint.
-- Increase the total run time to at least 10 seconds. You might have to raise that if you have a lot of components in your FSxN file system. However, if you have to raise it to more than a minute, it could be an issue with the endpoint causing the calls to the AWS services to hang. See the [Endpoints for AWS Services](#endpoints-for-aws-services) section above for more information.
+- Put it in a VPC and subnet that has access to the FSxN file system management endpoint. **NOTE:** It must be in the same region as the FSxN file system.
+- Increase the total run time to at least 20 seconds. You might have to raise that if you have a lot of components in your FSxN file system. However, if you have to raise it to more than a minute, it could be an issue with the endpoint causing the calls to the AWS services to hang. See the [Endpoints for AWS Services](#endpoints-for-aws-services) section above for more information.
 - Provide for the base configuration via environment variables and/or a configuration file. See the [Configuration Parameters](#configuration-parameters) section below for more information.
 - Create the "Matching Conditions" file, that specifies when the Lambda function should send alerts. See the [Matching Conditions File](#matching-conditions-file) section below for more information.
 - Set up an EventBridge Schedule rule to trigger the function on a regular basis.
