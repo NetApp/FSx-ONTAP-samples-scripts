@@ -614,7 +614,7 @@ def processStorageUtilization(service):
                 if response.status == 200:
                     data = json.loads(response.data)
                     for aggr in data["records"]:
-                        if (aggr["space"]["block_storage"]["used_percent"] >= rule[key]:
+                        if aggr["space"]["block_storage"]["used_percent"] >= rule[key]:
                             uniqueIdentifier = aggr["uuid"] + "_" + key
                             if not eventExist(events, uniqueIdentifier):  # This resets the "refresh" field if found.
                                 alertType = 'Warning' if lkey == "aggrwarnpercentused" else 'Critical'
