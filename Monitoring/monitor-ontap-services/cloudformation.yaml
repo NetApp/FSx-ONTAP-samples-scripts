@@ -66,7 +66,7 @@ Parameters:
   secretUsernameKey:
     Description: "The key in the secret that holds the username."
     Type: String
-    Default: "usernname"
+    Default: "username"
 
   secretPasswordKey:
     Description: "The key in the secret that holds the password."
