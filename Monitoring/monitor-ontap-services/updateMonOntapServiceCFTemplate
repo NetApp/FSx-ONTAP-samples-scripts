@@ -1,10 +1,10 @@
 #!/bin/bash
 
-cp cloudformation.yaml cloudformation.yaml.bak
 sed -e '/ZipFile/,$d' cloudformation.yaml > cloudformation.yaml.tmp
 echo "        ZipFile: |" >> cloudformation.yaml.tmp
 cat monitor_ontap_services.py | sed 's/^/          /' >> cloudformation.yaml.tmp
 if diff cloudformation.yaml cloudformation.yaml.tmp; then
+    rm -f cloudformation.yaml.tmp 
     echo "No changes detected"
     exit 0
 fi
