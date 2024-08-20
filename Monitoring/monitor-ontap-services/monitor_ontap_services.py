@@ -1,4 +1,4 @@
-#!/bin/python3
+#!/bin/python3.11
 ################################################################################
 # THIS SOFTWARE IS PROVIDED BY NETAPP "AS IS" AND ANY EXPRESS OR IMPLIED
 # WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
@@ -171,6 +171,7 @@ def checkSystem():
     #
     # Get the cluster name and ONTAP version from the FSxN.
     # This is also a way to test that the FSxN cluster is accessible.
+    badHTTPStatus = False
     try:
         endpoint = f'https://{config["OntapAdminServer"]}/api/cluster?fields=version,name'
         response = http.request('GET', endpoint, headers=headers, timeout=5.0)
@@ -195,13 +196,18 @@ def checkSystem():
                 fsxStatus["version"] = clusterVersion
         else:
             print(f'API call to {endpoint} failed. HTTP status code: {response.status}.')
+            badHTTPStatus = True
+            raise Exception(f'API call to {endpoint} failed. HTTP status code: {response.status}.')
     except:
         if fsxStatus["systemHealth"]:
             if config["awsAccountId"] != None:
                 clusterName = f'{config["OntapAdminServer"]}({config["awsAccountId"]})'
             else:
                 clusterName = config["OntapAdminServer"]
-            message = f'CRITICAL: Failed to issue API against {clusterName}. Cluster could be down.'
+            if badHTTPStatus:
+                message = f'CRITICAL: Received a non 200 HTTP status code ({response.status}) when trying to access {clusterName}.'
+            else:
+                message = f'CRITICAL: Failed to issue API against {clusterName}. Cluster could be down.'
             logger.critical(message)
             snsClient.publish(TopicArn=config["snsTopicArn"], Message=message, Subject=f'Monitor ONTAP Services Alert for cluster {clusterName}')
             fsxStatus["systemHealth"] = False
@@ -537,7 +543,9 @@ def processSnapMirrorRelationships(service):
                                 updateRelationships = True
                                 smRelationships.append(prevRec)
                     else:
-                        print(f'Unknown snapmirror alert type: "{key}".')
+                        message = f'Unknown snapmirror alert type: "{key}".'
+                        logger.warning(message)
+                        print(message)
         #
         # After processing the records, see if any SM relationships need to be removed.
         i = 0
@@ -606,11 +614,11 @@ def processStorageUtilization(service):
                 if response.status == 200:
                     data = json.loads(response.data)
                     for aggr in data["records"]:
-                        if (aggr["space"]["block_storage"]["used"]/aggr["space"]["block_storage"]["size"]) * 100 >= rule[key]:
+                        if (aggr["space"]["block_storage"]["used_percent"] >= rule[key]:
                             uniqueIdentifier = aggr["uuid"] + "_" + key
                             if not eventExist(events, uniqueIdentifier):  # This resets the "refresh" field if found.
                                 alertType = 'Warning' if lkey == "aggrwarnpercentused" else 'Critical'
-                                message = f'Aggregate {alertType} Alert: Aggregate {aggr["name"]} on {clusterName} is more than {rule[key]} full.'
+                                message = f'Aggregate {alertType} Alert: Aggregate {aggr["name"]} on {clusterName} is {aggr["space"]["block_storage"]["used_precent"]}% full, which is more or equal to {rule[key]}% full.'
                                 logger.warning(message)
                                 snsClient.publish(TopicArn=config["snsTopicArn"], Message=message, Subject=f'Monitor ONTAP Services Alert for cluster {clusterName}')
                                 changedEvents = True
@@ -625,18 +633,18 @@ def processStorageUtilization(service):
                     print(f'API call to {endpoint} failed. HTTP status code {response.status}.')
             elif lkey == "volumewarnpercentused" or lkey == "volumecriticalpercentused":
                 #
-                # Run the API call to get the physical storage used.
+                # Run the API call to get the volume information.
                 endpoint = f'https://{config["OntapAdminServer"]}/api/storage/volumes?fields=space,svm'
                 response = http.request('GET', endpoint, headers=headers)
                 if response.status == 200:
                     data = json.loads(response.data)
                     for record in data["records"]:
-                        if record["space"].get("logical_space") and record["space"]["logical_space"].get("used_percent"):
-                            if record["space"]["logical_space"]["used_percent"] >= rule[key]:
+                        if record["space"].get("used_percent"):
+                            if record["space"]["used_percent"] >= rule[key]:
                                 uniqueIdentifier = record["uuid"] + "_" + key
                                 if not eventExist(events, uniqueIdentifier):  # This resets the "refresh" field if found.
                                     alertType = 'Warning' if lkey == "volumewarnpercentused" else 'Critical'
-                                    message = f'Volume Usage {alertType} Alert: volume {record["svm"]["name"]}:/{record["name"]} on {clusterName} is {record["space"]["logical_space"]["used_percent"]}% full, which is more than {rule[key]}% full.'
+                                    message = f'Volume Usage {alertType} Alert: volume {record["svm"]["name"]}:/{record["name"]} on {clusterName} is {record["space"]["used_percent"]}% full, which is more or equal to {rule[key]}% full.'
                                     logger.warning(message)
                                     snsClient.publish(TopicArn=config["snsTopicArn"], Message=message, Subject=f'Monitor ONTAP Services Alert for cluster {clusterName}')
                                     changedEvents = True
@@ -649,6 +657,10 @@ def processStorageUtilization(service):
                                     events.append(event)
                 else:
                     print(f'API call to {endpoint} failed. HTTP status code {response.status}.')
+            else:
+                message = f'Unknown storage alert type: "{key}".'
+                logger.warning(message)
+                print(message)
     #
     # After processing the records, see if any events need to be removed.
     i = 0
@@ -794,7 +806,9 @@ def processQuotaUtilization(service):
                                 print(message)
                                 events.append(event)
                     else:
-                        print(f'Unknown storage matching condition type "{key}".')
+                        message = f'Unknown quota matching condition type "{key}".'
+                        logger.warning(message)
+                        print(message)
         #
         # After processing the records, see if any events need to be removed.
         i=0
@@ -814,6 +828,101 @@ def processQuotaUtilization(service):
             s3Client.put_object(Key=config["quotaEventsFilename"], Bucket=config["s3BucketName"], Body=json.dumps(events).encode('UTF-8'))
     else:
         print(f'API call to {endpoint} failed. HTTP status code {response.status}.')
+
+################################################################################
+# This function returns the index of the service in the conditions dictionary.
+################################################################################
+def getServiceIndex(targetService, conditions):
+
+    i = 0
+    while i < len(conditions["services"]):
+        if conditions["services"][i]["name"] == targetService:
+            return i
+        i += 1
+    
+    return None
+
+################################################################################
+# This function builds a default matching conditions dictionary based on the
+# environment variables passed in.
+################################################################################
+def buildDefaultMatchingConditions():
+    #
+    # Define global variables so we don't have to pass them to all the functions.
+    global config, s3Client, snsClient, http, headers, clusterName, clusterVersion, logger
+    #
+    # Define an empty matching conditions dictionary.
+    conditions = { "services": [
+        {"name": "systemHealth", "rules": []},
+        {"name": "ems", "rules": []},
+        {"name": "snapmirror", "rules": []},
+        {"name": "storage", "rules": []},
+        {"name": "quota", "rules": []}
+    ]}
+    #
+    # Now, add rules based on the environment variables.
+    for name, value in os.environ.items():
+        if name == "versionChangeAlert":
+            if value == "true":
+                conditions["services"][getServiceIndex("systemHealth", conditions)]["rules"].append({"versionChange": True})
+            else:
+                conditions["services"][getServiceIndex("systemHealth", conditions)]["rules"].append({"versionChange": False})
+        elif name == "failoverAlert":
+            if value == "true":
+                conditions["services"][getServiceIndex("systemHealth", conditions)]["rules"].append({"failover": True})
+            else:
+                conditions["services"][getServiceIndex("systemHealth", conditions)]["rules"].append({"failover": False})
+        elif name == "networkInterfacesAlert":
+            if value == "true":
+                conditions["services"][getServiceIndex("systemHealth", conditions)]["rules"].append({"networkInterfaces": True})
+            else:
+                conditions["services"][getServiceIndex("systemHealth", conditions)]["rules"].append({"networkInterfaces": False})
+        elif name == "emsEventsAlert":
+            if value == "true":
+                conditions["services"][getServiceIndex("ems", conditions)]["rules"].append({"name": "", "severity": "error|alert|emergency", "message": ""})
+        elif name == "snapMirrorHealthAlert":
+            if value == "true":
+                conditions["services"][getServiceIndex("snapmirror", conditions)]["rules"].append({"Healthy": False})  # This is what it matches on, so it is interesting when the health is false.
+            else:
+                conditions["services"][getServiceIndex("snapmirror", conditions)]["rules"].append({"Healthy": True})
+        elif name == "snapMirrorLagTimeAlert":
+            value = int(value)
+            if value > 0:
+                conditions["services"][getServiceIndex("snapmirror", conditions)]["rules"].append({"maxLagTime": value})
+        elif name == "snapMirrorStalledAlert":
+            value = int(value)
+            if value > 0:
+                conditions["services"][getServiceIndex("snapmirror", conditions)]["rules"].append({"stalledTransferSeconds": value})
+        elif name == "fileSystemUtilizationWarnAlert":
+            value = int(value)
+            if value > 0:
+                conditions["services"][getServiceIndex("storage", conditions)]["rules"].append({"aggrWarnPercentUsed": value})
+        elif name == "fileSystemUtilizationCriticalAlert":
+            value = int(value)
+            if value > 0:
+                conditions["services"][getServiceIndex("storage", conditions)]["rules"].append({"aggrCriticalPercentUsed": value})
+        elif name == "volumeUtilizationWarnAlert":
+            value = int(value)
+            if value > 0:
+                conditions["services"][getServiceIndex("storage", conditions)]["rules"].append({"volumeWarnPercentUsed": value})
+        elif name == "volumeUtilizationCriticalAlert":
+            value = int(value)
+            if value > 0:
+                conditions["services"][getServiceIndex("storage", conditions)]["rules"].append({"volumeCriticalPercentUsed": value})
+        elif name == "softQuotaUtilizationAlert":
+            value = int(value)
+            if value > 0:
+                conditions["services"][getServiceIndex("quota", conditions)]["rules"].append({"maxSoftQuotaPercentUsed": value})
+        elif name == "hardQuotaUtilizationAlert":
+            value = int(value)
+            if value > 0:
+                conditions["services"][getServiceIndex("quota", conditions)]["rules"].append({"maxHardQuotaPercentUsed": value})
+        elif name == "inodeQuotaUtilizationAlert":
+            value = int(value)
+            if value > 0:
+                conditions["services"][getServiceIndex("quota", conditions)]["rules"].append({"maxInodeQuotaPercentUsed": value})
+
+    return conditions
 
 ################################################################################
 # This function is used to read in all the configuration parameters from the
@@ -855,9 +964,7 @@ def readInConfig():
 
     config = {
         "snsTopicArn": None,
-        "snsRegion": None,
-        "secretName": None,
-        "secretRegion": None,
+        "secretArn": None,
         "secretUsernameKey": None,
         "secretPasswordKey": None
         }
@@ -868,6 +975,10 @@ def readInConfig():
     # Get the required, and any additional, paramaters from the environment.
     for var in config:
         config[var] = os.environ.get(var)
+    #
+    # Check to see if s3BacketArn was provided instead of s3BucketName.
+    if config["s3BucketName"] == None and os.environ.get("s3BucketArn") != None:
+        config["s3BucketName"] = os.environ.get("s3BucketArn").split(":")[-1]
     #
     # Check that required environmental variables are there.
     for var in requiredEnvVariables:
@@ -881,6 +992,11 @@ def readInConfig():
     defaultConfigFilename = config["OntapAdminServer"] + "-config"
     if config["configFilename"] == None:
         config["configFilename"] = defaultConfigFilename
+    #
+    # Calculate the conditions filename if it hasn't already been provided.
+    defaultConditionsFilename = config["OntapAdminServer"] + "-conditions"
+    if config["conditionsFilename"] == None:
+        config["conditionsFilename"] = defaultConditionsFilename
     #
     # Process the config file if it exist.
     try:
@@ -918,12 +1034,24 @@ def readInConfig():
         if config[filename] == None:
             config[filename] = config["OntapAdminServer"] + "-" + filename.replace("Filename", "")
     #
-    # Define the endpoints if an alternate wasn't already given.
+    # Define the endpoints if alternates weren't provided.
+    if config.get("secretArn") != None:
+        secretRegion = config["secretArn"].split(":")[3]
+    else:
+        #
+        # Give it a value so secretsManagerEndPointHostname can be set. The check for all variables will correctly error out because secretArn is missing.
+        secretRegion = "No-secretArn-was-provided"
     if config["secretsManagerEndPointHostname"] == None or config["secretsManagerEndPointHostname"] == "":
-        config["secretsManagerEndPointHostname"] = f'secretsmanager.{config["secretRegion"]}.amazonaws.com'
+        config["secretsManagerEndPointHostname"] = f'secretsmanager.{secretRegion}.amazonaws.com'
 
+    if config.get("snsTopicArn") != None:
+        snsRegion = config["snsTopicArn"].split(":")[3]
+    else:
+        #
+        # Give it a value so snsEndPointHostname can be set. The check for all variables will correctly error out because snsTopicArn is missing.
+        snsRegion = "No-snsTopicArn-was-provided"
     if config["snsEndPointHostname"] == None or config["snsEndPointHostname"] == "":
-        config["snsEndPointHostname"] = f'sns.{config["snsRegion"]}.amazonaws.com'
+        config["snsEndPointHostname"] = f'sns.{snsRegion}.amazonaws.com'
     #
     # Now, check that all the configuration parameters have been set.
     for key in config:
@@ -979,17 +1107,27 @@ def lambda_handler(event, context):
     #
     # Create a Secrets Manager client.
     session = boto3.session.Session()
-    client = session.client(service_name='secretsmanager', region_name=config["secretRegion"], endpoint_url=f'https://{config["secretsManagerEndPointHostname"]}')
+    secretRegion = config["secretArn"].split(":")[3]
+    client = session.client(service_name='secretsmanager', region_name=secretRegion, endpoint_url=f'https://{config["secretsManagerEndPointHostname"]}')
     #
     # Get the username and password of the ONTAP/FSxN system.
-    secretsInfo = client.get_secret_value(SecretId=config["secretName"])
+    secretsInfo = client.get_secret_value(SecretId=config["secretArn"])
     secrets = json.loads(secretsInfo['SecretString'])
+    if secrets.get(config['secretUsernameKey']) == None:
+        print(f'Error, "{config["secretUsernameKey"]}" not found in secret "{config["secretArn"]}".')
+        return
+
+    if secrets.get(config['secretPasswordKey']) == None:
+        print(f'Error, "{config["secretPasswordKey"]}" not found in secret "{config["secretArn"]}".')
+        return
+
     username = secrets[config['secretUsernameKey']]
     password = secrets[config['secretPasswordKey']]
     #
     # Create clients to the other AWS services we will be using.
-    s3Client = boto3.client('s3', config["s3BucketRegion"])
-    snsClient = boto3.client('sns', region_name=config["snsRegion"], endpoint_url=f'https://{config["snsEndPointHostname"]}')
+    #s3Client = boto3.client('s3', config["s3BucketRegion"])  # Defined in readInConfig()
+    snsRegion = config["snsTopicArn"].split(":")[3]
+    snsClient = boto3.client('sns', region_name=snsRegion, endpoint_url=f'https://{config["snsEndPointHostname"]}')
     #
     # Create a http handle to make ONTAP/FSxN API calls with.
     auth = urllib3.make_headers(basic_auth=f'{username}:{password}')
@@ -1000,14 +1138,18 @@ def lambda_handler(event, context):
     retries = Retry(total=None, connect=1, read=1, redirect=10, status=0, other=0)  # pylint: disable=E1123
     http = urllib3.PoolManager(cert_reqs='CERT_NONE', retries=retries)
     #
-    # Get the conditions we want to alert on.
+    # Get the conditions we know what to alert on.
     try:
         data = s3Client.get_object(Key=config["conditionsFilename"], Bucket=config["s3BucketName"])
     except botocore.exceptions.ClientError as err:
-        print(f'\n\nError, could not retrieve configuration file {config["conditionsFilename"]} from: s3://{config["s3BucketName"]}.\nBelow is additional information:\n\n')
-        raise err
-
-    matchingConditions = json.loads(data["Body"].read().decode('UTF-8'))
+        if err.response['Error']['Code'] != "NoSuchKey":
+            print(f'\n\nError, could not retrieve configuration file {config["conditionsFilename"]} from: s3://{config["s3BucketName"]}.\nBelow is additional information:\n\n')
+            raise err
+        else:
+            matchingConditions = buildDefaultMatchingConditions()
+            s3Client.put_object(Key=config["conditionsFilename"], Bucket=config["s3BucketName"], Body=json.dumps(matchingConditions).encode('UTF-8'))
+    else:
+        matchingConditions = json.loads(data["Body"].read().decode('UTF-8'))
 
     if(checkSystem()):
         #
