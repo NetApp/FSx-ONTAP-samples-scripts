@@ -959,11 +959,11 @@ Resources:
                           if response.status == 200:
                               data = json.loads(response.data)
                               for aggr in data["records"]:
-                                  if aggr["space"]["block_storage"]["used_percent"] >= rule[key]:
+                                  if (aggr["space"]["block_storage"]["used"]/aggr["space"]["block_storage"]["size"]) * 100 >= rule[key]:
                                       uniqueIdentifier = aggr["uuid"] + "_" + key
                                       if not eventExist(events, uniqueIdentifier):  # This resets the "refresh" field if found.
                                           alertType = 'Warning' if lkey == "aggrwarnpercentused" else 'Critical'
-                                          message = f'Aggregate {alertType} Alert: Aggregate {aggr["name"]} on {clusterName} is {aggr["space"]["block_storage"]["used_precent"]}% full, which is more or equal to {rule[key]}% full.'
+                                          message = f'Aggregate {alertType} Alert: Aggregate {aggr["name"]} on {clusterName} is more than {rule[key]} full.'
                                           logger.warning(message)
                                           snsClient.publish(TopicArn=config["snsTopicArn"], Message=message, Subject=f'Monitor ONTAP Services Alert for cluster {clusterName}')
                                           changedEvents = True
@@ -978,18 +978,18 @@ Resources:
                               print(f'API call to {endpoint} failed. HTTP status code {response.status}.')
                       elif lkey == "volumewarnpercentused" or lkey == "volumecriticalpercentused":
                           #
-                          # Run the API call to get the volume information.
+                          # Run the API call to get the physical storage used.
                           endpoint = f'https://{config["OntapAdminServer"]}/api/storage/volumes?fields=space,svm'
                           response = http.request('GET', endpoint, headers=headers)
                           if response.status == 200:
                               data = json.loads(response.data)
                               for record in data["records"]:
-                                  if record["space"].get("used_percent"):
-                                      if record["space"]["used_percent"] >= rule[key]:
+                                  if record["space"].get("logical_space") and record["space"]["logical_space"].get("used_percent"):
+                                      if record["space"]["logical_space"]["used_percent"] >= rule[key]:
                                           uniqueIdentifier = record["uuid"] + "_" + key
                                           if not eventExist(events, uniqueIdentifier):  # This resets the "refresh" field if found.
                                               alertType = 'Warning' if lkey == "volumewarnpercentused" else 'Critical'
-                                              message = f'Volume Usage {alertType} Alert: volume {record["svm"]["name"]}:/{record["name"]} on {clusterName} is {record["space"]["used_percent"]}% full, which is more or equal to {rule[key]}% full.'
+                                              message = f'Volume Usage {alertType} Alert: volume {record["svm"]["name"]}:/{record["name"]} on {clusterName} is {record["space"]["logical_space"]["used_percent"]}% full, which is more than {rule[key]}% full.'
                                               logger.warning(message)
                                               snsClient.publish(TopicArn=config["snsTopicArn"], Message=message, Subject=f'Monitor ONTAP Services Alert for cluster {clusterName}')
                                               changedEvents = True
@@ -1379,15 +1379,9 @@ Resources:
                   if config[filename] == None:
                       config[filename] = config["OntapAdminServer"] + "-" + filename.replace("Filename", "")
               #
-              # Define the endpoints if alternates weren't provided.
-              if config.get("secretArn") != None:
-                  secretRegion = config["secretArn"].split(":")[3]
-              else:
-                  #
-                  # Give it a value so secretsManagerEndPointHostname can be set. The check for all variables will correctly error out because secretArn is missing.
-                  secretRegion = "No-secretArn-was-provided"
+              # Define the endpoints if an alternate wasn't already given.
               if config["secretsManagerEndPointHostname"] == None or config["secretsManagerEndPointHostname"] == "":
-                  config["secretsManagerEndPointHostname"] = f'secretsmanager.{secretRegion}.amazonaws.com'
+                  config["secretsManagerEndPointHostname"] = f'secretsmanager.{config["secretRegion"]}.amazonaws.com'
           
               if config.get("snsTopicArn") != None:
                   snsRegion = config["snsTopicArn"].split(":")[3]
@@ -1395,6 +1389,7 @@ Resources:
                   #
                   # Give it a value so snsEndPointHostname can be set. The check for all variables will correctly error out because snsTopicArn is missing.
                   snsRegion = "No-snsTopicArn-was-provided"
+          
               if config["snsEndPointHostname"] == None or config["snsEndPointHostname"] == "":
                   config["snsEndPointHostname"] = f'sns.{snsRegion}.amazonaws.com'
               #
@@ -1452,8 +1447,7 @@ Resources:
               #
               # Create a Secrets Manager client.
               session = boto3.session.Session()
-              secretRegion = config["secretArn"].split(":")[3]
-              client = session.client(service_name='secretsmanager', region_name=secretRegion, endpoint_url=f'https://{config["secretsManagerEndPointHostname"]}')
+              client = session.client(service_name='secretsmanager', region_name=config["secretRegion"], endpoint_url=f'https://{config["secretsManagerEndPointHostname"]}')
               #
               # Get the username and password of the ONTAP/FSxN system.
               secretsInfo = client.get_secret_value(SecretId=config["secretArn"])
