@@ -27,7 +27,6 @@ if diff -w $tmpfile1 $tmpfile2 > /dev/null; then
 fi
 #
 # Get the number of commits in the git history for the file to calculate the minor version number.
-git log "$file"
 minorVersionNum="$(git log "$file" | egrep '^commit' | wc -l)"
 if [ -z "$minorVersionNum" ]; then
   echo "Failed to calculate version number." 1>&2
