@@ -235,7 +235,7 @@ Resources:
     Condition: CreateWatchdogAlarm
     Properties:
       AlarmName: !Sub "monitor-ontap-services-watchdog-${AWS::StackName}"
-      AlarmDescription: "Watchdog alarm for the monitor-ontap-services Lambda function."
+      AlarmDescription: !Sub "Watchdog alarm for the monitor-ontap-services-${AWS::StackName} Lambda function."
       Namespace: "AWS/Lambda"
       MetricName: "Errors"
       Dimensions:
@@ -245,7 +245,7 @@ Resources:
       Period: 300
       EvaluationPeriods: 1
       TreatMissingData: "ignore"
-      Threshold: 1
+      Threshold: 0.5
       ComparisonOperator: "GreaterThanThreshold"
       AlarmActions:
         - !Ref snsTopicArn
