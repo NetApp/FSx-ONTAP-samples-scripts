@@ -14,12 +14,14 @@ Metadata:
           - secretArn
           - secretUsernameKey
           - secretPasswordKey
+          - checkInterval
+          - createWatchdogAlarm
           - createSecretManagerEndpoint
           - createSNSEndpoint
           - createS3Endpoint
           - routeTableIds
           - vpcId
-          - checkInterval
+          - endpointSecurityGroupIds
       - Label: 
           default: "Alert Parameters"
         Parameters: 
@@ -35,18 +37,16 @@ Metadata:
           - volumeUtilizationCriticalAlert
           - softQuotaUtilizationAlert
           - hardQuotaUtilizationAlert
-          - inodeQuotaUtilizationAlert
+          - inodesQuotaUtilizationAlert
 
 Parameters:
   OntapAdminSever:
     Description: "The DNS name, or IP address, of the management endpoint of the FSxN file system to be monitored."
     Type: String
-    Default: ""
 
   subNetIds:
     Description: "The subnet IDs where the FSxN file system is located."
     Type: "List<AWS::EC2::Subnet::Id>"
-    Default: ""
 
   securityGroupIds:
     Description: "The security group IDs to associate with the Lambda function."
@@ -56,12 +56,10 @@ Parameters:
   snsTopicArn:
     Description: "The ARN of the SNS topic where you want alerts sent to."
     Type: String
-    Default: ""
 
   secretArn:
     Description: "The ARN of the secret that holds the FSxN credentials to use."
     Type: String
-    Default: ""
 
   secretUsernameKey:
     Description: "The key in the secret that holds the username."
@@ -72,6 +70,12 @@ Parameters:
     Description: "The key in the secret that holds the password."
     Type: String
     Default: "password"
+
+  createWatchdogAlarm:
+    Description: "Create a CloudWatch alarm to monitor the monitor-ontap-services Lambda function."
+    Type: String
+    Default: "true"
+    AllowedValues: ["true", "false"]
 
   createSecretManagerEndpoint:
     Description: "Create a secret manager endpoint."
@@ -92,13 +96,18 @@ Parameters:
     AllowedValues: ["true", "false"]
 
   routeTableIds:
-    Description: "The route table IDs to update to use the S3 endpoint. Since the S3 endpoint is of type 'Gateway' route tables have to be updated to use it. This parameter is only needed if createS3Endpoint is set to 'true'."
+    Description: "The route table IDs, comma separated, to update to use the S3 endpoint. Since the S3 endpoint is of type 'Gateway' route tables have to be updated to use it. This parameter is only needed if createS3Endpoint is set to 'true'."
     Type: CommaDelimitedList
     Default: ""
 
   vpcId:
     Description: "The VPC ID where the FSxN file system is located. This is only needed if you are creating an endpoint."
-    Type: "AWS::EC2::VPC::Id"
+    Type: String
+    Default: ""
+
+  endpointSecurityGroupIds:
+    Description: "The security group IDs, comma separated list, to associate with the SNS and SecretsManager endpoints. Must allow traffic from from the Lambda function over TCP port 443. This parameter is only needed if you are creating the SNS or SecretsManager endpoint."
+    Type: CommaDelimitedList
     Default: ""
 
   checkInterval:
@@ -172,7 +181,7 @@ Parameters:
     Type: Number
     Default: 80
 
-  inodeQuotaUtilizationAlert:
+  inodesQuotaUtilizationAlert:
     Description: "Alert when an inode quota exceeds this threshold in percentage."
     Type: Number
     Default: 80
@@ -181,6 +190,7 @@ Conditions:
   CreateSecretManagerEndpoint: !Equals [!Ref createSecretManagerEndpoint, "true"]
   CreateSNSEndpoint: !Equals [!Ref createSNSEndpoint, "true"]
   CreateS3Endpoint: !Equals [!Ref createS3Endpoint, "true"]
+  CreateWatchdogAlarm: !Equals [!Ref createWatchdogAlarm, "true"]
 
 Resources:
   SecretManagerEndpoint:
@@ -192,6 +202,7 @@ Resources:
       VpcEndpointType: 'Interface'
       PrivateDnsEnabled: true
       SubnetIds: !Ref subNetIds
+      SecurityGroupIds: !Ref endpointSecurityGroupIds
 
   SNSEndpoint:
     Type: AWS::EC2::VPCEndpoint
@@ -202,6 +213,7 @@ Resources:
       VpcEndpointType: 'Interface'
       PrivateDnsEnabled: true
       SubnetIds: !Ref subNetIds
+      SecurityGroupIds: !Ref endpointSecurityGroupIds
 
   S3Endpoint:
     Type: AWS::EC2::VPCEndpoint
@@ -217,6 +229,26 @@ Resources:
     Properties:
       BucketName: !Sub "monitor-ontap-services-${AWS::StackName}"
       AccessControl: "Private"
+
+  watchDogAlarm:
+    Type: "AWS::CloudWatch::Alarm"
+    Condition: CreateWatchdogAlarm
+    Properties:
+      AlarmName: !Sub "monitor-ontap-services-watchdog-${AWS::StackName}"
+      AlarmDescription: "Watchdog alarm for the monitor-ontap-services Lambda function."
+      Namespace: "AWS/Lambda"
+      MetricName: "Errors"
+      Dimensions:
+        - Name: "FunctionName"
+          Value: !Sub "monitor-ontap-services-${AWS::StackName}"
+      Statistic: "Maximum"
+      Period: 300
+      EvaluationPeriods: 1
+      TreatMissingData: "ignore"
+      Threshold: 1
+      ComparisonOperator: "GreaterThanThreshold"
+      AlarmActions:
+        - !Ref snsTopicArn
 
   LambdaRole:
     Type: "AWS::IAM::Role"
@@ -315,19 +347,19 @@ Resources:
           secretPasswordKey: !Ref secretPasswordKey
           snsTopicArn: !Ref snsTopicArn
 
-          versionChangeAlert: !Ref versionChangeAlert
-          failoverAlert: !Ref failoverAlert
-          emsEventsAlert: !Ref emsEventsAlert
-          snapMirrorLagTimeAlert: !Ref snapMirrorLagTimeAlert
-          snapMirrorStalledAlert: !Ref snapMirrorStalledAlert
-          snapMirrorHealthAlert: !Ref snapMirrorHealthAlert
-          fileSystemUtilizationWarnAlert: !Ref fileSystemUtilizationWarnAlert
-          fileSystemUtilizationCriticalAlert: !Ref fileSystemUtilizationCriticalAlert
-          volumeUtilizationWarnAlert: !Ref volumeUtilizationWarnAlert
-          volumeUtilizationCriticalAlert: !Ref volumeUtilizationCriticalAlert
-          softQuotaUtilizationAlert: !Ref softQuotaUtilizationAlert
-          hardQuotaUtilizationAlert: !Ref hardQuotaUtilizationAlert
-          inodeQuotaUtilizationAlert: !Ref inodeQuotaUtilizationAlert
+          initialVersionChangeAlert: !Ref versionChangeAlert
+          initialFailoverAlert: !Ref failoverAlert
+          initialEmsEventsAlert: !Ref emsEventsAlert
+          initialSnapMirrorLagTimeAlert: !Ref snapMirrorLagTimeAlert
+          initialSnapMirrorStalledAlert: !Ref snapMirrorStalledAlert
+          initialSnapMirrorHealthAlert: !Ref snapMirrorHealthAlert
+          initialFileSystemUtilizationWarnAlert: !Ref fileSystemUtilizationWarnAlert
+          initialFileSystemUtilizationCriticalAlert: !Ref fileSystemUtilizationCriticalAlert
+          initialVolumeUtilizationWarnAlert: !Ref volumeUtilizationWarnAlert
+          initialVolumeUtilizationCriticalAlert: !Ref volumeUtilizationCriticalAlert
+          initialSoftQuotaUtilizationAlert: !Ref softQuotaUtilizationAlert
+          initialHardQuotaUtilizationAlert: !Ref hardQuotaUtilizationAlert
+          initialInodesQuotaUtilizationAlert: !Ref inodesQuotaUtilizationAlert
       Code:
         ZipFile: |
           #!/bin/python3.11
@@ -350,8 +382,8 @@ Resources:
           # "matching conditions."  It is intended to be run as a Lambda function, but
           # can be run as a standalone program.
           #
-          # Version: v2.1
-          # Date: 2024-08-20-23:53:55
+          # Version: v2.5
+          # Date: 2024-08-23-16:48:47
           ################################################################################
           
           import json
@@ -796,13 +828,21 @@ Resources:
                       for rule in service["rules"]:
                           for key in rule.keys():
                               lkey = key.lower()
+                              #
+                              # iF the source cluster isn't defined, then assume it is a local SM relationship.
+                              sourceCluster = record['source'].get('cluster')
+                              if sourceCluster == None:
+                                  sourceClusterName = clusterName
+                              else:
+                                  sourceClusterName = sourceCluster['name']
+          
                               if lkey == "maxlagtime":
                                   if record.get("lag_time") != None:
                                       lagSeconds = parseLagTime(record["lag_time"])
                                       if lagSeconds > rule["maxLagTime"]:
                                           uniqueIdentifier = record["uuid"] + "_" + key
                                           if not eventExist(events, uniqueIdentifier):  # This resets the "refresh" field if found.
-                                              message = f'Snapmirror Lag Alert: {record["source"]["cluster"]["name"]}::{record["source"]["path"]} -> {clusterName}::{record["destination"]["path"]} has a lag time of {lagSeconds} seconds.'
+                                              message = f'Snapmirror Lag Alert: {sourceClusterName}::{record["source"]["path"]} -> {clusterName}::{record["destination"]["path"]} has a lag time of {lagSeconds} seconds.'
                                               logger.warning(message)
                                               snsClient.publish(TopicArn=config["snsTopicArn"], Message=message, Subject=f'Monitor ONTAP Services Alert for cluster {clusterName}')
                                               changedEvents=True
@@ -817,7 +857,7 @@ Resources:
                                   if not record["healthy"]:
                                       uniqueIdentifier = record["uuid"] + "_" + key
                                       if not eventExist(events, uniqueIdentifier):  # This resets the "refresh" field if found.
-                                          message = f'Snapmirror Health Alert: {record["source"]["cluster"]["name"]}::{record["source"]["path"]} {clusterName}::{record["destination"]["path"]} has a status of {record["healthy"]}'
+                                          message = f'Snapmirror Health Alert: {sourceClusterName}::{record["source"]["path"]} {clusterName}::{record["destination"]["path"]} has a status of {record["healthy"]}'
                                           logger.warning(message)  # Intentionally put this before adding the reasons, since I'm not sure how syslog will handle a multi-line message.
                                           for reason in record["unhealthy_reason"]:
                                               message += "\n" + reason["message"]
@@ -834,10 +874,9 @@ Resources:
                                   if record.get('transfer') and record['transfer']['state'].lower() == "transferring":
                                       sourcePath = record['source']['path']
                                       destPath = record['destination']['path']
-                                      sourceCluster = record['source']['cluster']['name']
                                       bytesTransferred = record['transfer']['bytes_transferred']
           
-                                      prevRec =  getPreviousSMRecord(smRelationships, sourceCluster, sourcePath, destPath)
+                                      prevRec =  getPreviousSMRecord(smRelationships, sourceClusterName, sourcePath, destPath)
           
                                       if prevRec != None:
                                           timeDiff=curTime - prevRec["time"]
@@ -847,7 +886,7 @@ Resources:
                                                   uniqueIdentifier = record['uuid'] + "_" + "transfer"
               
                                                   if not eventExist(events, uniqueIdentifier):
-                                                      message = f'Snapmiorror transfer has stalled: {sourceCluster}::{sourcePath} -> {clusterName}::{destPath}.'
+                                                      message = f'Snapmiorror transfer has stalled: {sourceClusterName}::{sourcePath} -> {clusterName}::{destPath}.'
                                                       logger.warning(message)
                                                       snsClient.publish(TopicArn=config["snsTopicArn"], Message=message, Subject='Monitor ONTAP Services Alert for cluster {clusterName}')
                                                       changedEvents=True
@@ -870,7 +909,7 @@ Resources:
                                               "bytesTransferred": bytesTransferred,
                                               "sourcePath": sourcePath,
                                               "destPath": destPath,
-                                              "sourceCluster": sourceCluster
+                                              "sourceCluster": sourceClusterName
                                           }
                                           updateRelationships = True
                                           smRelationships.append(prevRec)
@@ -950,7 +989,7 @@ Resources:
                                       uniqueIdentifier = aggr["uuid"] + "_" + key
                                       if not eventExist(events, uniqueIdentifier):  # This resets the "refresh" field if found.
                                           alertType = 'Warning' if lkey == "aggrwarnpercentused" else 'Critical'
-                                          message = f'Aggregate {alertType} Alert: Aggregate {aggr["name"]} on {clusterName} is {aggr["space"]["block_storage"]["used_precent"]}% full, which is more or equal to {rule[key]}% full.'
+                                          message = f'Aggregate {alertType} Alert: Aggregate {aggr["name"]} on {clusterName} is {aggr["space"]["block_storage"]["used_percent"]}% full, which is more or equal to {rule[key]}% full.'
                                           logger.warning(message)
                                           snsClient.publish(TopicArn=config["snsTopicArn"], Message=message, Subject=f'Monitor ONTAP Services Alert for cluster {clusterName}')
                                           changedEvents = True
@@ -971,12 +1010,12 @@ Resources:
                           if response.status == 200:
                               data = json.loads(response.data)
                               for record in data["records"]:
-                                  if record["space"].get("used_percent"):
-                                      if record["space"]["used_percent"] >= rule[key]:
+                                  if record["space"].get("percent_used"):
+                                      if record["space"]["percent_used"] >= rule[key]:
                                           uniqueIdentifier = record["uuid"] + "_" + key
                                           if not eventExist(events, uniqueIdentifier):  # This resets the "refresh" field if found.
                                               alertType = 'Warning' if lkey == "volumewarnpercentused" else 'Critical'
-                                              message = f'Volume Usage {alertType} Alert: volume {record["svm"]["name"]}:/{record["name"]} on {clusterName} is {record["space"]["used_percent"]}% full, which is more or equal to {rule[key]}% full.'
+                                              message = f'Volume Usage {alertType} Alert: volume {record["svm"]["name"]}:/{record["name"]} on {clusterName} is {record["space"]["percent_used"]}% full, which is more or equal to {rule[key]}% full.'
                                               logger.warning(message)
                                               snsClient.publish(TopicArn=config["snsTopicArn"], Message=message, Subject=f'Monitor ONTAP Services Alert for cluster {clusterName}')
                                               changedEvents = True
@@ -1194,65 +1233,65 @@ Resources:
               #
               # Now, add rules based on the environment variables.
               for name, value in os.environ.items():
-                  if name == "versionChangeAlert":
+                  if name == "initialVersionChangeAlert":
                       if value == "true":
                           conditions["services"][getServiceIndex("systemHealth", conditions)]["rules"].append({"versionChange": True})
                       else:
                           conditions["services"][getServiceIndex("systemHealth", conditions)]["rules"].append({"versionChange": False})
-                  elif name == "failoverAlert":
+                  elif name == "initialFailoverAlert":
                       if value == "true":
                           conditions["services"][getServiceIndex("systemHealth", conditions)]["rules"].append({"failover": True})
                       else:
                           conditions["services"][getServiceIndex("systemHealth", conditions)]["rules"].append({"failover": False})
-                  elif name == "networkInterfacesAlert":
+                  elif name == "initialNetworkInterfacesAlert":
                       if value == "true":
                           conditions["services"][getServiceIndex("systemHealth", conditions)]["rules"].append({"networkInterfaces": True})
                       else:
                           conditions["services"][getServiceIndex("systemHealth", conditions)]["rules"].append({"networkInterfaces": False})
-                  elif name == "emsEventsAlert":
+                  elif name == "initialEmsEventsAlert":
                       if value == "true":
                           conditions["services"][getServiceIndex("ems", conditions)]["rules"].append({"name": "", "severity": "error|alert|emergency", "message": ""})
-                  elif name == "snapMirrorHealthAlert":
+                  elif name == "initialSnapMirrorHealthAlert":
                       if value == "true":
                           conditions["services"][getServiceIndex("snapmirror", conditions)]["rules"].append({"Healthy": False})  # This is what it matches on, so it is interesting when the health is false.
                       else:
                           conditions["services"][getServiceIndex("snapmirror", conditions)]["rules"].append({"Healthy": True})
-                  elif name == "snapMirrorLagTimeAlert":
+                  elif name == "initialSnapMirrorLagTimeAlert":
                       value = int(value)
                       if value > 0:
                           conditions["services"][getServiceIndex("snapmirror", conditions)]["rules"].append({"maxLagTime": value})
-                  elif name == "snapMirrorStalledAlert":
+                  elif name == "initialSnapMirrorStalledAlert":
                       value = int(value)
                       if value > 0:
                           conditions["services"][getServiceIndex("snapmirror", conditions)]["rules"].append({"stalledTransferSeconds": value})
-                  elif name == "fileSystemUtilizationWarnAlert":
+                  elif name == "initialFileSystemUtilizationWarnAlert":
                       value = int(value)
                       if value > 0:
                           conditions["services"][getServiceIndex("storage", conditions)]["rules"].append({"aggrWarnPercentUsed": value})
-                  elif name == "fileSystemUtilizationCriticalAlert":
+                  elif name == "initialFileSystemUtilizationCriticalAlert":
                       value = int(value)
                       if value > 0:
                           conditions["services"][getServiceIndex("storage", conditions)]["rules"].append({"aggrCriticalPercentUsed": value})
-                  elif name == "volumeUtilizationWarnAlert":
+                  elif name == "initialVolumeUtilizationWarnAlert":
                       value = int(value)
                       if value > 0:
                           conditions["services"][getServiceIndex("storage", conditions)]["rules"].append({"volumeWarnPercentUsed": value})
-                  elif name == "volumeUtilizationCriticalAlert":
+                  elif name == "initialVolumeUtilizationCriticalAlert":
                       value = int(value)
                       if value > 0:
                           conditions["services"][getServiceIndex("storage", conditions)]["rules"].append({"volumeCriticalPercentUsed": value})
-                  elif name == "softQuotaUtilizationAlert":
+                  elif name == "initialSoftQuotaUtilizationAlert":
                       value = int(value)
                       if value > 0:
-                          conditions["services"][getServiceIndex("quota", conditions)]["rules"].append({"maxSoftQuotaPercentUsed": value})
-                  elif name == "hardQuotaUtilizationAlert":
+                          conditions["services"][getServiceIndex("quota", conditions)]["rules"].append({"maxSoftQuotaSpacePercentUsed": value})
+                  elif name == "initialHardQuotaUtilizationAlert":
                       value = int(value)
                       if value > 0:
-                          conditions["services"][getServiceIndex("quota", conditions)]["rules"].append({"maxHardQuotaPercentUsed": value})
-                  elif name == "inodeQuotaUtilizationAlert":
+                          conditions["services"][getServiceIndex("quota", conditions)]["rules"].append({"maxHardQuotaSpacePercentUsed": value})
+                  elif name == "initialInodesQuotaUtilizationAlert":
                       value = int(value)
                       if value > 0:
-                          conditions["services"][getServiceIndex("quota", conditions)]["rules"].append({"maxInodeQuotaPercentUsed": value})
+                          conditions["services"][getServiceIndex("quota", conditions)]["rules"].append({"maxQuotaInodesPercentUsed": value})
           
               return conditions
           
@@ -1479,7 +1518,7 @@ Resources:
                       raise err
                   else:
                       matchingConditions = buildDefaultMatchingConditions()
-                      s3Client.put_object(Key=config["conditionsFilename"], Bucket=config["s3BucketName"], Body=json.dumps(matchingConditions).encode('UTF-8'))
+                      s3Client.put_object(Key=config["conditionsFilename"], Bucket=config["s3BucketName"], Body=json.dumps(matchingConditions, indent=4).encode('UTF-8'))
               else:
                   matchingConditions = json.loads(data["Body"].read().decode('UTF-8'))
           

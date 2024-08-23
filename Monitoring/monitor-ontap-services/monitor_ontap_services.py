@@ -464,13 +464,21 @@ def processSnapMirrorRelationships(service):
             for rule in service["rules"]:
                 for key in rule.keys():
                     lkey = key.lower()
+                    #
+                    # If the source cluster isn't defined, then assume it is a local SM relationship.
+                    sourceCluster = record['source'].get('cluster')
+                    if sourceCluster == None:
+                        sourceClusterName = clusterName
+                    else:
+                        sourceClusterName = sourceCluster['name']
+
                     if lkey == "maxlagtime":
                         if record.get("lag_time") != None:
                             lagSeconds = parseLagTime(record["lag_time"])
                             if lagSeconds > rule["maxLagTime"]:
                                 uniqueIdentifier = record["uuid"] + "_" + key
                                 if not eventExist(events, uniqueIdentifier):  # This resets the "refresh" field if found.
-                                    message = f'Snapmirror Lag Alert: {record["source"]["cluster"]["name"]}::{record["source"]["path"]} -> {clusterName}::{record["destination"]["path"]} has a lag time of {lagSeconds} seconds.'
+                                    message = f'Snapmirror Lag Alert: {sourceClusterName}::{record["source"]["path"]} -> {clusterName}::{record["destination"]["path"]} has a lag time of {lagSeconds} seconds.'
                                     logger.warning(message)
                                     snsClient.publish(TopicArn=config["snsTopicArn"], Message=message, Subject=f'Monitor ONTAP Services Alert for cluster {clusterName}')
                                     changedEvents=True
@@ -485,7 +493,7 @@ def processSnapMirrorRelationships(service):
                         if not record["healthy"]:
                             uniqueIdentifier = record["uuid"] + "_" + key
                             if not eventExist(events, uniqueIdentifier):  # This resets the "refresh" field if found.
-                                message = f'Snapmirror Health Alert: {record["source"]["cluster"]["name"]}::{record["source"]["path"]} {clusterName}::{record["destination"]["path"]} has a status of {record["healthy"]}'
+                                message = f'Snapmirror Health Alert: {sourceClusterName}::{record["source"]["path"]} {clusterName}::{record["destination"]["path"]} has a status of {record["healthy"]}'
                                 logger.warning(message)  # Intentionally put this before adding the reasons, since I'm not sure how syslog will handle a multi-line message.
                                 for reason in record["unhealthy_reason"]:
                                     message += "\n" + reason["message"]
@@ -502,10 +510,9 @@ def processSnapMirrorRelationships(service):
                         if record.get('transfer') and record['transfer']['state'].lower() == "transferring":
                             sourcePath = record['source']['path']
                             destPath = record['destination']['path']
-                            sourceCluster = record['source']['cluster']['name']
                             bytesTransferred = record['transfer']['bytes_transferred']
 
-                            prevRec =  getPreviousSMRecord(smRelationships, sourceCluster, sourcePath, destPath)
+                            prevRec =  getPreviousSMRecord(smRelationships, sourceClusterName, sourcePath, destPath)
 
                             if prevRec != None:
                                 timeDiff=curTime - prevRec["time"]
@@ -515,7 +522,7 @@ def processSnapMirrorRelationships(service):
                                         uniqueIdentifier = record['uuid'] + "_" + "transfer"
     
                                         if not eventExist(events, uniqueIdentifier):
-                                            message = f'Snapmiorror transfer has stalled: {sourceCluster}::{sourcePath} -> {clusterName}::{destPath}.'
+                                            message = f'Snapmiorror transfer has stalled: {sourceClusterName}::{sourcePath} -> {clusterName}::{destPath}.'
                                             logger.warning(message)
                                             snsClient.publish(TopicArn=config["snsTopicArn"], Message=message, Subject='Monitor ONTAP Services Alert for cluster {clusterName}')
                                             changedEvents=True
@@ -538,7 +545,7 @@ def processSnapMirrorRelationships(service):
                                     "bytesTransferred": bytesTransferred,
                                     "sourcePath": sourcePath,
                                     "destPath": destPath,
-                                    "sourceCluster": sourceCluster
+                                    "sourceCluster": sourceClusterName
                                 }
                                 updateRelationships = True
                                 smRelationships.append(prevRec)
@@ -618,7 +625,7 @@ def processStorageUtilization(service):
                             uniqueIdentifier = aggr["uuid"] + "_" + key
                             if not eventExist(events, uniqueIdentifier):  # This resets the "refresh" field if found.
                                 alertType = 'Warning' if lkey == "aggrwarnpercentused" else 'Critical'
-                                message = f'Aggregate {alertType} Alert: Aggregate {aggr["name"]} on {clusterName} is {aggr["space"]["block_storage"]["used_precent"]}% full, which is more or equal to {rule[key]}% full.'
+                                message = f'Aggregate {alertType} Alert: Aggregate {aggr["name"]} on {clusterName} is {aggr["space"]["block_storage"]["used_percent"]}% full, which is more or equal to {rule[key]}% full.'
                                 logger.warning(message)
                                 snsClient.publish(TopicArn=config["snsTopicArn"], Message=message, Subject=f'Monitor ONTAP Services Alert for cluster {clusterName}')
                                 changedEvents = True
@@ -639,12 +646,12 @@ def processStorageUtilization(service):
                 if response.status == 200:
                     data = json.loads(response.data)
                     for record in data["records"]:
-                        if record["space"].get("used_percent"):
-                            if record["space"]["used_percent"] >= rule[key]:
+                        if record["space"].get("percent_used"):
+                            if record["space"]["percent_used"] >= rule[key]:
                                 uniqueIdentifier = record["uuid"] + "_" + key
                                 if not eventExist(events, uniqueIdentifier):  # This resets the "refresh" field if found.
                                     alertType = 'Warning' if lkey == "volumewarnpercentused" else 'Critical'
-                                    message = f'Volume Usage {alertType} Alert: volume {record["svm"]["name"]}:/{record["name"]} on {clusterName} is {record["space"]["used_percent"]}% full, which is more or equal to {rule[key]}% full.'
+                                    message = f'Volume Usage {alertType} Alert: volume {record["svm"]["name"]}:/{record["name"]} on {clusterName} is {record["space"]["percent_used"]}% full, which is more or equal to {rule[key]}% full.'
                                     logger.warning(message)
                                     snsClient.publish(TopicArn=config["snsTopicArn"], Message=message, Subject=f'Monitor ONTAP Services Alert for cluster {clusterName}')
                                     changedEvents = True
@@ -862,65 +869,65 @@ def buildDefaultMatchingConditions():
     #
     # Now, add rules based on the environment variables.
     for name, value in os.environ.items():
-        if name == "versionChangeAlert":
+        if name == "initialVersionChangeAlert":
             if value == "true":
                 conditions["services"][getServiceIndex("systemHealth", conditions)]["rules"].append({"versionChange": True})
             else:
                 conditions["services"][getServiceIndex("systemHealth", conditions)]["rules"].append({"versionChange": False})
-        elif name == "failoverAlert":
+        elif name == "initialFailoverAlert":
             if value == "true":
                 conditions["services"][getServiceIndex("systemHealth", conditions)]["rules"].append({"failover": True})
             else:
                 conditions["services"][getServiceIndex("systemHealth", conditions)]["rules"].append({"failover": False})
-        elif name == "networkInterfacesAlert":
+        elif name == "initialNetworkInterfacesAlert":
             if value == "true":
                 conditions["services"][getServiceIndex("systemHealth", conditions)]["rules"].append({"networkInterfaces": True})
             else:
                 conditions["services"][getServiceIndex("systemHealth", conditions)]["rules"].append({"networkInterfaces": False})
-        elif name == "emsEventsAlert":
+        elif name == "initialEmsEventsAlert":
             if value == "true":
                 conditions["services"][getServiceIndex("ems", conditions)]["rules"].append({"name": "", "severity": "error|alert|emergency", "message": ""})
-        elif name == "snapMirrorHealthAlert":
+        elif name == "initialSnapMirrorHealthAlert":
             if value == "true":
                 conditions["services"][getServiceIndex("snapmirror", conditions)]["rules"].append({"Healthy": False})  # This is what it matches on, so it is interesting when the health is false.
             else:
                 conditions["services"][getServiceIndex("snapmirror", conditions)]["rules"].append({"Healthy": True})
-        elif name == "snapMirrorLagTimeAlert":
+        elif name == "initialSnapMirrorLagTimeAlert":
             value = int(value)
             if value > 0:
                 conditions["services"][getServiceIndex("snapmirror", conditions)]["rules"].append({"maxLagTime": value})
-        elif name == "snapMirrorStalledAlert":
+        elif name == "initialSnapMirrorStalledAlert":
             value = int(value)
             if value > 0:
                 conditions["services"][getServiceIndex("snapmirror", conditions)]["rules"].append({"stalledTransferSeconds": value})
-        elif name == "fileSystemUtilizationWarnAlert":
+        elif name == "initialFileSystemUtilizationWarnAlert":
             value = int(value)
             if value > 0:
                 conditions["services"][getServiceIndex("storage", conditions)]["rules"].append({"aggrWarnPercentUsed": value})
-        elif name == "fileSystemUtilizationCriticalAlert":
+        elif name == "initialFileSystemUtilizationCriticalAlert":
             value = int(value)
             if value > 0:
                 conditions["services"][getServiceIndex("storage", conditions)]["rules"].append({"aggrCriticalPercentUsed": value})
-        elif name == "volumeUtilizationWarnAlert":
+        elif name == "initialVolumeUtilizationWarnAlert":
             value = int(value)
             if value > 0:
                 conditions["services"][getServiceIndex("storage", conditions)]["rules"].append({"volumeWarnPercentUsed": value})
-        elif name == "volumeUtilizationCriticalAlert":
+        elif name == "initialVolumeUtilizationCriticalAlert":
             value = int(value)
             if value > 0:
                 conditions["services"][getServiceIndex("storage", conditions)]["rules"].append({"volumeCriticalPercentUsed": value})
-        elif name == "softQuotaUtilizationAlert":
+        elif name == "initialSoftQuotaUtilizationAlert":
             value = int(value)
             if value > 0:
-                conditions["services"][getServiceIndex("quota", conditions)]["rules"].append({"maxSoftQuotaPercentUsed": value})
-        elif name == "hardQuotaUtilizationAlert":
+                conditions["services"][getServiceIndex("quota", conditions)]["rules"].append({"maxSoftQuotaSpacePercentUsed": value})
+        elif name == "initialHardQuotaUtilizationAlert":
             value = int(value)
             if value > 0:
-                conditions["services"][getServiceIndex("quota", conditions)]["rules"].append({"maxHardQuotaPercentUsed": value})
-        elif name == "inodeQuotaUtilizationAlert":
+                conditions["services"][getServiceIndex("quota", conditions)]["rules"].append({"maxHardQuotaSpacePercentUsed": value})
+        elif name == "initialInodesQuotaUtilizationAlert":
             value = int(value)
             if value > 0:
-                conditions["services"][getServiceIndex("quota", conditions)]["rules"].append({"maxInodeQuotaPercentUsed": value})
+                conditions["services"][getServiceIndex("quota", conditions)]["rules"].append({"maxQuotaInodesPercentUsed": value})
 
     return conditions
 
@@ -1147,7 +1154,7 @@ def lambda_handler(event, context):
             raise err
         else:
             matchingConditions = buildDefaultMatchingConditions()
-            s3Client.put_object(Key=config["conditionsFilename"], Bucket=config["s3BucketName"], Body=json.dumps(matchingConditions).encode('UTF-8'))
+            s3Client.put_object(Key=config["conditionsFilename"], Bucket=config["s3BucketName"], Body=json.dumps(matchingConditions, indent=4).encode('UTF-8'))
     else:
         matchingConditions = json.loads(data["Body"].read().decode('UTF-8'))
 
