@@ -382,8 +382,8 @@ Resources:
           # "matching conditions."  It is intended to be run as a Lambda function, but
           # can be run as a standalone program.
           #
-          # Version: v2.5
-          # Date: 2024-08-23-16:48:47
+          # Version: v2.1
+          # Date: 2024-08-23-22:01:08
           ################################################################################
           
           import json
@@ -829,7 +829,7 @@ Resources:
                           for key in rule.keys():
                               lkey = key.lower()
                               #
-                              # iF the source cluster isn't defined, then assume it is a local SM relationship.
+                              # If the source cluster isn't defined, then assume it is a local SM relationship.
                               sourceCluster = record['source'].get('cluster')
                               if sourceCluster == None:
                                   sourceClusterName = clusterName
