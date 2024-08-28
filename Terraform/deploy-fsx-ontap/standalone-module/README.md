@@ -10,7 +10,7 @@
 * [License](#license)
 
 ## Introduction
-This sample demonstrates how to deploy an FSx for NetApp ONTAP file system, including an SVM and a FlexVolume in that file system, using AWS Terraform provider in a standalone Terraform module. 
+This sample demonstrates how to deploy an FSx for NetApp ONTAP file system, including an SVM and a FlexVolume in that file system, using AWS Terraform provider in a standalone Terraform module.
 Follow the instructions below to use this sample in your own environment.
 ### Repository Overview
 This is a standalone Terraform configuration repository that contains the following files:
@@ -43,7 +43,7 @@ Running this terraform sample will result the following:
 * A new FSx for Netapp ONTAP file-system. Much of the configuration is defined in the `variables.tf` file, but the following are the default values:
     * 1024Gb of storage capacity
     * Generation 1 Multi AZ deployment type
-    * 128Mbps of throughput capacity 
+    * 128Mbps of throughput capacity
     * 1 HA pair
     * 1 Storage Virtual Machine (SVM)
     * 1 FlexVol volume with the following configuration parameters:
@@ -52,7 +52,7 @@ Running this terraform sample will result the following:
         * Security style of UNIX
         * Storage efficiencies enabled
         * Auto tiering policy with 31 cooling days
-        * post-delete backup disabled 
+        * post-delete backup disabled
 
 ## Prerequisites
 
@@ -107,7 +107,7 @@ value was retrieved, and the configuration variable name.
 ### 1. Clone the repository
 In your server's terminal, navigate to the location where you wish to store this Terraform repository, and clone the repository using your preferred authentication type. In this example we are using HTTPS clone:
 
-```shell 
+```shell
 git clone https://github.com/NetApp/FSx-ONTAP-samples-scripts.git
 ```
 
@@ -211,7 +211,7 @@ terraform apply
 | route_table_ids | An array of routing table IDs that will be modified to allow access to the FSxN file system. This is only used for Multi AZ deployment types and must be left as null for Single AZ deployment types. | `list(string)` | `null` | no |
 | secret_name_prefix | The prefix to the secret names created that will contain the FSxN passwords (system, and SVM). | `string` | `"fsxn-secret"` | no |
 | secret_region | The AWS region where the secrets for the FSxN file system and SVM will be deployed. | `string` | `"us-west-2"` | no |
-| security_group_id | If you are not creating the security group, provide the ID of the security group to be used. | `string` | `""` | no |
+| security_group_ids | If you are not creating the security group, provide a list of the IDs of the security group to be used. | `list(string)` | `[]` | no |
 | security_group_name_prefix | The prefix to the security group name that will be created. | `string` | `"fsxn-sg"` | no |
 | source_sg_id | The ID of the security group to allow access to the FSxN file system. Set to an empty string if you want to use the cidr_for_sg as the source. | `string` | `""` | no |
 | svm_name | The name of the Storage Virtual Machine | `string` | `"fsx"` | no |
