@@ -32,9 +32,9 @@ module "fsxn_rotate_secret" {
 }
 
 /*
- * The following resources are for deploying a complete FSx ONTAP file system. 
+ * The following resources are for deploying a complete FSx ONTAP file system.
  * The code below deploys the following resources in this order:
- * 1. A file system 
+ * 1. A file system
  * 2. A storage virtual machine
  * 3. A volume within the storage virtual machine
  */
@@ -43,7 +43,7 @@ resource "aws_fsx_ontap_file_system" "terraform-fsxn" {
   preferred_subnet_id = var.fsx_subnets["primarysub"]
 
   storage_capacity                = var.fsx_capacity_size_gb
-  security_group_ids              = var.create_sg ? [element(aws_security_group.fsx_sg[*].id, 0)] : [var.security_group_id]
+  security_group_ids              = var.create_sg ? [element(aws_security_group.fsx_sg[*].id, 0)] : var.security_group_ids
   deployment_type                 = var.fsx_deploy_type
   throughput_capacity_per_ha_pair = var.fsx_tput_in_MBps
   ha_pairs                        = var.ha_pairs
