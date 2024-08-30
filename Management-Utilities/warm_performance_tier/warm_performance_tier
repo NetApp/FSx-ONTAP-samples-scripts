@@ -29,13 +29,13 @@ usage () {
   cat 1>&2 <<EOF
 
 Usage: $(basename $0) [-f filesystem_endpoint] [-v volume_name] [-d directory] [-t max_directory_threads] [-x max_read_threads] [-n nfs_type] [-h] [-V]
-where
+Where:
   -f filesystem_endpoint - Is the hostname or IP address of the FSx for ONTAP file system.
   -v volume_name - Is the ID of the volume.
   -n nfs_type - Is the NFS version to use. Default is nfs4.
   -d directory - Is the root directory to start the process from.
-  -t max_directory_threads - Is the maximum number of threads to use to process directories. Default is 10.
-  -x max_read_threads - Is the maximum number of threads to use to read files. Default is 4.
+  -t max_directory_threads - Is the maximum number of threads to use to process directories. The default is 10.
+  -x max_read_threads - Is the maximum number of threads to use to read files. The default is 4.
   -V - Enable verbose output. Displays the thread ID, date (in epoch seconds), then the directory or file being processed.
   -h - Prints this help information.
 

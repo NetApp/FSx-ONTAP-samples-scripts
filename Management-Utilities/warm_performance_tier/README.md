@@ -1,11 +1,11 @@
-# Warm Performance (SSD) test for FSx for ONTAP volume
+# Warm Performance (SSD) tier for an FSx for ONTAP volume
 
 ## Introduction
-This sample provides a script that can be used to warm FSx for ONTAP
+This sample provides a script that can be used to warm a FSx for ONTAP
 volume. In other words, it ensures all the blocks for a volume are in
 the "performance tier" as opposed to the "capacity tier." It does that
 simply by reading every byte of every file in the volume. Doing that
-causes any block that is currently in the capacity tier to be pull
+causes any block that is currently in the capacity tier to be pulled
 into the performance tier before being returned to the reader. At that point,
 assuming the tiering policy is not set to 'all', all the data should remain
 in the performance tier until the policy tiers it back out to the capacity tier.
@@ -15,14 +15,14 @@ the volume. It will spawn a separate thread for each directory
 in the volume, and then a separate thread for each file in that directory.
 The number of directory threads is controlled by the -t option. The number
 of reader threads is controlled by the -x option. Note that the script
-will spawn -x reader threads **per** directory thread. So, if you have 4
+will spawn -x reader threads **per** directory thread. So for example, if you have 4
 directory threads and 10 reader threads, you could have up to 40 reader
 threads running at one time.
 
 You can specify a FSx for ONTAP file system data endpoint and a volume
 name to the script and it will attempt to mount the volume if it isn't already.
 If it does mount it, it will mount it read-only and unmount
-when it is done. The script assume that the junction path is the same
+when it is done. The script assumes that the junction path is the same
 as the volume name. If this isn't the case, then just mount the volume
 before running the script and provide the path to the mount point
 with the -d option.
@@ -37,11 +37,11 @@ volume before reading the files.
 Once the volume has been mounted, then the script should be run by
 a user that has read access to all the files in the volume.
 
-Of course it only make sense to have the tiering policy on the volume
+Of course it only makes sense to have the tiering policy on the volume
 set to something other than "all", otherwise the script will be ineffective.
 
 # Running The Script
-To run the script you just need to change the UNIX permissions on the file to be executable, then run it as a command:
+To run this script you just need to change the UNIX permissions on the file to be executable, then run it as a command:
 ```
 chmod +x warm_performance_tier
  ./warm_performance_tier -d /path/to/mount/point
@@ -59,13 +59,13 @@ directory or file being processed.
 If you run the script with a '-h' option, you will see the following help message:
 ```
 Usage: warm_performance_tier [-f filesystem_endpoint] [-v volume_name] [-d directory] [-t max_directory_threads] [-x max_read_threads] [-n nfs_type] [-h] [-V]
-where
+Where:
   -f filesystem_endpoint - Is the hostname or IP address of the FSx for ONTAP file system.
   -v volume_name - Is the ID of the volume.
   -n nfs_type - Is the NFS version to use. Default is nfs4.
   -d directory - Is the root directory to start the process from.
-  -t max_directory_threads - Is the maximum number of threads to use to process directories. Default is 10.
-  -x max_read_threads - Is the maximum number of threads to use to read files. Default is 4.
+  -t max_directory_threads - Is the maximum number of threads to use to process directories. The default is 10.
+  -x max_read_threads - Is the maximum number of threads to use to read files. The default is 4.
   -V - Enable verbose output. Displays the thread ID, date (in epoch seconds), then the directory or file being processed.
   -h - Prints this help information.
 
