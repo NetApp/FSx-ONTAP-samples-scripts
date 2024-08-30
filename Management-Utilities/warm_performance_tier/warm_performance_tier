@@ -1,0 +1,260 @@
+#!/bin/bash
+#
+################################################################################
+# This script is used to warm an FSx for ONTAP volume. It does that simply
+# by reading every byte of every file in a volume. By doing reading all the
+# contents of a file, that forces the data to be read from the capacity tier
+# and stored in the performance tier. The assumption is that the user has
+# changed the tiering policy to something other than "all".
+#
+# To try and speed up the process, it will spawn multiple threads to process
+# the volume. It will spawn a separate thread for each directory
+# in the volume, and then a separate thread for each file it reads. The
+# number of directory threads is controlled by the -t option. The number
+# of reader threads is controlled by the -x option. Note that the script
+# will spawn -x reader threads PER directory thread. So, if you have 4
+# directory threads and 10 reader threads, you could have up to 40 reader
+# threads running at once.
+#
+# If you provide the -f option, then the script will try to mount the volume
+# for you. It will mount it read-only. If the volume is already mounted, it
+# will not try to mount it again. If you provide the -f option, you must also
+# provide the -v option.
+################################################################################
+
+################################################################################
+# This function is used to print the usage of the script.
+################################################################################
+usage () {
+  cat 1>&2 <<EOF
+
+Usage: $(basename $0) [-f filesystem_endpoint] [-v volume_name] [-d directory] [-t max_directory_threads] [-x max_read_threads] [-n nfs_type] [-h] [-V]
+where
+  -f filesystem_endpoint - Is the hostname or IP address of the FSx for ONTAP file system.
+  -v volume_name - Is the ID of the volume.
+  -n nfs_type - Is the NFS version to use. Default is nfs4.
+  -d directory - Is the root directory to start the process from.
+  -t max_directory_threads - Is the maximum number of threads to use to process directories. Default is 10.
+  -x max_read_threads - Is the maximum number of threads to use to read files. Default is 4.
+  -V - Enable verbose output. Displays the thread ID, date (in epoch seconds), then the directory or file being processed.
+  -h - Prints this help information.
+
+Notes:
+  * The filesystem_endpoint, volume_name and nfs_type are used to mount the volume
+    if it is not already mounted. It will be mounted read-only. It assumes that
+    the junction path is the same as the volume name.
+  * For each directory thread, there will be a maximum of max_read_threads threads
+    reading files.
+EOF
+
+}
+
+################################################################################
+# This function is used to see if a volume is already mounted. It will echo
+# to standard output the mount point if it is mounted, otherwise it will echo
+# an empty string and return 1.
+################################################################################
+isMounted () {
+
+  hostname=$1
+  volumeName=$2
+  #
+  # Normalize the hostname to its IP address.
+  hostIP=$(getent hosts $hostname | awk '{print $1}')
+  if [ -z "$hostIP" ]; then
+    echo "Error, cannot resolve the hostname '$hostname'." 1>&2
+    exit 1
+  fi
+
+  while read mountHost mountVolume mountPoint; do
+    #
+    # Normalize the hostname to its IP address.
+    if [ "$(echo "$mountHost" | egrep '^[[:digit:]]{1,3}\.[[:digit:]]{1,3}\.[[:digit:]]{1,3}\.[[:digit:]]{1,3}$')" == "$mountHost" ]; then
+      mountIP=$mountHost
+    else
+      mountIP=$(getent hosts $mountHost | awk '{print $1}')
+    fi
+
+    if [ -z "$mountIP" ]; then
+      echo "Error, when trying to detect if the volume was already mount, could not resolve the hostname '$mountHost'." 1>&2
+      exit 1
+    fi
+
+    if [ "$mountIP" = "$hostIP" -a "$mountVolume" = "$volumeName" ]; then
+      echo $mountPoint
+      return 0
+    fi
+  done < <(mount -t nfs -t nfs2 -t nfs3 -t nfs4 | awk '{split($1, str, ":"); print str[1], substr(str[2], 2), $3}')
+
+  echo ""
+  return 1
+}
+
+################################################################################
+# Read all the files in the passed directory.
+################################################################################
+processDirectory () {
+
+  local runningPIDs
+
+  if [ "$verbose" = "true" ]; then
+    echo "$BASHPID $(date +%s) - Processing $1"
+  fi
+
+  cd "$1"
+  while read file; do
+    if [ -f "$file" ]; then
+      #
+      # If there are too many threads running already, wait until one finishes.
+      if [ ${#runningPIDs[*]} -ge $maxFileThreads ]; then
+        wait -n -p pid
+        if [ $? -eq 127 ]; then
+          echo "$BASHPID $(date +%s) - Warning, 'wait -n' returned 127" 1>&2
+        else
+          #
+          # Check to make sure the PID is one that we recorded.
+          if [ "${runningPIDs[$pid]}" != $pid ]; then
+            echo "$BASHPID $(date +%s) - Warning, expected $pid, got '${runningPIDs[$pid]}'" 1>&2
+          fi
+          unset runningPIDs[$pid]
+        fi
+      fi
+      if [ "$verbose" == "true" ]; then
+        echo "$BASHPID $(date +%s) - Reading $1/$file and discarding output. Number of threads: $((${#runningPIDs[*]}+1))"
+      fi
+      cat "$file" > /dev/null 2>&1 || echo "$BASHPID $(date +%s) - Warning, cannot read '${file}'." &
+      #
+      # Record the PID of the process mostly so we can keep up with how many are running.
+      runningPIDs[$!]=$!
+    fi
+  done < <(ls -1A)
+  #
+  # Wait for all the file threads to finish.
+  wait
+  if [ "$verbose" = "true" ]; then
+    echo "$BASHPID $(date +%s) - Done processing $1."
+  fi
+}
+
+################################################################################
+# Main logic starts here.
+################################################################################
+#
+# Set some defaults.
+maxDirThreads=4
+maxFileThreads=10
+nfsType=nfs4
+verbose=false
+#
+# process command line options.
+while getopts "f:v:t:d:n:x:hV" option; do
+  case $option in
+    f)
+      filesystemHostname=$OPTARG
+      ;;
+    v)
+      volumeName=$OPTARG
+      ;;
+    d)
+      rootDirectory=$OPTARG
+      ;;
+    t)
+      maxDirThreads=$OPTARG
+      ;;
+    x)
+      maxFileThreads=$OPTARG
+      ;;
+    n)
+      nfsType=$OPTARG
+      ;;
+    V)
+      verbose=true
+      ;;
+    *)
+      usage
+      exit 1
+      ;;
+  esac
+done
+#
+# If the user provided a filesystem endpoint, then we need to try to mount the volume.
+if [ ! -z "$filesystemHostname" ]; then
+  if [ -z "$volumeName" ]; then
+    echo "Error, if you provide a filesystem endpoint, you must specify the volume_name to mount." 1>&2
+    usage
+    exit 1
+  fi
+
+  rootDirectory=$(isMounted $filesystemHostname $volumeName)
+  if [ -z "$rootDirectory" ]; then
+    id=$(id -u)
+    if [ "$id" != "0" ]; then
+      echo "Error, volume '${volumeName}' from file system '${filesystemHostname}' is not mounted and this script isn't running as root so it can't mount it." 1>&2
+      exit 1
+    fi
+
+    tmpMount=$(mktemp -d /mnt/XXXXXXX-$volumeName)
+    if [ -z "$tmpMount" ]; then
+      echo "Error, cannot create a temporary mount point." 1>&2
+      exit 1
+    fi
+
+    if mount -t $nfsType -o hard,ro $filesystemHostname:/$volumeName $tmpMount; then
+      if [ "$verbose" == "true" ]; then
+        echo "Volume '${volumeName}' from file system '${filesystemHostname}' mounted at '${tmpMount}'."
+      fi
+      trap 'umount $tmpMount; rmdir $tmpMount' EXIT
+    else
+      echo "Error, cannot mount ${filesystemHostname}:${volumeName}." 1>&2
+      rmdir $tmpMount
+      exit 1
+    fi
+    rootDirectory=$tmpMount
+  else
+    if [ $verbose == "true" ]; then
+      echo "Volume '${volumeName}' from file system '${filesystemHostname}' is already mounted at '${rootDirectory}'."
+    fi
+  fi
+fi
+#
+# At this point we should have the volume mounted.
+if [ -z "$rootDirectory" ]; then
+  echo "Error, you must specify the root directory to start the process from." 1>&2
+  usage
+  exit 1
+fi
+
+if [ ! -d "$rootDirectory" ]; then
+  echo "Error, the directory '$rootDirectory' does not exist." 1>&2
+  exit 1
+fi
+#
+# Process all the driectories in the volume.
+while read directory; do
+  #
+  # If there are too many threads running already, wait until one finishes.
+  if [ ${#runningPIDs[*]} -ge $maxDirThreads ]; then
+    wait -n -p pid
+    if [ $? = 127 ]; then
+      echo "$$ $(date +%s) - Warning, 'wait -n' returned 127." 1>&2
+    else
+      #
+      # Check to make sure the PID is one that we recorded.
+      if [ "${runningPIDs[$pid]}" != $pid ]; then
+        echo "$$ $(date +%s) - Warning, expected $pid, got '${runningPIDs[$pid]}'" 1>&2
+      else
+        unset runningPIDs[$pid]
+      fi
+    fi
+  fi
+  if [ "$verbose" == "true" ]; then
+    echo "$$ $(date +%s) - Processing directory $directory. Number of threads: $((${#runningPIDs[*]}+1))."
+  fi
+  processDirectory "$directory" &
+  runningPIDs[$!]=$!
+done < <(find $rootDirectory -type d)
+
+if [ "$verbose" = "true" ]; then
+  echo "$$ $(date +%s) - Waiting for all directory threads to finish."
+fi
+wait
