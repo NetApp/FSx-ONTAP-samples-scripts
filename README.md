@@ -28,6 +28,7 @@ Have a great idea? We'd love to hear it! Please email us at [ng-fsxn-github-samp
     * [AWS CLI management scripts for FSx ONTAP](/Management-Utilities/fsx-ontap-aws-cli-scripts)
     * [Rotate AWS Secrets Manager Secret](/Management-Utilities/fsxn-rotate-secret)
     * [FSx ONTAP iscsi volume creation automation for Windows](/Management-Utilities/iscsi-vol-create-and-mount)
+    * [Warm Performance Tier](/Management-Utilities/warm_performance_tier)
 * [Monitoring](/Monitoring)
     * [Export LUN metrics from an FSx ONTAP to Amazon CloudWatch](/Monitoring/LUN-monitoring)
     * [Automatically Add CloudWatch Alarms for FSx Resources](/Monitoring/auto-add-cw-alarms)
