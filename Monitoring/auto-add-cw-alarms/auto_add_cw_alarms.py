@@ -263,7 +263,7 @@ def getFileSystemId(alarm):
             for dim in metric['MetricStat']['Metric']['Dimensions']:
                 if dim['Name'] == 'FileSystemId':
                     return dim['Value']
-  return None
+    return None
 
 ################################################################################
 # This function will return all the file systems in the region. It will handle the
