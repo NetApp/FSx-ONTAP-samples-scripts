@@ -14,7 +14,7 @@ resource "aws_fsx_ontap_file_system" "terraform-fsxn" {
   preferred_subnet_id = var.subnets["primarysub"]
 
   storage_capacity                  = var.capacity_size_gb
-  security_group_ids                = var.create_sg ? [element(aws_security_group.fsx_sg[*].id, 0)] : [var.security_group_id]
+  security_group_ids                = var.create_sg ? [element(aws_security_group.fsx_sg[*].id, 0)] : var.security_group_ids
   deployment_type                   = var.deployment_type
   throughput_capacity_per_ha_pair   = var.throughput_in_MBps
   ha_pairs                          = var.ha_pairs
@@ -41,7 +41,7 @@ resource "aws_fsx_ontap_file_system" "terraform-fsxn" {
       error_message = "You must specify EITHER cidr_block OR source_sg_id when creating a security group, not both."
     }
     precondition {
-      condition = var.create_sg || var.security_group_id != ""
+      condition = var.create_sg || length(var.security_group_ids) > 0
       error_message = "You must specify a security group ID when not creating a security group."
     }
   }

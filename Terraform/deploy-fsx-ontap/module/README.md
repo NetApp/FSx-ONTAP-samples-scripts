@@ -236,7 +236,7 @@ terraform apply
 | route_table_ids | An array of routing table IDs that will be modified to allow access to the FSxN file system. This is only used for Multi AZ deployment types and must be left as null for Single AZ deployment types. | `list(string)` | `null` | no |
 | secret_name_prefix | The prefix to the secret name that will be created that will contain the FSxN passwords (system, and SVM). | `string` | `"fsxn-secret"` | no |
 | secrets_region | The AWS region where the secrets for the FSxN file system and SVM will be deployed. | `string` | `""` | no |
-| security_group_id | If you are not creating the security group, provide the ID of the security group to be used. | `string` | `""` | no |
+| security_group_ids | If you are not creating the security group, provide a list of IDs of the security groups to be used. | `list(string)` | `[]` | no |
 | security_group_name_prefix | The prefix to the security group name that will be created. | `string` | `"fsxn-sg"` | no |
 | source_sg_id | The ID of the security group to allow access to the FSxN file system. Set to an empty string if you want to use the cidr_for_sg as the source. | `string` | `""` | no |
 | svm_name | name of the Storage Virtual Machine, (a.k.a. vserver). | `string` | `"fsx"` | no |
