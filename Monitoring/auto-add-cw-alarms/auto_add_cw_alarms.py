@@ -84,6 +84,7 @@ import os
 import getopt
 import sys
 import time
+import json
 
 ################################################################################
 # This function adds the SSD Utilization CloudWatch alarm.
@@ -218,7 +219,8 @@ def getAlarmThresholdTagValue(fsx, arn):
         except botocore.exceptions.ClientError as e:
             if e.response['Error']['Code'] == 'ResourceNotFound':
                 return(100) # Return 100 so we don't try to create an alarm.
-            elif e.response['Error']['Code'] == 'TooManyRequestsException' or e.response['Error']['Code'] == 'ThrottlingException':
+
+            if e.response['Error']['Code'] == 'TooManyRequestsException' or e.response['Error']['Code'] == 'ThrottlingException':
                 sleep = sleep * 2
                 if sleep > 5:
                     raise e
@@ -256,11 +258,11 @@ def getSSDAlarmThresholdTagValue(tags):
 ################################################################################
 def getFileSystemId(alarm):
 
-  for metric in alarm['Metrics']:
-      if metric["Id"] == "m1":
-          for dim in metric['MetricStat']['Metric']['Dimensions']:
-              if dim['Name'] == 'FileSystemId':
-                  return dim['Value']
+    for metric in alarm['Metrics']:
+        if metric["Id"] == "m1":
+            for dim in metric['MetricStat']['Metric']['Dimensions']:
+                if dim['Name'] == 'FileSystemId':
+                    return dim['Value']
   return None
 
 ################################################################################
