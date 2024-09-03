@@ -542,7 +542,7 @@ regions = []
 dryRun = False
 #
 # Check to see if there any any environment variables set.
-customerID = os.environ.get('customerId', '')
+customerId = os.environ.get('customerId', '')
 accountId  = os.environ.get('accountId', '')
 SNStopic   = os.environ.get('SNStopic', '')
 onlyFilesystemId = None
