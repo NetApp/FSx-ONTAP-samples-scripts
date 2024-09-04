@@ -91,6 +91,29 @@ isMounted () {
 }
 
 ################################################################################
+# This function is used to read a file and discard the output. It reads the file
+# in blocks of 4MB in reverse order. It is done this way so ONTAP doesn't
+# assume this is a backup process and not promote the data to the performance
+# tier.
+################################################################################
+readFile () {
+  local file=$1
+  local blockSize=$((4*1024*1024))
+
+  fileSize=$(stat -c "%s" "$file")
+  fileBlocks=$(($fileSize/$blockSize))
+  while [ $fileBlocks -ge 0 ]; do
+    if dd if="$file" of=/dev/null bs=$blockSize count=1 skip=$fileBlocks > /dev/null 2>&1; then
+      :
+    else
+      return 1
+    fi
+    let fileBlocks-=1
+  done
+  return 0
+}
+
+################################################################################
 # Read all the files in the passed directory.
 ################################################################################
 processDirectory () {
@@ -122,7 +145,7 @@ processDirectory () {
       if [ "$verbose" == "true" ]; then
         echo "$BASHPID $(date +%s) - Reading $1/$file and discarding output. Number of threads: $((${#runningPIDs[*]}+1))"
       fi
-      cat "$file" > /dev/null 2>&1 || echo "$BASHPID $(date +%s) - Warning, cannot read '${file}'." &
+      readFile "$file" || echo "$BASHPID $(date +%s) - Warning, cannot read '${file}'." 1>&2 &
       #
       # Record the PID of the process mostly so we can keep up with how many are running.
       runningPIDs[$!]=$!
