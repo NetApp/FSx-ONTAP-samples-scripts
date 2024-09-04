@@ -7,7 +7,7 @@ the "performance tier" as opposed to the "capacity tier." It does that by
 simply reading every byte of every file in the volume. Doing that
 causes all blocks that are currently in the capacity tier to be pulled
 into the performance tier before being returned to the reader. At that point,
-assuming, the tiering policy is not set to 'all', all the data should remain
+assuming the tiering policy is not set to 'all', all the data should remain
 in the performance tier until ONTAP tiers it back based on the volume's
 tiering policy.
 
@@ -41,8 +41,8 @@ any user that has read access to the files in the volume can run it.
 Otherwise, the script needs to be run as 'root' so it can mount the
 volume before reading the files.
 
-If the 'root' user can't read the files in the volume, then you should use 'root'
-to mount the volume first and then run the script from a user ID that can read the contents
+If the 'root' user can't read the files in the volume, then you should use 'root' user just
+to mount the volume and then run the script from a user ID that can read the contents
 of all the files in the volume. 
 
 Make sure you have set the tiering policy on the volume set to something
@@ -50,10 +50,10 @@ other than "all" or "snapshot-only", otherwise the script will be ineffective.
 
 # Running The Script
 There are two main ways to run the script. The first is to just provide
-the script with a directory to start from. The script will then read
-every file in that directory and all subdirectories. The second way
-is to provide the script with the FSx for ONTAP file system data endpoint
-and the volume name. The script will then attempt to mount the volume
+the script with a directory to start from using the -d option. The script will then read
+every file in that directory and all its subdirectories. The second way
+is to provide the script with the FSx for ONTAP file system data endpoint with the -f option
+and the volume name with the -v option. The script will then attempt to mount the volume
 if it isn't already mounted. If it does mount it, it will mount it read-only
 and unmount when it is done.
 
@@ -85,7 +85,7 @@ If you run the script with a '-h' option, you will see the following help messag
 Usage: warm_performance_tier [-f filesystem_endpoint] [-v volume_name] [-d directory] [-t max_directory_threads] [-x max_read_threads] [-n nfs_type] [-h] [-V]
 Where:
   -f filesystem_endpoint - Is the hostname or IP address of the FSx for ONTAP file system.
-  -v volume_name - Is the ID of the volume.
+  -v volume_name - Is the name of the volume.
   -n nfs_type - Is the NFS version to use. Default is nfs4.
   -d directory - Is the root directory to start the process from.
   -t max_directory_threads - Is the maximum number of threads to use to process directories. The default is 10.
