@@ -69,8 +69,8 @@ passwords. This secret is necessary for making direct ONTAP API calls to monitor
 Example secret structure:
 ```
     {
-    	"fs-111222333": "Password1",
-	    "fs-444555666": "Password2"
+        "fs-111222333": "Password1",
+        "fs-444555666": "Password2"
     }	
 ```
 When deploying the CloudFormation template, you will need to provide the ARN of this secret as a parameter. This allows the Lambda function to securely access the passwords for monitoring purposes.
@@ -100,8 +100,8 @@ If not provided, some features may not operate correctly. This secret should con
 The key is the File System ID, and the value is the fsxadmin password. For example:
 ```
     {
-    	"fs-111222333":"Password1",
-    	"fs-444555666":"Password2"
+        "fs-111222333":"Password1",
+        "fs-444555666":"Password2"
     }
 ```
 
