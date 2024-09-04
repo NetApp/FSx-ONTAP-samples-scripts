@@ -18,8 +18,11 @@ There are two ways you can invoke this script (Python program). Either from a co
 as a Lambda function.
 
 ### Configuring the program
-Before you can run the program you will need to configure it. You can configure it two ways. Either by editing the top part of the program itself,
-where there are the following variable definitions, or if you are running it as a standalone program, via some command line options.
+Before you can run the program you will need to configure it. You can configure it a few ways:
+* By editing the top part of the program itself where there are the following variable definitions.
+* By setting environment variables.
+* If running it as a standalone program, via some command line options.
+
 Here is the list of variables, and what they define:
 
 | Variable | Description |Command Line Option|
@@ -34,14 +37,21 @@ Here is the list of variables, and what they define:
 |alarmPrefixSSD    | This defines the string that will be put in front of the name of every SSD utilization CloudWatch alarm that the program creates. Having a known prefix is how it knows it is the one maintaining the alarm.|N/A|
 |alarmPrefixVolume | This defines the string that will be put in front of the name of every volume utilization CloudWatch alarm that the program creates. Having a known prefix is how it knows it is the one maintaining the alarm.|N/A|
 
+There are a few command line options that don't have a corresponding variables:
+|Option|Description|
+|:-----|:----------|
+|-r region| This option can be specified multiple times to limit the regions that the program will act on. If not specified, the program will act on all regions.|
+|-d| This option will cause the program to run in "Dry Run" mode. In this mode, the program will only display messages showing what it would have done, and not really create or delete any CloudWatch alarms.|
+|-F filesystem\_ID| This option will cause the program to only add or remove alarms that are associated with the filesystem\_ID.|
+
 As mentioned with the threshold variables, you can create a tag on the specific resource to override the default value set by the associated threshold
 variable. Here is the list of tags and where they should be located:
 
 |Tag|Description|Location|
 |:---|:------|:---|
-|alarm_threshold | Sets the volume utilization threshold. | Volume |
-|cpu_alarm_threshold| Sets the CPU utilization threshold. | File System |
-|ssd_alarm_threshold| Sets the SSD utilization threshold. | File System |
+|alarm\_threshold | Sets the volume utilization threshold. | Volume |
+|cpu\_alarm\_threshold| Sets the CPU utilization threshold. | File System |
+|ssd\_alarm\_threshold| Sets the SSD utilization threshold. | File System |
 
 :bulb: **NOTE:** When the alarm threshold is set to 100, the alarm will not be created. So, if you set the default to 100, then you can selectively add alarms by setting the appropriate tag.
 
