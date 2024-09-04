@@ -116,15 +116,17 @@ To fully clean up resources after using this solution:
 You can find the alarms by searching for the name prefix "FSx-ONTAP" in the CloudWatch Alarms section.
 
 This behavior ensures that important monitoring setups are not unintentionally removed, but it requires additional steps for complete resource cleanup.
- 
+
 ## Author Information
-This repository is maintained by the contributors listed on GitHub.
- 
+
+This repository is maintained by the contributors listed on [GitHub](https://github.com/NetApp/FSx-ONTAP-samples-scripts/graphs/contributors).
+
 ## License
+
 Licensed under the Apache License, Version 2.0 (the "License").
 
-You may obtain a copy of the License at apache.org/licenses/LICENSE-2.0.
-
+You may obtain a copy of the License at [apache.org/licenses/LICENSE-2.0](http://www.apache.org/licenses/LICENSE-2.0).
+ 
 Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" basis, without WARRANTIES or conditions of any kind, either express or implied.
 
 See the License for the specific language governing permissions and limitations under the License.
