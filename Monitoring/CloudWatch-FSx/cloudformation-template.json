@@ -298,7 +298,7 @@
                     }
                 },
                 "PackageType": "Image",
-                "Timeout": 30,
+                "Timeout": 90,
                 "Environment": {
                     "Variables": {
                         "NODE_TLS_REJECT_UNAUTHORIZED": "0",
@@ -1108,7 +1108,7 @@
                             "type": "metric",
                             "properties": {
                                 "metrics": [
-                                    [ "AWS/FSx", "StorageCapacityUtilization", "VolumeId", "\"\"", "StorageTier", "SSD", "FileSystemId", "\"\"", "DataType", "All", { "id": "m1", "region": {"Ref": "AWS::Region"} } ]
+                                    [ "AWS/FSx", "StorageCapacityUtilization", "VolumeId", "\"\"", "FileSystemId", "\"\"", { "region": {"Ref": "AWS::Region"} } ]
                                 ],
                                 "yAxis": {
                                     "left": {
@@ -1119,7 +1119,7 @@
                                 "view": "timeSeries",
                                 "stacked": false,
                                 "region": {"Ref": "AWS::Region"},
-                                "stat": "Maximum",
+                                "stat": "Average",
                                 "period": 300,
                                 "title": "Volume Utilization"
                             }
