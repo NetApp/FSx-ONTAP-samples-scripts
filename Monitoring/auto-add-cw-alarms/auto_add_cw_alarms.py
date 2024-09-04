@@ -26,7 +26,7 @@
 #
 ################################################################################
 #
-# The following variable effect the behavior of the script. They can be
+# The following variables effect the behavior of the script. They can be
 # either be set here, overridden via the command line options, or
 # overridden by environment variables.
 #
@@ -58,9 +58,9 @@ defaultVolumeThreshold=80
 #
 ################################################################################
 # You can't change the following variables from the command line or environment
-# variables since changing them after the program has run once, would cause
+# variables since changing them after the program has run once would cause
 # all existing CloudWatch alarms to be abandoned, and all new alarms to be
-# created. So it is not recommended to change these variables unless you know
+# created. So, it is not recommended to change these variables unless you know
 # what you are doing.
 ################################################################################
 #
@@ -78,11 +78,13 @@ alarmPrefixSSD="SSD_Utilization_for_fs_"
 ################################################################################
 
 import botocore
+from botocore.config import Config
 import boto3
 import os
 import getopt
 import sys
 import time
+import json
 
 ################################################################################
 # This function adds the SSD Utilization CloudWatch alarm.
@@ -217,13 +219,15 @@ def getAlarmThresholdTagValue(fsx, arn):
         except botocore.exceptions.ClientError as e:
             if e.response['Error']['Code'] == 'ResourceNotFound':
                 return(100) # Return 100 so we don't try to create an alarm.
-            elif e.response['Error']['Code'] == 'TooManyRequestsException':
+
+            if e.response['Error']['Code'] == 'TooManyRequestsException' or e.response['Error']['Code'] == 'ThrottlingException':
                 sleep = sleep * 2
                 if sleep > 5:
                     raise e
-                print(f"Sleeping for {sleep} seconds.")
+                print(f"Warning: Rate Limit fault while getting tags. Sleeping for {sleep} seconds.")
                 time.sleep(sleep)
             else:
+                print(f"boto3 client error: {json.dumps(e.response)}")
                 raise e
 
 ################################################################################
@@ -249,6 +253,19 @@ def getSSDAlarmThresholdTagValue(tags):
     return(defaultSSDThreshold)
 
 ################################################################################
+# This function returns the file system id that the passed in alarm is
+# associated with.
+################################################################################
+def getFileSystemId(alarm):
+
+    for metric in alarm['Metrics']:
+        if metric["Id"] == "m1":
+            for dim in metric['MetricStat']['Metric']['Dimensions']:
+                if dim['Name'] == 'FileSystemId':
+                    return dim['Value']
+    return None
+
+################################################################################
 # This function will return all the file systems in the region. It will handle the
 # case where there are more file systms than can be returned in a single call.
 # It will also handle the case where we get a rate limit exception.
@@ -265,13 +282,14 @@ def getFss(fsx):
             sleep=.125
             break
         except botocore.exceptions.ClientError as e:
-            if e.response['Error']['Code'] == 'TooManyRequestsException':
+            if e.response['Error']['Code'] == 'TooManyRequestsException' or e.response['Error']['Code'] == 'ThrottlingException':
                 sleep = sleep * 2   # Exponential backoff.
                 if sleep > 5:
                     raise e
-                print(f"Sleeping for {sleep} seconds for initial file systems.")
+                print(f"Warning: Rate Limit fault while getting initial file system list. Sleeping for {sleep} seconds.")
                 time.sleep(sleep)
             else:
+                print(f"boto3 client error: {json.dumps(e.response)}")
                 raise e
 
     while nextToken:
@@ -281,13 +299,14 @@ def getFss(fsx):
             nextToken = response.get('NextToken')
             sleep=.125
         except botocore.exceptions.ClientError as e:
-            if e.response['Error']['Code'] == 'TooManyRequestsException':
+            if e.response['Error']['Code'] == 'TooManyRequestsException' or e.response['Error']['Code'] == 'ThrottlingException':
                 sleep = sleep * 2   # Exponential backoff.
                 if sleep > 5:
                     raise e
-                print(f"Sleeping for {sleep} seconds for additional file systems.")
+                print(f"Warning: Rate Limit fault while getting additional file systems. Sleeping for {sleep} seconds.")
                 time.sleep(sleep)
             else:
+                print(f"boto3 client error: {json.dumps(e.response)}")
                 raise e
     return fss
 
@@ -297,7 +316,7 @@ def getFss(fsx):
 # It will also handle the case where we get a rate limit exception.
 ################################################################################
 def getVolumes(fsx):
-
+    #
     # The initial amount of time to sleep if there is a rate limit exception.
     sleep=.125
     while True:
@@ -308,13 +327,14 @@ def getVolumes(fsx):
             sleep=.125
             break
         except botocore.exceptions.ClientError as e:
-            if e.response['Error']['Code'] == 'TooManyRequestsException':
+            if e.response['Error']['Code'] == 'TooManyRequestsException' or e.response['Error']['Code'] == 'ThrottlingException':
                 sleep = sleep * 2   # Exponential backoff.
                 if sleep > 5:
                     raise e
-                print(f"Sleeping for {sleep} seconds for initial volumes.")
+                print(f"Warning: Rate Limit fault while getting the initial list of volumes. Sleeping for {sleep} seconds.")
                 time.sleep(sleep)
             else:
+                print(f"boto3 client error: {json.dumps(e.response)}")
                 raise e
 
     while nextToken:
@@ -324,13 +344,14 @@ def getVolumes(fsx):
             nextToken = response.get('NextToken')
             sleep=.125
         except botocore.exceptions.ClientError as e:
-            if e.response['Error']['Code'] == 'TooManyRequestsException':
+            if e.response['Error']['Code'] == 'TooManyRequestsException' or e.response['Error']['Code'] == 'ThrottlingException':
                 sleep = sleep * 2   # Exponential backoff.
                 if sleep > 5:
                     raise e
-                print(f"Sleeping for {sleep} seconds for additional volumes.")
+                print(f"Warning: Rate Limit fault while getting additional volumes. Sleeping for {sleep} seconds.")
                 time.sleep(sleep)
             else:
+                print(f"boto3 client error: {json.dumps(e.response)}")
                 raise e
 
     return volumes
@@ -352,13 +373,14 @@ def getAlarms(cw):
             sleep=.125
             break
         except botocore.exceptions.ClientError as e:
-            if e.response['Error']['Code'] == 'TooManyRequestsException':
+            if e.response['Error']['Code'] == 'TooManyRequestsException' or e.response['Error']['Code'] == 'ThrottlingException':
                 sleep = sleep * 2
                 if sleep > 5:
                     raise e
-                print(f"Sleeping for {sleep} seconds for initial alarms.")
+                print(f"Warning: Rate Limit fault while getting the initial list of alarms. Sleeping for {sleep} seconds.")
                 time.sleep(sleep)
             else:
+                print(f"boto3 client error: {json.dumps(e.response)}")
                 raise e
 
     while nextToken:
@@ -368,13 +390,14 @@ def getAlarms(cw):
             nextToken = response.get('NextToken')
             sleep=.125
         except botocore.exceptions.ClientError as e:
-            if e.response['Error']['Code'] == 'TooManyRequestsException':
+            if e.response['Error']['Code'] == 'TooManyRequestsException' or e.response['Error']['Code'] == 'ThrottlingException':
                 sleep = sleep * 2   # Exponential backoff.
                 if sleep > 5:
                     raise e
-                print(f"Sleeping for {sleep} seconds for additional alarms.")
+                print(f"Warning: Rate Limit fault while getting additional alarms. Sleeping for {sleep} seconds.")
                 time.sleep(sleep)
             else:
+                print(f"boto3 client error: {json.dumps(e.response)}")
                 raise e
 
     return alarms
@@ -385,9 +408,9 @@ def getAlarms(cw):
 # have a CloudWatch alarm, and if not, add one.
 ################################################################################
 def lambda_handler(event, context):
-    global customerId, regions, SNStopic, accountId
+    global customerId, regions, SNStopic, accountId, onlyFilesystemId
     #
-    # If the customer ID is set, reformat to be used in the alarm description.
+    # If the customer ID is set, reformat it to be used in the alarm description.
     if customerId != '':
         customerId = f", CustomerID: {customerId}"
 
@@ -396,9 +419,17 @@ def lambda_handler(event, context):
 
     if len(accountId) == 0:
         raise Exception("You must specify an accountId to run this program.")
+    #
+    # Configure boto3 to use the more advanced "adaptive" retry method.
+    boto3Config = Config(
+        retries = {
+            'max_attempts': 5,
+            'mode': 'adaptive'
+        }
+    )
 
     if len(regions) == 0:  # pylint: disable=E0601
-        ec2Client = boto3.client('ec2')
+        ec2Client = boto3.client('ec2', config=boto3Config)
         ec2Regions = ec2Client.describe_regions()['Regions']
         for region in ec2Regions:
             regions += [region['RegionName']]
@@ -407,8 +438,8 @@ def lambda_handler(event, context):
     for region in regions:
         if region in fsxRegions:
             print(f'Scanning {region}')
-            fsx = boto3.client('fsx', region_name=region)
-            cw = boto3.client('cloudwatch', region_name=region)
+            fsx = boto3.client('fsx', region_name=region, config=boto3Config)
+            cw = boto3.client('cloudwatch', region_name=region, config=boto3Config)
             #
             # Get all the file systems, volumes and alarm in the region.
             fss     = getFss(fsx)
@@ -425,7 +456,8 @@ def lambda_handler(event, context):
                         alarmName = alarmPrefixCPU + fsId
                         alarmDescription = f"CPU utilization alarm for file system {fsName}{customerId} in region {region}."
 
-                        if(not contains_alarm(alarmName, alarms)):
+                        if(not contains_alarm(alarmName, alarms) and onlyFilesystemId == None or
+                           not contains_alarm(alarmName, alarms) and onlyFilesystemId != None and onlyFilesystemId == fsId):
                             print(f'Adding CPU Alarm for {fs["FileSystemId"]}')
                             add_cpu_alarm(cw, fsId, alarmName, alarmDescription, threshold, region)
             #
@@ -434,8 +466,9 @@ def lambda_handler(event, context):
                 alarmName = alarm['AlarmName']
                 if(alarmName[:len(alarmPrefixCPU)] == alarmPrefixCPU):
                     fsId = alarmName[len(alarmPrefixCPU):]
-                    if(not contains_fs(fsId, fss)):
-                        print("Deleteing alarm: " + alarmName + " in region " + region)
+                    if(not contains_fs(fsId, fss) and onlyFilesystemId == None or
+                       not contains_fs(fsId, fss) and onlyFilesystemId != None and onlyFilesystemId == fsId):
+                        print("Deleting alarm: " + alarmName + " in region " + region)
                         delete_alarm(cw, alarmName)
             #
             # Scan for filesystems without SSD Utilization Alarm.
@@ -448,7 +481,8 @@ def lambda_handler(event, context):
                         alarmName = alarmPrefixSSD + fsId
                         alarmDescription = f"SSD utilization alarm for file system {fsName}{customerId} in region {region}."
 
-                        if(not contains_alarm(alarmName, alarms)):
+                        if(not contains_alarm(alarmName, alarms) and onlyFilesystemId == None or
+                           not contains_alarm(alarmName, alarms) and onlyFilesystemId != None and onlyFilesystemId == fsId):
                             print(f'Adding SSD Alarm for {fsId}')
                             add_ssd_alarm(cw, fs['FileSystemId'], alarmName, alarmDescription, threshold, region)
             #
@@ -457,7 +491,8 @@ def lambda_handler(event, context):
                 alarmName = alarm['AlarmName']
                 if(alarmName[:len(alarmPrefixSSD)] == alarmPrefixSSD):
                     fsId = alarmName[len(alarmPrefixSSD):]
-                    if(not contains_fs(fsId, fss)):
+                    if(not contains_fs(fsId, fss) and onlyFilesystemId == None or
+                       not contains_fs(fsId, fss) and onlyFilesystemId != None and onlyFilesystemId == fsId):
                         print("Deleteing alarm: " + alarmName + " in region " + region)
                         delete_alarm(cw, alarmName)
             #
@@ -475,7 +510,8 @@ def lambda_handler(event, context):
                         alarmName = alarmPrefixVolume + volumeId
                         fsName = fsId.replace('fs-', 'FsxId')
                         alarmDescription = f"Volume utilization alarm for volumeId {volumeId}{customerId}, File System Name: {fsName}, Volume Name: {volumeName} in region {region}."
-                        if(not contains_alarm(alarmName, alarms)):
+                        if(not contains_alarm(alarmName, alarms) and onlyFilesystemId == None or
+                           not contains_alarm(alarmName, alarms) and onlyFilesystemId != None and onlyFilesystemId == fsId):
                             print(f'Adding volume utilization alarm for {volumeName} in region {region}.')
                             add_volume_alarm(cw, volumeId, alarmName, alarmDescription, fsId, threshold, region)
             #
@@ -484,7 +520,8 @@ def lambda_handler(event, context):
                 alarmName = alarm['AlarmName']
                 if(alarmName[:len(alarmPrefixVolume)] == alarmPrefixVolume):
                     volumeId = alarmName[len(alarmPrefixVolume):]
-                    if(not contains_volume(volumeId, volumes)):
+                    if(not contains_volume(volumeId, volumes) and onlyFilesystemId == None or
+                       not contains_volume(volumeId, volumes) and onlyFilesystemId != None and onlyFilesystemId == getFileSystemId(alarm)):
                         print("Deleteing alarm: " + alarmName + " in region " + region)
                         delete_alarm(cw, alarmName)
 
@@ -494,7 +531,7 @@ def lambda_handler(event, context):
 # This function is used to print out the usage of the script.
 ################################################################################
 def usage():
-    print('Usage: add_cw_alarm [-h|--help] [-d|--dryRun] [[-c|--customerID] customerID] [[-a|--accountID] aws_account_id] [[-s|--SNSTopic] SNS_Topic_Name] [[-r|--region] region] [[-C|--CPUThreshold] threshold] [[-S|--SSDThreshold] threshold] [[-V|--VolumeThreshold] threshold]')
+    print('Usage: add_cw_alarm [-h|--help] [-d|--dryRun] [[-c|--customerID customerID] [[-a|--accountID aws_account_id] [[-s|--SNSTopic SNS_Topic_Name] [[-r|--region region] [[-C|--CPUThreshold threshold] [[-S|--SSDThreshold threshold] [[-V|--VolumeThreshold threshold] [-F|--FileSystemID FileSystemID]')
 
 ################################################################################
 # Main logic starts here.
@@ -505,9 +542,10 @@ regions = []
 dryRun = False
 #
 # Check to see if there any any environment variables set.
-customerID = os.environ.get('customerId', '')
+customerId = os.environ.get('customerId', '')
 accountId  = os.environ.get('accountId', '')
 SNStopic   = os.environ.get('SNStopic', '')
+onlyFilesystemId = None
 defaultCPUThreshold    = int(os.environ.get('defaultCPUThreshold',    defaultCPUThreshold))
 defaultSSDThreshold    = int(os.environ.get('defaultSSDThreshold',    defaultSSDThreshold))
 defaultVolumeThreshold = int(os.environ.get('defaultVolumeThreshold', defaultVolumeThreshold))
@@ -515,9 +553,9 @@ defaultVolumeThreshold = int(os.environ.get('defaultVolumeThreshold', defaultVol
 # Check to see if we are bring run from a command line or a Lmabda function.
 if os.environ.get('AWS_LAMBDA_FUNCTION_NAME') == None:
     argumentList = sys.argv[1:]
-    options = "hc:a:s:dr:C:S:V:"
+    options = "hc:a:s:dr:C:S:V:F:"
 
-    longOptions = ["help", "customerID=", "accountID=", "SNSTopic=", "dryRun", "region=", "CPUThreshold=", "SSDThreshold=", "VolumeThreshold="]
+    longOptions = ["help", "customerID=", "accountID=", "SNSTopic=", "dryRun", "region=", "CPUThreshold=", "SSDThreshold=", "VolumeThreshold=", "FileSystemID="]
     skip = False
     try:
         arguments, values = getopt.getopt(argumentList, options, longOptions)
@@ -542,6 +580,8 @@ if os.environ.get('AWS_LAMBDA_FUNCTION_NAME') == None:
                 dryRun = True
             elif currentArgument in ("-r", "--region"):
                 regions += [currentValue]
+            elif currentArgument in ("-F", "--FileSystemID"):
+                onlyFilesystemId = currentValue
 
     except getopt.error as err:
         print(str(err))

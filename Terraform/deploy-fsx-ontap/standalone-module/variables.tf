@@ -6,7 +6,7 @@ variable "fsx_name" {
 
 variable "fsx_deploy_type" {
    description = "The file system deployment type. Supported values are 'MULTI_AZ_1', 'SINGLE_AZ_1', 'MULTI_AZ_2', and 'SINGLE_AZ_2'. MULTI_AZ_1 and SINGLE_AZ_1 are Gen 1. MULTI_AZ_2 and SINGLE_AZ_2 are Gen 2."
-   type        = string 
+   type        = string
    default     = "MULTI_AZ_1"
    validation {
       condition = contains(["MULTI_AZ_1", "SINGLE_AZ_1", "MULTI_AZ_2", "SINGLE_AZ_2"], var.fsx_deploy_type)
@@ -186,10 +186,10 @@ variable "create_sg" {
   default     = true
 }
 
-variable "security_group_id" {
-  description = "If you are not creating the security group, provide the ID of the security group to be used."
-  type        = string
-  default     = ""
+variable "security_group_ids" {
+  description = "If you are not creating the security group, provide a list of IDs of security groups to be used."
+  type        = list(string)
+  default     = []
 }
 
 variable "security_group_name_prefix" {

@@ -1,0 +1,37 @@
+---
+# Copyright (c) NetApp, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+name: "Update Cloudformation Template"
+
+on:
+  pull_request:
+    paths:
+      - 'Monitoring/monitor-ontap-services/monitor_ontap_services.py'
+  push:
+    paths:
+      - 'Monitoring/monitor-ontap-services/monitor_ontap_services.py'
+    branches:
+      - main
+
+jobs:
+  update-Cloudformation-Template:
+    runs-on: ubuntu-latest
+    permissions:
+      # Give the default GITHUB_TOKEN write permission to commit and push the
+      # added or changed files to the repository.
+      contents: write
+
+    steps:
+      - name: Checkout pull request
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: Update the Cloudformation Template
+        shell: bash
+        working-directory: Monitoring/monitor-ontap-services
+        run: ./updateMonOntapServiceCFTemplate
+
+      - name: Commit the changes
+        uses: stefanzweifel/git-auto-commit-action@v5

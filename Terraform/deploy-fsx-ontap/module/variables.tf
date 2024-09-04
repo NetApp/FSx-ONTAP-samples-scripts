@@ -174,10 +174,10 @@ variable "create_sg" {
   default     = true
 }
 
-variable "security_group_id" {
-  description = "If you are not creating the security group, provide the ID of the security group to be used."
-  type        = string
-  default     = ""
+variable "security_group_ids" {
+  description = "If you are not creating the security group, provide a list of IDs of the security groups to be used."
+  type        = list(string)
+  default     = []
 }
 
 variable "security_group_name_prefix" {
