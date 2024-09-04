@@ -131,7 +131,7 @@ You will find below a complete list of all the parameters that can be passed to 
 
 ```hcl
 module "fsxontap" {
-    source = "/home/ckeith/DevelopersAdocacy/FSx-ONTAP-samples-scripts/Terraform/deploy-fsx-ontap/module"
+    source = "github.com/NetApp/FSx-ONTAP-samples-scripts/Terraform/deploy-fsx-ontap/module"
 
     name = "Development"
 
