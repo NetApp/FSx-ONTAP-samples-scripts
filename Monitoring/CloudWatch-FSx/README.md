@@ -5,23 +5,17 @@ This sample provides a CloudFormation template to deploy an AWS CloudWatch dashb
 The template creates the following resources:
 
 1. Dashboard - The Amazon CloudWatch dashboard divided into four main sections: 
-<ol type="a"><ol type="a">
-<li>Overview metrics of all FSx systems in the region.
-<li>Metrics by individual FSx system.
-<li>Metrics by volume ID.
-<li>Alarms.
-</ol></ol>
+    1. Overview metrics of all FSx systems in the region.
+    1. Metrics by individual FSx system.
+    1. Metrics by volume ID.
+    1. Alarms.
 2. Lambda function - The service does the following:
-<ol type="a"><ol type="a">
-<li>Build custom widgets for the dashboard.
-<li>Collect metrics directly from ONTAP (like snapmirror health status).
-<li>Create CloudWatch alarms for all files systems in the region.
-</ol></ol>
+    1. Build custom widgets for the dashboard.
+    1. Collect metrics directly from ONTAP (like snapmirror health status).
+    1. Create CloudWatch alarms for all files systems in the region.
 3. Schedulers - Two Amazon EventBridge schedulers that trigger the Lambda function to:
-<ol type="a"><ol type="a">
-<li>Collect ONTAP metrics. Scheduled to trigger every minute.
-<li>Create, update or delete CloudWatch alarms. Scheduled to trigger once an hour.
-</ol></ol>
+    1. Collect ONTAP metrics. Scheduled to trigger every minute.
+    1. Create, update or delete CloudWatch alarms. Scheduled to trigger once an hour.
 4. Lambda Role - The IAM role that allows the Lambda function to run.
 5. Scheduler Role - The IAM role that allows the scheduler to trigger the Lambda function.
 6. SecretManager endpoint - The Lambda function runs inside a VPC, which by default lacks outgoing internet connectivity. To
