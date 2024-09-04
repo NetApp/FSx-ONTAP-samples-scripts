@@ -31,40 +31,39 @@ function to send calls to FSxService to retrieve file systems information.
  
 ## Prerequisites
 1. You should have an AWS Account with the following permissions to create and manage resources:
-* "cloudformation:DescribeStacks"
-* "cloudformation:ListStacks"
-* "cloudformation:DescribeStackEvents"
-* "cloudformation:ListStackResources"
-* "cloudformation:CreateChangeSet"
-* "ec2:DescribeSubnets"
-* "ec2:DescribeSecurityGroups"
-* "ec2:DescribeVpcs"
-* "iam:ListRoles"
-* "iam:GetRolePolicy"
-* "iam:GetRole"
-* "iam:DeleteRolePolicy"
-* "iam:CreateRole"
-* "iam:DetachRolePolicy"
-* "iam:PassRole"
-* "iam:PutRolePolicy"
-* "iam:DeleteRole"
-* "iam:AttachRolePolicy"
-* "lambda:AddPermission"
-* "lambda:RemovePermission"
-* "lambda:InvokeFunction"
-* "lambda:GetFunction"
-* "lambda:CreateFunction"
-* "lambda:DeleteFunction"
-* "lambda:TagResource"
-* "codestar-connections:GetSyncConfiguration"
-* "ecr:BatchGetImage"
-* "ecr:GetDownloadUrlForLayer"
-* "scheduler:GetSchedule"
-* "scheduler:CreateSchedule"
-* "scheduler:DeleteSchedule"
-* "logs:PutRetentionPolicy"
-* "secretsmanager:GetSecretValue" (on specific secert)
-
+    * "cloudformation:DescribeStacks"
+    * "cloudformation:ListStacks"
+    * "cloudformation:DescribeStackEvents"
+    * "cloudformation:ListStackResources"
+    * "cloudformation:CreateChangeSet"
+    * "ec2:DescribeSubnets"
+    * "ec2:DescribeSecurityGroups"
+    * "ec2:DescribeVpcs"
+    * "iam:ListRoles"
+    * "iam:GetRolePolicy"
+    * "iam:GetRole"
+    * "iam:DeleteRolePolicy"
+    * "iam:CreateRole"
+    * "iam:DetachRolePolicy"
+    * "iam:PassRole"
+    * "iam:PutRolePolicy"
+    * "iam:DeleteRole"
+    * "iam:AttachRolePolicy"
+    * "lambda:AddPermission"
+    * "lambda:RemovePermission"
+    * "lambda:InvokeFunction"
+    * "lambda:GetFunction"
+    * "lambda:CreateFunction"
+    * "lambda:DeleteFunction"
+    * "lambda:TagResource"
+    * "codestar-connections:GetSyncConfiguration"
+    * "ecr:BatchGetImage"
+    * "ecr:GetDownloadUrlForLayer"
+    * "scheduler:GetSchedule"
+    * "scheduler:CreateSchedule"
+    * "scheduler:DeleteSchedule"
+    * "logs:PutRetentionPolicy"
+    * "secretsmanager:GetSecretValue" (on specific secert)
 2. Optional: create a secret in AWS Secrets Manager with key-value pairs of file system IDs and their corresponding fsxadmin 
 passwords. This secret is necessary for making direct ONTAP API calls to monitor resources, such as SnapMirror relations.
 Example secret structure:
@@ -117,7 +116,6 @@ To fully clean up resources after using this solution:
 You can find the alarms by searching for the name prefix "FSx-ONTAP" in the CloudWatch Alarms section.
 
 This behavior ensures that important monitoring setups are not unintentionally removed, but it requires additional steps for complete resource cleanup.
-		
  
 ## Author Information
 This repository is maintained by the contributors listed on GitHub.
