@@ -138,7 +138,7 @@ def lambda_handler(event, context):
     logging.getLogger("urllib3").setLevel(logging.WARNING)
     #
     # If this is an event from a failed call. Report that and return.
-    if event['detail']['errorCode'] != None:
+    if event['detail'].get('errorCode') != None:
         logger.warning(f"This is reporting on a error event. Error Code: {event['detail']['errorCode']}. Error Message: {event['detail']['errorMessage']}.")
         return
     #
