@@ -34,8 +34,8 @@ Where:
   -v volume_name - Is the ID of the volume.
   -n nfs_type - Is the NFS version to use. Default is nfs4.
   -d directory - Is the root directory to start the process from.
-  -t max_directory_threads - Is the maximum number of threads to use to process directories. The default is 10.
-  -x max_read_threads - Is the maximum number of threads to use to read files. The default is 4.
+  -t max_directory_threads - Is the maximum number of threads to use to process directories. The default is 5.
+  -x max_read_threads - Is the maximum number of threads to use to read files. The default is 2.
   -V - Enable verbose output. Displays the thread ID, date (in epoch seconds), then the directory or file being processed.
   -h - Prints this help information.
 
@@ -98,10 +98,14 @@ isMounted () {
 ################################################################################
 readFile () {
   local file=$1
-  local blockSize=$((4*1024*1024))
+  local blockSize=$((2*1024*1024))
 
   fileSize=$(stat -c "%s" "$file")
-  fileBlocks=$(($fileSize/$blockSize))
+  fileBlocks=$((fileSize/blockSize))
+  if [ $((fileSize % blockSize)) -ne 0 -o $fileSize -eq 0 ]; then
+    let fileBlocks+=1
+  fi
+
   while [ $fileBlocks -ge 0 ]; do
     if dd if="$file" of=/dev/null bs=$blockSize count=1 skip=$fileBlocks > /dev/null 2>&1; then
       :
@@ -164,8 +168,8 @@ processDirectory () {
 ################################################################################
 #
 # Set some defaults.
-maxDirThreads=4
-maxFileThreads=10
+maxDirThreads=2
+maxFileThreads=5
 nfsType=nfs4
 verbose=false
 #
