@@ -11,25 +11,24 @@ assuming the tiering policy is not set to 'all' or 'snapshot', all the data shou
 in the performance tier until ONTAP tiers it back based on the volume's
 tiering policy.
 
-Note that by default Data ONTAP will not store data in the performance
+Note that, by default, Data ONTAP will not store data in the performance
 tier from the capacity tier if it detects that the data is being read sequentially.
 This is to keep things like backups and virus scans from filling up the performance tier.
 You can, and should, override this behavior by setting
 the cloud-retrieval-policy to "on-read" for the volume. Examples on
 how to do that are shown below.
 
-To further try and keep ONTAP from now keeping data in the performance tier
-after reading it in, this script will
-read files in "reverse" order. Meaning it will read the last block of
-the file first, then the second to last block, and so on. 
+In an additional effort to try to get ONTAP to keep data in the performance tier
+after reading it in, this script will read files in "reverse" order. Meaning
+it will read the last block of the file first, then the second to last block, and so on.
 
 To speed up the process, the script will spawn multiple threads to process
 the volume. It will spawn a separate thread for each directory
 in the volume, and then a separate thread for each file in that directory.
 The number of directory threads is controlled by the -t option. The number
 of reader threads is controlled by the -x option. Note that the script
-will spawn -x reader threads **per** directory thread. So for example, if you have 4
-directory threads and 10 reader threads, you could have up to 40 reader
+will spawn -x reader threads **per** directory thread. So, for example, if you have 2
+directory threads and 5 reader threads, you could have up to 10 reader
 threads running at one time.
 
 Since the goal of this script is to force all the data that is currently
@@ -44,8 +43,8 @@ capacity tier after running this script. There can be several reasons
 for that. For example:
 
 * Space is from snapshots that aren't part of the live volume anymore.
-* Space from blocks that are part of a object in the object store, but aren't
-part of the volume. This space will get consolidated eventaully.
+* Space from blocks that are part of an object in the object store, but aren't
+part of the volume. This space will get consolidated eventually.
 * Some is from metadata that is always kept in the capacity tier.
 
 Even with the reasons mentioned above, we have found that running the
@@ -54,9 +53,9 @@ if you are trying to get as much data as possible into the performance tier,
 it is recommended to run the script twice.
 
 ## Set Up
-The first step is ensure the volume's tiering policy is set
+The first step is to ensure the volume's tiering policy is set
 to something other than "all" or "snapshot-only". You should also ensure
-that the cloud-retreival-policy to set to "on-read". You can make
+that the cloud-retrieval-policy is set to "on-read". You can make
 both of these changes with the following commands:
 ```
 set advanced -c off
@@ -64,13 +63,13 @@ volume modify -vserver <vserver> -volume <volume> -tiering-policy auto -cloud-re
 ```
 Where `<vserver>` is the name of the SVM and `<volume>` is the name of the volume.
 
-The next perperational step is to copy the scrip to a Linux based host that is able to NFS
+The next step is to copy the script to a Linux based host that is able to NFS
 mount the volume to be warmed. If the volume is already mounted, then
 any user that has read access to all the files in the volume can run it.
 Otherwise, the script needs to be run as 'root' so it can mount the
 volume before reading the files.
 
-If the 'root' user can't read the all files in the volume, then you should use 'root' user just
+If the 'root' user can't read the all files in the volume, then you should use the 'root' user just
 to mount the volume and then run the script from a user ID that can read the contents
 of all the files in the volume. 
 
@@ -114,8 +113,8 @@ Where:
   -v volume_name - Is the name of the volume.
   -n nfs_type - Is the NFS version to use. Default is nfs4.
   -d directory - Is the root directory to start the process from.
-  -t max_directory_threads - Is the maximum number of threads to use to process directories. The default is 5
-  -x max_read_threads - Is the maximum number of threads to use to read files. The default is 2.
+  -t max_directory_threads - Is the maximum number of threads to use to process directories. The default is 2.
+  -x max_read_threads - Is the maximum number of threads to use to read files. The default is 5.
   -V - Enable verbose output. Displays the thread ID, date (in epoch seconds), then the directory or file being processed.
   -h - Prints this help information.
 
