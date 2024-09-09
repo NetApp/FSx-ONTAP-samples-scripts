@@ -21,6 +21,8 @@ Before running the UNIX based scripts, make sure the following package is instal
 |list_fsx_filesystems.ps1 | List all the FSx for NetApp ONTAP filesystems that the user has access to, written in PowerShell. |
 |list_fsxn_volumes        | List all the FSx for NetApp ONTAP volumes that the user has access to. |
 |list_fsxn_svms           | List all the storage virtual machines that the user access to. |
+|list_aws_subnets         | List all the aws subnets. |
+|list_aws_vpcs            | List all the aws vpcs. |
 |delete_fsxn_filesystem   | Deletes an FSx for NetApp ONTAP filesystem. |
 |delete_fsxn_svm          | Deletes an svm. |
 |delete_fsxn_volume       | Deletes a volume. |

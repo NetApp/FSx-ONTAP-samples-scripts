@@ -1,0 +1,76 @@
+#!/bin/bash
+#
+# This script is used to list all VPCs in the AWS account.
+################################################################################
+#
+usage () {
+  cat 1>&2 <<EOF
+Usage: $(basename $0) [-a] [-r region] [-s]
+where: -a list - All regions
+       -r region - List VPCs in the specified region
+       -s - List all the subnets in the VPC
+       -q - Supress extraineous output
+       -h - Print this help message
+EOF
+  exit 1
+}
+
+# Check if the required tools are installed
+for tool in aws jq; do
+  if which $tool > /dev/null 2>&1; then
+    :
+  else
+    echo "Error, $tool command is rquired to run this script."
+    exit 1
+  fi
+done
+
+allRegions=False
+regions=""
+subnets=False
+quiet=False
+while getopts "qsar:h" opt; do
+  case $opt in
+    a) allRegions=True
+      ;;
+    r) regions=$OPTARG
+      ;;
+    s) subnets=True
+      ;;
+    q) quiet=True
+      ;;
+    *) usage
+      ;;
+  esac
+done
+
+tmpout=/tmp/list_aws_vpcs.$$
+trap 'rm -f $tmpout' exit
+
+if [ "$allRegions" == "True" ]; then
+  regions=$(aws ec2 describe-regions --query "Regions[].RegionName" --output=text)
+else
+  if [ -z "$regions" ]; then
+     regions=$(aws configure get region)
+  fi
+fi
+
+vpcFormatStr="%21s  %19s  %s\n"
+for region in $regions; do
+  [ "$quiet" != "True" ] && printf "\nRegion: $region\n"
+  first=True
+  aws ec2 describe-vpcs --region $region | jq -r '.Vpcs[] | .VpcId + " " + .CidrBlock + " " + (if (.Tags != null) then (.Tags[] | (select(.Key == "Name") .Value)) else "" end)' |  \
+    while read vpcId cidr name; do
+      if [ "$quiet" != "True" -a "$first" == "True" ]; then
+        printf "\n$vpcFormatStr" "VPC IP" "CIDR" "Name"
+        first=False
+      fi
+      echo "$vpcId,$cidr,$name" | awk -F, '{printf "'"$vpcFormatStr"'", $1, $2, $3}'
+      
+      if [ "$subnets" == "True" ]; then
+        printf "\n\tSubnets:\n"
+        aws ec2 describe-subnets --filters '[{"Name": "vpc-id", "Values": ["'$vpcId'"]}]' | jq -r '.Subnets[] | .VpcId + " " + .SubnetId + " " + .CidrBlock + " " + (first(.Tags[] | select(.Key == "Name").Value) // "")' | awk 'BEGIN {formatStr="\t\t%24s  %18s  %s\n"; printf(formatStr, "Subnet ID", "CIDR", "Name")} {name=$4; for (i=5; i<=NF; i++) {name=name " " $(i)}; printf(formatStr , $2, $3, name)}'
+        first=True
+      fi
+  done
+done
