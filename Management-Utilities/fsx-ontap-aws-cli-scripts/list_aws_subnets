@@ -1,0 +1,58 @@
+#!/bin/bash
+#
+# This script is used to list all VPCs in the AWS account.
+################################################################################
+#
+usage () {
+  cat 1>&2 <<EOF
+Usage: $(basename $0) [-a] [-r region] [-v vpcId]
+Where:
+    vpcId is the VPC id to list the subnets for.
+EOF
+  exit 1
+}
+#
+# Check if the required tools are installed
+for tool in aws jq; do
+  if which $tool > /dev/null 2>&1; then
+    :
+  else
+    echo "Error, $tool command is rquired to run this script."
+    exit 1
+  fi
+done
+
+allRegions=False
+regions=""
+vpcId=""
+while getopts "ar:hv:" opt; do
+  case $opt in
+    a) allRegions=True
+      ;;
+    r) regions=$OPTARG
+      ;;
+    v) vpcId=$OPTARG
+      ;;
+    *) usage
+      ;;
+  esac
+done
+
+if [ "$allRegions" == "True" ]; then
+  regions=$(aws ec2 describe-regions --query "Regions[].RegionName" --output=text)
+else
+  if [ -z "$regions" ]; then
+     regions=$(aws configure get region)
+  fi
+fi
+
+for region in $regions; do
+  if [ "$allRegions" == "True" ]; then
+    printf "\nRegion: $region\n"
+  fi
+  if [ -z "$vpcId" ]; then
+    aws ec2 describe-subnets | jq -r '.Subnets[] | .VpcId + "," + .SubnetId + "," + .CidrBlock + "," + (first(.Tags[] | select(.Key == "Name").Value) // "")' | awk -F, 'BEGIN {formatStr="%21s  %24s  %18s  %s\n"; printf(formatStr, "VPC Id", "Subnet ID", "CIDR", "Name")} {printf(formatStr , $1, $2, $3, $4)}'
+  else
+    aws ec2 describe-subnets --filters '[{"Name": "vpc-id", "Values": ["'$vpcId'"]}]' | jq -r '.Subnets[] | .VpcId + "," + .SubnetId + "," + .CidrBlock + "," + (first(.Tags[] | select(.Key == "Name").Value) // "")' | awk -F, 'BEGIN {formatStr="%21s  %24s  %18s  %s\n"; printf(formatStr, "VPC Id", "Subnet ID", "CIDR", "Name")} {printf(formatStr , $1, $2, $3, $4)}'
+  fi
+done
