@@ -2,6 +2,7 @@
 
 ## Introduction
 This sample provides a CloudFormation template to deploy an AWS CloudWatch dashboard for monitoring FSx for ONTAP systems. The dashboard offers comprehensive insights into your FSx for ONTAP resources, helping you monitor performance, track metrics, and manage alarms efficiently. 
+![Screenshot](images/CW-Dashboard-Screenshot.png)
 The template creates the following resources:
 
 1. Dashboard - The Amazon CloudWatch dashboard divided into four main sections: 
