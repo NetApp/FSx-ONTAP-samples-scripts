@@ -10,18 +10,31 @@ to monitor the CPU utilization of the file system. And if a volume or file syste
 
 To implement this, you might think to just create EventTail filters to trigger on the creation or deletion of an FSx Volume.
 This would kind of work, but since you have command line access to the FSx for ONTAP file system, you can create
-and delete volumes without creating CloudTrail events. So, this method would not be reliable. Therefore, instead
+and delete volumes without generating any CloudTrail events. So, this method would not be reliable. Therefore, instead
 of relying on those events, this script will scan all the file systems and volumes in all the regions then create and delete alarms as needed.
 
 ## Invocation
-There are two ways you can invoke this script (Python program). Either from a computer that has Python installed, or you could upload it
-as a Lambda function.
+There are two ways you can invoke this script (Python program). Either from a computer that has Python installed, or you could install it
+as a Lambda function. If you want to run it as a Lambda function, a CloudFormation template is included in the repo that will:
+- Create a role that will allow the Lambda function to:
+    - List AWS regions. So it can scan all regions for FSx for ONTAP file systems and volumes.
+    - List the FSx for ONTAP file systems.
+    - List the FSx volume.
+    - List the CloudWatch alarms.
+    - List tags for the resources. This is so you can customize the thresholds for the alarms.
+    - Create CloudWatch alarms.
+    - Delete CloudWatch alarms that it has created (based on alarm names).
+- Create a Lambda function with the Python program.
+- Create a EventBridge schedule that will run the Lambda function on a user defined basis.
+- Create a role that will allow the EventBridge schedule to trigger the Lambda function.
 
 ### Configuring the program
 Before you can run the program you will need to configure it. You can configure it a few ways:
 * By editing the top part of the program itself where there are the following variable definitions.
-* By setting environment variables.
+* By setting environment variables with the same names as the variables in the program.
 * If running it as a standalone program, via some command line options.
+
+:bulb: **NOTE:** The CloudFormation template will prompt for these values when you create the stack and will set the appropriate environment variables for you.
 
 Here is the list of variables, and what they define:
 
@@ -78,19 +91,20 @@ You can run the program in "Dry Run" mode by specifying the `-d` (or `--dryRun`)
 messages showing what it would have done, and not really create or delete any CloudWatch alarms.
 
 ### Running as a Lambda function
-If you run the program as a Lambda function, you will want to set the timeout to at least two minutes since some of the API calls
+A CloudFormation template is included in the repo that will do the steps below. Otherwise, here are the steps required to install the program as a Lambda function.
+Create a Lambda function and upload the program as the function code. Set the set the timeout to at least five minutes since some of the API calls
 can take a significant amount of "clock time" to run, especially in distant regions.
 
 Once you have installed the Lambda function it is recommended to set up a scheduled type EventBridge rule so the function will run on a regular basis.
 
 The appropriate permissions will need to be assigned to the Lambda function in order for it to run correctly.
 It doesn't need many permissions. It just needs to be able to:
-* List the FSx for ONTAP file systems
-* List the FSx volume names
-* List the CloudWatch alarms
-* Create CloudWatch alarms
-* Delete CloudWatch alarms
-* Create CloudWatch Log Groups and Log Streams in case you need to diagnose an issue
+* List the FSx for ONTAP file systems.
+* List the FSx volume names.
+* List the CloudWatch alarms.
+* Create CloudWatch alarms.
+* Delete CloudWatch alarms. You can set resource to "arn:aws:cloudwatch:*:${AWS::AccountId}:alarm:FSx-ONTAP-Auto*" to limit the deletion to only the alarms that it created.
+* Create CloudWatch Log Groups and Log Streams in case you need to diagnose an issue.
 
 The following permissions are required to run the script (although you could narrow the "Resource" specification to suit your needs.)
 ```JSON
@@ -105,7 +119,6 @@ The following permissions are required to run the script (although you could nar
                 "fsx:ListTagsForResource",
                 "fsx:DescribeVolumes",
                 "fsx:DescribeFilesystems",
-                "cloudwatch:DeleteAlarms",
                 "cloudwatch:DescribeAlarmsForMetric",
                 "ec2:DescribeRegions",
                 "cloudwatch:DescribeAlarms"
@@ -116,13 +129,21 @@ The following permissions are required to run the script (although you could nar
             "Sid": "VisualEditor1",
             "Effect": "Allow",
             "Action": [
+                "cloudwatch:DeleteAlarms"
+            ],
+            "Resource": "arn:aws:cloudwatch:*:*:alarm:FSx-ONTAP-Auto*"
+        },
+        {
+            "Sid": "VisualEditor2",
+            "Effect": "Allow",
+            "Action": [
                 "logs:CreateLogStream",
                 "logs:PutLogEvents"
             ],
             "Resource": "arn:aws:logs:*:*:log-group:*:log-stream:*"
         },
         {
-            "Sid": "VisualEditor2",
+            "Sid": "VisualEditor3",
             "Effect": "Allow",
             "Action": "logs:CreateLogGroup",
             "Resource": "arn:aws:logs:*:*:log-group:*"
@@ -133,7 +154,7 @@ The following permissions are required to run the script (although you could nar
 
 ### Expected Action
 Once the script has been configured and invoked, it will:
-* Scan for every FSx for ONTAP file systems in every region. For every file system it finds it will:
+* Scan for every FSx for ONTAP file systems in every region. For every file system that it finds it will:
     * Create a CPU utilization CloudWatch alarm, unless the threshold value is set to 100 for the specific alarm.
     * Create a SSD utilization CloudWatch alarm, unless the threshold value is set to 100 for the specific alarm.
 * Scan for every FSx for ONTAP volume in every region. For every volume it finds it will:

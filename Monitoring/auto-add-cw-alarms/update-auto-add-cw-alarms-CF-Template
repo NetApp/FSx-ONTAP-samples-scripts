@@ -6,7 +6,7 @@
 #################################################################################
 
 majorVersionNum=2
-file="monitor_ontap_services.py"
+file="auto_add_cw_alarms.py"
 
 tmpfile1=$(mktemp /tmp/tmpfile1.XXXXXX)
 tmpfile2=$(mktemp /tmp/tmpfile2.XXXXXX)
