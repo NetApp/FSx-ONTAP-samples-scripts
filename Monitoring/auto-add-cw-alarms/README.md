@@ -17,7 +17,7 @@ of relying on those events, this script will scan all the file systems and volum
 There are two ways you can invoke this script (Python program). Either from a computer that has Python installed, or you could install it
 as a Lambda function. If you want to run it as a Lambda function, a CloudFormation template is included in the repo that will:
 - Create a role that will allow the Lambda function to:
-    - List AWS regions. So it can scan all regions for FSx for ONTAP file systems and volumes.
+    - List AWS regions. This is so it can scan all regions for FSx for ONTAP file systems and volumes.
     - List the FSx for ONTAP file systems.
     - List the FSx volume.
     - List the CloudWatch alarms.
@@ -92,7 +92,8 @@ messages showing what it would have done, and not really create or delete any Cl
 
 ### Running as a Lambda function
 A CloudFormation template is included in the repo that will do the steps below. Otherwise, here are the steps required to install the program as a Lambda function.
-Create a Lambda function and upload the program as the function code. Set the set the timeout to at least five minutes since some of the API calls
+
+Create a Lambda function and upload the program as the function code. Set the timeout to at least five minutes since some of the API calls
 can take a significant amount of "clock time" to run, especially in distant regions.
 
 Once you have installed the Lambda function it is recommended to set up a scheduled type EventBridge rule so the function will run on a regular basis.
@@ -156,7 +157,7 @@ The following permissions are required to run the script (although you could nar
 Once the script has been configured and invoked, it will:
 * Scan for every FSx for ONTAP file systems in every region. For every file system that it finds it will:
     * Create a CPU utilization CloudWatch alarm, unless the threshold value is set to 100 for the specific alarm.
-    * Create a SSD utilization CloudWatch alarm, unless the threshold value is set to 100 for the specific alarm.
+    * Create an SSD utilization CloudWatch alarm, unless the threshold value is set to 100 for the specific alarm.
 * Scan for every FSx for ONTAP volume in every region. For every volume it finds it will:
     * Create a Volume Utilization CloudWatch alarm, unless the threshold value is set to 100 for the specific alarm.
 * Scan for the CloudWatch alarms and remove any alarms that the associated resource doesn't exist anymore.
