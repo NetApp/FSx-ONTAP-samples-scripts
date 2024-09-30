@@ -15,4 +15,6 @@
 /Monitoring/LUN-monitoring/ @LirazRom10
 /Monitoring/auto-add-cw-alarms/ @kcantrel
 /Monitoring/monitor-ontap-services/ @kcantrel
+/Terraform/deploy-fsx-ontap-sqlserver/ @varunrai
+/Terraform/deploy-fsx-ontap-fileshare-access/ @varunrai
 /Terraform/deploy-fsx-ontap/ @kcantrel
