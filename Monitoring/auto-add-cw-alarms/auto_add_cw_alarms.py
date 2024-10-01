@@ -72,9 +72,12 @@ defaultVolumeThreshold=80
 #
 # The following is put in front of all alarms so an IAM policy can be create
 # that will allow this script to only be able to delete the alarms it creates.
-# If you change this, you must also change the IAM policy. Note that the
-# Cloudfomration template also assume the value of this variable.
-basePrefix="FSx-ONTAP-Auto"
+# If you change this, you must also change the IAM policy. It can be
+# set via an environment variable, this is so that the CloudFormation template
+# can pass the value to the Lambda function. To change the value, change
+# the "FSx-ONTAP-Auto" string to your desired value.
+import os
+basePrefix = os.environ.get('basePrefix', "FSx-ONTAP-Auto")
 #
 # Define the prefix for the volume utilization alarm name for the CloudWatch alarms.
 alarmPrefixVolume=f"{basePrefix}-Volume_Utilization_for_volume_"
@@ -92,7 +95,6 @@ alarmPrefixSSD=f"{basePrefix}-SSD_Utilization_for_fs_"
 import botocore
 from botocore.config import Config
 import boto3
-import os
 import getopt
 import sys
 import time

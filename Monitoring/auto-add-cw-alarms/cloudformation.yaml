@@ -14,6 +14,7 @@ Metadata:
           - defaultSSDThreshold
           - defaultVolumeThreshold
           - checkInterval
+          - alarmPrefixString
 
 Parameters:
   SNStopic:
@@ -56,6 +57,11 @@ Parameters:
     MinValue: 5
     Default: 15
 
+  alarmPrefixString:
+    Description: "This is the string that will be prepended to all CloudWatch alarms created by this script."
+    Type: String
+    Default: "FSx-ONTAP-Auto"
+
 Resources:
   LambdaRole:
     Type: "AWS::IAM::Role"
@@ -91,7 +97,7 @@ Resources:
               - Effect: "Allow"
                 Action:
                   - "cloudwatch:DeleteAlarms"
-                Resource: !Sub "arn:aws:cloudwatch:*:${AWS::AccountId}:alarm:FSx-ONTAP-Auto*"
+                Resource: !Sub "arn:aws:cloudwatch:*:${AWS::AccountId}:alarm:${alarmPrefixString}*"
 
   SchedulerRole:
     Type: "AWS::IAM::Role"
@@ -144,6 +150,7 @@ Resources:
           defaultCPUThreshold: !Ref defaultCPUThreshold
           defaultSSDThreshold: !Ref defaultSSDThreshold
           defaultVolumeThreshold: !Ref defaultVolumeThreshold
+          basePrefix: !Ref alarmPrefixString
 
       Code:
         ZipFile: |
@@ -176,8 +183,8 @@ Resources:
           # Lastly, you can create an override for the SSD alarm, by creating a tag
           # with the name "SSD_Alarm_Threshold" on the file system resource.
           #
-          # Version: v2.11
-          # Date: 2024-09-27-16:03:19
+          # Version: v2.12
+          # Date: 2024-10-01-14:58:15
           #
           ################################################################################
           #
@@ -221,9 +228,12 @@ Resources:
           #
           # The following is put in front of all alarms so an IAM policy can be create
           # that will allow this script to only be able to delete the alarms it creates.
-          # If you change this, you must also change the IAM policy. Note that the
-          # Cloudfomration template also assume the value of this variable.
-          basePrefix="FSx-ONTAP-Auto"
+          # If you change this, you must also change the IAM policy. It can be
+          # set via an environment variable, this is so that the CloudFormation template
+          # can pass the value to the Lambda function. To change the value, change
+          # the "FSx-ONTAP-Auto" string to your desired value.
+          import os
+          basePrefix = os.environ.get('basePrefix', "FSx-ONTAP-Auto")
           #
           # Define the prefix for the volume utilization alarm name for the CloudWatch alarms.
           alarmPrefixVolume=f"{basePrefix}-Volume_Utilization_for_volume_"
@@ -241,7 +251,6 @@ Resources:
           import botocore
           from botocore.config import Config
           import boto3
-          import os
           import getopt
           import sys
           import time
