@@ -20,7 +20,7 @@
 ################################################################################
 usage () {
 cat 1>&2 <<EOF
-Usage: $(basename $0) -name fileSystemName -subnetID1 subnetID1 -subnetID2 subnetID2 [-region region] [-type availability] [-size size] [-security-group-id securityGroupID] [-throughput throughput] [-endpointIPrange CIDR]
+Usage: $(basename $0) -name fileSystemName -subnetID1 subnetID1 -subnetID2 subnetID2 [-region region] [-type availability] [-size size] [-security-group-id securityGroupID] [-throughput throughput] [-endpointIPrange CIDR] [-wait]
 where
   fileSystemName: Is the name you want to assign the file system.
   subnetID1: Is the subnet ID of the preferred subnet you want the file system to be accessible from.
@@ -31,6 +31,7 @@ where
   size: Is size, in gigabytes, you want the file system to be. Minimum and the default is 1024.
   throughput: Is the throughput capacity you the file system to have. Valid numbers are 128, 256, 512, 1024, 2048, and 4096. Default is 128.
   CIDR: Is an address range that the system management, and data access, IPs will be allocated from. It is only allowed for multi availability zone deployments.
+  --wait: Forces the script to wait until the file system is created before returning.
 EOF
   exit 1
 }
@@ -40,13 +41,23 @@ EOF
 ################################################################################
 tmpout=/tmp/fsx_fs_create.$$
 trap 'rm -f $tmpout' exit
+#
+# Set the maximum number of times to check that the file system was created.
+# Multiple it by the SleepTime set below to the total amount of time allowed.
+MaxIterations=180
+#
+# Set the number of seconds to wait between checks that the file system
+# has been created.
+SleepTime=15
 
-if which jq aws > /dev/null 2>&1; then
-  :
-else
-  echo "Error, both the 'aws' and 'jq' commands are required to run this script." 1>&2
-  exit 1
-fi
+for cmd in jq aws; do
+  if which $cmd > /dev/null 2>&1; then
+    :
+  else
+    echo "Error, the '$cmd' is required to run this script." 1>&2
+    exit 1
+  fi
+done
 #
 # Set some defaults.
 size=1024
@@ -55,6 +66,7 @@ region=$(aws configure list | egrep '^.*egion ' | awk '{print $2}')
 securityGroupOption=""
 endpointips=""
 azType="MULTI_AZ_1"
+waitForCompletion=false
 #
 # Process command line arguments.
 while [ ! -z "$1" ]; do
@@ -110,6 +122,9 @@ while [ ! -z "$1" ]; do
       endpointips='"EndpointIpAddressRange": "'$2'",'
       shift
       ;;
+    -wait|--wait)
+      waitForCompletion=true
+      ;;
     -h|-help|--help)
       usage
       ;;
@@ -151,11 +166,44 @@ if [ $? != "0" ]; then
 else
   status=$(jq -r .FileSystem.Lifecycle $tmpout 2> /dev/null)
   if [ "$status" == "CREATING" -o "$status" == "PENDING" ]; then
-    echo "File system '$fileSystemName' ($(jq -r .FileSystem.FileSystemId $tmpout)) is being created."
-    exit 0
+    fsid=$(jq -r .FileSystem.FileSystemId $tmpout)
+    printf "File system '$fileSystemName' ($fsid) is being created."
+    if [ $waitForCompletion == "true" ]; then
+      i=0
+      while [ $i -lt $MaxIterations ]; do
+        aws fsx describe-file-systems --file-system-ids $fsid --output=json --region=$region > $tmpout 2>&1
+        if [ $? -eq 0 ]; then
+          status=$(jq -r '.FileSystems[0].Lifecycle' $tmpout 2> /dev/null)
+          if [ "$status" == "AVAILABLE" ]; then
+            printf "\nFile system '$fileSystemName' ($fsid) has been created.\n"
+            break
+          fi
+          if [ "$status" != "CREATING" -a "$status" != "PENDING" ]; then
+            printf "\nError, failed to create the file system. Status = $status\n" 1>&2
+            cat $tmpout 1>&2
+            exit 1
+          fi
+          printf "."
+        else
+          printf "\nError, failed to get the file system status.\n" 1>&2
+          cat $tmpout 1>&2
+          exit 1
+        fi
+        sleep $SleepTime
+        let i+=1
+      done
+      if [ $i -ge $MaxIterations ]; then
+        printf "\nFailed to create file system('$fsid'). Taking too long.\n" 1>&2
+        exit 1
+      fi
+      exit 0
+    else
+      echo
+    fi
   else
     echo "Unknown status '$status'. Complete output returned from the AWS api:" 1>&2
     cat $tmpout 1>&2
     exit 1
   fi
 fi
+exit 0

@@ -38,9 +38,18 @@ EOF
 tmpout=/tmp/create_volume.$$
 trap 'rm -f $tmpout' exit
 #
+# Set the maximum number of times to check that a volume has been
+# created. Multiple it by the SleepTime set below to the total amount of
+# time allowed.
+maxIterations=24
+#
+# Set the number of seconds to wait between checks that a volume and/or SVM has been deleted.
+sleepTime=5
+#
 # Set some defaults.
 size=20
 region=$(aws configure list | egrep '^.*egion ' | awk '{print $2}')
+waitForCompletion=false
 #
 # Process command line arguments.
 while getopts "hi:n:r:s:w" option; do
@@ -53,7 +62,7 @@ while getopts "hi:n:r:s:w" option; do
       ;;
     s) size=$OPTARG
       ;;
-    w) wait=1
+    w) waitForCompletion=true
       ;;
     *) usage
       ;;
@@ -84,21 +93,35 @@ else
   status=$(jq -r .Volume.Lifecycle $tmpout 2> /dev/null)
   if [ "$status" == "CREATING" -o "$status" == "PENDING" ]; then
     volumeId=$(jq -r .Volume.VolumeId $tmpout)
-    echo "FSxN volume '$volumeName'($volumeId) is being created."
-    if [ ! -z "$wait" ]; then
-      echo -n "Waiting for volume to be created."
-      while [ $status == "CREATING" -o $status == "PENDING" ]; do
-        sleep 4
+    printf "FSxN volume '$volumeName'($volumeId) is being created."
+    if [ "$waitForCompletion" == "true" ]; then
+      i=0
+      while [ $i -lt $maxIterations ]; do
         aws fsx describe-volumes --volume-ids $volumeId --region=$region --output=json > $tmpout 2>&1
         status=$(jq -r .Volumes[0].Lifecycle $tmpout 2> /dev/null)
+        if [ $status == "CREATED" ]; then
+          printf "\nVolume '$volumeName'($volumeId) has been created.\n"
+          break
+        fi
+        if [ $status != "CREATING" -a $status != "PENDING" ]; then
+          echo "Error, volume $volumeId creation failed." 1>&2
+          cat $tmpout 1>&2
+          exit 1
+        fi
         echo -n "."
+        sleep $sleepTime
       done
-      printf "\nVolume as been $status.\n"
+      if [ $i -gt $maxIterations ]; then
+        printf "\nError, volume creation failed. Took too long." 1>&2
+        exit 1
+      fi
+    else
+      printf "\n"
     fi
-    exit 0
   else
     echo "Unknown status '$status'. Complete output returned from the AWS api:" 1>&2
     cat $tmpout 1>&2
     exit 1
   fi
 fi
+exit 0
