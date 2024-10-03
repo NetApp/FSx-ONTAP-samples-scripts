@@ -14,17 +14,17 @@ Before running the UNIX based scripts, make sure the following package is instal
 
 | Script                  | Description     |
 |:------------------------|:----------------|
-|create_fsxn_filesystem   | Creates a new FSx for NetApp ONTAP file-system. |
-|create_fsxn_svm          | Creates a new Storage Virtual Server (SVM) in a soecific FSx ONTAP filesystem. |
+|create_fsxn_filesystem   | Creates a new FSx for NetApp ONTAP file system. |
+|create_fsxn_svm          | Creates a new Storage Virtual Server (SVM) in a specified FSx for ONTAP file system. |
 |create_fsxn_volume       | Creates a new volume under a specified SVM. |
-|list_fsx_filesystems     | List all the FSx for NetApp ONTAP filesystems that the user has access to. |
-|list_fsx_filesystems.ps1 | List all the FSx for NetApp ONTAP filesystems that the user has access to, written in PowerShell. |
+|list_fsx_filesystems     | List all the FSx for NetApp ONTAP file systems that the user has access to. |
+|list_fsx_filesystems.ps1 | List all the FSx for NetApp ONTAP file systems that the user has access to, written in PowerShell. |
 |list_fsxn_volumes        | List all the FSx for NetApp ONTAP volumes that the user has access to. |
 |list_fsxn_svms           | List all the storage virtual machines that the user access to. |
-|list_aws_subnets         | List all the aws subnets. |
-|list_aws_vpcs            | List all the aws VPCs. |
-|delete_fsxn_filesystem   | Deletes an FSx for NetApp ONTAP filesystem. Including all the SVMs and volumes on it. |
-|delete_fsxn_svm          | Deletes an svm. Including all the volumes assigned to it. |
+|list_aws_subnets         | List all the AWS subnets. |
+|list_aws_vpcs            | List all the AWS VPCs. |
+|delete_fsxn_filesystem   | Deletes an FSx for ONTAP file system. Including all the SVMs and volumes on it. |
+|delete_fsxn_svm          | Deletes an SVM. Including all the volumes assigned to it. |
 |delete_fsxn_volume       | Deletes a volume. |
 
 
