@@ -23,9 +23,9 @@ Before running the UNIX based scripts, make sure the following package is instal
 |list_fsxn_svms           | List all the storage virtual machines that the user access to. |
 |list_aws_subnets         | List all the AWS subnets. |
 |list_aws_vpcs            | List all the AWS VPCs. |
-|delete_fsxn_filesystem   | Deletes an FSx for ONTAP file system. Including all the SVMs and volumes on it. |
-|delete_fsxn_svm          | Deletes an SVM. Including all the volumes assigned to it. |
-|delete_fsxn_volume       | Deletes a volume. |
+|delete_fsxn_filesystem   | Deletes a specified FSx for ONTAP file system. Including all the SVMs and volumes on it. |
+|delete_fsxn_svm          | Deletes a specified SVM. Including all the volumes assigned to it. |
+|delete_fsxn_volume       | Deletes a specified volume. |
 
 
 ## Author Information
