@@ -8,9 +8,9 @@ delete alarms. This can be tedious, and error prone. This script will automate t
 AWS CloudWatch alarms that monitor the utilization of the file system and its volumes. It will also create alarms
 to monitor the CPU utilization of the file system. And if a volume or file system is removed, it will remove the associated alarms.
 
-To implement this, you might think to just create EventBridge rules to trigger on the creation or deletion of an FSx Volume.
+To implement this, you might think to just create EventBridge rules that trigger on the creation or deletion of an FSx Volume.
 This would kind of work, but since you have command line access to the FSx for ONTAP file system, you can create
-and delete volumes without generating any CloudTrail events. So, this method would not be reliable. Therefore, instead
+and delete volumes without generating any CloudTrail events. So, depending on CloudTrail events would not be reliable. Therefore, instead
 of relying on those events, this script will scan all the file systems and volumes in all the regions then create and delete alarms as needed.
 
 ## Invocation
@@ -38,15 +38,15 @@ To use the CloudFormation template perform the following steps:
 4. Click `Choose file` and select the `cloudformation.yaml` file you downloaded in step 1.
 5. Click `Next` and fill in the parameters presented on the next page. The parameters are:
     - `Stack name` - The name of the CloudFormation stack. Note this name is also used as a base name for some of the resources that are created, to make them unique, so you must keep this string under 25 characters so the resource names don't exceed their name length limit.
-    - `SNStopic` - The SNS Topic name where CloudWatch will send alerts to. Note that it is assumed that the SNS topic, with the same name, will exist in all the regions where alarms are to be created. This CloudFormation template, nor the Lambda function, will not create these SNS topics for you.
-    - `accountId` - The AWS account ID associated with the SNStopic. This is only used to compute the ARN to the SNS Topic set above.
+    - `SNStopic` - The SNS Topic name where CloudWatch will send alerts to. Note that since CloudWatch can't send messages to an SNS topic residing in a different region, it is assumed that the SNS topic, with the same name, will exist in all the regions where alarms are to be created.
+    - `accountId` - The AWS account ID associated with the SNS topic. This is only used to compute the ARN to the SNS Topic set above.
     - `customerId` - This is optional. If provided the string entered is included in the description of every alarm created.
-    - `defaultCPUThreshold` - This will define a default CPU utilization threshold. You can override the default by having a specific tag associated with the file system (see below).
-    - `defaultSSDThreshold` - This will define a default SSD (aggregate) utilization threshold. You can override the default by having a specific tag associated with the file system (see below).
-    - `defaultVolumeThreshold` - This will define the default Volume utilization threshold. You can override the default by having a specific tag associated with the volume (see below).
+    - `defaultCPUThreshold` - This will define a default CPU utilization threshold. You can override the default by having a specific tag associated with the file system (see below for more information).
+    - `defaultSSDThreshold` - This will define a default SSD (aggregate) utilization threshold. You can override the default by having a specific tag associated with the file system (see below for more information).
+    - `defaultVolumeThreshold` - This will define the default Volume utilization threshold. You can override the default by having a specific tag associated with the volume (see below for more information).
     - `checkInterval` - This is the interval in minutes that the program will run.
     - `alarmPrefixString` - This defines the string that will be prepended to every CloudWatch alarm name that the program creates. Having a known prefix is how it knows it is the one maintaining the alarm.
-    - `regions` - This is a comma separated list of AWS region names (e.g. us-east-1) that the program will act on. If not specified, the program will scan on all regions that support an FSx for ONTAP file system. Note that no checking is preformed to ensure that the regions you provide are valid.
+    - `regions` - This is a comma separated list of AWS region names (e.g. us-east-1) that the program will act on. If not specified, the program will scan on all regions that support an FSx for ONTAP file system. Note that no checking is performed to ensure that the regions you provide are valid.
 6. Click `Next`. There aren't any recommended changes to make to any of the proceeding pages, so just click `Next` again.
 7. On the final page, check the box that says `I acknowledge that AWS CloudFormation might create IAM resources with custom names.` and click `Submit`.
 
@@ -67,17 +67,17 @@ Here is the list of variables, and what they define:
 | Variable | Description |Command Line Option|
 |:---------|:------------|:--------------------------------|
 |SNStopic  | The SNS Topic name where CloudWatch will send alerts to. Note that it is assumed that the SNS topic, with the same name, will exist in all the regions where alarms are to be created.|-s SNS\_Topic\_Name|
-|accountId | The AWS account ID associated with the SNStopic. This is only used to compute the ARN to the SNS Topic.|-a Account\_number|
-|customerId| This is really just a comment that will be added to the alarm description.|-c Customer\_String|
+|accountId | The AWS account ID associated with the SNS topic. This is only used to compute the ARN to the SNS Topic.|-a Account\_number|
+|customerId| This is just an optional string that will be added to the alarm description.|-c Customer\_String|
 |defaultCPUThreshold | This will define the default CPU utilization threshold. You can override the default by having a specific tag associated with the file system. See below for more information.|-C number|
 |defaultSSDThreshold | This will define the default SSD (aggregate) utilization threshold. You can override the default by having a specific tag associated with the file system. See below for more information.|-S number|
 |defaultVolumeThreshold | This will define the default Volume utilization threshold. You can override the default by having a specific tag associated with the volume. See below for more information.|-V number|
 |alarmPrefixCPU | This defines the string that will be put in front of the name of every CPU utilization CloudWatch alarm that the program creates. Having a known prefix is how it knows it is the one maintaining the alarm.|N/A|
 |alarmPrefixSSD | This defines the string that will be put in front of the name of every SSD utilization CloudWatch alarm that the program creates. Having a known prefix is how it knows it is the one maintaining the alarm.|N/A|
 |alarmPrefixVolume | This defines the string that will be put in front of the name of every volume utilization CloudWatch alarm that the program creates. Having a known prefix is how it knows it is the one maintaining the alarm.|N/A|
-|regions   | This is a comma separated list of AWS region names (e.g. us-east-1) that the program will act on. If not specified, the program will scan on all regions that support an FSx for ONTAP file system. Note that no checking is preformed to ensure that the regions you provide are valid.|-r region -r region ...|
+|regions   | This is a comma separated list of AWS region names (e.g. us-east-1) that the program will act on. If not specified, the program will scan on all regions that support an FSx for ONTAP file system. Note that no checking is performed to ensure that the regions you provide are valid.|-r region -r region ...|
 
-There are a few command line options that don't have a corresponding variables:
+There are a few command line options that don't have a corresponding variable:
 |Option|Description|
 |:-----|:----------|
 |-d| This option will cause the program to run in "Dry Run" mode. In this mode, the program will only display messages showing what it would have done, and not really create or delete any CloudWatch alarms.|
@@ -131,7 +131,7 @@ the detailed steps required to install the program as a Lambda function.
 7. Click on the Configuration tag and then the "General configuration" sub tab and set the "Timeout" to be at least 3 minutes.
 8. Click on the "Environment variables" tab and add the following environment variables:
     - `SNStopic` - The SNS Topic name where CloudWatch will send alerts to.
-    - `accountId` - The AWS account ID associated with the SNStopic.
+    - `accountId` - The AWS account ID associated with the SNS topic.
     - `customerId` - This is optional. If provided the string entered is included in the description of every alarm created.
     - `defaultCPUThreshold` - This will define a default CPU utilization threshold.
     - `defaultSSDThreshold` - This will define a default SSD (aggregate) utilization threshold.
