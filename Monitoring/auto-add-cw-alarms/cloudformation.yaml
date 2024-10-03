@@ -15,6 +15,7 @@ Metadata:
           - defaultVolumeThreshold
           - checkInterval
           - alarmPrefixString
+          - regions
 
 Parameters:
   SNStopic:
@@ -61,6 +62,11 @@ Parameters:
     Description: "This is the string that will be prepended to all CloudWatch alarms created by this script."
     Type: String
     Default: "FSx-ONTAP-Auto"
+
+  regions:
+    Description: "This is a list of AWS regions that you want the Lambda function to run in. If left blank, it will run in all regions."
+    Type: CommaDelimitedList
+    Default: ""
 
 Resources:
   LambdaRole:
@@ -151,6 +157,7 @@ Resources:
           defaultSSDThreshold: !Ref defaultSSDThreshold
           defaultVolumeThreshold: !Ref defaultVolumeThreshold
           basePrefix: !Ref alarmPrefixString
+          regions: !Join [",", !Ref regions]
 
       Code:
         ZipFile: |
@@ -183,8 +190,8 @@ Resources:
           # Lastly, you can create an override for the SSD alarm, by creating a tag
           # with the name "SSD_Alarm_Threshold" on the file system resource.
           #
-          # Version: v2.12
-          # Date: 2024-10-01-14:58:15
+          # Version: v2.13
+          # Date: 2024-10-03-12:30:21
           #
           ################################################################################
           #
@@ -719,6 +726,9 @@ Resources:
           defaultCPUThreshold    = int(os.environ.get('defaultCPUThreshold',    defaultCPUThreshold))
           defaultSSDThreshold    = int(os.environ.get('defaultSSDThreshold',    defaultSSDThreshold))
           defaultVolumeThreshold = int(os.environ.get('defaultVolumeThreshold', defaultVolumeThreshold))
+          regionsEnv = os.environ.get('regions', '')
+          if regionsEnv != '':
+              regions = regionsEnv.split(',')
           #
           # Check to see if we are bring run from a command line or a Lmabda function.
           if os.environ.get('AWS_LAMBDA_FUNCTION_NAME') == None:

@@ -563,6 +563,9 @@ onlyFilesystemId = None
 defaultCPUThreshold    = int(os.environ.get('defaultCPUThreshold',    defaultCPUThreshold))
 defaultSSDThreshold    = int(os.environ.get('defaultSSDThreshold',    defaultSSDThreshold))
 defaultVolumeThreshold = int(os.environ.get('defaultVolumeThreshold', defaultVolumeThreshold))
+regionsEnv = os.environ.get('regions', '')
+if regionsEnv != '':
+    regions = regionsEnv.split(',')
 #
 # Check to see if we are bring run from a command line or a Lmabda function.
 if os.environ.get('AWS_LAMBDA_FUNCTION_NAME') == None:
