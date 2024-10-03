@@ -41,7 +41,7 @@ EOF
 ################################################################################
 # This function is used to display the contents of a FSxN file system based on 
 # the file system ID passed as the first and only argument. It assumes that
-# the svmsFile and volumesFile fles have already been created.
+# the svmsFile and volumesFile files have already been created.
 ################################################################################
 displayFileSystemContents() {
 
