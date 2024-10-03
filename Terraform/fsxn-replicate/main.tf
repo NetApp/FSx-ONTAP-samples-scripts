@@ -25,59 +25,94 @@ data "aws_secretsmanager_secret_version" "ontap_dr_username_pass" {
 }
 
 
-provider "netapp-ontap" {
+#provider "netapp-ontap" {
   # A connection profile defines how to interface with an ONTAP cluster or svm.
   # At least one is required.
-  connection_profiles = [
-    {
-      name = "primary_clus"
-      hostname = var.prime_hostname
-      username = jsondecode(data.aws_secretsmanager_secret_version.ontap_prime_username_pass.secret_string)["username"]
-      password = jsondecode(data.aws_secretsmanager_secret_version.ontap_prime_username_pass.secret_string)["password"]
-      validate_certs = var.validate_certs
-    },
-    {
-      name = "dr_clus"
-      username = jsondecode(data.aws_secretsmanager_secret_version.ontap_dr_username_pass.secret_string)["username"]
-      password = jsondecode(data.aws_secretsmanager_secret_version.ontap_dr_username_pass.secret_string)["password"]
-      hostname = var.dr_hostname
-      validate_certs = var.validate_certs
-    },
-  ]
-}
+#  connection_profiles = [
+#    {
+#      name = "primary_clus"
+#      hostname = var.prime_hostname
+#      username = jsondecode(data.aws_secretsmanager_secret_version.ontap_prime_username_pass.secret_string)["username"]
+#      password = jsondecode(data.aws_secretsmanager_secret_version.ontap_prime_username_pass.secret_string)["password"]
+#      validate_certs = var.validate_certs
+#    },
+#    {
+#      name = "dr_clus"
+#      username = jsondecode(data.aws_secretsmanager_secret_version.ontap_dr_username_pass.secret_string)["username"]
+#      password = jsondecode(data.aws_secretsmanager_secret_version.ontap_dr_username_pass.secret_string)["password"]
+#      hostname = var.dr_hostname
+#      validate_certs = var.validate_certs
+#    },
+#  ]
+#}
 
-data "netapp-ontap_storage_volume_data_source" "my_vol" {
-   for_each        = toset(var.list_of_volumes_to_replicate)
-   cx_profile_name = "primary_clus"
-   svm_name        = var.prime_svm
-   name            = each.value
-}
+resource "aws_fsx_ontap_file_system" "terraform-fsxn" {
+  subnet_ids = var.dr_fsx_deploy_type == "MULTI_AZ_1" || var.dr_fsx_deploy_type == "MULTI_AZ_2" ? [var.dr_fsx_subnets["primarysub"], var.dr_fsx_subnets["secondarysub"]] : [var.dr_fsx_subnets["primarysub"]]
+  preferred_subnet_id = var.dr_fsx_subnets["primarysub"]
 
-resource "netapp-ontap_storage_volume_resource" "example" {
-  cx_profile_name = "primary_clus"
-  name = "rvwn_vol1_tf"
-  svm_name = var.prime_svm
-  aggregates = [
-    {
-      name = "aggr1"
-    },
-  ]
-  space_guarantee = "none"
-  snapshot_policy = "default"
-  space = {
-      size = 100
-      size_unit = "gb"
-    logical_space = {
-      enforcement = true
-      reporting = true
+  storage_capacity                = var.dr_fsx_capacity_size_gb
+  security_group_ids              = var.create_sg ? [element(aws_security_group.fsx_sg[*].id, 0)] : var.security_group_ids
+  deployment_type                 = var.dr_fsx_deploy_type
+  throughput_capacity_per_ha_pair = var.dr_fsx_tput_in_MBps
+  ha_pairs                        = var.dr_ha_pairs
+  endpoint_ip_address_range       = var.dr_endpoint_ip_address_range
+  route_table_ids                 = var.dr_route_table_ids
+  dynamic "disk_iops_configuration" {
+    for_each = length(var.dr_disk_iops_configuration) > 0 ? [var.dr_disk_iops_configuration] : []
+
+    content {
+      iops = try(disk_iops_configuration.value.iops, null)
+      mode = try(disk_iops_configuration.value.mode, null)
     }
   }
-  tiering = {
-      policy_name = "auto"
-  }
-  nas = {
-    export_policy_name = "default"
-    security_style = "unix"
-      junction_path = "/rvwn_vol1_tf"
-  }
+
+  tags = merge(var.dr_tags, {Name = var.dr_fsx_name})
+  weekly_maintenance_start_time =  var.dr_maintenance_start_time
+  kms_key_id = var.dr_kms_key_id
+  automatic_backup_retention_days = var.dr_backup_retention_days
+  daily_automatic_backup_start_time = var.dr_backup_retention_days > 0 ? var.dr_daily_backup_start_time : null
+  fsx_admin_password = jsondecode(data.aws_secretsmanager_secret_version.ontap_dr_username_pass.secret_string)["password"]
 }
+
+# Define a storage virtual machine.
+resource "aws_fsx_ontap_storage_virtual_machine" "mysvm" {
+  file_system_id             = aws_fsx_ontap_file_system.terraform-fsxn.id
+  name                       = var.dr_svm_name
+  root_volume_security_style = var.dr_root_vol_sec_style
+}
+
+#data "netapp-ontap_storage_volume_data_source" "my_vol" {
+#   for_each        = toset(var.list_of_volumes_to_replicate)
+#   cx_profile_name = "primary_clus"
+#   svm_name        = var.prime_svm
+#   name            = each.value
+#}
+
+# resource "netapp-ontap_storage_volume_resource" "example" {
+#   cx_profile_name = "primary_clus"
+#   name = "rvwn_vol1_tf"
+#   svm_name = var.prime_svm
+#   aggregates = [
+#     {
+#       name = "aggr1"
+#     },
+#   ]
+#   space_guarantee = "none"
+#   snapshot_policy = "default"
+#   space = {
+#       size = 100
+#       size_unit = "gb"
+#     logical_space = {
+#       enforcement = true
+#       reporting = true
+#     }
+#  }
+#  tiering = {
+#      policy_name = "auto"
+#  }
+#  nas = {
+#    export_policy_name = "default"
+#    security_style = "unix"
+#      junction_path = "/rvwn_vol1_tf"
+#  }
+#}
