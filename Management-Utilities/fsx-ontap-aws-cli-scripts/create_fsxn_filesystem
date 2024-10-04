@@ -66,7 +66,7 @@ is_in(){
 
   local value=$1
   shift
-  for i in $@; do
+  for i in "$@"; do
     if [ $i == $value ]; then
       return 0
     fi
@@ -157,8 +157,8 @@ while [ ! -z "$1" ]; do
   shift
 done
 
-if is_in "$throughput" ${throughputValuesGen1[@]}; then
-  if [ $availType="single" ]; then
+if is_in "$throughput" "${throughputValuesGen1[@]}"; then
+  if [ $availType == "single" ]; then
     azType="SINGLE_AZ_1"
   elif [ $availType="multi" ]; then
     azType="MULTI_AZ_1"
@@ -166,10 +166,10 @@ if is_in "$throughput" ${throughputValuesGen1[@]}; then
     echo "Error, unknown availability type '$availType'."
     usage
   fi
-elif is_in "$throughput" ${throughputValuesGen2[@]}; then
-  if [ $availType="single" ]; then
+elif is_in "$throughput" "${throughputValuesGen2[@]}"; then
+  if [ $availType == "single" ]; then
     azType="SINGLE_AZ_2"
-  elif [ $availType="multi" ]; then
+  elif [ $availType == "multi" ]; then
     azType="MULTI_AZ_2"
   else
     echo "Error, unknown availability type '$availType'."
@@ -181,8 +181,13 @@ else
 fi
 #
 # Ensure all the required parameters have been provided.
-if [ -z "$fileSystemName" -o -z "$subnetID1" -o "$azType" == "MULTI_AZ_1" -a -z "$subnetID2" -o "$azType" == "MULTI_AZ_2" -a -z "$subnetID2" ]; then
-  echo "Missing arguments." 1>&2
+if [ -z "$fileSystemName" ]; then
+  echo "Error, you must specify a file system name." 1>&2
+  usage
+fi
+
+if [ -z "$subnetID1" -o "$azType" == "MULTI_AZ_1" -a -z "$subnetID2" -o "$azType" == "MULTI_AZ_2" -a -z "$subnetID2" ]; then
+  echo "Error, you must specify only subnetID1 for a single availability zone deployments or both subnetID1 and subnetID2 for a multi availability zone deployments." 1>&2
   usage
 fi
 
@@ -199,13 +204,13 @@ if [[ $azType == *"SINGLE_AZ"* ]]; then
 fi
 
 if [ $numPairs -gt 1 ]; then
-  if [ $azType != "SINGLE_AZ_2" ]; then
-    echo "Error, you can only specify more than one HA pair with a single availability zone deployment." 1>&2
+  if ! is_in "$throughput" "${throughputValuesMultiHAPairs[@]}"; then
+    echo "Error, you can only specify more than one HA pair with throughput values of 1536, 3072, and 6144." 1>&2
     usage
   fi
 
-  if ! is_in "$throughput" ${throughputValuesMultiHAPairs[@]}; then
-    echo "Error, you can only specify more than one HA pair with throughput values of 1536, 3072, and 6144." 1>&2
+  if [ $azType != "SINGLE_AZ_2" ]; then
+    echo "Error, you can only specify more than one HA pair with a single availability zone deployment." 1>&2
     usage
   fi
 fi
@@ -216,13 +221,14 @@ if [ $size -lt $minSize ]; then
   usage
 fi
 
-aws fsx create-file-system --output=json --file-system-type ONTAP --storage-capacity $size --subnet-ids $subnetID1 $subnetID2 --storage-type SSD --tags "Key=Name,Value=$fileSystemName" $securityGroupOption --ontap-configuration '{
+echo aws fsx create-file-system --output=json --file-system-type ONTAP --storage-capacity $size --subnet-ids $subnetID1 $subnetID2 --storage-type SSD --tags "Key=Name,Value=$fileSystemName" $securityGroupOption --ontap-configuration '{
   "PreferredSubnetId": "'$subnetID1'",
   '$endpointips'
   "DeploymentType": "'$azType'",
   "HAPairs": '$numPairs',
-  "ThroughputCapacityPerHAPair": '$throughput'}' --region=$region > $tmpout 2>&1
-
+  "ThroughputCapacityPerHAPair": '$throughput'}' --region=$region 
+#  "ThroughputCapacityPerHAPair": '$throughput'}' --region=$region > $tmpout 2>&1
+exit
 if [ $? != "0" ]; then
   echo "Failed to create FSxN file system." 1>&2
   cat $tmpout 1>&2
