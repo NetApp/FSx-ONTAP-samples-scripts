@@ -105,7 +105,12 @@ else
         fi
         if [ $status != "CREATING" -a $status != "PENDING" ]; then
           echo "Error, volume $volumeId creation failed." 1>&2
-          cat $tmpout 1>&2
+          reason="$(jq -r '.Volumes[0].LifecycleTransitionReason.Message' $tmpout 2> /dev/null)"
+          if [ -n "$reason" ]; then
+            echo "Reason: $reason" 1>&2
+          else
+            cat $tmpout 1>&2
+          fi
           exit 1
         fi
         echo -n "."

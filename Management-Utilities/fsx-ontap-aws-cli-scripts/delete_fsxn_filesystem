@@ -213,7 +213,12 @@ else
           status=$(jq -r '.FileSystems[0].Lifecycle' $tmpout 2> /dev/null)
           if [ "$status" != "DELETING" -a "$status" != "PENDING" ]; then
             printf "\nError, failed to delete file system with file system ID '$fsid'. Status = $status\n" 1>&2
-            cat $tmpout 1>&2
+            reason="$(jq -r '.FileSystems[0].LifecycleTransitionReason.Message' $tmpout 2> /dev/null)"
+            if [ ! -z "$reason" ]; then
+              printf "Reason: $reason\n" 1>&2
+            else
+              cat $tmpout 1>&2
+            fi
             exit 1
           else
             printf "."

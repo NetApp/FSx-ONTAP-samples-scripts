@@ -209,7 +209,12 @@ else
           status=$(jq -r '.StorageVirtualMachines[0].Lifecycle' $tmpout 2> /dev/null)
           if [ "$status" != "DELETING" -a "$status" != "PENDING" ]; then
             printf "\nError, failed to delete SVM with SVM ID '$svmID'. Status = $status\n" 1>&2
-            cat $tmpout 1>&2
+            reason="$(jq -r '.StorageVirtualMachines[0].LifecycleTransitionReason.Message' $tmpout 2> /dev/null)"
+            if [ ! -z "$reason" ]; then
+              echo "Reason: $reason" 1>&2
+            else
+              cat $tmpout 1>&2
+            fi
             exit 1
           else
             printf "."
