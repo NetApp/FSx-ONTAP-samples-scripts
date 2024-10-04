@@ -160,7 +160,7 @@ done
 if is_in "$throughput" "${throughputValuesGen1[@]}"; then
   if [ $availType == "single" ]; then
     azType="SINGLE_AZ_1"
-  elif [ $availType="multi" ]; then
+  elif [ $availType == "multi" ]; then
     azType="MULTI_AZ_1"
   else
     echo "Error, unknown availability type '$availType'."
