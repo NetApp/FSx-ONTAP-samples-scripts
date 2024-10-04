@@ -129,6 +129,8 @@ else
         exit 1
       fi
       [ $quiet != "true" ] && printf "\n"
+    else
+      [ $quiet != "true" ] && printf "\n"
     fi
   else
     echo "Unknown status '$status'. Complete output returned from the AWS api:" 1>&2

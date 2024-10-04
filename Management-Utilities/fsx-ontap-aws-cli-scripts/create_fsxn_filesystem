@@ -20,18 +20,19 @@
 ################################################################################
 usage () {
 cat 1>&2 <<EOF
-Usage: $(basename $0) -name fileSystemName -subnetID1 subnetID1 -subnetID2 subnetID2 [-region region] [-type availability] [-size size] [-security-group-id securityGroupID] [-throughput throughput] [-endpointIPrange CIDR] [-wait]
+Usage: $(basename $0) -name fileSystemName -subnetID1 subnetID1 -subnetID2 subnetID2 [-region region] [-type availability] [-size size] [-security-group-id securityGroupID] [-throughput throughput] [-numberPairs numberPairs] [-endpointIPrange CIDR] [-wait]
 where
   fileSystemName: Is the name you want to assign the file system.
   subnetID1: Is the subnet ID of the preferred subnet you want the file system to be accessible from.
   subnetID2: Is the subnet ID of the standby subnet you want the file system to be accessible from. Only allowed for multi availability zone deployments.
   security-group-id: Is the security ID that you want applied to the ENIs that are assigned to the file system.
   region: Is the AWS region where the FSxN file system will reside.
-  availability: Specifies whether the HA pair should be spread across 'single' or 'multiple' availability zones. Valid settings are 'Single' or 'Multi' (default).
-  size: Is size, in gigabytes, you want the file system to be. Minimum and the default is 1024.
-  throughput: Is the throughput capacity you the file system to have. Valid numbers are 128, 256, 512, 1024, 2048, and 4096. Default is 128.
+  availability: Specifies whether the HA pair should be spread across 'single' or 'multiple' availability zones. Valid settings are 'single' or 'multi' (default).
+  size: Is size, in gigabytes, you want the file system to be. Minimum is 1024 per number of HA pairs. Default is 1024.
+  throughput: Is the throughput capacity you the file system to have. Valid Gen1 numbers are 128, 256, 512, 1024, 2048, and 4096. Valid Gen2 numbers are 384, 768, 1536, 3072, and 6144. Default is 128.
+  numberPairs: Is the number of HA pairs you want the file system to have. Can only be greater than 1 with throupghput numbers of 1536, 3072, and 6144. Default is 1.
   CIDR: Is an address range that the system management, and data access, IPs will be allocated from. It is only allowed for multi availability zone deployments.
-  --wait: Forces the script to wait until the file system is created before returning.
+  -wait: Forces the script to wait until the file system is created before returning.
 EOF
   exit 1
 }
@@ -49,6 +50,29 @@ MaxIterations=180
 # Set the number of seconds to wait between checks that the file system
 # has been created.
 SleepTime=15
+#
+# Possible throughput values
+throughputValuesGen1=(128 256 512 1024 2048 4096)
+throughputValuesGen2=(384 768 1536 3072 6144)
+throughputValuesMultiHAPairs=(1536 3072 6144)
+
+integerRegex='^[0-9]+$'
+
+################################################################################
+# This function is used to see if the first value passed is in one of the
+# other parameters passed.
+################################################################################
+is_in(){
+
+  local value=$1
+  shift
+  for i in $@; do
+    if [ $i == $value ]; then
+      return 0
+    fi
+  done
+  return 1
+}
 
 for cmd in jq aws; do
   if which $cmd > /dev/null 2>&1; then
@@ -65,7 +89,8 @@ throughput=128
 region=$(aws configure list | egrep '^.*egion ' | awk '{print $2}')
 securityGroupOption=""
 endpointips=""
-azType="MULTI_AZ_1"
+availType=multi
+numPairs=1
 waitForCompletion=false
 #
 # Process command line arguments.
@@ -78,12 +103,9 @@ while [ ! -z "$1" ]; do
       shift
       ;;
     -size|--size) size="$2"
-      if ! [[ "$size" =~ '^[0-9]+$' ]]; then
+      if ! [[ "$size" =~ $integerRegEx ]]; then
           echo "-size must be an integer."
           usage
-      fi
-      if [ "$size" -le 1024 ]; then
-        usage
       fi
       shift
       ;;
@@ -97,29 +119,29 @@ while [ ! -z "$1" ]; do
       shift
       ;;
     -type|--type)
-      if [ "$(echo $2 | tr [A-Z] [a-z])" == "single" ]; then
-        azType="SINGLE_AZ_1"
-      elif [ "$(echo $2 | tr [A-Z] [a-z])" == "multi" ]; then
-        azType="MULTI_AZ_1"
-      else
-        echo "Error, known availability type '$2'."
+      availType=$2
+      if [ $availType != "single" -a $availType != "multi" ]; then
+        echo "-type must be 'single' or 'multi'." 1>&2
         usage
       fi
       shift
       ;;
     -throughput|--throughput) throughput="$2"
-      if ! [[ "$throughput" =~ '^[0-9]+$' ]]; then
+      if ! [[ "$throughput" =~ $integerRegEx ]]; then
           echo "-throughput must be an integer."
-          usage
-      fi
-      if [ "$througput" != "128" -a "$througput" != "256" -a "$throughput" != "512" -a "$throughput" != "1024" -a "$throughput" != "2048" -a "$throughput" != "4096" ]; then
-          echo "-throughput must be 128 or 256 or 512 or 1024 or 2048 or 4096."
           usage
       fi
       shift
       ;;
     -endpointiprange|--endpointiprange)
       endpointips='"EndpointIpAddressRange": "'$2'",'
+      shift
+      ;;
+    -numberpairs|--numberpairs) numPairs="$2"
+      if ! [[ "$numPairs" =~ $integerRegEx ]]; then
+          echo "-numPairs must be an integer."
+          usage
+      fi
       shift
       ;;
     -wait|--wait)
@@ -134,16 +156,39 @@ while [ ! -z "$1" ]; do
   esac
   shift
 done
+
+if is_in "$throughput" ${throughputValuesGen1[@]}; then
+  if [ $availType="single" ]; then
+    azType="SINGLE_AZ_1"
+  elif [ $availType="multi" ]; then
+    azType="MULTI_AZ_1"
+  else
+    echo "Error, unknown availability type '$availType'."
+    usage
+  fi
+elif is_in "$throughput" ${throughputValuesGen2[@]}; then
+  if [ $availType="single" ]; then
+    azType="SINGLE_AZ_2"
+  elif [ $availType="multi" ]; then
+    azType="MULTI_AZ_2"
+  else
+    echo "Error, unknown availability type '$availType'."
+    usage
+  fi
+else
+  echo "Error, unsupported throughput value '$throughput'."
+  usage
+fi
 #
 # Ensure all the required parameters have been provided.
-if [ -z "$fileSystemName" -o -z "$subnetID1" -o "$azType" == "MULTI_AZ_1" -a -z "$subnetID2" ]; then
+if [ -z "$fileSystemName" -o -z "$subnetID1" -o "$azType" == "MULTI_AZ_1" -a -z "$subnetID2" -o "$azType" == "MULTI_AZ_2" -a -z "$subnetID2" ]; then
   echo "Missing arguments." 1>&2
   usage
-  exit 1
 fi
-if [ $azType == "SINGLE_AZ_1" ]; then
+
+if [[ $azType == *"SINGLE_AZ"* ]]; then
   if [ ! -z "$endpointips" ]; then
-    echo "Error, you can not specify Endpoint IP address range when deploying in a single availability zone." 1>&2
+    echo "Error, you cannot specify Endpoint IP address range when deploying in a single availability zone." 1>&2
     exit 1
   fi
 
@@ -153,11 +198,30 @@ if [ $azType == "SINGLE_AZ_1" ]; then
   fi
 fi
 
+if [ $numPairs -gt 1 ]; then
+  if [ $azType != "SINGLE_AZ_2" ]; then
+    echo "Error, you can only specify more than one HA pair with a single availability zone deployment." 1>&2
+    usage
+  fi
+
+  if ! is_in "$throughput" ${throughputValuesMultiHAPairs[@]}; then
+    echo "Error, you can only specify more than one HA pair with throughput values of 1536, 3072, and 6144." 1>&2
+    usage
+  fi
+fi
+
+minSize=$((1024*numPairs))
+if [ $size -lt $minSize ]; then
+  echo "Error, the size must be at least $minSize for $numPairs HA pairs. In other words 1024 per HA pair." 1>&2
+  usage
+fi
+
 aws fsx create-file-system --output=json --file-system-type ONTAP --storage-capacity $size --subnet-ids $subnetID1 $subnetID2 --storage-type SSD --tags "Key=Name,Value=$fileSystemName" $securityGroupOption --ontap-configuration '{
   "PreferredSubnetId": "'$subnetID1'",
   '$endpointips'
   "DeploymentType": "'$azType'",
-  "ThroughputCapacity": '$throughput'}' --region=$region > $tmpout 2>&1
+  "HAPairs": '$numPairs',
+  "ThroughputCapacityPerHAPair": '$throughput'}' --region=$region > $tmpout 2>&1
 
 if [ $? != "0" ]; then
   echo "Failed to create FSxN file system." 1>&2
