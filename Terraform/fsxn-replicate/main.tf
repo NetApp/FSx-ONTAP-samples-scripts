@@ -13,10 +13,16 @@ terraform {
 }
 
 provider "aws" {
-   region = var.secrets_aws_region
+   region = var.dr_aws_region
+}
+
+provider "aws" {
+   alias = "prime-aws-region"
+   region = var.prime_aws_region
 }
 
 data "aws_secretsmanager_secret_version" "ontap_prime_username_pass" {
+  provider = aws.prime-aws-region
   secret_id = var.username_pass_secrets_id
 }
 
@@ -25,26 +31,20 @@ data "aws_secretsmanager_secret_version" "ontap_dr_username_pass" {
 }
 
 
-#provider "netapp-ontap" {
+provider "netapp-ontap" {
   # A connection profile defines how to interface with an ONTAP cluster or svm.
   # At least one is required.
-#  connection_profiles = [
-#    {
-#      name = "primary_clus"
-#      hostname = var.prime_hostname
-#      username = jsondecode(data.aws_secretsmanager_secret_version.ontap_prime_username_pass.secret_string)["username"]
-#      password = jsondecode(data.aws_secretsmanager_secret_version.ontap_prime_username_pass.secret_string)["password"]
-#      validate_certs = var.validate_certs
-#    },
-#    {
-#      name = "dr_clus"
-#      username = jsondecode(data.aws_secretsmanager_secret_version.ontap_dr_username_pass.secret_string)["username"]
-#      password = jsondecode(data.aws_secretsmanager_secret_version.ontap_dr_username_pass.secret_string)["password"]
-#      hostname = var.dr_hostname
-#      validate_certs = var.validate_certs
-#    },
-#  ]
-#}
+  connection_profiles = [
+    {
+      name = "primary_clus"
+      hostname = var.prime_hostname
+      username = jsondecode(data.aws_secretsmanager_secret_version.ontap_prime_username_pass.secret_string)["username"]
+      password = jsondecode(data.aws_secretsmanager_secret_version.ontap_prime_username_pass.secret_string)["password"]
+      validate_certs = var.validate_certs
+    }
+
+  ]
+}
 
 resource "aws_fsx_ontap_file_system" "terraform-fsxn" {
   subnet_ids = var.dr_fsx_deploy_type == "MULTI_AZ_1" || var.dr_fsx_deploy_type == "MULTI_AZ_2" ? [var.dr_fsx_subnets["primarysub"], var.dr_fsx_subnets["secondarysub"]] : [var.dr_fsx_subnets["primarysub"]]
@@ -81,38 +81,38 @@ resource "aws_fsx_ontap_storage_virtual_machine" "mysvm" {
   root_volume_security_style = var.dr_root_vol_sec_style
 }
 
-#data "netapp-ontap_storage_volume_data_source" "my_vol" {
-#   for_each        = toset(var.list_of_volumes_to_replicate)
-#   cx_profile_name = "primary_clus"
-#   svm_name        = var.prime_svm
-#   name            = each.value
-#}
+data "netapp-ontap_storage_volume_data_source" "my_vol" {
+   for_each        = toset(var.list_of_volumes_to_replicate)
+   cx_profile_name = "primary_clus"
+   svm_name        = var.prime_svm
+   name            = each.value
+}
 
-# resource "netapp-ontap_storage_volume_resource" "example" {
-#   cx_profile_name = "primary_clus"
-#   name = "rvwn_vol1_tf"
-#   svm_name = var.prime_svm
-#   aggregates = [
-#     {
-#       name = "aggr1"
-#     },
-#   ]
-#   space_guarantee = "none"
-#   snapshot_policy = "default"
-#   space = {
-#       size = 100
-#       size_unit = "gb"
-#     logical_space = {
-#       enforcement = true
-#       reporting = true
-#     }
-#  }
-#  tiering = {
-#      policy_name = "auto"
-#  }
-#  nas = {
-#    export_policy_name = "default"
-#    security_style = "unix"
-#      junction_path = "/rvwn_vol1_tf"
-#  }
-#}
+ resource "netapp-ontap_storage_volume_resource" "example" {
+   cx_profile_name = "primary_clus"
+   name = "rvwn_vol1_tf"
+   svm_name = var.prime_svm
+   aggregates = [
+     {
+       name = "aggr1"
+     },
+   ]
+   space_guarantee = "none"
+   snapshot_policy = "default"
+   space = {
+       size = 100
+       size_unit = "gb"
+       logical_space = {
+       enforcement = true
+       reporting = true
+     }
+  }
+  tiering = {
+      policy_name = "auto"
+  }
+  nas = {
+    export_policy_name = "default"
+    security_style = "unix"
+    junction_path = "/rvwn_vol1_tf"
+  }
+}

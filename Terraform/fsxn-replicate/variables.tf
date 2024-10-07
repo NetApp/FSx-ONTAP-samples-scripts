@@ -11,8 +11,14 @@ variable "prime_svm" {
    default     = "vs1cli"
 }
 
-variable "secrets_aws_region" {
-   description = "Region where the AWS secret for username/password reside"
+variable "prime_aws_region" {
+   description = "AWS regionfor the Primary ONTAP FSxN"
+   type        = string
+   default     = "us-west-2"
+}
+
+variable "dr_aws_region" {
+   description = "AWS regionfor the Secondary(DR) ONTAP FSxN"
    type        = string
    default     = "us-east-2"
 }
