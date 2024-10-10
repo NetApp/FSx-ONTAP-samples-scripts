@@ -12,15 +12,15 @@
  */
 
 locals {
-  mycount = var.create_sg ? 1 : 0
-  my_ref_sec_group_id = (var.source_sg_id != "" ? var.source_sg_id : null)
-  my_cidr      = (var.cidr_for_sg != "" ? var.cidr_for_sg : null)
+  mycount = var.dr_create_sg ? 1 : 0
+  my_ref_sec_group_id = (var.dr_source_sg_id != "" ? var.dr_source_sg_id : null)
+  my_cidr      = (var.dr_cidr_for_sg != "" ? var.dr_cidr_for_sg : null)
 }
 
 resource "aws_security_group" "fsx_sg" {
   description = "Allow FSx ONTAP required ports"
   count       = local.mycount
-  name_prefix = var.security_group_name_prefix
+  name_prefix = var.dr_security_group_name_prefix
   vpc_id      = var.dr_vpc_id
 }
 

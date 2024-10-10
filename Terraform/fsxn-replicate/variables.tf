@@ -20,7 +20,7 @@ variable "prime_aws_region" {
 variable "dr_aws_region" {
    description = "AWS regionfor the Secondary(DR) ONTAP FSxN"
    type        = string
-   default     = "us-east-2"
+   default     = "us-west-2"
 }
 
 variable "username_pass_secrets_id" {
@@ -55,7 +55,7 @@ variable "dr_fsx_subnets" {
    description = "The primary subnet ID, and secondary subnet ID if you are deploying in a Multi AZ environment, file system will be accessible from. For MULTI_AZ deployment types both subnets are required. For SINGLE_AZ deployment type, only the primary subnet is used."
    type        = map(any)
    default = {
-      "primarysub"   = "subnet-0a64530a9c7afc84c"
+      "primarysub"   = "subnet-8fba81f8"
       "secondarysub" = "subnet-33333333"
    }
 }
@@ -168,53 +168,46 @@ variable "dr_root_vol_sec_style" {
  * the ID of the security group that you want to use.
  *
  */
-variable "create_sg" {
+variable "dr_create_sg" {
   description = "Determines whether the Security Group should be created as part of this deployment or not."
   type        = bool
   default     = true
 }
 
-variable "security_group_ids" {
+variable "dr_security_group_ids" {
   description = "If you are not creating the security group, provide a list of IDs of security groups to be used."
   type        = list(string)
   default     = []
 }
 
-variable "security_group_name_prefix" {
+variable "dr_security_group_name_prefix" {
   description = "The prefix to the security group name that will be created."
   type        = string
   default     = "fsxn-sg"
 }
 
-variable "cidr_for_sg" {
+variable "dr_cidr_for_sg" {
   description = "The cidr block to be used for the created security ingress rules. Set to an empty string if you want to use the source_sg_id as the source."
   type        = string
   default     = "10.0.0.0/8"
 }
 
-variable "source_sg_id" {
+variable "dr_source_sg_id" {
   description = "The ID of the security group to allow access to the FSxN file system. Set to an empty string if you want to use the cidr_for_sg as the source."
   type        = string
   default     = ""
 }
 
 variable "dr_vpc_id" {
-  description = "The VPC ID where the security group will be created."
+  description = "The VPC ID where the DR FSxN and security group will be created."
   type        = string
-  default     = "vpc-0684c5d22c4b48dd4"
+  default     = "vpc-445d4f21"
 }
 
 variable "dr_username_pass_secrets_id" {
    description = "Name of secret ID in AWS secrets"
    type        = string
    default     = "rvwn_replicate_ontap_creds"
-}
-
-variable "dr_hostname" {
-   description = "Hostname or IP address of disaster recovery cluster."
-   type        = string
-# Prod DR FSxN
-   default     = "198.19.254.83"
 }
 
 variable "validate_certs" {

@@ -41,6 +41,13 @@ provider "netapp-ontap" {
       username = jsondecode(data.aws_secretsmanager_secret_version.ontap_prime_username_pass.secret_string)["username"]
       password = jsondecode(data.aws_secretsmanager_secret_version.ontap_prime_username_pass.secret_string)["password"]
       validate_certs = var.validate_certs
+    },
+    {
+      name = "dr_clus"
+      hostname = join("", aws_fsx_ontap_file_system.terraform-fsxn.endpoints[0].management[0].ip_addresses)
+      username = jsondecode(data.aws_secretsmanager_secret_version.ontap_prime_username_pass.secret_string)["username"]
+      password = jsondecode(data.aws_secretsmanager_secret_version.ontap_prime_username_pass.secret_string)["password"]
+      validate_certs = var.validate_certs
     }
 
   ]
@@ -51,7 +58,7 @@ resource "aws_fsx_ontap_file_system" "terraform-fsxn" {
   preferred_subnet_id = var.dr_fsx_subnets["primarysub"]
 
   storage_capacity                = var.dr_fsx_capacity_size_gb
-  security_group_ids              = var.create_sg ? [element(aws_security_group.fsx_sg[*].id, 0)] : var.security_group_ids
+  security_group_ids              = var.dr_create_sg ? [element(aws_security_group.fsx_sg[*].id, 0)] : var.dr_security_group_ids
   deployment_type                 = var.dr_fsx_deploy_type
   throughput_capacity_per_ha_pair = var.dr_fsx_tput_in_MBps
   ha_pairs                        = var.dr_ha_pairs
@@ -88,10 +95,10 @@ data "netapp-ontap_storage_volume_data_source" "my_vol" {
    name            = each.value
 }
 
- resource "netapp-ontap_storage_volume_resource" "example" {
-   cx_profile_name = "primary_clus"
+ resource "netapp-ontap_storage_volume_resource" "example2" {
+   cx_profile_name = "dr_clus"
    name = "rvwn_vol1_tf"
-   svm_name = var.prime_svm
+   svm_name = aws_fsx_ontap_storage_virtual_machine.mysvm.name
    aggregates = [
      {
        name = "aggr1"
