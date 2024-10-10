@@ -13,7 +13,9 @@
 ################################################################################
 #
 # This script is used to delete a storage virtual machine from a
-# FSxN filesystem.
+# FSxN filesystem. It will delete all the volumes associated with the
+# storage virtual machine as well.
+#
 ################################################################################
 
 ################################################################################
@@ -21,10 +23,13 @@
 ################################################################################
 usage () {
 cat 1>&2 <<EOF
-Usage: $(basename $0) -i svmID [-r region] 
+Usage: $(basename $0) -i svmID [-r region] [-w] [-n] [-b]
 Where:
   svmID: Is the ID of the storage virtual machine you want to delete.
   region: Is the AWS region where the SVM resides.
+  -w: Wait for the delete to complete before returning.
+  -n: No query. Do not ask for confirmation before deleting the SVM.
+  -b: Enable final backup of the volumes before deleting the volumes. Otherwise, the volumes are deleted without a backup.
 EOF
   exit 1
 }
@@ -33,31 +38,47 @@ EOF
 # Main logic starts here.
 ################################################################################
 tmpout=/tmp/fsx_svm_create.$$
-volumesFile=/tmp/fsx_svm_create-volumes.$$
-trap 'rm -f $tmpout volumesFile' exit
+volumesFile=/tmp/fsx_svm_delete-volumes.$$
+trap 'rm -f $tmpout $volumesFile' exit
 
-if which aws jq > /dev/null 2>&1; then
-  :
-else
-  echo "Error, both the 'aws' and 'jq' commands are required to run this script." 1>&2
-  exit 1
-fi
+for cmd in aws jq delete_fsxn_volume; do
+  if which $cmd > /dev/null 2>&1; then
+    :
+  else
+    echo "Error, a required command '$cmd' is not in the search path. Please install it and try again." 1>&2
+    exit 1
+  fi
+done
 #
 # Set any defaults.
 region=$(aws configure list | egrep '^.*egion ' | awk '{print $2}')
+waitForDelete=false
+noQuery=false
+enableBackup=false
 #
 # Process command line arguments.
-while getopts "hi:r:" option; do
+while getopts "hbi:wnr:" option; do
   case $option in
     i) svmID=$OPTARG
       ;;
     r) region=$OPTARG
       ;;
+    w) waitForDelete=true
+      ;;
+    n) noQuery=true
+      ;;
+    b) enableBackup=true
+      ;;
     *) usage
       ;;
   esac
-  shift
 done
+
+if [ $enableBackup == "true" ]; then
+  enableBackup="-b"  # This is just a flag to the delete_fsxn_volume script.
+else
+  enableBackup=""
+fi
 #
 # Ensure all the required parameters have been provided.
 if [ -z "$svmID" ]; then
@@ -65,18 +86,155 @@ if [ -z "$svmID" ]; then
   usage
   exit 1
 fi
+#
+# Set the maximum number of volume deletes that can be running at the same time.
+MaxDeletesRunning=20
+#
+# Set the maximum number of iterations to wait for the SVM delete to complete.
+# The total time to wait is the product of MaxIterations and SleepTime.
+MaxIterations=120
+#
+# Set the sleep time between iterations checking to see if the SVM delete has completed.
+SleepTime=5
+#
+# Get the list of volumes associated with the SVM.
+aws fsx describe-volumes --region=$region --output=json --filters Name=storage-virtual-machine-id,Values=$svmID > $volumesFile 2>&1
+if [ $? -ne 0 ]; then
+  echo "Error, failed to get the list of volumes for SVM: $svmID." 1>&2
+  cat $volumesFile 1>&2
+  exit 1
+fi
 
+if [ $noQuery != "true" ]; then
+  #
+  # Display the voluems in the SVM to make sure the user really wants to delete them.
+  numVolumes=$(jq '.Volumes | length' $volumesFile)
+  if [ $numVolumes -gt 1 ]; then  # Assume there is a root volume that will be skipped.
+    echo "The following volumes are associated with the storage virtual machine with an id of '$svmID':"
+    while read volumeId volumeName; do
+      volumes=(${volumes[@]} $volumeId)
+      printf "\t$volumeId - '$volumeName'\n"
+    done < <(jq -r '.Volumes[] | select(.OntapConfiguration.StorageVirtualMachineRoot | not) | .VolumeId + " " + .Name' $volumesFile)
+  fi 
+
+  read -p "Are you sure you want to delete the storage virtual machine with an id of '$svmID' and all its volumes? (yes/no): " answer
+  
+  if [ "$answer" != "yes" ]; then
+    echo "Aborting deletion of storage virtual machine." 1>&2
+    exit 1
+  fi
+else
+  #
+  # Create the volumes array.
+  while read volumeId; do
+    volumes=(${volumes[@]} $volumeId)
+  done < <(jq -r '.Volumes[] | select(.OntapConfiguration.StorageVirtualMachineRoot | not) | .VolumeId' $volumesFile)
+fi
+
+if [ ! -z "${volumes[*]}" ]; then
+  #
+  # Since it can take a while for a single volume to be deleted (e.g. 4 minutes
+  # for a small empty volume) and you can do multiple deletes in parallel,
+  # spawn them in the background and wait for them to finish. Although, since
+  # we don't want to overwhelm either AWS or ONTAP, only allow a certain
+  # number at a time.
+  i=0
+  numRunning=0
+  numVolumes=${#volumes[*]}
+  maxNumRunning=1  # Only do one initially, if it completes successfully, then do the rest concurrently.
+  printf "\nDeleting all the volumes associated with ${svmID}.\n"
+  while [ $i -lt $numVolumes ]; do
+    delete_fsxn_volume -r $region -w -q -i ${volumes[$i]} $enableBackup &
+    let i+=1
+    let numRunning+=1
+    printf "\rTotal number of volumes to delete: ${numVolumes}. Number of deletes currently running: ${numRunning}. Number waiting to be started: $((numVolumes-i)).     "
+    if [ $numRunning -ge $maxNumRunning ]; then
+      #
+      # Wait for a job to complete.
+      wait -n
+      rc=$?
+      if [ $rc -eq 127 ]; then
+        #
+        # 127 means there were no background jobs. Since we just deployed one, that shouldn't happen.
+        printf "\nError, got an expected response from 'wait'. Aborting.\n" 1>&2
+        exit 1
+      fi
+      if [ $rc -ne 0 ]; then
+        printf "\nError, one of the volume deletes failed. Aborting!\n" 1>&2
+        exit 1
+      fi
+      let numRunning-=1
+      if [ $i -eq 1 ]; then
+        # The first one succeeded, open up the flood gates.
+        maxNumRunning=$MaxDeletesRunning
+      fi
+    fi
+  done
+  #
+  # Now that we have queued them all up, wait for them to finish.
+  wait -n
+  rc=$?
+  let numRunning-=1
+  while [ "$rc" != 127 ]; do
+    printf "\rTotal number of volumes to delete: ${numVolumes}. Number of deletes currently running: ${numRunning}. Number waiting to be started: $((numVolumes-i)).     "
+    if [ "$rc" != 0 ]; then
+      printf "\nError, one of the volume deletes failed. Aborting!\n" 1>&2
+      exit 1
+    fi
+    wait -n
+    rc=$?
+    let numRunning-=1
+  done
+  echo ""
+fi
+#
+# Now that all the volumes have been deleted, delete the storage virtual machine.
 aws fsx delete-storage-virtual-machine --region=$region --storage-virtual-machine-id $svmID > $tmpout 2>&1
 
 if [ $? != "0" ]; then
   echo "Failed to delete storage virtual machine." 1>&2
-  cat $tmpout
+  cat $tmpout 1>&2
   exit 1
 else
   status=$(jq -r .Lifecycle $tmpout)
   if [ "$status" == "DELETING" ]; then
-    echo "Storage Virtual Machine with an id of '$svmID' is being deleted."
-    exit 0
+    echo -n "Storage Virtual Machine with an id of '$svmID' is being deleted."
+    #
+    # Wait for the svm to be deleted.
+    if [ $waitForDelete == "true" ]; then
+      i=0
+      while [ $i -lt $MaxIterations ]; do
+        aws fsx describe-storage-virtual-machines --storage-virtual-machine-ids $svmID --output=json --region=$region > $tmpout 2>&1
+        if [ $? -eq 0 ]; then
+          status=$(jq -r '.StorageVirtualMachines[0].Lifecycle' $tmpout 2> /dev/null)
+          if [ "$status" != "DELETING" -a "$status" != "PENDING" ]; then
+            printf "\nError, failed to delete SVM with SVM ID '$svmID'. Status = $status\n" 1>&2
+            reason="$(jq -r '.StorageVirtualMachines[0].LifecycleTransitionReason.Message' $tmpout 2> /dev/null)"
+            if [ ! -z "$reason" ]; then
+              echo "Reason: $reason" 1>&2
+            else
+              cat $tmpout 1>&2
+            fi
+            exit 1
+          else
+            printf "."
+          fi
+        else
+          # Assume if it failed, it is because the SVM was delted and therefore doesn't exist anymore.
+          printf "\nStorage Virtual Machine with an id of '$svmID' has been deleted.\n"
+          break
+        fi
+        sleep $SleepTime
+        let i+=1
+      done
+      if [ $i -ge $MaxIterations ]; then
+        printf "\nFailed to delete SVM with SVM ID of '$svmID'. Taking too long.\n" 1>&2
+        exit 1
+      fi
+      exit 0
+    else
+      echo
+    fi
   else
     echo "Unknown status '$status'. Complete output returned from the AWS api:"
     cat $tmpout

@@ -107,6 +107,7 @@ resource "aws_lambda_function" "rotateLambdaFunction" {
   runtime          = "python3.12"
   handler          = "fsxn_rotate_secret.lambda_handler"
   filename         = "fsxn_rotate_secret.zip"
+  timeout          = 10
   source_code_hash = data.archive_file.lambda.output_base64sha256
 }
 #

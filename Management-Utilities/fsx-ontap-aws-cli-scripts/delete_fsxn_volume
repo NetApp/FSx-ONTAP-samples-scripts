@@ -20,13 +20,54 @@
 ################################################################################
 usage () {
 cat 1>&2 <<EOF
-Usage: $(basename $0) -i volumeID [-r region] [-b]
+Usage: $(basename $0) -i volumeID [-r region] [-b] [-w]
 where
   volumeID: is the ID of the volume to delete.
   region: is the AWS region where the FSxN filesystem resides.
   -b: enable final backup. Otherwise it is skipped.
+  -w: wait for the volume to be deleted before returning.
 EOF
   exit 1
+}
+
+################################################################################
+#  This function waits for the volume to be deleted.
+################################################################################
+waitForVolumeDelete () {
+
+  local volumeId=$1
+  local MaxIterations=60
+  local SleepTime=5
+  #
+  # Wait for the volume to be deleted.
+  i=0
+  while [ $i -lt $MaxIterations ]; do
+    aws fsx describe-volumes --volume-ids $volumeId --output=json --region=$region > $tmpout 2>&1
+    if [ $? -eq 0 ]; then
+      status=$(jq -r .Volumes[0].Lifecycle $tmpout 2> /dev/null)
+      if [ "$status" != "DELETING" -a "$status" != "PENDING" ]; then
+        printf "\nError, failed to delete volume with volume ID '$volumeId'. Status = ${status}.\n" 1>&2
+        reason="$(jq -r '.Volumes[0].LifecycleTransitionReason.Message' $tmpout 2> /dev/null)"
+        if [ ! -z "$reason" ]; then
+          echo "Reason: $reason" 1>&2
+        else
+          cat $tmpout 1>&2
+        fi
+        return 1
+      fi
+    else
+      # Assume if it failed, it is because the volume was deleted and doesn't exist anymore.
+      break
+    fi
+    [ $quiet != "true" ] && printf "."
+    sleep $SleepTime
+    let i+=1
+  done
+  if [ $i -ge $MaxIterations ]; then
+    printf "\nFailed to delete volume with volume ID of '$volumeId'. Taking too long.\n" 1>&2
+    return 1
+  fi
+  return 0
 }
 
 ################################################################################
@@ -37,10 +78,12 @@ trap 'rm -f $tmpout' exit
 #
 # Set some defaults.
 region=$(aws configure list | egrep '^.*egion ' | awk '{print $2}')
+skipBackup=true
+waitForCompletion=false
+quiet=false
 #
 # Process command line arguments.
-skipBackup=true
-while getopts "hbi:r:" option; do
+while getopts "qhwbi:r:" option; do
   case $option in
     r) region="$OPTARG"
       ;;
@@ -48,10 +91,21 @@ while getopts "hbi:r:" option; do
       ;;
     b) skipBackup=false
       ;;
+    w) waitForCompletion=true
+      ;;
+    q) quiet=true
+      ;;
     *) usage
       ;;
   esac
 done
+
+if which jq aws > /dev/null 2>&1; then
+  :
+else
+  echo "Error, both 'jq' and 'aws' are required to run this script." 1>&2
+  exit 1
+fi
 #
 # Ensure all the required parameters have been provided.
 if [ -z "$volumeId" ]; then
@@ -68,11 +122,20 @@ if [ $? != "0" ]; then
 else
   status=$(jq -r .Lifecycle $tmpout 2> /dev/null)
   if [ "$status" == "DELETING"  -o "$status" == "PENDING" ]; then
-    echo "Volume '$volumeId' is being deleted."
-    exit 0
+    [ $quiet != "true" ] && printf "Volume '$volumeId' is being deleted."
+    if [ "$waitForCompletion" == "true" ]; then
+      waitForVolumeDelete $volumeId
+      if [ $? -ne 0 ]; then
+        exit 1
+      fi
+      [ $quiet != "true" ] && printf "\n"
+    else
+      [ $quiet != "true" ] && printf "\n"
+    fi
   else
     echo "Unknown status '$status'. Complete output returned from the AWS api:" 1>&2
     cat $tmpout 1>&2
     exit 1
   fi
 fi
+exit 0
