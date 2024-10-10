@@ -4,15 +4,18 @@
 # ONTAP volumes, that don't already have one, that will trigger when the
 # utilization of the volume gets above the threshold defined below. It will
 # also create an alarm that will trigger when the file system reach
-# an average CPU utilization greater than what is specified below.
+# an average CPU utilization greater than what is specified below as well
+# an alarm that will trigger when the SSD utilization is greater than what
+# is specified below.
 #
 # It can either be run as a standalone script, or uploaded as a Lambda
 # function with the thought being that you will create a EventBridge schedule
 # to invoke it periodically.
 #
-# It will scan all regions looking for FSxN volumes, and since CloudWatch
-# can't send SNS messages across regions, it assumes that the specified
-# SNS topic exist in each region for the specified account ID.
+# It will scan all regions looking for FSxN volumes and file systems
+# and since CloudWatch can't send SNS messages across regions, it assumes
+# that the specified SNS topic exist in each region for the specified
+# account ID.
 #
 # Finally, a default volume threshold is defined below. It sets the volume
 # utilization threshold that will cause CloudWatch to send the alarm event
@@ -23,6 +26,9 @@
 # a tag with the name of 'CPU_Alarm_Threshold' on the file system resouce.
 # Lastly, you can create an override for the SSD alarm, by creating a tag
 # with the name "SSD_Alarm_Threshold" on the file system resource.
+#
+# Version: %%VERSION%%
+# Date: %%DATE%%
 #
 ################################################################################
 #
@@ -64,14 +70,23 @@ defaultVolumeThreshold=80
 # what you are doing.
 ################################################################################
 #
+# The following is put in front of all alarms so an IAM policy can be create
+# that will allow this script to only be able to delete the alarms it creates.
+# If you change this, you must also change the IAM policy. It can be
+# set via an environment variable, this is so that the CloudFormation template
+# can pass the value to the Lambda function. To change the value, change
+# the "FSx-ONTAP-Auto" string to your desired value.
+import os
+basePrefix = os.environ.get('basePrefix', "FSx-ONTAP-Auto")
+#
 # Define the prefix for the volume utilization alarm name for the CloudWatch alarms.
-alarmPrefixVolume="Volume_Utilization_for_volume_"
+alarmPrefixVolume=f"{basePrefix}-Volume_Utilization_for_volume_"
 #
 # Define the prefix for the CPU utilization alarm name for the CloudWatch alarms.
-alarmPrefixCPU="CPU_Utilization_for_fs_"
+alarmPrefixCPU=f"{basePrefix}-CPU_Utilization_for_fs_"
 #
 # Define the prefix for the SSD utilization alarm name for the CloudWatch alarms.
-alarmPrefixSSD="SSD_Utilization_for_fs_"
+alarmPrefixSSD=f"{basePrefix}-SSD_Utilization_for_fs_"
 
 ################################################################################
 # You shouldn't have to modify anything below here.
@@ -80,7 +95,6 @@ alarmPrefixSSD="SSD_Utilization_for_fs_"
 import botocore
 from botocore.config import Config
 import boto3
-import os
 import getopt
 import sys
 import time
@@ -531,7 +545,7 @@ def lambda_handler(event, context):
 # This function is used to print out the usage of the script.
 ################################################################################
 def usage():
-    print('Usage: add_cw_alarm [-h|--help] [-d|--dryRun] [[-c|--customerID customerID] [[-a|--accountID aws_account_id] [[-s|--SNSTopic SNS_Topic_Name] [[-r|--region region] [[-C|--CPUThreshold threshold] [[-S|--SSDThreshold threshold] [[-V|--VolumeThreshold threshold] [-F|--FileSystemID FileSystemID]')
+    print('Usage: auto_add_cw_alarms [-h|--help] [-d|--dryRun] [[-c|--customerID customerID] [[-a|--accountID aws_account_id] [[-s|--SNSTopic SNS_Topic_Name] [[-r|--region region] [[-C|--CPUThreshold threshold] [[-S|--SSDThreshold threshold] [[-V|--VolumeThreshold threshold] [-F|--FileSystemID FileSystemID]')
 
 ################################################################################
 # Main logic starts here.
@@ -549,6 +563,9 @@ onlyFilesystemId = None
 defaultCPUThreshold    = int(os.environ.get('defaultCPUThreshold',    defaultCPUThreshold))
 defaultSSDThreshold    = int(os.environ.get('defaultSSDThreshold',    defaultSSDThreshold))
 defaultVolumeThreshold = int(os.environ.get('defaultVolumeThreshold', defaultVolumeThreshold))
+regionsEnv = os.environ.get('regions', '')
+if regionsEnv != '':
+    regions = regionsEnv.split(',')
 #
 # Check to see if we are bring run from a command line or a Lmabda function.
 if os.environ.get('AWS_LAMBDA_FUNCTION_NAME') == None:

@@ -1,0 +1,772 @@
+Description: "Deploy auto-add-cw-alarms."
+#
+# This just formats the page that prompts for the parameters when using the AWS Console to deploy your stack.
+Metadata: 
+  AWS::CloudFormation::Interface: 
+    ParameterGroups:
+      - Label: 
+          default: "Configuration Parameters"
+        Parameters: 
+          - SNStopic
+          - accountId
+          - customerId
+          - defaultCPUThreshold
+          - defaultSSDThreshold
+          - defaultVolumeThreshold
+          - checkInterval
+          - alarmPrefixString
+          - regions
+
+Parameters:
+  SNStopic:
+    Description: "The SNS Topic name where CloudWatch will send alerts to. Note that it is assumed that the SNS topic, with the same name, will exist in all the regions where alarms are to be created."
+    Type: String
+
+  accountId:
+    Description: "The AWS account ID associated with the SNStopic. This is only used to compute the ARN to the SNS Topic."
+    Type: String
+
+  customerId:
+    Description: "This is really just a comment that will be added to the alarm description."
+    Type: String
+    Default: ""
+
+  defaultCPUThreshold:
+    Description: "This will define the default CPU utilization threshold. You can override the default by having a specific tag associated with the file system. See below for more information."
+    Type: Number
+    MinValue: 0
+    MaxValue: 100
+    Default: 80
+
+  defaultSSDThreshold:
+    Description: "This will define the default SSD (aggregate) utilization threshold. You can override the default by having a specific tag associated with the file system. See below for more information."
+    Type: Number
+    MinValue: 0
+    MaxValue: 100
+    Default: 80
+
+  defaultVolumeThreshold:
+    Description: "This will define the default Volume utilization threshold. You can override the default by having a specific tag associated with the volume. See below for more information."
+    Type: Number
+    MinValue: 0
+    MaxValue: 100
+    Default: 80
+
+  checkInterval:
+    Description: "This is how often you want the Lambda function to run to look for new file systems and/or volumes (minutes)."
+    Type: Number
+    MinValue: 5
+    Default: 15
+
+  alarmPrefixString:
+    Description: "This is the string that will be prepended to all CloudWatch alarms created by this script."
+    Type: String
+    Default: "FSx-ONTAP-Auto"
+
+  regions:
+    Description: "This is a list of AWS regions that you want the Lambda function to run in. If left blank, it will run in all regions."
+    Type: CommaDelimitedList
+    Default: ""
+
+Resources:
+  LambdaRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName: !Sub "Lambda-Role-for-${AWS::StackName}"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service: "lambda.amazonaws.com"
+            Action: "sts:AssumeRole"
+
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+
+      Policies:
+        - PolicyName: "LambdaPolicy_for_Auto_Add_CW_Alarms"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "fsx:DescribeFileSystems"
+                  - "fsx:DescribeVolumes"
+                  - "fsx:ListTagsForResource"
+                  - "ec2:DescribeRegions"
+                  - "cloudwatch:DescribeAlarms"
+                  - "cloudwatch:DescribeAlarmsForMetric"
+                  - "cloudwatch:PutMetricAlarm"
+                Resource: "*"
+
+              - Effect: "Allow"
+                Action:
+                  - "cloudwatch:DeleteAlarms"
+                Resource: !Sub "arn:aws:cloudwatch:*:${AWS::AccountId}:alarm:${alarmPrefixString}*"
+
+  SchedulerRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName: !Sub "SchedulerRole-for-${AWS::StackName}"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service: "scheduler.amazonaws.com"
+            Action: "sts:AssumeRole"
+
+      Policies:
+        - PolicyName: "SchedulerPolicy_for_Auto_Add_CW_Alarms"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "lambda:InvokeFunction"
+                Resource: !GetAtt LambdaFunction.Arn
+
+  LambdaScheduler:
+    Type: "AWS::Scheduler::Schedule"
+    Properties:
+      Description: "Schedule the auto_add_cw_alarms Lambda function."
+      Name: !Sub "Schedule-for-${AWS::StackName}"
+      FlexibleTimeWindow:
+        Mode: "OFF"
+      ScheduleExpression: !Sub "rate(${checkInterval} minutes)"
+      Target:
+        Arn: !GetAtt LambdaFunction.Arn
+        RoleArn: !GetAtt SchedulerRole.Arn
+
+  LambdaFunction:
+    Type: "AWS::Lambda::Function"
+    Properties:
+      FunctionName: !Sub "Lambda-for-${AWS::StackName}"
+      Role: !GetAtt LambdaRole.Arn
+      PackageType: "Zip"
+      Runtime: "python3.12"
+      Handler: "index.lambda_handler"
+      Timeout: 300
+      Environment:
+        Variables:
+          SNStopic: !Ref SNStopic
+          accountId: !Ref accountId
+          customerId: !Ref customerId
+          defaultCPUThreshold: !Ref defaultCPUThreshold
+          defaultSSDThreshold: !Ref defaultSSDThreshold
+          defaultVolumeThreshold: !Ref defaultVolumeThreshold
+          basePrefix: !Ref alarmPrefixString
+          regions: !Join [",", !Ref regions]
+
+      Code:
+        ZipFile: |
+          #!/usr/bin/python3
+          #
+          # This script is used to add CloudWatch alarms for all the FSx for NetApp
+          # ONTAP volumes, that don't already have one, that will trigger when the
+          # utilization of the volume gets above the threshold defined below. It will
+          # also create an alarm that will trigger when the file system reach
+          # an average CPU utilization greater than what is specified below as well
+          # an alarm that will trigger when the SSD utilization is greater than what
+          # is specified below.
+          #
+          # It can either be run as a standalone script, or uploaded as a Lambda
+          # function with the thought being that you will create a EventBridge schedule
+          # to invoke it periodically.
+          #
+          # It will scan all regions looking for FSxN volumes and file systems
+          # and since CloudWatch can't send SNS messages across regions, it assumes
+          # that the specified SNS topic exist in each region for the specified
+          # account ID.
+          #
+          # Finally, a default volume threshold is defined below. It sets the volume
+          # utilization threshold that will cause CloudWatch to send the alarm event
+          # to the SNS topic. It can be overridden on a per volume basis by having a
+          # tag with the name of "alarm_threshold" set to the desired threshold.
+          # If the tag is set to 100, then no alarm will be created. You can also
+          # set an override to the filesystem CPU utilization alarm, but setting
+          # a tag with the name of 'CPU_Alarm_Threshold' on the file system resouce.
+          # Lastly, you can create an override for the SSD alarm, by creating a tag
+          # with the name "SSD_Alarm_Threshold" on the file system resource.
+          #
+          # Version: v2.13
+          # Date: 2024-10-03-12:30:21
+          #
+          ################################################################################
+          #
+          # The following variables effect the behavior of the script. They can be
+          # either be set here, overridden via the command line options, or
+          # overridden by environment variables.
+          #
+          # Define which SNS topic you want "volume full" message to be sent to.
+          SNStopic=''
+          #
+          # Provide the account id the SNS topic resides under:
+          # MUST be a string.
+          accountId=''
+          #
+          # Set the customer ID associated with the AWS account. This is used to
+          # as part of the alarm name prefix so a customer ID can be associated
+          # with the alarm. If it is left as an empty string, no extra prefix
+          # will be added.
+          customerId=''
+          #
+          # Define the default CPU utilization threshold before sending the alarm.
+          # Setting it to 100 will disable the creation of the alarm.
+          defaultCPUThreshold=80
+          #
+          # Define the default SSD utilization threshold before sending the alarm.
+          # Setting it to 100 will disable the creation of the alarm.
+          defaultSSDThreshold=90
+          #
+          # Define the default volume utilization threshold before sending the alarm.
+          # Setting it to 100 will disable the creation of the alarm.
+          defaultVolumeThreshold=80
+          #
+          #
+          ################################################################################
+          # You can't change the following variables from the command line or environment
+          # variables since changing them after the program has run once would cause
+          # all existing CloudWatch alarms to be abandoned, and all new alarms to be
+          # created. So, it is not recommended to change these variables unless you know
+          # what you are doing.
+          ################################################################################
+          #
+          # The following is put in front of all alarms so an IAM policy can be create
+          # that will allow this script to only be able to delete the alarms it creates.
+          # If you change this, you must also change the IAM policy. It can be
+          # set via an environment variable, this is so that the CloudFormation template
+          # can pass the value to the Lambda function. To change the value, change
+          # the "FSx-ONTAP-Auto" string to your desired value.
+          import os
+          basePrefix = os.environ.get('basePrefix', "FSx-ONTAP-Auto")
+          #
+          # Define the prefix for the volume utilization alarm name for the CloudWatch alarms.
+          alarmPrefixVolume=f"{basePrefix}-Volume_Utilization_for_volume_"
+          #
+          # Define the prefix for the CPU utilization alarm name for the CloudWatch alarms.
+          alarmPrefixCPU=f"{basePrefix}-CPU_Utilization_for_fs_"
+          #
+          # Define the prefix for the SSD utilization alarm name for the CloudWatch alarms.
+          alarmPrefixSSD=f"{basePrefix}-SSD_Utilization_for_fs_"
+          
+          ################################################################################
+          # You shouldn't have to modify anything below here.
+          ################################################################################
+          
+          import botocore
+          from botocore.config import Config
+          import boto3
+          import getopt
+          import sys
+          import time
+          import json
+          
+          ################################################################################
+          # This function adds the SSD Utilization CloudWatch alarm.
+          ################################################################################
+          def add_ssd_alarm(cw, fsId, alarmName, alarmDescription, threshold, region):
+              action = 'arn:aws:sns:' + region + ':' + accountId + ':' + SNStopic
+              if not dryRun:
+                  cw.put_metric_alarm(
+                      AlarmName=alarmName,
+                      ActionsEnabled=True,
+                      AlarmActions=[action],
+                      AlarmDescription=alarmDescription,
+                      EvaluationPeriods=1,
+                      DatapointsToAlarm=1,
+                      Threshold=threshold,
+                      ComparisonOperator='GreaterThanThreshold',
+                      MetricName="StorageCapacityUtilization",
+                      Period=300,
+                      Statistic="Average",
+                      Namespace="AWS/FSx",
+                      Dimensions=[{'Name': 'FileSystemId', 'Value': fsId}, {'Name': 'StorageTier', 'Value': 'SSD'}, {'Name': 'DataType', 'Value': 'All'}]
+                  )
+              else:
+                  print(f'Would have added SSD alarm for {fsId} with name {alarmName} with thresold of {threshold} in {region} with action {action}')
+          
+          ################################################################################
+          # This function adds the CPU Utilization CloudWatch alarm.
+          ################################################################################
+          def add_cpu_alarm(cw, fsId, alarmName, alarmDescription, threshold, region):
+              action = 'arn:aws:sns:' + region + ':' + accountId + ':' + SNStopic
+              if not dryRun:
+                  cw.put_metric_alarm(
+                      AlarmName=alarmName,
+                      ActionsEnabled=True,
+                      AlarmActions=[action],
+                      AlarmDescription=alarmDescription,
+                      EvaluationPeriods=1,
+                      DatapointsToAlarm=1,
+                      Threshold=threshold,
+                      ComparisonOperator='GreaterThanThreshold',
+                      MetricName="CPUUtilization",
+                      Period=300,
+                      Statistic="Average",
+                      Namespace="AWS/FSx",
+                      Dimensions=[{'Name': 'FileSystemId', 'Value': fsId}]
+                  )
+              else:
+                  print(f'Would have added CPU alarm for {fsId} with name {alarmName} with thresold of {threshold} in {region} with action {action}.')
+          
+          ################################################################################
+          # This function adds the Volume utilization CloudWatch alarm.
+          ################################################################################
+          def add_volume_alarm(cw, volumeId, alarmName, alarmDescription, fsId, threshold, region):
+              action = 'arn:aws:sns:' + region + ':' + accountId + ':' + SNStopic
+              if not dryRun:
+                  cw.put_metric_alarm(
+                      ActionsEnabled=True,
+                      AlarmName=alarmName,
+                      AlarmActions=[action],
+                      AlarmDescription=alarmDescription,
+                      EvaluationPeriods=1,
+                      DatapointsToAlarm=1,
+                      Threshold=threshold,
+                      ComparisonOperator='GreaterThanThreshold',
+                      Metrics=[{"Id":"e1","Label":"Utilization","ReturnData":True,"Expression":"m2/m1*100"},\
+                               {"Id":"m2","ReturnData":False,"MetricStat":{"Metric":{"Namespace":"AWS/FSx","MetricName":"StorageUsed","Dimensions":[{"Name":"VolumeId","Value": volumeId},{"Name":"FileSystemId","Value":fsId}]},"Period":300,"Stat":"Average"}},\
+                               {"Id":"m1","ReturnData":False,"MetricStat":{"Metric":{"Namespace":"AWS/FSx","MetricName":"StorageCapacity","Dimensions":[{"Name":"VolumeId","Value": volumeId},{"Name":"FileSystemId","Value":fsId}]},"Period":300,"Stat":"Average"}}]
+                  )
+              else:
+                  print(f'Would have added volume alarm for {volumeId} {fsId} with name {alarmName} with thresold of {threshold} in {region} with action {action}.')
+          
+          
+          ################################################################################
+          # This function deletes a CloudWatch alarm.
+          ################################################################################
+          def delete_alarm(cw, alarmName):
+              if not dryRun:
+                  cw.delete_alarms(AlarmNames=[alarmName])
+              else:
+                  print(f'Would have deleted alarm {alarmName}.')
+          
+          ################################################################################
+          # This function checks to see if the alarm already exists.
+          ################################################################################
+          def contains_alarm(alarmName, alarms):
+              for alarm in alarms:
+                  if(alarm['AlarmName'] == alarmName):
+                      return True
+              return False
+          
+          ################################################################################
+          # This function checks to see if a volume exists.
+          ################################################################################
+          def contains_volume(volumeId, volumes):
+              for volume in volumes:
+                  if(volume['VolumeId'] == volumeId):
+                      return True
+              return False
+          
+          ################################################################################
+          # This function checks to see if a file system exists.
+          ################################################################################
+          def contains_fs(fsId, fss):
+              for fs in fss:
+                  if(fs['FileSystemId'] == fsId):
+                      return True
+              return False
+          
+          ################################################################################
+          # This function returns the value assigned to the "alarm_threshold" tag
+          # associated with the arn passed in. If none is found, it returns the default
+          # threshold set above.
+          ################################################################################
+          def getAlarmThresholdTagValue(fsx, arn):
+              #
+              # If there are a lot of volumes, we could get hit by the AWS rate limit,
+              # so we will sleep for a short period of time and then retry. We will
+              # double the sleep time each time we get a rate limit exception until
+              # we get to 5 seconds, then we will just raise the exception.
+              sleep=.125
+              #
+              # This is put into a try block because it is possible that the volume
+              # is deleted between the time we get the list of volumes and the time
+              # we try to get the tags for the volume.
+              while True:
+                  try:
+                      tags = fsx.list_tags_for_resource(ResourceARN=arn)
+                      for tag in tags['Tags']:
+                          if(tag['Key'].lower() == "alarm_threshold"):
+                              return(tag['Value'])
+                      return(defaultVolumeThreshold)
+                  except botocore.exceptions.ClientError as e:
+                      if e.response['Error']['Code'] == 'ResourceNotFound':
+                          return(100) # Return 100 so we don't try to create an alarm.
+          
+                      if e.response['Error']['Code'] == 'TooManyRequestsException' or e.response['Error']['Code'] == 'ThrottlingException':
+                          sleep = sleep * 2
+                          if sleep > 5:
+                              raise e
+                          print(f"Warning: Rate Limit fault while getting tags. Sleeping for {sleep} seconds.")
+                          time.sleep(sleep)
+                      else:
+                          print(f"boto3 client error: {json.dumps(e.response)}")
+                          raise e
+          
+          ################################################################################
+          # This function returns the value assigned to the "CPU_alarm_threshold" tag
+          # that is in the array of tags passed in. if it doesn't find that tag it
+          # returns the default threshold set above.
+          ################################################################################
+          def getCPUAlarmThresholdTagValue(tags):
+              for tag in tags:
+                  if(tag['Key'].lower() == "cpu_alarm_threshold"):
+                      return(tag['Value'])
+              return(defaultCPUThreshold)
+          
+          ################################################################################
+          # This function returns the value assigned to the "CPU_alarm_threshold" tag
+          # that is in the array of tags passed in. if it doesn't find that tag it
+          # returns the default threshold set above.
+          ################################################################################
+          def getSSDAlarmThresholdTagValue(tags):
+              for tag in tags:
+                  if(tag['Key'].lower() == "ssd_alarm_threshold"):
+                      return(tag['Value'])
+              return(defaultSSDThreshold)
+          
+          ################################################################################
+          # This function returns the file system id that the passed in alarm is
+          # associated with.
+          ################################################################################
+          def getFileSystemId(alarm):
+          
+              for metric in alarm['Metrics']:
+                  if metric["Id"] == "m1":
+                      for dim in metric['MetricStat']['Metric']['Dimensions']:
+                          if dim['Name'] == 'FileSystemId':
+                              return dim['Value']
+              return None
+          
+          ################################################################################
+          # This function will return all the file systems in the region. It will handle the
+          # case where there are more file systms than can be returned in a single call.
+          # It will also handle the case where we get a rate limit exception.
+          ################################################################################
+          def getFss(fsx):
+          
+              # The initial amount of time to sleep if there is a rate limit exception.
+              sleep=.125
+              while True:
+                  try:
+                      response = fsx.describe_file_systems()
+                      fss = response['FileSystems']
+                      nextToken = response.get('NextToken')
+                      sleep=.125
+                      break
+                  except botocore.exceptions.ClientError as e:
+                      if e.response['Error']['Code'] == 'TooManyRequestsException' or e.response['Error']['Code'] == 'ThrottlingException':
+                          sleep = sleep * 2   # Exponential backoff.
+                          if sleep > 5:
+                              raise e
+                          print(f"Warning: Rate Limit fault while getting initial file system list. Sleeping for {sleep} seconds.")
+                          time.sleep(sleep)
+                      else:
+                          print(f"boto3 client error: {json.dumps(e.response)}")
+                          raise e
+          
+              while nextToken:
+                  try:
+                      response = fsx.describe_file_systems(NextToken=nextToken)
+                      fss += response['FileSystems']
+                      nextToken = response.get('NextToken')
+                      sleep=.125
+                  except botocore.exceptions.ClientError as e:
+                      if e.response['Error']['Code'] == 'TooManyRequestsException' or e.response['Error']['Code'] == 'ThrottlingException':
+                          sleep = sleep * 2   # Exponential backoff.
+                          if sleep > 5:
+                              raise e
+                          print(f"Warning: Rate Limit fault while getting additional file systems. Sleeping for {sleep} seconds.")
+                          time.sleep(sleep)
+                      else:
+                          print(f"boto3 client error: {json.dumps(e.response)}")
+                          raise e
+              return fss
+          
+          ################################################################################
+          # This function will return all the volumes in the region. It will handle the
+          # case where there are more volumes than can be returned in a single call.
+          # It will also handle the case where we get a rate limit exception.
+          ################################################################################
+          def getVolumes(fsx):
+              #
+              # The initial amount of time to sleep if there is a rate limit exception.
+              sleep=.125
+              while True:
+                  try:
+                      response = fsx.describe_volumes()
+                      volumes = response['Volumes']
+                      nextToken = response.get('NextToken')
+                      sleep=.125
+                      break
+                  except botocore.exceptions.ClientError as e:
+                      if e.response['Error']['Code'] == 'TooManyRequestsException' or e.response['Error']['Code'] == 'ThrottlingException':
+                          sleep = sleep * 2   # Exponential backoff.
+                          if sleep > 5:
+                              raise e
+                          print(f"Warning: Rate Limit fault while getting the initial list of volumes. Sleeping for {sleep} seconds.")
+                          time.sleep(sleep)
+                      else:
+                          print(f"boto3 client error: {json.dumps(e.response)}")
+                          raise e
+          
+              while nextToken:
+                  try:
+                      response = fsx.describe_volumes(NextToken=nextToken)
+                      volumes += response['Volumes']
+                      nextToken = response.get('NextToken')
+                      sleep=.125
+                  except botocore.exceptions.ClientError as e:
+                      if e.response['Error']['Code'] == 'TooManyRequestsException' or e.response['Error']['Code'] == 'ThrottlingException':
+                          sleep = sleep * 2   # Exponential backoff.
+                          if sleep > 5:
+                              raise e
+                          print(f"Warning: Rate Limit fault while getting additional volumes. Sleeping for {sleep} seconds.")
+                          time.sleep(sleep)
+                      else:
+                          print(f"boto3 client error: {json.dumps(e.response)}")
+                          raise e
+          
+              return volumes
+          
+          ################################################################################
+          # This function will return all the alarms in the region. It will handle the
+          # case where there are more alarms than can be returned in a single call.
+          # It will also handle the case where we get a rate limit exception.
+          ################################################################################
+          def getAlarms(cw):
+          
+              # The initial amount of time to sleep if there is a rate limit exception.
+              sleep=.125
+              while True:
+                  try:
+                      response = cw.describe_alarms()
+                      alarms = response['MetricAlarms']
+                      nextToken = response.get('NextToken')
+                      sleep=.125
+                      break
+                  except botocore.exceptions.ClientError as e:
+                      if e.response['Error']['Code'] == 'TooManyRequestsException' or e.response['Error']['Code'] == 'ThrottlingException':
+                          sleep = sleep * 2
+                          if sleep > 5:
+                              raise e
+                          print(f"Warning: Rate Limit fault while getting the initial list of alarms. Sleeping for {sleep} seconds.")
+                          time.sleep(sleep)
+                      else:
+                          print(f"boto3 client error: {json.dumps(e.response)}")
+                          raise e
+          
+              while nextToken:
+                  try:
+                      response = cw.describe_alarms(NextToken=nextToken)
+                      alarms += response['MetricAlarms']
+                      nextToken = response.get('NextToken')
+                      sleep=.125
+                  except botocore.exceptions.ClientError as e:
+                      if e.response['Error']['Code'] == 'TooManyRequestsException' or e.response['Error']['Code'] == 'ThrottlingException':
+                          sleep = sleep * 2   # Exponential backoff.
+                          if sleep > 5:
+                              raise e
+                          print(f"Warning: Rate Limit fault while getting additional alarms. Sleeping for {sleep} seconds.")
+                          time.sleep(sleep)
+                      else:
+                          print(f"boto3 client error: {json.dumps(e.response)}")
+                          raise e
+          
+              return alarms
+          
+          ################################################################################
+          # This is the main logic of the program. It loops on all the regions then all
+          # the fsx volumes within the region, checking to see if any of them already
+          # have a CloudWatch alarm, and if not, add one.
+          ################################################################################
+          def lambda_handler(event, context):
+              global customerId, regions, SNStopic, accountId, onlyFilesystemId
+              #
+              # If the customer ID is set, reformat it to be used in the alarm description.
+              if customerId != '':
+                  customerId = f", CustomerID: {customerId}"
+          
+              if len(SNStopic) == 0:
+                  raise Exception("You must specify a SNS topic to send the alarm messages to.")
+          
+              if len(accountId) == 0:
+                  raise Exception("You must specify an accountId to run this program.")
+              #
+              # Configure boto3 to use the more advanced "adaptive" retry method.
+              boto3Config = Config(
+                  retries = {
+                      'max_attempts': 5,
+                      'mode': 'adaptive'
+                  }
+              )
+          
+              if len(regions) == 0:  # pylint: disable=E0601
+                  ec2Client = boto3.client('ec2', config=boto3Config)
+                  ec2Regions = ec2Client.describe_regions()['Regions']
+                  for region in ec2Regions:
+                      regions += [region['RegionName']]
+          
+              fsxRegions = boto3.Session().get_available_regions('fsx')
+              for region in regions:
+                  if region in fsxRegions:
+                      print(f'Scanning {region}')
+                      fsx = boto3.client('fsx', region_name=region, config=boto3Config)
+                      cw = boto3.client('cloudwatch', region_name=region, config=boto3Config)
+                      #
+                      # Get all the file systems, volumes and alarm in the region.
+                      fss     = getFss(fsx)
+                      volumes = getVolumes(fsx)
+                      alarms  = getAlarms(cw)
+                      #
+                      # Scan for filesystems without CPU Utilization Alarm.
+                      for fs in fss:
+                          if(fs['FileSystemType'] == "ONTAP"):
+                              threshold = int(getCPUAlarmThresholdTagValue(fs['Tags']))
+                              if(threshold != 100):
+                                  fsId = fs['FileSystemId']
+                                  fsName = fsId.replace('fs-', 'FsxId')
+                                  alarmName = alarmPrefixCPU + fsId
+                                  alarmDescription = f"CPU utilization alarm for file system {fsName}{customerId} in region {region}."
+          
+                                  if(not contains_alarm(alarmName, alarms) and onlyFilesystemId == None or
+                                     not contains_alarm(alarmName, alarms) and onlyFilesystemId != None and onlyFilesystemId == fsId):
+                                      print(f'Adding CPU Alarm for {fs["FileSystemId"]}')
+                                      add_cpu_alarm(cw, fsId, alarmName, alarmDescription, threshold, region)
+                      #
+                      # Scan for CPU alarms without a FSxN filesystem.
+                      for alarm in alarms:
+                          alarmName = alarm['AlarmName']
+                          if(alarmName[:len(alarmPrefixCPU)] == alarmPrefixCPU):
+                              fsId = alarmName[len(alarmPrefixCPU):]
+                              if(not contains_fs(fsId, fss) and onlyFilesystemId == None or
+                                 not contains_fs(fsId, fss) and onlyFilesystemId != None and onlyFilesystemId == fsId):
+                                  print("Deleting alarm: " + alarmName + " in region " + region)
+                                  delete_alarm(cw, alarmName)
+                      #
+                      # Scan for filesystems without SSD Utilization Alarm.
+                      for fs in fss:
+                          if(fs['FileSystemType'] == "ONTAP"):
+                              threshold = int(getSSDAlarmThresholdTagValue(fs['Tags']))
+                              if(threshold != 100):
+                                  fsId = fs['FileSystemId']
+                                  fsName = fsId.replace('fs-', 'FsxId')
+                                  alarmName = alarmPrefixSSD + fsId
+                                  alarmDescription = f"SSD utilization alarm for file system {fsName}{customerId} in region {region}."
+          
+                                  if(not contains_alarm(alarmName, alarms) and onlyFilesystemId == None or
+                                     not contains_alarm(alarmName, alarms) and onlyFilesystemId != None and onlyFilesystemId == fsId):
+                                      print(f'Adding SSD Alarm for {fsId}')
+                                      add_ssd_alarm(cw, fs['FileSystemId'], alarmName, alarmDescription, threshold, region)
+                      #
+                      # Scan for SSD alarms without a FSxN filesystem.
+                      for alarm in alarms:
+                          alarmName = alarm['AlarmName']
+                          if(alarmName[:len(alarmPrefixSSD)] == alarmPrefixSSD):
+                              fsId = alarmName[len(alarmPrefixSSD):]
+                              if(not contains_fs(fsId, fss) and onlyFilesystemId == None or
+                                 not contains_fs(fsId, fss) and onlyFilesystemId != None and onlyFilesystemId == fsId):
+                                  print("Deleteing alarm: " + alarmName + " in region " + region)
+                                  delete_alarm(cw, alarmName)
+                      #
+                      # Scan for volumes without alarms.
+                      for volume in volumes:
+                          if(volume['VolumeType'] == "ONTAP"):
+                              volumeId = volume['VolumeId']
+                              volumeName = volume['Name']
+                              volumeARN = volume['ResourceARN']
+                              fsId = volume['FileSystemId']
+          
+                              threshold = int(getAlarmThresholdTagValue(fsx, volumeARN))
+          
+                              if(threshold != 100):   # No alarm if the value is set to 100.
+                                  alarmName = alarmPrefixVolume + volumeId
+                                  fsName = fsId.replace('fs-', 'FsxId')
+                                  alarmDescription = f"Volume utilization alarm for volumeId {volumeId}{customerId}, File System Name: {fsName}, Volume Name: {volumeName} in region {region}."
+                                  if(not contains_alarm(alarmName, alarms) and onlyFilesystemId == None or
+                                     not contains_alarm(alarmName, alarms) and onlyFilesystemId != None and onlyFilesystemId == fsId):
+                                      print(f'Adding volume utilization alarm for {volumeName} in region {region}.')
+                                      add_volume_alarm(cw, volumeId, alarmName, alarmDescription, fsId, threshold, region)
+                      #
+                      # Scan for volume alarms without volumes.
+                      for alarm in alarms:
+                          alarmName = alarm['AlarmName']
+                          if(alarmName[:len(alarmPrefixVolume)] == alarmPrefixVolume):
+                              volumeId = alarmName[len(alarmPrefixVolume):]
+                              if(not contains_volume(volumeId, volumes) and onlyFilesystemId == None or
+                                 not contains_volume(volumeId, volumes) and onlyFilesystemId != None and onlyFilesystemId == getFileSystemId(alarm)):
+                                  print("Deleteing alarm: " + alarmName + " in region " + region)
+                                  delete_alarm(cw, alarmName)
+          
+              return
+          
+          ################################################################################
+          # This function is used to print out the usage of the script.
+          ################################################################################
+          def usage():
+              print('Usage: auto_add_cw_alarms [-h|--help] [-d|--dryRun] [[-c|--customerID customerID] [[-a|--accountID aws_account_id] [[-s|--SNSTopic SNS_Topic_Name] [[-r|--region region] [[-C|--CPUThreshold threshold] [[-S|--SSDThreshold threshold] [[-V|--VolumeThreshold threshold] [-F|--FileSystemID FileSystemID]')
+          
+          ################################################################################
+          # Main logic starts here.
+          ################################################################################
+          #
+          # Set some default values.
+          regions = []
+          dryRun = False
+          #
+          # Check to see if there any any environment variables set.
+          customerId = os.environ.get('customerId', '')
+          accountId  = os.environ.get('accountId', '')
+          SNStopic   = os.environ.get('SNStopic', '')
+          onlyFilesystemId = None
+          defaultCPUThreshold    = int(os.environ.get('defaultCPUThreshold',    defaultCPUThreshold))
+          defaultSSDThreshold    = int(os.environ.get('defaultSSDThreshold',    defaultSSDThreshold))
+          defaultVolumeThreshold = int(os.environ.get('defaultVolumeThreshold', defaultVolumeThreshold))
+          regionsEnv = os.environ.get('regions', '')
+          if regionsEnv != '':
+              regions = regionsEnv.split(',')
+          #
+          # Check to see if we are bring run from a command line or a Lmabda function.
+          if os.environ.get('AWS_LAMBDA_FUNCTION_NAME') == None:
+              argumentList = sys.argv[1:]
+              options = "hc:a:s:dr:C:S:V:F:"
+          
+              longOptions = ["help", "customerID=", "accountID=", "SNSTopic=", "dryRun", "region=", "CPUThreshold=", "SSDThreshold=", "VolumeThreshold=", "FileSystemID="]
+              skip = False
+              try:
+                  arguments, values = getopt.getopt(argumentList, options, longOptions)
+          
+                  for currentArgument, currentValue in arguments:
+                      if currentArgument in ("-h", "--help"):
+                          usage()
+                          skip = True
+                      elif currentArgument in ("-c", "--customerID"):
+                          customerId = currentValue
+                      elif currentArgument in ("-a", "--accountID"):
+                          accountId = currentValue
+                      elif currentArgument in ("-s", "--SNSTopic"):
+                          SNStopic = currentValue
+                      elif currentArgument in ("-C", "--CPUThreshold"):
+                          defaultCPUThreshold = int(currentValue)
+                      elif currentArgument in ("-S", "--SSDThreshold"):
+                          defaultSSDThreshold = int(currentValue)
+                      elif currentArgument in ("-V", "--VolumeThreshold"):
+                          defaultVolumeThreshold = int(currentValue)
+                      elif currentArgument in ("-d", "--dryRun"):
+                          dryRun = True
+                      elif currentArgument in ("-r", "--region"):
+                          regions += [currentValue]
+                      elif currentArgument in ("-F", "--FileSystemID"):
+                          onlyFilesystemId = currentValue
+          
+              except getopt.error as err:
+                  print(str(err))
+                  usage()
+                  skip = True
+          
+              if not skip:
+                  lambda_handler(None, None)
