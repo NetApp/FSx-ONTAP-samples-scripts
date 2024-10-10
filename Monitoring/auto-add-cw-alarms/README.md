@@ -15,19 +15,19 @@ of relying on those events, this script will scan all the file systems and volum
 
 ## Invocation
 The preferred way to run this script is as a Lambda function. That is because it is very inexpensive to run without having
-to maintain compute resources. You can use an `EventBridge Schedule` to run it on a regular basis to
-ensure that all the CloudWatch alarms are kept up to date. Since there are several steps involved in setting up a Lambda function
-a CloudFormation script is included in the repo, named `cloudlformation.yaml`, that will do the following steps for you:
+to maintain any compute resources. You can use an `EventBridge Schedule` to run it on a regular basis to
+ensure that all the CloudWatch alarms are kept up to date. Since there are several steps involved in setting up a Lambda function,
+a CloudFormation template is included in the repo, named `cloudlformation.yaml`, that will do the following steps for you:
 - Create a role that will allow the Lambda function to:
-    - List AWS regions. This is so it can scan all regions for FSx for ONTAP file systems and volumes.
+    - List AWS regions. This is so it can get a list of all the regions, so it can know which regions to scan for FSx for ONTAP file systems and volumes.
     - List the FSx for ONTAP file systems.
-    - List the FSx volume.
+    - List the FSx volumes.
     - List the CloudWatch alarms.
-    - List tags for the resources. This is so you can customize the thresholds for the alarms.
+    - List tags for the resources. This is so you can customize the thresholds for the alarms on a per instance basis. More on that below.
     - Create CloudWatch alarms.
     - Delete CloudWatch alarms that it has created (based on alarm names).
 - Create a Lambda function with the Python program.
-- Create a EventBridge schedule that will run the Lambda function on a user defined basis.
+- Create an EventBridge schedule that will run the Lambda function on a user defined basis.
 - Create a role that will allow the EventBridge schedule to trigger the Lambda function.
 
 To use the CloudFormation template perform the following steps:
@@ -37,7 +37,7 @@ To use the CloudFormation template perform the following steps:
 3. Select `Choose an existing template` and `Upload a template file`.
 4. Click `Choose file` and select the `cloudformation.yaml` file you downloaded in step 1.
 5. Click `Next` and fill in the parameters presented on the next page. The parameters are:
-    - `Stack name` - The name of the CloudFormation stack. Note this name is also used as a base name for some of the resources that are created, to make them unique, so you must keep this string under 25 characters so the resource names don't exceed their name length limit.
+    - `Stack name` - The name of the CloudFormation stack. Note this name is also used as a base name for some of the resources that are created, to make them unique, so you must keep this string under 25 characters, so the resource names don't exceed their name length limit.
     - `SNStopic` - The SNS Topic name where CloudWatch will send alerts to. Note that since CloudWatch can't send messages to an SNS topic residing in a different region, it is assumed that the SNS topic, with the same name, will exist in all the regions where alarms are to be created.
     - `accountId` - The AWS account ID associated with the SNS topic. This is only used to compute the ARN to the SNS Topic set above.
     - `customerId` - This is optional. If provided the string entered is included in the description of every alarm created.
@@ -48,7 +48,7 @@ To use the CloudFormation template perform the following steps:
     - `alarmPrefixString` - This defines the string that will be prepended to every CloudWatch alarm name that the program creates. Having a known prefix is how it knows it is the one maintaining the alarm.
     - `regions` - This is a comma separated list of AWS region names (e.g. us-east-1) that the program will act on. If not specified, the program will scan on all regions that support an FSx for ONTAP file system. Note that no checking is performed to ensure that the regions you provide are valid.
 6. Click `Next`. There aren't any recommended changes to make to any of the proceeding pages, so just click `Next` again.
-7. On the final page, check the box that says `I acknowledge that AWS CloudFormation might create IAM resources with custom names.` and click `Submit`.
+7. On the final page, check the box that says `I acknowledge that AWS CloudFormation might create IAM resources with custom names.` and then click `Submit`.
 
 If you prefer, you can run this Python program on any UNIX based computer that has Python installed. See the "Running on a computer" section below for more information.
 
@@ -196,7 +196,7 @@ Note it assumes that the alarmPrefixString is set to "FSx-ONTAP-Auto".
 }
 ```
 
-Once you have deployed the Lambda function it is recommended to set up a scheduled to run it on a regular basis.
+Once you have deployed the Lambda function it is recommended to set up a schedule to run it on a regular basis.
 The easiest way to do that is:
 1. Click on the `Add trigger` button from the Lambda function page.
 2. Select `EventBridge (CloudWatch Events)` as the trigger type.
