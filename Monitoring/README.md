@@ -3,6 +3,7 @@ This subfolder contains tools that can help you monitor your FSx ONTAP file syst
 
 | Tool | Description |
 | --- | --- |
+| [CloudWatchy Dashboard for FSx for ONTAP](/Monitoring/CloudWatch-FSx) | This tool creates a CloudWatch dashboard that displays metrics for your FSx for ONTAP file system. |
 | [LUN-monitoring](/Monitoring/LUN-monitoring) | This tool exports FSxN LUN metrics to CloudWatch and creates a CloudWatch dashboard to you can monitor your LUNs. |
 | [auto-add-cw-alarms](/Monitoring/auto-add-cw-alarms) | This tool will automatically add CloudWatch alarms that will alert you when:<br><ul><li>The utilization of the primary storage of any FSx ONTAP file system gets above a specified threshold.</li><li>The CPU utilization of any file system gets above a specified threshold.</li><li>The utilization of any volume within any file system gets above a specified threshold.</li></ul>|
 | [monitor-ontap-services](/Monitoring/monitor-ontap-services)| This tool helps you monitor various Data ONTAP services and send SNS alerts if anything of interest is detected. The following services are monitored:<br><ul><li>EMS Messages</li><li>SnapMirror health, including tag time</li><li>Aggregate, volume or Quota utilization based on user provided thresholds</li><li>Overall health of the File System</ul>|
