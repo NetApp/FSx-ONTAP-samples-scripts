@@ -11,7 +11,12 @@ resource "random_id" "id" {
   byte_length = 4
 }
 #
-# Create the assume role policy document for the Lambda function.
+# Create a local variable for the Lambda function name, so it can be used in two places without causing a cycle.
+locals {
+  lambdaName = "fsxn_rotate_secret-${random_id.id.hex}"
+}
+#
+# Create the policy document for the assume role policy for the Lambda function role.
 data "aws_iam_policy_document" "assume_role" {
   statement {
     effect = "Allow"
@@ -25,8 +30,8 @@ data "aws_iam_policy_document" "assume_role" {
   }
 }
 #
-# Create the inline policy document for the Lambda function role.
-data "aws_iam_policy_document" "inline_permissions" {
+# Create a policy document for the policy for the Lambda function role.
+data "aws_iam_policy_document" "lambda_permissions" {
     #
     # The frist two statements are required for the lambda function to write logs to CloudWatch.
     # While not required, are useful for debugging.
@@ -75,20 +80,18 @@ data "aws_iam_policy_document" "inline_permissions" {
     }
 }
 #
-# Create a local variable for the Lambda function name, so it can be used in two places without causing a cycle.
-locals {
-  lambdaName = "fsxn_rotate_secret-${random_id.id.hex}"
-}
-#
 # Create the IAM role for the Lambda function.
-resource "aws_iam_role" "iam_for_lambda" {
-  name               = "iam_for_lambda-${random_id.id.hex}"
+resource "aws_iam_role" "role_for_lambda" {
+  name               = "rotate_fsxn_secret_role_${random_id.id.hex}"
   description        = "IAM role for the Rotate FSxN Secret Lambda function."
   assume_role_policy = data.aws_iam_policy_document.assume_role.json
-  inline_policy {
-    name   = "required_policy"
-    policy = data.aws_iam_policy_document.inline_permissions.json
-  }
+}
+#
+# Create the policy based on the policy document.
+resource "aws_iam_role_policy" "lambda_permissions" {
+  name   = "rotate_fsxn_secret_policy_${random_id.id.hex}"
+  role   = aws_iam_role.role_for_lambda.name
+  policy = data.aws_iam_policy_document.lambda_permissions.json
 }
 #
 # Create the archive file for the Lambda function.
@@ -103,7 +106,7 @@ resource "aws_lambda_function" "rotateLambdaFunction" {
   provider         = aws.secrets_provider
   function_name    = local.lambdaName
   description      = var.svm_id != "" ? "Lambda function to rotate the secret for SVM (${var.svm_id})." : "Lambda function to rotate the secret for FSxN File System (${var.fsx_id})."
-  role             = aws_iam_role.iam_for_lambda.arn
+  role             = aws_iam_role.role_for_lambda.arn
   runtime          = "python3.12"
   handler          = "fsxn_rotate_secret.lambda_handler"
   filename         = "fsxn_rotate_secret.zip"
