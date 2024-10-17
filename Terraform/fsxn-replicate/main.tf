@@ -95,9 +95,11 @@ data "netapp-ontap_storage_volume_data_source" "my_vol" {
    name            = each.value
 }
 
- resource "netapp-ontap_storage_volume_resource" "example2" {
+resource "netapp-ontap_storage_volume_resource" "volloop" {
+   for_each = data.netapp-ontap_storage_volume_data_source.my_vol
    cx_profile_name = "dr_clus"
-   name = "rvwn_vol1_tf"
+   name = "${each.value.name}_dp"
+   type = "DP"
    svm_name = aws_fsx_ontap_storage_virtual_machine.mysvm.name
    aggregates = [
      {
@@ -105,21 +107,20 @@ data "netapp-ontap_storage_volume_data_source" "my_vol" {
      },
    ]
    space_guarantee = "none"
-   snapshot_policy = "default"
    space = {
-       size = 100
-       size_unit = "gb"
+       size = each.value.space.size
+       size_unit =  each.value.space.size_unit
        logical_space = {
        enforcement = true
        reporting = true
      }
   }
   tiering = {
-      policy_name = "auto"
+      policy_name = "all"
   }
   nas = {
     export_policy_name = "default"
     security_style = "unix"
-    junction_path = "/rvwn_vol1_tf"
+    # junction_path = join("", ["/",each.value.name])
   }
 }
