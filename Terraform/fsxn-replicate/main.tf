@@ -99,7 +99,7 @@ resource "netapp-ontap_storage_volume_resource" "volloop" {
    for_each = data.netapp-ontap_storage_volume_data_source.my_vol
    cx_profile_name = "dr_clus"
    name = "${each.value.name}_dp"
-   type = "DP"
+   type = "dp"
    svm_name = aws_fsx_ontap_storage_virtual_machine.mysvm.name
    aggregates = [
      {
@@ -123,4 +123,47 @@ resource "netapp-ontap_storage_volume_resource" "volloop" {
     security_style = "unix"
     # junction_path = join("", ["/",each.value.name])
   }
+}
+
+# Now that we have the DP volumes created on the newly deployed destination cluster,
+# let's get the intercluster LIFs so we can peer the clusters.
+
+# For existing FSx ONTAP cluster
+data "netapp-ontap_networking_ip_interfaces_data_source" "primary_intercluster_lifs" {
+  cx_profile_name = "primary_clus"
+  filter = {
+     svm_name        = var.prime_svm
+     name            = "inter*"  # Filter to only get intercluster LIFs
+  }
+}
+
+# For newly created FSx ONTAP cluster
+data "netapp-ontap_networking_ip_interfaces_data_source" "dr_intercluster_lifs" {
+  cx_profile_name = "dr_clus"
+  filter = {
+     svm_name        = aws_fsx_ontap_storage_virtual_machine.mysvm.name
+     name            = "inter*"  # Filter to only get intercluster LIFs
+  }
+}
+
+
+# Now udse the LIF names and IP addresses to peer the clusters
+
+resource "netapp-ontap_cluster_peers_resource" "cluster_peer" {
+  cx_profile_name      = "primary_clus"  # Source cluster profile
+  peer_cx_profile_name = "dr_clus"       # Destination (peer) cluster profile
+
+  remote = {
+    # Destination cluster (DR) intercluster LIF IPs
+    ip_addresses = [for lif in data.netapp-ontap_networking_ip_interfaces_data_source.dr_intercluster_lifs.ip_interfaces : lif.ip_address]
+  }
+
+  source_details = {
+    # Source cluster (primary) intercluster LIF IPs
+    ip_addresses = [for lif in data.netapp-ontap_networking_ip_interfaces_data_source.primary_intercluster_lifs.ip_interfaces : lif.ip_address]
+  }
+
+  # Optional: Add authentication, passphrase or any other required settings
+  # passphrase = var.cluster_peer_passphrase  # Optional, if you use passphrase for peering
+  peer_applications = ["snapmirror"]
 }
