@@ -20,10 +20,10 @@ output "lambda_name" {
 
 output "role_arn" {
   description = "The ARN of the role that was created that allows the Lambda function to rotate the secret."
-  value = aws_iam_role.iam_for_lambda.arn
+  value = aws_iam_role.role_for_lambda.arn
 }
 
 output "role_name" {
   description = "The name of the role that was created that allows the Lambda function to rotate the secret."
-  value = aws_iam_role.iam_for_lambda.name
+  value = aws_iam_role.role_for_lambda.name
 }
