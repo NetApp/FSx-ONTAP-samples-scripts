@@ -3,36 +3,25 @@
 
 A multi log solution using NetApp FSxN and Trident for collecting non-stdout logs from applications.
 
-
-
-
 ## The problem
-* Lets say you have your default application stream but you also want to maintain an access log and an audit log, each log has its own foramt, its own wirte frequesncy and even different permissions.  
-* There is a need to save each type in a different file but the same goal of collecting these logs and pushing them to log aggreagtion engines/storage.
-* The chalange is that these file are located on the disposible Pod storage and cannot be accessed or streamed same as std out/std error logs.
+* Lets say you have your default application stream but you also want to maintain an access log and an audit log, each log has its own format, its own write frequency and even different permissions.
+* There is a need to save each type in a different file but the same goal of collecting these logs and pushing them to log aggregation engines/storage.
+* The challenge is that these file are located on the disposable Pod storage and cannot be accessed or streamed same as std out/std error logs.
 * A more advance but still common scenario is when a container has more than one log stream / file.
-
-
-
 
 ## Collecting logs using FSxN Trident persistent storage
 
-With FSxN and Trident, you can create a shared namespace persistent storage platform and collect non-stdout logs into one location (ElasticSearch, Loki, S3, etc..), overcoming the common obstacles faced when implementing multilog solutions.
+With FSxN and Trident, you can create a shared namespace persistent storage platform and collect non-stdout logs into one location (ElasticSearch, Loki, S3, etc..), overcoming the common obstacles faced when implementing multi log solutions.
 
-
-
-
-
-### Solution Architecture Example
 ## Getting Started
 
-The following sections provide quickstart instructions for multiple logs shippers. All of these assume that you have cloned this repository locally and are using a CLI thats current directory is the root of the code repository.
+The following section provide quick start instructions for multiple logs shippers. All of these assume that you have cloned this repository locally and you are using a CLI with its current directory set to the root of the code repository.
 
 ### Prerequisites
 
-* `Helm` - for reources installation.
+* `Helm` - for resource installation.
 * `Kubectl` – for interacting with the EKS cluster.
-* NetApp FSxN running on the same EKS vpc.
+* NetApp FSxN running on the same EKS VPC.
 * TCP NFS ports should be open between the EKS nodes and the FSxN: 
     `111`,
     `2049`,
@@ -41,13 +30,17 @@ The following sections provide quickstart instructions for multiple logs shipper
     `4046`,
     `4049` - [Check NetAppKB instructions](https://kb.netapp.com/onprem/ontap/da/NAS/Which_Network_File_System_NFS_TCP_and_NFS_UDP_ports_are_used_on_the_storage_system)
 * Kubernetes Snapshot Custom Resources (CRD) and Snapshot Controller installed on EKS cluster:
-  Learn more about the snapshot requirements for your cluster in the ["How to Deploy Volume Snapshots”](https://kubernetes.io/blog/2020/12/10/kubernetes-1.20-volume-snapshot-moves-to-ga/#how-to-deploy-volume-snapshots) Kuberbetes blog.
+  Learn more about the snapshot requirements for your cluster in the ["How to Deploy Volume Snapshots”](https://kubernetes.io/blog/2020/12/10/kubernetes-1.20-volume-snapshot-moves-to-ga/#how-to-deploy-volume-snapshots) Kubernetes blog.
 * NetApp Trident operator CSI should be installed on EKS. [Check Trident installation guide using Helm](https://docs.netapp.com/us-en/trident/trident-get-started/kubernetes-deploy-helm.html#deploy-the-trident-operator-and-install-astra-trident-using-helm).
 
 ### Installation
 
 * Configure Trident CSI backend to connect to the FSxN file system. Create the backend configuration for the trident driver. Create secret on trident namespace and fill the FSxN password:
-```kubectl create secret generic fsx-secret --from-literal=username=fsxadmin --from-literal=password=<your FSxN password> -n trident --create-namespace```
+
+```
+kubectl create secret generic fsx-secret --from-literal=username=fsxadmin --from-literal=password=<your FSxN password> -n trident --create-namespace
+```
+
 * Install trident-resources helm chart from this GitHub repository.
   The custom Helm chart includes:
    - `backend-tbc-ontap-nas.yaml` - backend configuration for using NFS on EKS
@@ -58,17 +51,21 @@ The following sections provide quickstart instructions for multiple logs shipper
 
 The following variables should be filled on the Values.yaml or run the following by using `--set` Helm command.
 
-* `namespace` - namespace of the Trident operator
+* `namespace` - namespace of the Trident operator. Typically 'trident'.
 * `fsx.managment_lif` - FSxN ip address
 * `fsx.svm_name` - FSxN SVM name
 * `configuration.storageclass_nas` - NAS storage class name
 * `configuration.storageclass_san` - SAN (ISCSI) storage class name
 
 Then use helm to deploy the package:
-```helm install trident-resources ./trident-resources -n trident```
+```
+helm install trident-resources ./trident-resources -n trident
+```
 
 Verify that FSxN has been successfully connected to the backend:
-```kubectl get TridentBackendConfig -n trident```
+```
+kubectl get TridentBackendConfig -n trident
+```
 
 ### Implementing a sample application for collecting logs
 
@@ -91,7 +88,7 @@ spec:
       storage: 100Gi
   storageClassName: trident-csi
 ```
- * `trident.netapp.io/shareFromPVC:` The primary PersistentVolumeClaim you have created previously.
+* `trident.netapp.io/shareFromPVC:` The primary PersistentVolumeClaim you have created previously.
 * `storage` - volume size
 
 ##### **volume-reference-fsx.yaml**:
@@ -136,7 +133,9 @@ spec:
 
 Installing an example application by helm:
 
-```helm upgrade --install example-app ./examples/example-app -n rpc --create-namespace```
+```
+helm upgrade --install example-app ./examples/example-app -n rpc --create-namespace
+```
 
 When the application is deployed, you should be able to see the PVC as a mount at /log.
 
@@ -151,7 +150,6 @@ Install Vector.dev agent as DeamonSet from [Helm chart](https://vector.dev/docs/
 1. Clone vector GitHub repository:
 ``` 
 git clone https://github.com/vectordotdev/helm-charts.git
-
 ```
 
 2. Adding override values:
