@@ -26,3 +26,14 @@ output "primary_intercluster_lifs_details" {
   description = "Intercluster LIF names and IP addresses for the primary existing cluster"
 }
 
+output "data_from_aws_fsxn" {
+  value =  {
+    intercluster = {
+#      dns_name = data.aws_fsx_ontap_file_system.source_fsxn.endpoints[0].intercluster[0].dns_name
+#      ip_addresses = data.aws_fsx_ontap_file_system.source_fsxn.endpoints[0].intercluster[0].ip_addresses
+      all_of_it = data.aws_fsx_ontap_file_system.source_fsxn
+    }
+  }
+  description = "All data from aws fsxn provider"
+}
+

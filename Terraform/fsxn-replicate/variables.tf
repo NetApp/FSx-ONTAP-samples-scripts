@@ -5,6 +5,13 @@ variable "prime_hostname" {
    default     = "198.19.253.210"
 }
 
+variable "prime_fsxid" {
+   description = "FSx ID of the primary cluster."
+   type        = string
+# Development FSxN
+   default     = "fs-020de2687bd98ccf7"
+}
+
 variable "prime_svm" {
    description = "Name of svm for replication in the primary cluster."
    type        = string

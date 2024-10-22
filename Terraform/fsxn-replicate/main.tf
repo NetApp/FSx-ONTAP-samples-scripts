@@ -147,24 +147,28 @@ data "netapp-ontap_networking_ip_interfaces_data_source" "dr_intercluster_lifs" 
   }
 }
 
+# For now let's try to get the source and destination IC LIFs via AWS TF provider.
+data "aws_fsx_ontap_file_system" "source_fsxn" {
+  id = var.prime_fsxid
+}
 
 # Now udse the LIF names and IP addresses to peer the clusters
 
-# resource "netapp-ontap_cluster_peers_resource" "cluster_peer" {
-#   cx_profile_name      = "primary_clus"  # Source cluster profile
-#   peer_cx_profile_name = "dr_clus"       # Destination (peer) cluster profile
-#
-#   remote = {
-#     # Destination cluster (DR) intercluster LIF IPs
-#     ip_addresses = [for lif in data.netapp-ontap_networking_ip_interfaces_data_source.dr_intercluster_lifs.ip_interfaces : lif.ip_address]
-#   }
+resource "netapp-ontap_cluster_peers_resource" "cluster_peer" {
+  cx_profile_name      = "primary_clus"  # Source cluster profile
+  peer_cx_profile_name = "dr_clus"       # Destination (peer) cluster profile
 
-#  source_details = {
-   # Source cluster (primary) intercluster LIF IPs
-#    ip_addresses = [for lif in data.netapp-ontap_networking_ip_interfaces_data_source.primary_intercluster_lifs.ip_interfaces : lif.ip_address]
-#  }
+  remote = {
+    # Destination cluster (DR) intercluster LIF IPs
+    ip_addresses = aws_fsx_ontap_file_system.terraform-fsxn.endpoints[0].intercluster[0].ip_addresses
+  }
+
+  source_details = {
+    # Source cluster (primary) intercluster LIF IPs
+    ip_addresses = data.aws_fsx_ontap_file_system.source_fsxn.endpoints[0].intercluster[0].ip_addresses
+  }
 
   # Optional: Add authentication, passphrase or any other required settings
   # passphrase = var.cluster_peer_passphrase  # Optional, if you use passphrase for peering
-#  peer_applications = ["snapmirror"]
-#}
+  peer_applications = ["snapmirror"]
+}
