@@ -120,7 +120,7 @@ resource "netapp-ontap_storage_volume_resource" "volloop" {
   }
   nas = {
     export_policy_name = "default"
-    security_style = "unix"
+#    security_style = "unix"
     # junction_path = join("", ["/",each.value.name])
   }
 }
@@ -133,7 +133,8 @@ data "netapp-ontap_networking_ip_interfaces_data_source" "primary_intercluster_l
   cx_profile_name = "primary_clus"
   filter = {
      svm_name        = var.prime_svm
-     name            = "inter*"  # Filter to only get intercluster LIFs
+#     svm_name        = "FsxId020de2687bd98ccf7"
+     name            = "iscsi_*"  # Filter to only get intercluster LIFs
   }
 }
 
@@ -149,21 +150,21 @@ data "netapp-ontap_networking_ip_interfaces_data_source" "dr_intercluster_lifs" 
 
 # Now udse the LIF names and IP addresses to peer the clusters
 
-resource "netapp-ontap_cluster_peers_resource" "cluster_peer" {
-  cx_profile_name      = "primary_clus"  # Source cluster profile
-  peer_cx_profile_name = "dr_clus"       # Destination (peer) cluster profile
+# resource "netapp-ontap_cluster_peers_resource" "cluster_peer" {
+#   cx_profile_name      = "primary_clus"  # Source cluster profile
+#   peer_cx_profile_name = "dr_clus"       # Destination (peer) cluster profile
+#
+#   remote = {
+#     # Destination cluster (DR) intercluster LIF IPs
+#     ip_addresses = [for lif in data.netapp-ontap_networking_ip_interfaces_data_source.dr_intercluster_lifs.ip_interfaces : lif.ip_address]
+#   }
 
-  remote = {
-    # Destination cluster (DR) intercluster LIF IPs
-    ip_addresses = [for lif in data.netapp-ontap_networking_ip_interfaces_data_source.dr_intercluster_lifs.ip_interfaces : lif.ip_address]
-  }
-
-  source_details = {
-    # Source cluster (primary) intercluster LIF IPs
-    ip_addresses = [for lif in data.netapp-ontap_networking_ip_interfaces_data_source.primary_intercluster_lifs.ip_interfaces : lif.ip_address]
-  }
+#  source_details = {
+   # Source cluster (primary) intercluster LIF IPs
+#    ip_addresses = [for lif in data.netapp-ontap_networking_ip_interfaces_data_source.primary_intercluster_lifs.ip_interfaces : lif.ip_address]
+#  }
 
   # Optional: Add authentication, passphrase or any other required settings
   # passphrase = var.cluster_peer_passphrase  # Optional, if you use passphrase for peering
-  peer_applications = ["snapmirror"]
-}
+#  peer_applications = ["snapmirror"]
+#}
