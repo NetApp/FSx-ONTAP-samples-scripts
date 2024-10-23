@@ -16,7 +16,7 @@ The output of the report is a CSV file with the following columns:
 There are three files used to create the report:
 - `generate_report.yaml`: The Ansible playbook that generates the report.
 - `processs_region.yaml`: A collection of tasks that will process all the FSxNs in a region.
-- `get_all_fsxn_regions.yaml`: A colleciton of tasks that retrieves all the regions, that are enabled for the account, where FSx for ONTAP is available.
+- `get_all_fsxn_regions.yaml`: A collection of tasks that retrieves all the regions, that are enabled for the account, where FSx for ONTAP is available.
 
 You will also need to create a file named (by default) `secrets_list.csv` that list the secret name for each FSx file system.
 The format of the file should be:
@@ -26,7 +26,7 @@ file_system_id,secret_name
 You should have all four of these files in a single directory.
 
 ## Configuration
-There are a few varaibles that can be changed at the top of the `generate_report.yaml` file:
+There are a few variables that can be changed at the top of the `generate_report.yaml` file:
 - report\_name - Sets the file path of the report that will be generated. 
 - secrets\_list\_file - Sets the file path of the file that contains the list of FSx file systems and their secrets.
 - secrets\_region - Set the region where the secrets are stored.
@@ -36,7 +36,7 @@ To generate the report, run the following command:
 ```bash
 ansible-playbook generate_report.yaml
 ```
-After a succesful run, the report will be saved to the file path specified in the `report_name` variable.
+After a successful run, the report will be saved to the file path specified in the `report_name` variable.
 
 ## Author Information
 
