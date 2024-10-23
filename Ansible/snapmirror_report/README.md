@@ -6,7 +6,7 @@ The output of the report is a CSV file with the following columns:
 - Destination Path (svm:volume)
 - State (e.g. snapmirrored, broken-off)
 - Healthy (true or false)
-- lag\_time (in "P#DT#H#M#S" format)
+- lag\_time (in "P#DT#H#M#S" format, where 'P' and 'T' are fixed characters, and the number before the other letters specify how many Days, Hours, Minutes and Seconds have transpired)
 
 ## Requirements
 - Ansible 2.9 or later
@@ -18,7 +18,7 @@ There are three files used to create the report:
 - `processs_region.yaml`: A collection of tasks that will process all the FSxNs in a region.
 - `get_all_fsxn_regions.yaml`: A collection of tasks that retrieves all the regions, that are enabled for the account, where FSx for ONTAP is available.
 
-You will also need to create a file named (by default) `secrets_list.csv` that list the secret name for each FSx file system.
+You will also need to create a file named (by default) `secrets_list.csv` that list the secret name for each FSx file systems.
 The format of the file should be:
 ```
 file_system_id,secret_name
