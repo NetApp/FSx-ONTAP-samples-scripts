@@ -12,10 +12,22 @@ variable "prime_fsxid" {
    default     = "fs-020de2687bd98ccf7"
 }
 
+variable "prime_clus_name" {
+   description = "This is the name of the cluster given for ONTAP TF connection profile. This is a user creatred value, that can be any string. It is referenced in many ONTAP TF resources."
+   type        = string
+   default     = "primary_clus"
+}
+
 variable "prime_svm" {
    description = "Name of svm for replication in the primary cluster."
    type        = string
    default     = "vs1cli"
+}
+
+variable "prime_cluster_vserver" {
+   description = "Name of cluster vserver for inter cluster lifs in the primary cluster. This can be found by running network interface show on the source cluster"
+   type        = string
+   default     = "FsxId020de2687bd98ccf7"
 }
 
 variable "prime_aws_region" {
@@ -39,13 +51,19 @@ variable "username_pass_secrets_id" {
 variable "list_of_volumes_to_replicate" {
    description = "list of volumes to replicate to dr fsxn"
    type        = list(string)
-   default     = ["cifs_share", "rvwn_from_bxp", "unix"]
+   default     = ["cifs_share", "rvwn_from_bxp", "rvwn_voltb", "rvwn_volmb"]
 }
 
 variable "dr_fsx_name" {
    description = "The name to assign to the destination FSxN file system."
    type        = string
    default     = "terraform-dr-fsxn"
+}
+
+variable "dr_clus_name" {
+   description = "This is the name of the cluster given for ONTAP TF connection profile. This is a user creatred value, that can be any string. It is referenced in many ONTAP TF resources."
+   type        = string
+   default     = "dr_clus"
 }
 
 variable "dr_fsx_deploy_type" {
@@ -70,7 +88,7 @@ variable "dr_fsx_subnets" {
 variable "dr_fsx_capacity_size_gb" {
    description = "The storage capacity in GiBs of the FSxN file system. Valid values between 1024 (1 TiB) and 1048576 (1 PiB). Gen 1 deployment types are limited to 192 TiB. Gen 2 Multi AZ is limited to 512 TiB. Gen 2 Single AZ is limited to 1 PiB."
    type        = number
-   default     = 1024
+   default     = 2048
    validation {
       condition = var.dr_fsx_capacity_size_gb >= 1024 && var.dr_fsx_capacity_size_gb <= 1048576
       error_message = "Invalid capacity size. Valid values are between 1024 (1TiB) and 1045876 (1 PiB)."
@@ -214,7 +232,7 @@ variable "dr_vpc_id" {
 variable "dr_username_pass_secrets_id" {
    description = "Name of secret ID in AWS secrets"
    type        = string
-   default     = "rvwn_replicate_ontap_creds"
+   default     = "rvwn_replicate_ontap_creds_dr"
 }
 
 variable "validate_certs" {

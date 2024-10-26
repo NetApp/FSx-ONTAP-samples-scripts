@@ -36,14 +36,14 @@ provider "netapp-ontap" {
   # At least one is required.
   connection_profiles = [
     {
-      name = "primary_clus"
+      name = var.prime_clus_name
       hostname = var.prime_hostname
       username = jsondecode(data.aws_secretsmanager_secret_version.ontap_prime_username_pass.secret_string)["username"]
       password = jsondecode(data.aws_secretsmanager_secret_version.ontap_prime_username_pass.secret_string)["password"]
       validate_certs = var.validate_certs
     },
     {
-      name = "dr_clus"
+      name = var.dr_clus_name
       hostname = join("", aws_fsx_ontap_file_system.terraform-fsxn.endpoints[0].management[0].ip_addresses)
       username = jsondecode(data.aws_secretsmanager_secret_version.ontap_prime_username_pass.secret_string)["username"]
       password = jsondecode(data.aws_secretsmanager_secret_version.ontap_prime_username_pass.secret_string)["password"]
@@ -88,64 +88,52 @@ resource "aws_fsx_ontap_storage_virtual_machine" "mysvm" {
   root_volume_security_style = var.dr_root_vol_sec_style
 }
 
-data "netapp-ontap_storage_volume_data_source" "my_vol" {
+data "netapp-ontap_storage_volume_data_source" "src_vols" {
    for_each        = toset(var.list_of_volumes_to_replicate)
-   cx_profile_name = "primary_clus"
+   cx_profile_name = var.prime_clus_name
    svm_name        = var.prime_svm
    name            = each.value
 }
 
-resource "netapp-ontap_storage_volume_resource" "volloop" {
-   for_each = data.netapp-ontap_storage_volume_data_source.my_vol
-   cx_profile_name = "dr_clus"
-   name = "${each.value.name}_dp"
-   type = "dp"
-   svm_name = aws_fsx_ontap_storage_virtual_machine.mysvm.name
-   aggregates = [
-     {
-       name = "aggr1"
-     },
-   ]
-   space_guarantee = "none"
-   space = {
-       size = each.value.space.size
-       size_unit =  each.value.space.size_unit
-       logical_space = {
-       enforcement = true
-       reporting = true
-     }
+variable "size_in_mb" {
+  type = map(string)
+
+  # Conversion to MBs
+  default = {
+    "mb" = 1
+    "MB" = 1
+    "gb" = 1024
+    "GB" = 1024
+    "tb" = 1024*1024
+    "TB" = 1024*1024
   }
-  tiering = {
-      policy_name = "all"
+}
+
+
+resource "aws_fsx_ontap_volume" "dp_volumes" {
+  for_each = data.netapp-ontap_storage_volume_data_source.src_vols
+  storage_virtual_machine_id = aws_fsx_ontap_storage_virtual_machine.mysvm.id
+  name     = "${each.value.name}_dp"
+  ontap_volume_type = "DP"
+  size_in_megabytes = each.value.space.size * lookup(var.size_in_mb, each.value.space.size_unit, 0)
+  tiering_policy {
+    name = "ALL"
   }
-  nas = {
-    export_policy_name = "default"
-#    security_style = "unix"
-    # junction_path = join("", ["/",each.value.name])
-  }
+  skip_final_backup = true
+}
+
+resource "aws_fsx_ontap_volume" "test_src" {
+  storage_virtual_machine_id = aws_fsx_ontap_storage_virtual_machine.mysvm.id
+  name                       = "volx_src"
+  ontap_volume_type          = "RW"
+  size_in_megabytes          = 1024
+  junction_path              = "/volx_src"
+  storage_efficiency_enabled = true
 }
 
 # Now that we have the DP volumes created on the newly deployed destination cluster,
 # let's get the intercluster LIFs so we can peer the clusters.
 
-# For existing FSx ONTAP cluster
-data "netapp-ontap_networking_ip_interfaces_data_source" "primary_intercluster_lifs" {
-  cx_profile_name = "primary_clus"
-  filter = {
-     svm_name        = var.prime_svm
-#     svm_name        = "FsxId020de2687bd98ccf7"
-     name            = "iscsi_*"  # Filter to only get intercluster LIFs
-  }
-}
-
-# For newly created FSx ONTAP cluster
-data "netapp-ontap_networking_ip_interfaces_data_source" "dr_intercluster_lifs" {
-  cx_profile_name = "dr_clus"
-  filter = {
-     svm_name        = aws_fsx_ontap_storage_virtual_machine.mysvm.name
-     name            = "inter*"  # Filter to only get intercluster LIFs
-  }
-}
 
 # For now let's try to get the source and destination IC LIFs via AWS TF provider.
 data "aws_fsx_ontap_file_system" "source_fsxn" {
@@ -155,8 +143,8 @@ data "aws_fsx_ontap_file_system" "source_fsxn" {
 # Now udse the LIF names and IP addresses to peer the clusters
 
 resource "netapp-ontap_cluster_peers_resource" "cluster_peer" {
-  cx_profile_name      = "primary_clus"  # Source cluster profile
-  peer_cx_profile_name = "dr_clus"       # Destination (peer) cluster profile
+  cx_profile_name      = var.prime_clus_name  # Source cluster profile
+  peer_cx_profile_name = var.dr_clus_name       # Destination (peer) cluster profile
 
   remote = {
     # Destination cluster (DR) intercluster LIF IPs
@@ -171,4 +159,38 @@ resource "netapp-ontap_cluster_peers_resource" "cluster_peer" {
   # Optional: Add authentication, passphrase or any other required settings
   # passphrase = var.cluster_peer_passphrase  # Optional, if you use passphrase for peering
   peer_applications = ["snapmirror"]
+}
+
+resource "netapp-ontap_svm_peers_resource" "peer_svms" {
+  cx_profile_name = var.dr_clus_name
+  svm = {
+    name = aws_fsx_ontap_storage_virtual_machine.mysvm.name
+  }
+  peer = {
+    svm = {
+      name = var.prime_svm
+    }
+    cluster = {
+      name = var.prime_cluster_vserver
+    }
+    peer_cx_profile_name = var.prime_clus_name
+  }
+  applications = ["snapmirror", "flexcache"]
+  depends_on = [
+    netapp-ontap_cluster_peers_resource.cluster_peer
+  ]
+}
+
+resource "netapp-ontap_snapmirror_resource" "snapmirror" {
+  for_each = data.netapp-ontap_storage_volume_data_source.src_vols
+  cx_profile_name = var.dr_clus_name
+  source_endpoint = {
+     path = join(":",[var.prime_svm,each.value.name])
+  }
+  destination_endpoint = {
+     path = join(":",[aws_fsx_ontap_storage_virtual_machine.mysvm.name, "${each.value.name}_dp"])
+  }
+  depends_on = [
+    netapp-ontap_svm_peers_resource.peer_svms
+  ]
 }
