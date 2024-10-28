@@ -10,7 +10,7 @@ The output of the report is a CSV file with the following columns:
 
 ## Requirements
 - Ansible 2.9 or later
-- AWS collection
+- AWS Ansible collection
 
 ## Installation
 There are three files used to create the report:
