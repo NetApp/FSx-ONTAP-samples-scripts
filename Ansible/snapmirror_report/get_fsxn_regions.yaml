@@ -1,3 +1,7 @@
+#
+# These tasks are used to set a variable named 'fsnx_regions' that contains a
+# list of regions that support FSxN and are opted-in.
+################################################################################
 - name: Get all the opted-in regions
   amazon.aws.aws_region_info:
   register: region_info
@@ -21,6 +25,6 @@
         | list
       }}
 
-- name: Output the FSxN regions
-  debug:
-    msg: "fsxn_regions={{ fsxn_regions }}"
+#- name: Output the FSxN regions
+#  debug:
+#    msg: "fsxn_regions={{ fsxn_regions }}"

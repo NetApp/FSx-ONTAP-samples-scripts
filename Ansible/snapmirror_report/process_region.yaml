@@ -1,6 +1,7 @@
 #
-# Since Ansible can't handle nested loops, this is a block of tasked that is run
-# for each region. It assume that the calling playbook used 'region' as its loop variable.
+# Since Ansible can't handle nested loops, this is a block of tasked that is
+# run for each region. It assume that the calling playbook used 'region' as its loop variable.
+#################################################################################
 ---
 - name: Get all the FSxNs for the specified region.
   ansible.builtin.shell:

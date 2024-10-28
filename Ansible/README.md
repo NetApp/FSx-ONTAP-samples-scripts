@@ -2,7 +2,7 @@
 Ansible is a general purpose automation engine. It can be used to automate most repetitive IT tasks.
 The typical input you provide Ansible is a "Playbook." This folder holds various playbooks that can be used
 to help automate tasks around the management of a FSx for ONTAP file system.
-Click here for more information an [Ansible](https://www.ansible.com/).
+Click here for more information on [Ansible](https://www.ansible.com/).
 
 | Tool | Description |
 | --- | --- |

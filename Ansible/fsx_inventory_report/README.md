@@ -24,7 +24,7 @@ ansible-playbook generate_report.yaml
 
 ## Output
 After a successful run, the report will be saved to the file path specified in the `report_name` variable.
-The fommat of the report is as follows:
+The format of the report is as follows:
 ```
 Region: <region_name>
   File System ID: <file-system-id-1>

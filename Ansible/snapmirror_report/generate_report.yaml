@@ -1,5 +1,5 @@
 #
-# This Ansible playbook generates a SnapMirror lag time report for all the
+# This Ansible playbook generates a SnapMirrorreport for all the
 # SnapMirror relationships, in all the FSxNs, in all regions,
 #################################################################################
 ---
