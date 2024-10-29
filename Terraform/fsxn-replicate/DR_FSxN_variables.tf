@@ -1,63 +1,15 @@
-variable "prime_hostname" {
-   description = "Hostname or IP address of primary cluster."
-   type        = string
-# Development FSxN
-   default     = "198.19.253.210"
-}
-
-variable "prime_fsxid" {
-   description = "FSx ID of the primary cluster."
-   type        = string
-# Development FSxN
-   default     = "fs-020de2687bd98ccf7"
-}
-
-variable "prime_clus_name" {
-   description = "This is the name of the cluster given for ONTAP TF connection profile. This is a user creatred value, that can be any string. It is referenced in many ONTAP TF resources."
-   type        = string
-   default     = "primary_clus"
-}
-
-variable "prime_svm" {
-   description = "Name of svm for replication in the primary cluster."
-   type        = string
-   default     = "vs1cli"
-}
-
-variable "prime_cluster_vserver" {
-   description = "Name of cluster vserver for inter cluster lifs in the primary cluster. This can be found by running network interface show on the source cluster"
-   type        = string
-   default     = "FsxId020de2687bd98ccf7"
-}
-
-variable "prime_aws_region" {
-   description = "AWS regionfor the Primary ONTAP FSxN"
-   type        = string
-   default     = "us-west-2"
-}
+# Variables for the Disaster Recovery FSxN system to be created.
 
 variable "dr_aws_region" {
    description = "AWS regionfor the Secondary(DR) ONTAP FSxN"
    type        = string
-   default     = "us-west-2"
-}
-
-variable "username_pass_secrets_id" {
-   description = "Name of secret ID in AWS secrets"
-   type        = string
-   default     = "rvwn_replicate_ontap_creds"
-}
-
-variable "list_of_volumes_to_replicate" {
-   description = "list of volumes to replicate to dr fsxn"
-   type        = list(string)
-   default     = ["cifs_share", "rvwn_from_bxp", "rvwn_voltb", "rvwn_volmb"]
+   default     = ""
 }
 
 variable "dr_fsx_name" {
    description = "The name to assign to the destination FSxN file system."
    type        = string
-   default     = "terraform-dr-fsxn"
+   default     = ""
 }
 
 variable "dr_clus_name" {
@@ -80,7 +32,7 @@ variable "dr_fsx_subnets" {
    description = "The primary subnet ID, and secondary subnet ID if you are deploying in a Multi AZ environment, file system will be accessible from. For MULTI_AZ deployment types both subnets are required. For SINGLE_AZ deployment type, only the primary subnet is used."
    type        = map(any)
    default = {
-      "primarysub"   = "subnet-8fba81f8"
+      "primarysub"   = "subnet-11111111"
       "secondarysub" = "subnet-33333333"
    }
 }
@@ -88,7 +40,7 @@ variable "dr_fsx_subnets" {
 variable "dr_fsx_capacity_size_gb" {
    description = "The storage capacity in GiBs of the FSxN file system. Valid values between 1024 (1 TiB) and 1048576 (1 PiB). Gen 1 deployment types are limited to 192 TiB. Gen 2 Multi AZ is limited to 512 TiB. Gen 2 Single AZ is limited to 1 PiB."
    type        = number
-   default     = 2048
+   default     = 1024
    validation {
       condition = var.dr_fsx_capacity_size_gb >= 1024 && var.dr_fsx_capacity_size_gb <= 1048576
       error_message = "Invalid capacity size. Valid values are between 1024 (1TiB) and 1045876 (1 PiB)."
@@ -170,7 +122,7 @@ variable "dr_daily_backup_start_time" {
 variable "dr_svm_name" {
    description = "The name of the Storage Virtual Machine"
    type        = string
-   default     = "fsx-dr"
+   default     = ""
 }
 
 variable "dr_root_vol_sec_style" {
@@ -226,17 +178,17 @@ variable "dr_source_sg_id" {
 variable "dr_vpc_id" {
   description = "The VPC ID where the DR FSxN and security group will be created."
   type        = string
-  default     = "vpc-445d4f21"
+  default     = ""
 }
 
 variable "dr_username_pass_secrets_id" {
    description = "Name of secret ID in AWS secrets"
    type        = string
-   default     = "rvwn_replicate_ontap_creds_dr"
+   default     = ""
 }
 
-variable "validate_certs" {
-   description = "Do we validate the cluster certs (true or false)"
+variable "dr_snapmirror_policy_name" {
+   description = "Name of snamirror policy to create"
    type        = string
-   default     = "false"
+   default     = ""
 }

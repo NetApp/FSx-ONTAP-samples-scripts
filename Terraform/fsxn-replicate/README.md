@@ -7,7 +7,7 @@ This repository contains a method to take an existing FSxN system and replicate 
 
 You will need to define some key characteristics of your destination FSxN cluster to be created, such as deployment type and througput, full list below.  You also will need to define the source SVM and list of volumes to replicate, and replication parameters.
 
-These values can be found in the following .tfvars files: Primary_FSxN_variables.tfvar and DR_FSxN_variables.tfvar
+These values can be found in the following variables files: Primary_FSxN_variables.tf and DR_FSxN_variables.tf
 
 
 

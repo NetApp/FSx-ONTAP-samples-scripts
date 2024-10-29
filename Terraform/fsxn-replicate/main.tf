@@ -122,15 +122,6 @@ resource "aws_fsx_ontap_volume" "dp_volumes" {
   skip_final_backup = true
 }
 
-resource "aws_fsx_ontap_volume" "test_src" {
-  storage_virtual_machine_id = aws_fsx_ontap_storage_virtual_machine.mysvm.id
-  name                       = "volx_src"
-  ontap_volume_type          = "RW"
-  size_in_megabytes          = 1024
-  junction_path              = "/volx_src"
-  storage_efficiency_enabled = true
-}
-
 # Now that we have the DP volumes created on the newly deployed destination cluster,
 # let's get the intercluster LIFs so we can peer the clusters.
 
@@ -181,6 +172,24 @@ resource "netapp-ontap_svm_peers_resource" "peer_svms" {
   ]
 }
 
+resource "netapp-ontap_snapmirror_policy_resource" "snapmirror_policy_async" {
+  # required to know which system to interface with
+  cx_profile_name = var.dr_clus_name
+  name = var.dr_snapmirror_policy_name
+  svm_name = aws_fsx_ontap_storage_virtual_machine.mysvm.name
+  type = "async"
+  retention = [{
+    label = "weekly"
+    count = 2
+  },
+  {
+    label = "daily",
+    count = 7
+  }
+  ]
+}
+
+
 resource "netapp-ontap_snapmirror_resource" "snapmirror" {
   for_each = data.netapp-ontap_storage_volume_data_source.src_vols
   cx_profile_name = var.dr_clus_name
@@ -190,7 +199,11 @@ resource "netapp-ontap_snapmirror_resource" "snapmirror" {
   destination_endpoint = {
      path = join(":",[aws_fsx_ontap_storage_virtual_machine.mysvm.name, "${each.value.name}_dp"])
   }
+  policy = {
+     name = netapp-ontap_snapmirror_policy_resource.snapmirror_policy_async.name
+  }
   depends_on = [
-    netapp-ontap_svm_peers_resource.peer_svms
+    netapp-ontap_svm_peers_resource.peer_svms,
+    aws_fsx_ontap_volume.dp_volumes
   ]
 }
