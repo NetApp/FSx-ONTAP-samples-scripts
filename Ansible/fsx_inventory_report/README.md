@@ -20,7 +20,7 @@ Since this script leverages the AWS Ansible collection as well as the `aws` cli,
 You can read more about how to do that [here](https://docs.ansible.com/ansible/latest/collections/amazon/aws/docsite/aws_ec2_guide.html#authentication).
 
 ## Usage
-To generate the report, run the following command:
+To generate the report copy the three files mentioned above and run the following command:
 ```bash
 ansible-playbook generate_report.yaml
 ```
