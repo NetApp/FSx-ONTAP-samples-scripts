@@ -16,6 +16,9 @@ There are three files used to create the report:
 There are a variable that can be changed at the top of the `generate_report.yaml` file:
 - report\_name - Sets the file path of the report that will be generated. 
 
+Since this script leverages the AWS Ansible collection as well as the `aws` cli, you will need to provide authentication credentials for them.
+You can read more about how to do that [here](https://docs.ansible.com/ansible/latest/collections/amazon/aws/docsite/aws_ec2_guide.html#authentication).
+
 ## Usage
 To generate the report, run the following command:
 ```bash
