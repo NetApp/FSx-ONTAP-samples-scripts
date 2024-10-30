@@ -6,7 +6,7 @@
 ---
 - name: Get all the FSxNs for the specified region.
   ansible.builtin.shell:
-    cmd:  aws fsx describe-file-systems --region {{ region }} --query 'FileSystems[*].{FileSystemId:FileSystemId}' --output text | sed -e '/^$/d' 
+    cmd: aws fsx describe-file-systems --region {{ region }} --query 'FileSystems[*].{FileSystemId:FileSystemId}' --output text | sed -e '/^$/d' 
   register: fsxn_ids_per_region
 
 - name: Get all the SVMs and volumes for each FSxN.

@@ -24,7 +24,3 @@
         | map(attribute="attributes.aws:region")
         | list
       }}
-
-#- name: Output the FSxN regions
-#  debug:
-#    msg: "fsxn_regions={{ fsxn_regions }}"
