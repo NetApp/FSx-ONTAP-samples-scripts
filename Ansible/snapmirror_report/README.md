@@ -36,6 +36,9 @@ There are a few variables that can be changed at the top of the `generate_report
 - secrets\_list\_file - Sets the file path of the file that contains the list of FSx file systems and their secrets. See above for more information.
 - secrets\_region - Set the region where the secrets are stored.
 
+Since this script leverage the AWS Ansible collection as well as the `aws` cli, you will need to provide authentication credentials for them.
+You can read more about how to do that [here](https://docs.ansible.com/ansible/latest/collections/amazon/aws/docsite/aws_ec2_guide.html#authentication).
+
 ## Usage
 To generate the report, run the following command:
 ```bash
