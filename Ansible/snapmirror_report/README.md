@@ -11,6 +11,7 @@ The output of the report is a CSV file with the following columns:
 ## Requirements
 - Ansible 2.9 or later
 - AWS Ansible collection
+- AWS secret(s) with the credentials neccesary to run SnapMirror ONTAP APIs against the FSx for ONTAP file systems.
 
 ## Installation
 There are three files used to create the report:
@@ -23,12 +24,16 @@ The format of the file should be:
 ```
 file_system_id,secret_name
 ```
-You should have all four of these files in a single directory.
+Each secret should have two `keys`:
+| Key | Value |
+| --- | --- |
+| `username` | The username to use to authenticate with the FSx for ONTAP file system. |
+| `password` | The password to use to authenticate with the FSx for ONTAP file system. |
 
 ## Configuration
 There are a few variables that can be changed at the top of the `generate_report.yaml` file:
 - report\_name - Sets the file path of the report that will be generated. 
-- secrets\_list\_file - Sets the file path of the file that contains the list of FSx file systems and their secrets.
+- secrets\_list\_file - Sets the file path of the file that contains the list of FSx file systems and their secrets. See above for more information.
 - secrets\_region - Set the region where the secrets are stored.
 
 ## Usage
@@ -36,7 +41,7 @@ To generate the report, run the following command:
 ```bash
 ansible-playbook generate_report.yaml
 ```
-After a successful run, the report will be saved to the file path specified in the `report_name` variable.
+After a successful run, the report will be stored in the file specified by the `report_name` variable.
 
 ## Author Information
 
