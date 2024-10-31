@@ -20,7 +20,7 @@ SnapMirror replication requires **ICMP** and ports **11104** and **11105**.
 | --------------------- | ------------------------------------------------------------------------------------------------------------- | -------------- | ------------------------------------ | :------: |
 | prime_hostname        | Hostname or IP address of primary cluster.                                                                    | `string`       |                                      |   Yes    |
 | prime_fsxid           | FSx ID of the primary cluster.                                                                                | `string`       |                                      |   Yes    |
-| prime_clus_name       | This is the name of the cluster given for ONTAP TF connection profile.  This is a user created value, that can be any string.  It is referenced in many ONTAP TF resources | `string`  |  primary_clus  |   Yes   | 
+| prime_clus_name       | This is the name of the cluster given for ONTAP TF connection profile.  This is a user created value, that can be any string.  It is referenced in many ONTAP TF resources | `string`  |  primary_clus  |   Yes   |
 | prime_svm             | Name of the primary SVM for the volumes that will be replicated.                                              | `string`       |                                      |   Yes    |
 | prime_cluster_vserver | Name of the ONTAP cluster vserver for intercluster LIFs in the primary cluster.  Can be found by running `network interface show` on the primary cluster. It will have the format FsxId#################  | `string` |  Yes  |
 | prime_aws_region      | AWS region of the primary FSx ONTAP system                                                                    | `string`       |                                      |  Yes     |
@@ -60,6 +60,113 @@ SnapMirror replication requires **ICMP** and ports **11104** and **11105**.
 | dr_cidr_for_sg        | The VPC ID where the DR FSxN and security group will be created.                                              | `string`       |  10.0.0.0/8                          |   No     |
 | dr_source_sg_id       | The ID of the security group to allow access to the FSxN file system. Set to an empty string if you want to use the cidr_for_sg as the source. | `string` |           |   No     |
 
+## Usage
+
+#### 1. Clone the repository
+
+In your server's terminal, navigate to the location where you wish to store this Terraform repository, and clone the repository using your preferred authentication type. In this example we are using HTTPS clone:
+
+```shell
+git clone https://github.com/NetApp/FSx-ONTAP-samples-scripts
+```
+
+#### 2. Navigate to the directory
+
+```shell
+cd Terraform/fsxn-replicate
+```
+
+#### 3. Initialize Terraform
+
+This directory represents a standalone Terraform module. Run the following command to initialize the module and install all dependencies:
+
+```shell
+terraform init
+```
+
+A succesfull initialization should display the following output:
+
+```shell
+
+Initializing the backend...
+Initializing modules...
+
+Initializing provider plugins...
+- Reusing previous version of netapp/netapp-ontap from the dependency lock file
+- Reusing previous version of hashicorp/aws from the dependency lock file
+- Using previously-installed netapp/netapp-ontap v1.1.4
+- Using previously-installed hashicorp/aws v5.69.0
+
+Terraform has been successfully initialized!
+
+You may now begin working with Terraform. Try running "terraform plan" to see
+any changes that are required for your infrastructure. All Terraform commands
+should now work.
+
+If you ever set or change modules or backend configuration for Terraform,
+rerun this command to reinitialize your working directory. If you forget, other
+commands will detect it and remind you to do so if necessary.
+
+```
+
+You can see that Terraform recognizes the modules required by our configuration: `hashicorp/aws` and `hashicorpt/netapp-ontap`.
+
+#### 4. Create Variables Values
+
+- Copy or Rename the file **`terraform.sample.tfvars`** to **`terraform.tfvars`**
+
+- Open the **`terraform.tfvars`** file in your preferred text editor. Update the values of the variables to match your preferences and save the file. This will ensure that the Terraform code deploys resources according to your specifications.
+
+- Set the parameters in terraform.tfvars
+
+  ##### Sample file
+
+  ***
+
+  ```ini
+    # Primary FSxN variables
+    prime_hostname                = "<admin ip address>"
+    prime_fsxid                   = "fs-xxxxxxxxxxxxxxxxx"
+    prime_svm                     = "fsx"
+    prime_cluster_vserver         = "FsxIdxxxxxxxxxxxxxxxx"
+    prime_aws_region              = "us-west-2"
+    username_pass_secrets_id      = "<Name of AWS secret>"
+    list_of_volumes_to_replicate  = ["vol1", "vol2", "vol3"]
+
+    # DR FSxN variables
+    dr_aws_region                 = "us-west-2"
+    dr_fsx_name                   = "terraform-dr-fsxn"
+    dr_fsx_subnets                = {
+                                       "primarysub" = "subnet-11111111"
+                                       "secondarysub" = "subnet-33333333"
+                                    }
+    dr_svm_name                   = "fsx-dr"
+    dr_security_group_name_prefix = "fsxn-sg"
+    dr_vpc_id                     = "vpc-xxxxxxxx"
+    dr_username_pass_secrets_id   = "<Name of AWS secret>"
+    dr_snapmirror_policy_name     = "<Name of Policy to create>"
+  ```
+
+> [!IMPORTANT]
+> **Make sure to replace the values with ones that match your AWS environment and needs.**
+
+#### 5. Create a Terraform plan
+
+Run the following command to create an execution plan, which lets you preview the changes that Terraform plans to make to your infrastructure:
+
+```shell
+terraform plan
+```
+
+Ensure that the proposed changes match what you expected before you apply the changes!
+
+#### 6. Apply the Terraform plan
+
+Run the following command to execute the Terrafom code and apply the changes proposed in the `plan` step:
+
+```shell
+terraform apply
+```
 
 ## Author Information
 
