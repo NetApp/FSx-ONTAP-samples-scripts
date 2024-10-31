@@ -27,6 +27,8 @@ SnapMirror replication requires **ICMP** and ports **11104** and **11105**.
 | username_pass_secrets_id | Name of the secrets ID in AWS secrets.  The AWS Secret should has format of a key `username` which should be fsxadmin and a key `password` and the password of the FSxN | `string` |   | Yes |
 | validate_certs        | When connecting to ONTAP do we validate the cluster certs (true or false).                                                              | `string`       | false                                |  No      |
 | list_of_volumes_to_replicate | List of volume names to replicate to the destination FSx ONTAP system                                  | `list(string)`   |                                      |  Yes     |
+
+
 ## Inputs (DR Cluster)
 
 | Name                  | Description                                                                                                   | Type           | Default                              | Required |
@@ -48,7 +50,15 @@ SnapMirror replication requires **ICMP** and ports **11104** and **11105**.
 | dr_root_vol_sec_style | Specifies the root volume security style, Valid values are UNIX, NTFS, and MIXED (although MIXED is not recommended). All volumes created under this SVM will inherit the root security style unless the security style is specified on the volume. | `string` | UNIX | Yes |
 | dr_username_pass_secrets_id | Name of the secrets ID in AWS secrets.  The AWS Secret should has format of a key `username` where the value should be fsxadmin and a key `password` with the value being the password to be assigned to the destination FSxN filesystem. | `string` |  | Yes |
 
+## Inputs (Security Group - DR Cluster)
 
+| Name                  | Description                                                                                                   | Type           | Default                              | Required |
+| --------------------- | ------------------------------------------------------------------------------------------------------------- | -------------- | ------------------------------------ | :------: |
+| dr_create_sg          | Determines whether the Security Group should be created as part of this deployment or not.                    | `bool`         |  true                                |   Yes    |
+| dr_security_group_ids | If you are not creating the security group, provide a list of IDs of security groups to be used.              | `list(string)` |  []                                  |   No     |
+| dr_security_group_name_prefix | The prefix to the security group name that will be created.                                           | `string`       |  fsxn-sg                             |   No     |
+| dr_cidr_for_sg        | The VPC ID where the DR FSxN and security group will be created.                                              | `string`       |  10.0.0.0/8                          |   No     |
+| dr_source_sg_id       | The ID of the security group to allow access to the FSxN file system. Set to an empty string if you want to use the cidr_for_sg as the source. | `string` |           |   No     |
 
 
 ## Author Information
