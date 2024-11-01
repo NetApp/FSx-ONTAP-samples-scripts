@@ -5,6 +5,8 @@
 # Set the owner for all the individual samples, if the owner is known and they want to continue to maintain the sample:
 /AI/GenAI-ChatBot-application-sample/ @cbenbass
 /CloudFormation/deploy-fsx-ontap/ @kcantrel
+/Ansible/fsx_inventory_report/ @kcantrel
+/Ansible/snapmirror_report/ @kcantrel
 /EKS/FSxN-as-PVC-for-EKS/ @mickeysh
 /Management-Utilities/auto_create_sm_relationships/ @kcantrel
 /Management-Utilities/auto_set_fsxn_auto_grow/ @kcantrel

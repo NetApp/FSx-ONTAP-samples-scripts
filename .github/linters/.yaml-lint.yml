@@ -2,6 +2,7 @@
 extends: default
 rules:
   line-length: disable
+  comments-indentation: disable
   trailing-spaces: disable
   truthy: disable
   braces:
