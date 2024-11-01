@@ -1,0 +1,36 @@
+#
+# Since Ansible can't handle nested loops, this is a block of tasked that is
+# run for each region. It assume that the calling playbook used 'region' as its loop variable.
+#################################################################################
+---
+- name: Get all the FSxNs for the specified region.
+  ansible.builtin.shell:
+    cmd: aws fsx describe-file-systems --region {{ region }} --query 'FileSystems[*].{FileSystemId:FileSystemId}' --output text | sed -e '/^$/d' 
+  register: fsxn_ids_per_region
+
+- name: Get the SnapMirror relationships for each FSxN.
+  when: secret != 'n/a'
+  ansible.builtin.shell:
+    cmd: |
+      fs={{ item }};
+      username="{{ lookup('amazon.aws.aws_secret', '{{ secret }}.username', region=secrets_region, nested=true, on_missing='skip') }}";
+      password="{{ lookup('amazon.aws.aws_secret', '{{ secret }}.password', region=secrets_region, nested=true, on_missing='skip') }}";
+      if [ "$username" = '[]' -o "$password" = '[]' ]; then
+        echo "Missing secret for file system $fs" 1>&2;
+        exit 0;
+      fi;
+      ip=$(aws fsx describe-file-systems --region {{ region }} --file-system-ids $fs --query 'FileSystems[0].OntapConfiguration.Endpoints.Management.IpAddresses[0]' --output=text);
+      curl -s -u "${username}:${password}" -k https://$ip/api/snapmirror/relationships?fields=source,destination,lag_time,state,healthy | jq -r '.records[] | "'${fs}',\(.source.path),\(.destination.path),\(.state),\(.healthy),\(.lag_time)"'
+  loop: "{{ fsxn_ids_per_region.stdout_lines }}"
+  register: snapmirror_relationships
+  vars:
+    secret: "{{ lookup('ansible.builtin.csvfile', item, file=secrets_list_file, delimiter=',', default='n/a') }}"
+
+- name: Write the SnapMirror relationships to a file.
+  when: item.stdout is defined
+  ansible.builtin.shell:
+    cmd: |
+      if [ "{{ item.stdout }}" != "" ]; then
+        echo "{{ item.stdout }}" >> {{ report_name }};
+      fi
+  loop: "{{ snapmirror_relationships.results }}"
