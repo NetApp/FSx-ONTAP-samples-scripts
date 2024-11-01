@@ -6,7 +6,7 @@
 ---
 - name: Get all the FSxNs for the specified region.
   ansible.builtin.shell:
-    cmd: aws fsx describe-file-systems --region {{ region }} --query 'FileSystems[*].{FileSystemId:FileSystemId}' --output text | sed -e '/^$/d' 
+    cmd: aws fsx describe-file-systems --region {{ region }} --query 'FileSystems[*].{FileSystemId:FileSystemId}' --output text | sed -e '/^$/d'
   register: fsxn_ids_per_region
 
 - name: Get all the SVMs and volumes for each FSxN.
@@ -19,6 +19,6 @@
       for svm in $svms; do
         echo "    SVM ID: ${svm}" >> {{ report_name }};
         echo "      Volume IDs:" >> {{ report_name }};
-        aws fsx describe-volumes --filters Name=storage-virtual-machine-id,Values=${svm} --region {{ region }} --output=text --query 'Volumes[*].{Size: OntapConfiguration.SizeInMegabytes, ID: VolumeId, Type: OntapConfiguration.OntapVolumeType, Style: OntapConfiguration.SecurityStyle}' | sed -e 's/^/        /' >> {{ report_name }};
+        aws fsx describe-volumes --filters Name=storage-virtual-machine-id,Values=${svm} --region {{ region }} --output=json --query 'Volumes[*].{Size: OntapConfiguration.SizeInMegabytes, ID: VolumeId, Name: Name, Type: OntapConfiguration.OntapVolumeType, Style: OntapConfiguration.SecurityStyle}' | jq -r '.[] | "        \(.ID) \(.Type) \(.Style) \(.Size) \(.Name)"' >> {{ report_name }};
       done
   loop: "{{ fsxn_ids_per_region.stdout_lines }}"

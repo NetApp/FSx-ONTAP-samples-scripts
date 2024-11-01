@@ -1,10 +1,36 @@
 # Ansible Inventory Report
 This Ansible playbook generates a report of all the FSx for ONTAP file systems within an AWS account.
-In includes all the SVMs and Volumes.
+In includes all the SVMs and Volumes. The format of the report is as follows:
+```
+Region: <region_name>
+  File System ID: <file-system-id-1>
+    SVM ID: <svm-id-1-1>
+      Volumes:
+        <volume-id-1-1-1> <volume-type> <security-style> <volume-size-in-megabytes> <volume-name>
+        <volume-id-1-1-2> <volume-type> <security-style> <volume-size-in-megabytes> <volume-name>
+    SVM ID: <svm-id-1-2>
+      Volumes:
+        <volume-id-1-2-2> <volume-type> <security-style> <volume-size-in-megabytes> <volume-name>
+        <volume-id-1-2-2> <volume-type> <security-style> <volume-size-in-megabytes> <volume-name>
+  File System ID: <file-system-id-2>
+    SVM ID: <svm-id-2-1>
+      Volumes:
+        <volume-id-2-1-1> <volume-type> <security-style> <volume-size-in-megabytes> <volume-name>
+        <volume-id-2-1-2> <volume-type> <security-style> <volume-size-in-megabytes> <volume-name>
+    SVM ID: <svm-id-2-2>
+      Volumes:
+        <volume-id-2-2-1> <volume-type> <security-style> <volume-size-in-megabytes> <volume-name>
+        <volume-id-2-2-2> <volume-type> <security-style> <volume-size-in-megabytes> <volume-name>
+```
+Where:
+  - \<volume-size-in-megabytes> is the provisioned size of the volume in megabytes.
+  - \<security-style> is the security style of the volume (e.g. UNIX, NTFS).
+  - \<volume-type> is the type of the volume (e.g. RW, DP).
 
 ## Requirements
-- Ansible 2.9 or later
-- AWS Ansible collection
+- jq - A lightweight and flexible command-line JSON processor. Installation instructions can be found [here](https://jqlang.github.io/jq/download/)
+- Ansible 2.9 or later. Installation instructions can be found [here](https://docs.ansible.com/ansible/latest/installation_guide/index.html)
+- AWS Ansible collection. This should be included with the base installation of Ansible.
 
 ## Installation
 There are three files used to create the report:
@@ -24,35 +50,6 @@ To generate the report copy the three files mentioned above and run the followin
 ```bash
 ansible-playbook generate_report.yaml
 ```
-
-## Output
-After a successful run, the report will be saved to the file path specified in the `report_name` variable.
-The format of the report is as follows:
-```
-Region: <region_name>
-  File System ID: <file-system-id-1>
-    SVM ID: <svm-id-1-1>
-      Volumes:
-        <volume-id-1-1-1> <volume-size-in-megabytes> <security-style> <volume-type>
-        <volume-id-1-1-2> <volume-size-in-megabytes> <security-style> <volume-type>
-    SVM ID: <svm-id-1-2>
-      Volumes:
-        <volume-id-1-1-1> <volume-size-in-megabytes> <security-style> <volume-type>
-        <volume-id-1-1-2> <volume-size-in-megabytes> <security-style> <volume-type>
-  File System ID: <file-system-id-2>
-    SVM ID: <svm-id-2-1>
-      Volumes:
-        <volume-id-2-1-1> <volume-size-in-megabytes> <security-style> <volume-type>
-        <volume-id-2-1-2> <volume-size-in-megabytes> <security-style> <volume-type>
-    SVM ID: <svm-id-2-2>
-      Volumes:
-        <volume-id-2-2-1> <volume-size-in-megabytes> <security-style> <volume-type>
-        <volume-id-2-2-2> <volume-size-in-megabytes> <security-style> <volume-type>
-```
-Where:
-  - \<volume-size-in-megabytes> is the provisioned size of the volume in megabytes.
-  - \<security-style> is the security style of the volume (e.g. UNIX, NTFS).
-  - \<volume-type> is the type of the volume (e.g. RW, DP).
 
 ## Author Information
 

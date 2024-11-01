@@ -5,7 +5,7 @@
 ---
 - vars:
     report_name: output.csv
-    secrets_list_file: secrets.csv
+    secrets_list_file: secrets_list.csv
     secrets_region: us-west-2
 #################################################################################
 #
