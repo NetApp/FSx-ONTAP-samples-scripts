@@ -8,11 +8,11 @@ The output of the report is a CSV file with the following columns:
 - Healthy (true or false)
 - lag\_time (in "P#DT#H#M#S" format. See below for an explanation)
 
-The lag\_time format always starts with the letter 'P' and if the lag time is more than 24 hours it is followed by
-a number and the letter 'D'. The number is the number of days. The next character is always a 'T' and is followed by
-a number, letter pairs, where the letter is either an 'H', 'M', or 'S'. If the letter is 'H' then number before it is
-the number of hours. If the letter is 'M' then number before it is the number of minutes. If the letter is 'S' then
-number before it is the number of seconds. For example, 'P1DT2H3M4S' represents 1 day, 2 hours, 3 minutes, and 4 seconds.
+The lag\_time format is an ASCII string that always starts with the letter 'P' and if the lag time is more than 24 hours it is followed by
+a number and the letter 'D'. The number represents the number days. The next character is always a 'T' and is followed by
+number/letter pairs, where the letter is either an 'H', 'M', or 'S'. If the letter is 'H' then the number before it represents
+the number of hours. If the letter is 'M' then the number before it represents the number of minutes. If the letter is 'S' then
+the number before it represents the number of seconds. For example, 'P1DT2H3M4S' represents 1 day, 2 hours, 3 minutes, and 4 seconds.
 
 ## Requirements
 - jq - A lightweight and flexible command-line JSON processor. Installation instructions can be found [here](https://jqlang.github.io/jq/download/)
@@ -31,7 +31,7 @@ The format of the file should be:
 ```
 file_system_id,secret_name
 ```
-NOTE: Do not add any spaces before or after the file\_system\_id or secret\_name.
+:warning: **NOTE:** Do not add any spaces before or after the file\_system\_id or secret\_name.
 
 Each secret should have two `keys`:
 | Key | Value |
