@@ -128,6 +128,7 @@ resource "aws_fsx_ontap_volume" "dp_volumes" {
 
 # For now let's try to get the source and destination IC LIFs via AWS TF provider.
 data "aws_fsx_ontap_file_system" "source_fsxn" {
+  provider = aws.prime-aws-region
   id = var.prime_fsxid
 }
 

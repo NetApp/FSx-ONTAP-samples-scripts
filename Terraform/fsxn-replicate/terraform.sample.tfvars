@@ -1,7 +1,7 @@
 # Variables for my environment.  Source is Development FSxN system.
 
 # Primary FSxN variables
-prime_hostname                = "<admin ip address>"
+prime_hostname                = "<cluster mgmt ip address>"
 prime_fsxid                   = "fs-xxxxxxxxxxxxxxxxx"
 prime_svm                     = "fsx"
 prime_cluster_vserver         = "FsxIdxxxxxxxxxxxxxxxx"

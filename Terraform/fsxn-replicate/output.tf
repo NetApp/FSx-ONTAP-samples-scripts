@@ -16,3 +16,10 @@
 #  description = "All data from aws fsxn provider"
 #}
 
+
+output "dr_fsxn_system" {
+  value =  {
+      cluster_mgmt_ip = aws_fsx_ontap_file_system.terraform-fsxn.endpoints[0].management[0].ip_addresses
+  }
+  description = "Cluster management IP address of the created DR cluster"
+}

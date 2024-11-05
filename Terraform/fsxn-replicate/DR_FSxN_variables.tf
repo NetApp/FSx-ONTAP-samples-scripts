@@ -1,13 +1,13 @@
-# Variables for the Disaster Recovery FSxN system to be created.
+# Variables for the Disaster Recovery FSx for ONTAP file system to be created.
 
 variable "dr_aws_region" {
-   description = "AWS regionfor the Secondary(DR) ONTAP FSxN"
+   description = "AWS region where you want the Secondary(DR) FSx for ONTAP file system."
    type        = string
    default     = ""
 }
 
 variable "dr_fsx_name" {
-   description = "The name to assign to the destination FSxN file system."
+   description = "The name to assign to the destination FSx for ONTAP file system."
    type        = string
    default     = ""
 }
@@ -38,7 +38,7 @@ variable "dr_fsx_subnets" {
 }
 
 variable "dr_fsx_capacity_size_gb" {
-   description = "The storage capacity in GiBs of the FSxN file system. Valid values between 1024 (1 TiB) and 1048576 (1 PiB). Gen 1 deployment types are limited to 192 TiB. Gen 2 Multi AZ is limited to 512 TiB. Gen 2 Single AZ is limited to 1 PiB."
+   description = "The storage capacity in GiBs of the FSx for ONTAP file system. Valid values between 1024 (1 TiB) and 1048576 (1 PiB). Gen 1 deployment types are limited to 192 TiB. Gen 2 Multi AZ is limited to 512 TiB. Gen 2 Single AZ is limited to 1 PiB."
    type        = number
    default     = 1024
    validation {
@@ -68,13 +68,13 @@ variable "dr_ha_pairs" {
 }
 
 variable "dr_endpoint_ip_address_range" {
-   description = "The IP address range that the FSxN file system will be accessible from. This is only used for Multi AZ deployment types and must be left a null for Single AZ deployment types."
+   description = "The IP address range that the FSx for ONTAP file system will be accessible from. This is only used for Multi AZ deployment types and must be left a null for Single AZ deployment types."
    type        = string
    default     = null
 }
 
 variable "dr_route_table_ids" {
-   description = "An array of routing table IDs that will be modified to allow access to the FSxN file system. This is only used for Multi AZ deployment types and must be left as null for Single AZ deployment types."
+   description = "An array of routing table IDs that will be modified to allow access to the FSx for ONTAP file system. This is only used for Multi AZ deployment types and must be left as null for Single AZ deployment types."
    type        = list(string)
    default     = []
 }
@@ -86,7 +86,7 @@ variable "dr_disk_iops_configuration" {
 }
 
 variable "dr_tags" {
-  description = "Tags to be applied to the FSxN file system. The format is '{Name1 = value, Name2 = value}' where value should be enclosed in double quotes."
+  description = "Tags to be applied to the FSx for ONTAP file system. The format is '{Name1 = value, Name2 = value}' where value should be enclosed in double quotes."
   type        = map(any)
   default = {}
 }
@@ -122,7 +122,7 @@ variable "dr_daily_backup_start_time" {
 variable "dr_svm_name" {
    description = "The name of the Storage Virtual Machine"
    type        = string
-   default     = ""
+   default     = "fsx_dr"
 }
 
 variable "dr_root_vol_sec_style" {
@@ -134,7 +134,7 @@ variable "dr_root_vol_sec_style" {
 /*
  * These last set of variables have to do with a security group that can be optionally
  * created. The security group will have all the ingress rules that will allow access
- * to all the protocols that an FSxN supports (e.g. SMB, NFS, etc). See the security_groups.tf
+ * to all the protocols that an FSx for ONTAP file system supports (e.g. SMB, NFS, etc). See the security_groups.tf
  * for more information.
  *
  * If you decide to create the security group, you can specify either the CIDR block to
@@ -170,19 +170,19 @@ variable "dr_cidr_for_sg" {
 }
 
 variable "dr_source_sg_id" {
-  description = "The ID of the security group to allow access to the FSxN file system. Set to an empty string if you want to use the cidr_for_sg as the source."
+  description = "The ID of the security group to allow access to the FSx for ONTAP file system. Set to an empty string if you want to use the cidr_for_sg as the source."
   type        = string
   default     = ""
 }
 
 variable "dr_vpc_id" {
-  description = "The VPC ID where the DR FSxN and security group will be created."
+  description = "The VPC ID where the DR FSx for ONTAP file system and security group will be created."
   type        = string
   default     = ""
 }
 
 variable "dr_username_pass_secrets_id" {
-   description = "Name of secret ID in AWS secrets"
+   description = "Name of secret ID in AWS secrets. This secret needs to be in the same region as the DR FSx for ONTAP file system."
    type        = string
    default     = ""
 }
