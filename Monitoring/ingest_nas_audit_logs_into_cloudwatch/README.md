@@ -42,6 +42,7 @@ systems that you want to ingest the audit logs from.
 <tr><td>secretsmanager </td><td> GetSecretValue </td><td> arn:aws:secretsmanager:&lt;region&gt;:&lt;accountID&gt;:secret:&lt;secretName&gt;</td></tr>
 </table>
 Where:
+
 - &lt;accountID&gt; -  is your AWS account ID.
 - &lt;region&gt; - is the region where the FSx for ONTAP file systems are located.
 - &lt;logGroupName&gt; - is the name of the CloudWatch log group where the audit logs will be ingested.
