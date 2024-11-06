@@ -28,18 +28,19 @@ systems that you want to ingest the audit logs from.
 - You have applied the necessary  SACLS to the files you want to audit.
 - You have created a role with the necessary permissions to allow the Lambda function to do the following:
 
-| Service | Actions | Resources |
-| ---  | --- | --- |
-| fsx  | fsx:DescribeFileSystems | * |
-| ec2  | DescribeNetworkInterfaces | * |
-| ^    | CreateNetworkInterface | arn:aws:ec2:*:\<accountID>:* |
-| ^    | DeleteNetworkInterface | arn:aws:ec2:*:\<accountID>:* |
-| logs | CreateLogStream        | arn:aws:logs:\<region>:\<accountID>:log-group:\<logGroupName>:* |
-| ^    | PutLogEvents           | arn:aws:logs:\<region>:\<accountID>:log-group:\<logGroupName>:* |
-| s3   | ListBucket             | arn:aws:s3:\<region>:\<accountID>:* |
-| ^    | GetObject              | arn:aws:s3:\<region>:\<accountID>:*/* |
-| ^    | PutObject              | arn:aws:s3:\<region>:\<accountID>:*/* |
-| secretsmanager | GetSecretValue | arn:aws:secretsmanager:\<region>:\<accountID>:secret:\<secretName> |
+<table>
+<tr><th>Service</td><td>Actions</td></td>Resources</td></tr>
+<tr><td>fsx</td><td>fsx:DescribeFileSystems</td><td>*</td></tr>
+<tr><td rowspan="3">ec2</td><td>DescribeNetworkInterfaces</td><td>*</td></tr>
+<tr><td>CreateNetworkInterface</td><td>arn:aws:ec2:*:\<accountID>:*</td></tr>
+<tr><td>DeleteNetworkInterface</td><td>arn:aws:ec2:*:\<accountID>:*</td></tr>
+<tr><td rowspan="2">logs</td><td>CreateLogStream        </td><td> arn:aws:logs:\<region>:\<accountID>:log-group:\<logGroupName>:* </td></tr>
+<tr><td>PutLogEvents           </td><td> arn:aws:logs:\<region>:\<accountID>:log-group:\<logGroupName>:* </td></tr>
+<tr><td rowspan="3"> s3  </td><td> ListBucket             </td><td> arn:aws:s3:\<region>:\<accountID>:* </td></tr>
+<tr><td>GetObject              </td><td> arn:aws:s3:\<region>:\<accountID>:*/* </td></tr>
+<tr><td>PutObject              </td><td> arn:aws:s3:\<region>:\<accountID>:*/* </td></tr>
+<tr><td>secretsmanager </td><td> GetSecretValue </td><td> arn:aws:secretsmanager:\<region>:\<accountID>:secret:\<secretName> </td></tr>
+</table>
 
 ## Deployment
 1. Create a Lambda deployment package by:
