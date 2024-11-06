@@ -47,21 +47,21 @@ systems that you want to ingest the audit logs from.
     1. Downloading the `ingest_fsx_audit_logs.py` file from this repository and placing it in an empty directory.
     1. Rename the file to `lambda_function.py`.
     1. Install a couple dependencies that aren't included with AWS's base Lambda deployment by running the following command:<br>
-`       pip install --target . xmltodict requests_toolbelt`<br>
+`pip install --target . xmltodict requests_toolbelt`<br>
     1. Zip the contents of the directory into a zip file.<br>
-`       zip -r ingest_fsx_audit_logs.zip .`<br>
+`zip -r ingest_fsx_audit_logs.zip .`<br>
 
 2. Create the Lambda function with:
     1. Python 3.10, or higher, as the runtime.
     1. Set the permissions to the role created above.
-    1. Under `Additional Configurations` select `Enable VPC` and select a VPC and Subnet that will have access to all the FSxN cluster management endpoints that you want to gather audit logs from.
+    1. Under `Additional Configurations` select `Enable VPC` and select a VPC and Subnet that will have access to all the FSx for ONtAP file system management endpoints that you want to gather audit logs from.
     1. Click `Create Function` and on the next page, under the `Code` tab, select `Upload From -> .zip file.` Provide the .zip file created by the steps above. 
-    1. From the `Configuration -> General` tab set the timeout to at least 30 seconds. You will may need to increase that if it has to process a lot of audit entries and/or process a lot of FSxN file systems.
+    1. From the `Configuration -> General` tab set the timeout to at least 30 seconds. You will may need to increase that if it has to process a lot of audit entries and/or process a lot of FSx for ONTAP file systems.
 3. Configure the Lambda function by setting the following environment variables. For a Lambda function you do this by clicking on the `Configuration` tab and then the `Environment variables` section.
 
 | Variable | Description |
 | --- | --- |
-| secretArn | The ARN of the secret that contains the credentials to access the FSx for Data ONTAP file system. |
+| secretArn | The ARN of the secret that contains the credentials for all the FSx for ONTAP file systems you want to gather audit logs from. |
 | secretRegion | The region where the secret is stored. |
 | s3BucketRegion | The region of the S3 bucket where stats file is stored. |
 | s3BucketName | The name of the S3 bucket where the stats are stored. |
