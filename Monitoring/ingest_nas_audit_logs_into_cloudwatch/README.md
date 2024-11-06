@@ -29,17 +29,17 @@ systems that you want to ingest the audit logs from.
 - You have created a role with the necessary permissions to allow the Lambda function to do the following:
 
 <table>
-<tr><th>Service</td><td>Actions</td><td>Resources</td></tr>
+<tr><th>Service</td><th>Actions</td><th>Resources</th></tr>
 <tr><td>fsx</td><td>fsx:DescribeFileSystems</td><td>*</td></tr>
 <tr><td rowspan="3">ec2</td><td>DescribeNetworkInterfaces</td><td>*</td></tr>
 <tr><td>CreateNetworkInterface</td><td>arn:aws:ec2:*:&lt;accountID&gt;:*</td></tr>
 <tr><td>DeleteNetworkInterface</td><td>arn:aws:ec2:*:&lt;accountID&gt;:*</td></tr>
-<tr><td rowspan="2">logs</td><td>CreateLogStream        </td><td> arn:aws:logs:\<region>:\<accountID>:log-group:\<logGroupName>:* </td></tr>
-<tr><td>PutLogEvents           </td><td> arn:aws:logs:\<region>:\<accountID>:log-group:\<logGroupName>:* </td></tr>
-<tr><td rowspan="3"> s3  </td><td> ListBucket             </td><td> arn:aws:s3:\<region>:\<accountID>:* </td></tr>
-<tr><td>GetObject              </td><td> arn:aws:s3:\<region>:\<accountID>:*/* </td></tr>
-<tr><td>PutObject              </td><td> arn:aws:s3:\<region>:\<accountID>:*/* </td></tr>
-<tr><td>secretsmanager </td><td> GetSecretValue </td><td> arn:aws:secretsmanager:\<region>:\<accountID>:secret:\<secretName> </td></tr>
+<tr><td rowspan="2">logs</td><td>CreateLogStream        </td><td> arn:aws:logs:&lt;region&gt;:&lt;accountID&gt;:log-group:&lt;logGroupName&gt;:* </td></tr>
+<tr><td>PutLogEvents           </td><td> arn:aws:logs:&lt;region&gt;:&lt;accountID&gt;:log-group:&lt;logGroupName&gt;:* </td></tr>
+<tr><td rowspan="3"> s3  </td><td> ListBucket             </td><td> arn:aws:s3:&lt;region&gt;:&lt;accountID&gt;:* </td></tr>
+<tr><td>GetObject              </td><td> arn:aws:s3:&lt;region>:&lt;accountID&gt;:*/* </td></tr>
+<tr><td>PutObject              </td><td> arn:aws:s3:&lt;region>:&lt;accountID&gt;:*/* </td></tr>
+<tr><td>secretsmanager </td><td> GetSecretValue </td><td> arn:aws:secretsmanager:&lt;region&gt;:&lt;accountID&gt;:secret:&lt;secretName&gt;</td></tr>
 </table>
 
 ## Deployment
