@@ -2,7 +2,8 @@
 
 ## Introduction
 This repository contains a method to take an existing FSx for ONTAP file system and replicate volumes to a new FSx for ONTAP file system for disaster recovery or backup purposes.  It leverages both AWS FSx Terraform provider as well as the ONTAP Terraform provider.
-Note: Currently supports replicating volumes within a single SVM.
+
+Note: Currently it supports replicating volumes within a single SVM.
 
 ## Setup
 
@@ -26,7 +27,7 @@ These variables are to be filled in the terraform.tfvars file, please see instru
 | prime_hostname        | Hostname or IP address of primary FSx for ONTAP file system.                                                  | `string`       |                                      |   Yes    |
 | prime_fsxid           | FSx for ONTAP file system ID of the primary cluster.                                                          | `string`       |                                      |   Yes    |
 | prime_svm             | Name of the primary SVM for the volumes that will be replicated.                                              | `string`       |                                      |   Yes    |
-| prime_cluster_vserver | Name of the ONTAP cluster vserver for intercluster LIFs in the primary cluster.  Can be found by running `network interface show -services default-intercluster` on the primary cluster. It will have the format FsxId#################  | `string` |  Yes  |
+| prime_cluster_vserver | Name of the ONTAP cluster vserver for intercluster LIFs in the primary cluster.  Can be found by running `network interface show -services default-intercluster` on the primary cluster. It will have the format FsxId#################  | `string` |    | Yes  |
 | prime_aws_region      | AWS region of the primary FSx for ONTAP file system                                                           | `string`       |                                      |  Yes     |
 | username_pass_secrets_id | Name of the secrets ID in AWS secrets.  The AWS Secret should has format of a key `username` which should be fsxadmin and a key `password` and the password of the FSxN | `string` |   | Yes |
 | validate_certs        | When connecting to ONTAP do we validate the cluster certs (true or false).                                                              | `string`       | false                                |  No      |
