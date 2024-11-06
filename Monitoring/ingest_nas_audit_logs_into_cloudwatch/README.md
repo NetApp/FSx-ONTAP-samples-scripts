@@ -1,14 +1,14 @@
 # Ingest FSx for ONTAP NAS audit logs into CloudWatch
 
 ## Overview
-This sample will demonstrate a way to ingest the NAS audit logs from an FSx for Data ONTAP file system into a CloudWatch log group
+This sample demonstrates a way to ingest the NAS audit logs from an FSx for Data ONTAP file system into a CloudWatch log group
 without having to NFS or CIFS mount a volume to access them.
 It will attempt to gather the audit logs from all the FSx for Data ONTAP file systems that are within a specified region.
 It will skip any file systems where the credentials aren't provided in the supplied AWS SecretManager's secret, or that do not have
 the appropriate NAS auditing configuration enabled.
 It will maintain a "stats" file in an S3 bucket that will keep track of the last time it successfully ingested audit logs from each
-file system to try and ensure it doesn't process an audit file more than once..
-You can run this program as a standalone program or as a Lambda function. These directions assume you are going to run it as a Lambda function.
+file system to try to ensure it doesn't process an audit file more than once.
+You can run this script as a standalone program or as a Lambda function. These directions assume you are going to run it as a Lambda function.
 
 ## Prerequisites
 - An FSx for Data ONTAP file system.
@@ -17,7 +17,7 @@ You can run this program as a standalone program or as a Lambda function. These 
 - Have the NAS auditing configured to store the audit logs in a volume with the same name on all FSx for Data ONTAP file
 systems that you want to ingest the audit logs from.
 - A CloudWatch log group.
-- An AWS Secrets Manager secret that contains the passwords for the fsxadmin account for all the FSx for Data ONTAP file system you want to gather audit logs from.
+- An AWS Secrets Manager secret that contains the passwords for the fsxadmin account for all the FSx for Data ONTAP file systems you want to gather audit logs from.
   - The secret should be in the form of key/value pairs (or a JSON object) where the key is the file system ID and value is the password for the fsxadmin account. For example:
 ```json
       {
@@ -25,7 +25,7 @@ systems that you want to ingest the audit logs from.
         "fs-abcdef012345"     : "password2"
       }
 ```
-- You have applied the necessary  SACLS to the files you want to audit.
+- You have applied the necessary SACLs to the files you want to audit. The knowledge base article linked above provides guidance on how to do this.
 - You have created a role with the necessary permissions to allow the Lambda function to do the following:
 
 <table>
@@ -41,6 +41,11 @@ systems that you want to ingest the audit logs from.
 <tr><td>PutObject              </td><td> arn:aws:s3:&lt;region>:&lt;accountID&gt;:*/* </td></tr>
 <tr><td>secretsmanager </td><td> GetSecretValue </td><td> arn:aws:secretsmanager:&lt;region&gt;:&lt;accountID&gt;:secret:&lt;secretName&gt;</td></tr>
 </table>
+Where:
+- &lt;accountID&gt; -  is your AWS account ID.
+- &lt;region&gt; - is the region where the FSx for ONTAP file systems are located.
+- &lt;logGroupName&gt; - is the name of the CloudWatch log group where the audit logs will be ingested.
+- &lt;secretName&gt; - is the name of the secret that contains the credentials for the fsxadmin accounts.
 
 ## Deployment
 1. Create a Lambda deployment package by:
@@ -51,24 +56,28 @@ systems that you want to ingest the audit logs from.
     1. Zip the contents of the directory into a zip file.<br>
 `zip -r ingest_fsx_audit_logs.zip .`<br>
 
-2. Create the Lambda function with:
+2. Within the AWS console, or using the AWS API, create a Lambda function with:
     1. Python 3.10, or higher, as the runtime.
     1. Set the permissions to the role created above.
     1. Under `Additional Configurations` select `Enable VPC` and select a VPC and Subnet that will have access to all the FSx for ONtAP file system management endpoints that you want to gather audit logs from.
     1. Click `Create Function` and on the next page, under the `Code` tab, select `Upload From -> .zip file.` Provide the .zip file created by the steps above. 
     1. From the `Configuration -> General` tab set the timeout to at least 30 seconds. You will may need to increase that if it has to process a lot of audit entries and/or process a lot of FSx for ONTAP file systems.
-3. Configure the Lambda function by setting the following environment variables. For a Lambda function you do this by clicking on the `Configuration` tab and then the `Environment variables` section.
+
+3. Configure the Lambda function by setting the following environment variables. For a Lambda function you do this by clicking on the `Configuration` tab and then the `Environment variables` sub tab.
 
 | Variable | Description |
 | --- | --- |
 | secretArn | The ARN of the secret that contains the credentials for all the FSx for ONTAP file systems you want to gather audit logs from. |
 | secretRegion | The region where the secret is stored. |
-| s3BucketRegion | The region of the S3 bucket where stats file is stored. |
-| s3BucketName | The name of the S3 bucket where the stats are stored. |
-| statsName | The name of the S3 object that contains the stats file. |
+| s3BucketRegion | The region of the S3 bucket where the stats file is stored. |
+| s3BucketName | The name of the S3 bucket where the stats file is stored. |
+| statsName | The name you want to use as the stats file. |
 | logGroupName | The name of the CloudWatch log group to ingest the audit logs into. |
 
-4. After you have tested it, add an EventBridge trigger to run periodically. You can do this by clicking on the `Add Trigger` button and selecting `EventBridge (CloudWatch Events)` from the dropdown. You can then configure the schedule to run as often as you want. How often depends on how often you have set up your FSx for ONTAP file systems to generate audit logs, and how up-to-date you want the CloudWatch logs to be.
+4. After you have tested that the Ladmba function is running correctly, add an EventBridge trigger to have it run periodically.
+You can do this by clicking on the `Add Trigger` button within the AWS console and selecting `EventBridge (CloudWatch Events)`
+from the dropdown. You can then configure the schedule to run as often as you want. How often depends on how often you have
+set up your FSx for ONTAP file systems to generate audit logs, and how up-to-date you want the CloudWatch logs to be.
 
 ## Author Information
 
