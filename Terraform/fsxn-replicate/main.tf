@@ -173,21 +173,18 @@ resource "netapp-ontap_svm_peers_resource" "peer_svms" {
   ]
 }
 
+locals {
+  dr_retention_parsed = jsondecode(var.dr_retention)
+}
+
 resource "netapp-ontap_snapmirror_policy_resource" "snapmirror_policy_async" {
   # required to know which system to interface with
   cx_profile_name = var.dr_clus_name
   name = var.dr_snapmirror_policy_name
   svm_name = aws_fsx_ontap_storage_virtual_machine.mysvm.name
   type = "async"
-  retention = [{
-    label = "weekly"
-    count = 2
-  },
-  {
-    label = "daily",
-    count = 7
-  }
-  ]
+  transfer_schedule_name = var.dr_transfer_schedule
+  retention = local.dr_retention_parsed
 }
 
 

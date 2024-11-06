@@ -55,7 +55,8 @@ These variables are to be filled in the terraform.tfvars file, please see instru
 | dr_username_pass_secrets_id | Name of the secrets ID in AWS secrets.  The AWS Secret should has format of a key `username` where the value should be fsxadmin and a key `password` with the value being the password to be assigned to the destination FSx for ONTAP file system. | `string` |  | Yes |
 | dr_vpc_id             | The VPC ID where the DR FSx for ONTAP file system (and security group if this option is selected) will be created. | `string` |  | Yes |
 | dr_snapmirror_policy_name | Name of snamirror policy to create.                                                                            | `string` |  | Yes |
-
+| dr_transfer_schedule  | The schedule used to update asynchronous relationships.                                                            | `string` | hourly | No |
+| dr_retention          | Rules for Snapshot copy retention. See [Retention Schema] (https://registry.terraform.io/providers/NetApp/netapp-ontap/latest/docs/resources/snapmirror_policy_resource#retention)  | `string` | 4 weekly, 2 daily | Yes |
 ## Inputs (Security Group - DR Cluster)
 
 | Name                  | Description                                                                                                   | Type           | Default                              | Required |

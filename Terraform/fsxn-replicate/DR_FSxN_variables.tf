@@ -192,3 +192,25 @@ variable "dr_snapmirror_policy_name" {
    type        = string
    default     = ""
 }
+
+variable "dr_transfer_schedule" {
+   description = "The schedule used to update asynchronous relationships."
+   type        = string
+   default     = "hourly"
+}
+
+variable "dr_retention" {
+  description = "Rules for Snapshot copy retention."
+  type        = string
+  default     = <<-EOF
+[{
+  "label": "weekly",
+  "count": 4
+},
+{
+  "label": "daily",
+  "count": 7
+}]
+EOF
+}
+

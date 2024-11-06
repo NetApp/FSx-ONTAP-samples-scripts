@@ -23,3 +23,20 @@ output "dr_fsxn_system" {
   }
   description = "Cluster management IP address of the created DR cluster"
 }
+
+#output "replication_relationships" {
+#  value = {
+#      full_data = netapp-ontap_snapmirror_resource.snapmirror
+#  }
+#  description = "Replication relationships"
+#}
+
+output "snapmirror_details" {
+  value = { for id, snapmirror in netapp-ontap_snapmirror_resource.snapmirror : id => {
+    source_path = snapmirror.source_endpoint.path
+    destination_path = snapmirror.destination_endpoint.path
+    policy_name = snapmirror.policy.name
+  }}
+  description = "A map of all snapmirror details."
+}
+
