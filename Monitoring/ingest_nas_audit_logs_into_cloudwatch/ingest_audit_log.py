@@ -343,7 +343,7 @@ def lambda_handler(event, context):
         if response.status == 200:
             data = json.loads(response.data.decode('utf-8'))
             if data['num_records'] > 0:
-                volumeUUID = data['records'][0]['uuid']  # Since we specified the volume name, there should only be one record.
+                volumeUUID = data['records'][0]['uuid']  # Since we specified the volume, and vserver name, there should only be one record.
 
         if volumeUUID == None:
             print(f"Volume {config['volumeName']} not found for {fsId}.")
