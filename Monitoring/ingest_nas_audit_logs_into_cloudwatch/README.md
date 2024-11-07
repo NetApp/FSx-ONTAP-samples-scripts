@@ -53,7 +53,6 @@ Where:
 
 - &lt;accountID&gt; -  is your AWS account ID.
 - &lt;region&gt; - is the region where the FSx for ONTAP file systems are located.
-- &lt;logGroupName&gt; - is the name of the CloudWatch log group where the audit logs will be ingested.
 - &lt;secretName&gt; - is the name of the secret that contains the credentials for the fsxadmin accounts.
 
 Notes:
