@@ -88,7 +88,7 @@ def processFile(ontapAdminServer, headers, volumeUUID, filePath):
     #
     # Number of bytes to read for each API call.
     blockSize=1024*1024
-    
+
     bytesRead = 0
     requestSize = 1   # Set to > 0 to start the loop.
     while requestSize > 0:
@@ -116,7 +116,7 @@ def processFile(ontapAdminServer, headers, volumeUUID, filePath):
         else:
             print(f'API call to {endpoint} failed. HTTP status code: {response.status}.')
             break
-    
+
     f.close()
     #
     # Upload the audit events to CloudWatch.
@@ -135,8 +135,10 @@ def createCWEvent(event):
     # Attributes: A verbose list of strings representing the attributes.
     # DirHandleID: A string of numbers that I'm not sure what they represent.
     # SearchFilter: Always seems to be null.
-    # SearchPattern: Always seems to be set to "Not Present"
-    ignoredDataFields = ["ObjectServer", "HandleID", "InformationRequested", "AccessList", "AccessMask", "DesiredAccess", "Attributes", "DirHandleID", "SearchFilter", "SearchPattern"]
+    # SearchPattern: Always seems to be set to "Not Present".
+    # SubjectPort: Just the TCP port that the user came in on.
+    # OldDirHandle and NewDirHandle: Are the UUIDs of the directory. The OldPath and NewPath are human readable.
+    ignoredDataFields = ["ObjectServer", "HandleID", "InformationRequested", "AccessList", "AccessMask", "DesiredAccess", "Attributes", "DirHandleID", "SearchFilter", "SearchPattern", "SubjectPort", "OldDirHandle", "NewDirHandle"]
     #
     # Convert the timestamp from the XML file to a timestamp in milliseconds.
     # An example format of the time is: 2024-09-22T21:05:27.263864000Z
@@ -180,7 +182,7 @@ def createCWEvent(event):
                     str += ", InformationSet=Null"
                 else:
                     str += f", InformationSet={data['#text']}"
-            elif data['@Name'] in ['ObjectType', 'WriteOffset', 'WriteCount', 'NewSD', 'OldSD']: # These don't require special handling.
+            elif data['@Name'] in ['ObjectType', 'WriteOffset', 'WriteCount', 'NewSD', 'OldSD', 'SubjectUserIsLocal', 'OldPath', 'NewPath', 'OldRotateLimit', 'NewRotateLimit', 'OldLogFormat', 'NewLogFormat', 'OldRetentionDuration', 'NewRetentionDuration', 'AuditGuarantee', 'OldDestinationPath', 'NewDestinationPath']: # These don't require special handling.
                 str += f", {data['@Name']}={data['#text']}"
             else:
                 print(f"Unknown data type: {data['@Name']}")
@@ -201,7 +203,7 @@ def ingestAuditFile(auditLogPath, auditLogName):
 
     if dict.get('Events') == None or dict['Events'].get('Event') == None:
         print(f"No events found in {auditLogName}")
-        return  
+        return
     #
     # Ensure the logstream exists.
     try:
@@ -243,7 +245,8 @@ def checkConfig():
         'secretArn': secretArn if 'secretArn' in globals() else None,
         's3BucketRegion': s3BucketRegion if 's3BucketRegion' in globals() else None,
         's3BucketName': s3BucketName if 's3BucketName' in globals() else None,
-        'statsName': statsName if 'statsName' in globals() else None
+        'statsName': statsName if 'statsName' in globals() else None,
+        'vserverName': vserverName if 'vserverName' in globals() else None
     }
 
     for item in config:
@@ -315,7 +318,7 @@ def lambda_handler(event, context):
     lastFileReadChanged = False
     #
     # Process each FSxN.
-    for fsxn in fsxNs: 
+    for fsxn in fsxNs:
         fsId = fsxn.split('.')[1]
         #
         # Get the password
@@ -331,7 +334,7 @@ def lambda_handler(event, context):
         #
         # Get the volume UUID for the audit_logs volume.
         volumeUUID = None
-        endpoint = f"https://{fsxn}/api/storage/volumes?name={config['volumeName']}"
+        endpoint = f"https://{fsxn}/api/storage/volumes?name={config['volumeName']}&svm={config['vserverName']}"
         response = http.request('GET', endpoint, headers=headersQuery, timeout=5.0)
         if response.status == 200:
             data = json.loads(response.data.decode('utf-8'))
@@ -343,8 +346,7 @@ def lambda_handler(event, context):
             continue
         #
         # Get all the files in the volume that match the audit file pattern.
-        # Since the vserver is part of the filename, it assumes the vserver is 'fsx'.
-        endpoint = f'https://{fsxn}/api/storage/volumes/{volumeUUID}/files?name=audit_fsx_D*&order_by=name%20asc&fields=name'
+        endpoint = f'https://{fsxn}/api/storage/volumes/{volumeUUID}/files?name=audit_{config['vserverName']}_D*&order_by=name%20asc&fields=name'
         response = http.request('GET', endpoint, headers=headersQuery, timeout=5.0)
         data = json.loads(response.data.decode('utf-8'))
         for file in data['records']:

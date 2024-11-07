@@ -26,20 +26,28 @@ systems that you want to ingest the audit logs from.
       }
 ```
 - You have applied the necessary SACLs to the files you want to audit. The knowledge base article linked above provides guidance on how to do this.
+- Since the Lambda function runs within your VPC it will not have access to the Internet, even if you can access the Internet from the Subnet it run from.
+Therefore, there needs to be an VPC endpoint for all the AWS services that the Lambda function uses. Specifically, the Lambda function needs to be able to access the following services:
+  - FSx.
+  - Secrets Manager.
+  - CloudWatch Logs.
+  - S3 - Note that typically there is a Gateway type VPC endpoint for S3, so you should not need to create a VPC endpoint for S3.
+  - EC2.
 - You have created a role with the necessary permissions to allow the Lambda function to do the following:
 
 <table>
 <tr><th>Service</td><th>Actions</td><th>Resources</th></tr>
-<tr><td>fsx</td><td>fsx:DescribeFileSystems</td><td>*</td></tr>
-<tr><td rowspan="3">ec2</td><td>DescribeNetworkInterfaces</td><td>*</td></tr>
-<tr><td>CreateNetworkInterface</td><td>arn:aws:ec2:*:&lt;accountID&gt;:*</td></tr>
-<tr><td>DeleteNetworkInterface</td><td>arn:aws:ec2:*:&lt;accountID&gt;:*</td></tr>
-<tr><td rowspan="2">logs</td><td>CreateLogStream        </td><td> arn:aws:logs:&lt;region&gt;:&lt;accountID&gt;:log-group:&lt;logGroupName&gt;:* </td></tr>
-<tr><td>PutLogEvents           </td><td> arn:aws:logs:&lt;region&gt;:&lt;accountID&gt;:log-group:&lt;logGroupName&gt;:* </td></tr>
-<tr><td rowspan="3"> s3  </td><td> ListBucket             </td><td> arn:aws:s3:&lt;region&gt;:&lt;accountID&gt;:* </td></tr>
-<tr><td>GetObject              </td><td> arn:aws:s3:&lt;region>:&lt;accountID&gt;:*/* </td></tr>
-<tr><td>PutObject              </td><td> arn:aws:s3:&lt;region>:&lt;accountID&gt;:*/* </td></tr>
-<tr><td>secretsmanager </td><td> GetSecretValue </td><td> arn:aws:secretsmanager:&lt;region&gt;:&lt;accountID&gt;:secret:&lt;secretName&gt;</td></tr>
+<tr><td>Fsx</td><td>fsx:DescribeFileSystems</td><td>\*</td></tr>
+<tr><td rowspan="3">ec2</td><td>DescribeNetworkInterfaces</td><td>\*</td></tr>
+<tr><td>CreateNetworkInterface</td><td>arn:aws:ec2:&lt;region&gt;:&lt;accountID&gt;:\*</td></tr>
+<tr><td>DeleteNetworkInterface</td><td>arn:aws:ec2:&lt;region&gt;:&lt;accountID&gt;:\*</td></tr>
+<tr><td rowspan="3">CloudWatch Logs</td><td>CreateLogGroup</td><td rowspan="3">arn:aws:logs:&lt;region&gt;:&lt;accountID&gt;:log-group:\* </td></tr>
+<tr><td>CreateLogStream</td></tr>
+<tr><td>PutLogEvents</td></tr>
+<tr><td rowspan="3">s3</td><td> ListBucket</td><td> arn:aws:s3:&lt;region&gt;:&lt;accountID&gt;:* </td></tr>
+<tr><td>GetObject</td><td rowspan="2">arn:aws:s3:&lt;region>:&lt;accountID&gt;:*/* </td></tr>
+<tr><td>PutObject</td></tr>
+<tr><td>Secrets Manager</td><td> GetSecretValue </td><td>arn:aws:secretsmanager:&lt;region&gt;:&lt;accountID&gt;:secret:&lt;secretName&gt\*;</td></tr>
 </table>
 Where:
 
@@ -47,6 +55,11 @@ Where:
 - &lt;region&gt; - is the region where the FSx for ONTAP file systems are located.
 - &lt;logGroupName&gt; - is the name of the CloudWatch log group where the audit logs will be ingested.
 - &lt;secretName&gt; - is the name of the secret that contains the credentials for the fsxadmin accounts.
+
+Notes:
+- Since the Lambda function runs within your VPC it needs to be able to create an delete network interfaces.
+- It needs to be able to create a log groups so it can create a log group for the diagnostic output from the Lambda function.
+- Since the ARN of any Secrets Manager secret has random characters at the end of it, you must add the `*` at the end.
 
 ## Deployment
 1. Create a Lambda deployment package by:
@@ -68,14 +81,19 @@ Where:
 
 | Variable | Description |
 | --- | --- |
+| fsxRegion | The region where the FSx for ONTAP file systems are located. |
 | secretArn | The ARN of the secret that contains the credentials for all the FSx for ONTAP file systems you want to gather audit logs from. |
 | secretRegion | The region where the secret is stored. |
 | s3BucketRegion | The region of the S3 bucket where the stats file is stored. |
 | s3BucketName | The name of the S3 bucket where the stats file is stored. |
 | statsName | The name you want to use as the stats file. |
 | logGroupName | The name of the CloudWatch log group to ingest the audit logs into. |
+| volumeName | The name of the volume, on all the FSx for ONTAP file systems, where the audit logs are stored. |
 
-4. After you have tested that the Ladmba function is running correctly, add an EventBridge trigger to have it run periodically.
+4. Test the Lambda function by clicking on the `Test` tab and then clicking on the `Test` button. You should see "Executing function: succeeded".
+If not, click on the "Details" button to see what errors there are.
+
+5. After you have tested that the Ladmba function is running correctly, add an EventBridge trigger to have it run periodically.
 You can do this by clicking on the `Add Trigger` button within the AWS console and selecting `EventBridge (CloudWatch Events)`
 from the dropdown. You can then configure the schedule to run as often as you want. How often depends on how often you have
 set up your FSx for ONTAP file systems to generate audit logs, and how up-to-date you want the CloudWatch logs to be.
