@@ -37,17 +37,17 @@ Therefore, there needs to be an VPC endpoint for all the AWS services that the L
 
 <table>
 <tr><th>Service</td><th>Actions</td><th>Resources</th></tr>
-<tr><td>Fsx</td><td>fsx:DescribeFileSystems</td><td>\*</td></tr>
-<tr><td rowspan="3">ec2</td><td>DescribeNetworkInterfaces</td><td>\*</td></tr>
-<tr><td>CreateNetworkInterface</td><td>arn:aws:ec2:&lt;region&gt;:&lt;accountID&gt;:\*</td></tr>
-<tr><td>DeleteNetworkInterface</td><td>arn:aws:ec2:&lt;region&gt;:&lt;accountID&gt;:\*</td></tr>
-<tr><td rowspan="3">CloudWatch Logs</td><td>CreateLogGroup</td><td rowspan="3">arn:aws:logs:&lt;region&gt;:&lt;accountID&gt;:log-group:\* </td></tr>
+<tr><td>Fsx</td><td>fsx:DescribeFileSystems</td><td>&#42;</td></tr>
+<tr><td rowspan="3">ec2</td><td>DescribeNetworkInterfaces</td><td>&#42;</td></tr>
+<tr><td>CreateNetworkInterface</td><td>arn:aws:ec2:&lt;region&gt;:&lt;accountID&gt;:&#42;</td></tr>
+<tr><td>DeleteNetworkInterface</td><td>arn:aws:ec2:&lt;region&gt;:&lt;accountID&gt;:&#42;</td></tr>
+<tr><td rowspan="3">CloudWatch Logs</td><td>CreateLogGroup</td><td rowspan="3">arn:aws:logs:&lt;region&gt;:&lt;accountID&gt;:log-group:&#42;</td></tr>
 <tr><td>CreateLogStream</td></tr>
 <tr><td>PutLogEvents</td></tr>
-<tr><td rowspan="3">s3</td><td> ListBucket</td><td> arn:aws:s3:&lt;region&gt;:&lt;accountID&gt;:* </td></tr>
-<tr><td>GetObject</td><td rowspan="2">arn:aws:s3:&lt;region>:&lt;accountID&gt;:*/* </td></tr>
+<tr><td rowspan="3">s3</td><td> ListBucket</td><td> arn:aws:s3:&lt;region&gt;:&lt;accountID&gt;:&#42;</td></tr>
+<tr><td>GetObject</td><td rowspan="2">arn:aws:s3:&lt;region>:&lt;accountID&gt;:&#42;/&#42;</td></tr>
 <tr><td>PutObject</td></tr>
-<tr><td>Secrets Manager</td><td> GetSecretValue </td><td>arn:aws:secretsmanager:&lt;region&gt;:&lt;accountID&gt;:secret:&lt;secretName&gt\*;</td></tr>
+<tr><td>Secrets Manager</td><td> GetSecretValue </td><td>arn:aws:secretsmanager:&lt;region&gt;:&lt;accountID&gt;:secret:&lt;secretName&gt&#42;;</td></tr>
 </table>
 Where:
 
