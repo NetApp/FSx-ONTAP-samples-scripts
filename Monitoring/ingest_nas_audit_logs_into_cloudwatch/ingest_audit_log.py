@@ -186,10 +186,8 @@ def createCWEvent(event):
                     str += ", InformationSet=Null"
                 else:
                     str += f", InformationSet={data['#text']}"
-            elif data['@Name'] in ['ObjectType', 'WriteOffset', 'WriteCount', 'NewSD', 'OldSD', 'SubjectUserIsLocal', 'OldPath', 'NewPath', 'OldRotateLimit', 'NewRotateLimit', 'OldLogFormat', 'NewLogFormat', 'OldRetentionDuration', 'NewRetentionDuration', 'AuditGuarantee', 'OldDestinationPath', 'NewDestinationPath']: # These don't require special handling.
+            else: # Assume the rest of the fields don't need special handling.
                 str += f", {data['@Name']}={data['#text']}"
-            else:
-                print(f"Unknown data type: {data['@Name']}")
 
     return {'timestamp': t, 'message': str}
 
