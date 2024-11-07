@@ -39,8 +39,8 @@ Therefore, there needs to be an VPC endpoint for all the AWS services that the L
 <tr><th>Service</td><th>Actions</td><th>Resources</th></tr>
 <tr><td>Fsx</td><td>fsx:DescribeFileSystems</td><td>&#42;</td></tr>
 <tr><td rowspan="3">ec2</td><td>DescribeNetworkInterfaces</td><td>&#42;</td></tr>
-<tr><td>CreateNetworkInterface</td><td>arn:aws:ec2:&lt;region&gt;:&lt;accountID&gt;:&#42;</td></tr>
-<tr><td>DeleteNetworkInterface</td><td>arn:aws:ec2:&lt;region&gt;:&lt;accountID&gt;:&#42;</td></tr>
+<tr><td>CreateNetworkInterface</td><td rowspan="2">arn:aws:ec2:&lt;region&gt;:&lt;accountID&gt;:&#42;</td></tr>
+<tr><td>DeleteNetworkInterface</td></tr>
 <tr><td rowspan="3">CloudWatch Logs</td><td>CreateLogGroup</td><td rowspan="3">arn:aws:logs:&lt;region&gt;:&lt;accountID&gt;:log-group:&#42;</td></tr>
 <tr><td>CreateLogStream</td></tr>
 <tr><td>PutLogEvents</td></tr>
