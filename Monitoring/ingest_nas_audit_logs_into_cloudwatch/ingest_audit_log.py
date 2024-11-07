@@ -54,6 +54,10 @@ import botocore
 # all FSxNs.
 #volumeName = "audit_logs"
 #
+# The name of the vserver that holds the audit logs. Assumed to be the same on 
+# all FSxNs.
+#vserverName = "fsx"
+#
 # The CloudWatch log group to store the audit logs in.
 #logGroupName = "/fsx/audit_logs"
 

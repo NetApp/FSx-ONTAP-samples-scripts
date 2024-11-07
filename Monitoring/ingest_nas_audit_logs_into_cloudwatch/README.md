@@ -88,6 +88,7 @@ Notes:
 | statsName | The name you want to use as the stats file. |
 | logGroupName | The name of the CloudWatch log group to ingest the audit logs into. |
 | volumeName | The name of the volume, on all the FSx for ONTAP file systems, where the audit logs are stored. |
+| vserverName | The name of the vserver, on all the FSx for ONTAP file systems, where the audit logs are stored. |
 
 4. Test the Lambda function by clicking on the `Test` tab and then clicking on the `Test` button. You should see "Executing function: succeeded".
 If not, click on the "Details" button to see what errors there are.
