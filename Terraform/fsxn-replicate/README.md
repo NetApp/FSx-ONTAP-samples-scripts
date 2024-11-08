@@ -11,7 +11,7 @@ Note: Currently it supports replicating volumes within a single SVM.
 
 You will need to define some key characteristics of the destination FSx for ONTAP file system that will be created, such as deployment type and througput, full list below.  You also will need to define the source SVM and list of volumes to replicate, and replication parameters.
 
-These values can be found in the following variables files: Primary_FSxN_variables.tf and DR_FSxN_variables.tf
+These values can be found in the following variables files: Primary_FSxN_variables.tf and DR_FSxN_variables.tf files. The values should be set in the terraform.tfvars file.
 
 ### Prerequisites
 You have an existing FSx for ONTAP file system that you want to replicate to a new FSx for ONTAP file system.  There is proper networking connectivy between the source FSx for ONTAP file system and the region/VPC/subnets where the destination FSx for ONTAP file system will be deployed.
@@ -29,8 +29,8 @@ These variables are to be filled in the terraform.tfvars file, please see instru
 | prime_svm             | Name of the primary SVM for the volumes that will be replicated.                                              | `string`       |                                      |   Yes    |
 | prime_cluster_vserver | Name of the ONTAP cluster vserver for intercluster LIFs in the primary cluster.  Can be found by running `network interface show -services default-intercluster` on the primary cluster. It will have the format FsxId#################  | `string` |    | Yes  |
 | prime_aws_region      | AWS region of the primary FSx for ONTAP file system                                                           | `string`       |                                      |  Yes     |
-| username_pass_secrets_id | Name of the secrets ID in AWS secrets.  The AWS Secret should has format of a key `username` which should be fsxadmin and a key `password` and the password of the FSxN | `string` |   | Yes |
-| validate_certs        | When connecting to ONTAP do we validate the cluster certs (true or false).                                                              | `string`       | false                                |  No      |
+| username_pass_secrets_id | Name of the secrets ID in AWS secrets. The AWS Secret should have a format of a key `username`, which should have a value of `fsxadmin,` and another key `password` with its value set to the password of the FSxN. *Note*: The secret must be in the same region as the FSx for ONTAP file system it is associated with. | `string` |   | Yes |
+| validate_certs        | When connecting to an FSx for ONTAP file system, should Terraform validate the SSL certificate (true or false)? This should be set to `false` if you are using the default self-signed SSL certificate.  | `string`       | false                                |  No      |
 | list_of_volumes_to_replicate | List of volume names to replicate to the destination FSx for ONTAP file system                         | `list(string)`   |                                      |  Yes     |
 
 
@@ -40,7 +40,7 @@ These variables are to be filled in the terraform.tfvars file, please see instru
 | --------------------- | ------------------------------------------------------------------------------------------------------------- | -------------- | ------------------------------------ | :------: |
 | dr_aws_region         | AWS region where you want the Secondary(DR) FSx for ONTAP file system to be deployed.                         | `string`       |                                      |   Yes    |
 | dr_fsx_name           | The name to assign to the destination FSx for ONTAP file system that will be created.                         | `string`       |                                      |   Yes    |
-| dr_fsx_deploy_type    | The file system deployment type. Supported values are 'MULTI_AZ_1', 'SINGLE_AZ_1', 'MULTI_AZ_2', and 'SINGLE_AZ_2'. MULTI_AZ_1 and SINGLE_AZ_1 are Gen 1. MULTI_AZ_2 and SINGLE_AZ_2 are Gen 2. | `string` | SINGLE_AZ_1 | Yes |
+| dr_fsx_deploy_type    | The file system deploment type. Supported values are 'MULTI_AZ_1', 'SINGLE_AZ_1', 'MULTI_AZ_2', and 'SINGLE_AZ_2'. MULTI_AZ_1 and SINGLE_AZ_1 are Gen 1. MULTI_AZ_2 and SINGLE_AZ_2 are Gen 2. | `string` | SINGLE_AZ_1 | Yes |
 | dr_fsx_subnets        | The primary subnet ID, and secondary subnet ID if you are deploying in a Multi AZ environment, file system will be accessible from. For MULTI_AZ deployment types both subnets are required. For SINGLE_AZ deployment type, only the primary subnet is used. | `map(any)` |     | Yes |
 | dr_fsx_capacity_size_gb | The storage capacity in GiBs of the FSx for ONTAP file system. Valid values between 1024 (1 TiB) and 1048576 (1 PiB). Gen 1 deployment types are limited to 192 TiB. Gen 2 Multi AZ is limited to 512 TiB. Gen 2 Single AZ is limited to 1 PiB. The sizing should take into account the size of the volumes you plan to replicate and the tiering policy of the volumes. | `number` | 1024 | Yes |
 | dr_fsx_tput_in_MBps   | The throughput capacity (in MBps) for the file system. Valid values are 128, 256, 512, 1024, 2048, and 4096 for Gen 1, and 384, 768, 1536, 3072 and 6144 for Gen 2. | `string` | 128 | Yes |
@@ -52,11 +52,11 @@ These variables are to be filled in the terraform.tfvars file, please see instru
 | dr_maintenance_start_time | The preferred start time to perform weekly maintenance, in UTC time zone. The format is 'D:HH:MM' format. D is the day of the week, where 1=Monday and 7=Sunday. | `string` | 7:00:00 | No |
 | dr_svm_name           | The name of the Storage Virtual Machine that will house the replicated volumes. | `string` | fsx_dr   | Yes |
 | dr_root_vol_sec_style | Specifies the root volume security style, Valid values are UNIX, NTFS, and MIXED (although MIXED is not recommended). All volumes created under this SVM will inherit the root security style unless the security style is specified on the volume. | `string` | UNIX | Yes |
-| dr_username_pass_secrets_id | Name of the secrets ID in AWS secrets.  The AWS Secret should has format of a key `username` where the value should be fsxadmin and a key `password` with the value being the password to be assigned to the destination FSx for ONTAP file system. | `string` |  | Yes |
+| dr_username_pass_secrets_id | Name of the secrets ID in AWS secrets. The AWS Secret should have a format of a key `username`, which should have a value of `fsxadmin,` and another key `password` with its value set to the password of the FSxN. *Note*: The secret must be in the same region as the FSx for ONTAP file system it is associated with. | `string` |  | Yes |
 | dr_vpc_id             | The VPC ID where the DR FSx for ONTAP file system (and security group if this option is selected) will be created. | `string` |  | Yes |
 | dr_snapmirror_policy_name | Name of snamirror policy to create.                                                                            | `string` |  | Yes |
 | dr_transfer_schedule  | The schedule used to update asynchronous relationships.                                                            | `string` | hourly | No |
-| dr_retention          | Rules for Snapshot copy retention. See [Retention Schema] (https://registry.terraform.io/providers/NetApp/netapp-ontap/latest/docs/resources/snapmirror_policy_resource#retention)  | `string` | 4 weekly, 2 daily | Yes |
+| dr_retention          | Rules for Snapshot copy retention. See [Retention Schema](https://registry.terraform.io/providers/NetApp/netapp-ontap/latest/docs/resources/snapmirror_policy_resource#retention)  | `string` | 4 weekly, 2 daily | Yes |
 ## Inputs (Security Group - DR Cluster)
 
 | Name                  | Description                                                                                                   | Type           | Default                              | Required |
