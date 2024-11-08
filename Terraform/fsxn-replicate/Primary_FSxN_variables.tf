@@ -1,9 +1,3 @@
-variable "prime_hostname" {
-   description = "Hostname or IP address of primary cluster."
-   type        = string
-   default     = ""
-}
-
 variable "prime_fsxid" {
    description = "FSx for ONTAP file system ID of the primary cluster."
    type        = string
