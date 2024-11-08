@@ -55,7 +55,7 @@ These variables are to be filled in the terraform.tfvars file, please see instru
 | dr_vpc_id             | The VPC ID where the DR FSx for ONTAP file system (and security group if this option is selected) will be created. | `string` |  | Yes |
 | dr_snapmirror_policy_name | Name of snamirror policy to create.                                                                            | `string` |  | Yes |
 | dr_transfer_schedule  | The schedule used to update asynchronous relationships.                                                            | `string` | hourly | No |
-| dr_retention          | Rules for Snapshot copy retention. See [Retention Schema](https://registry.terraform.io/providers/NetApp/netapp-ontap/latest/docs/resources/snapmirror_policy_resource#retention)  | `string` | 4 weekly, 2 daily | Yes |
+| dr_retention          | Rules for Snapshot copy retention. See [Retention Schema](https://registry.terraform.io/providers/NetApp/netapp-ontap/latest/docs/resources/snapmirror_policy_resource#retention) for more information.  | `string` | [{ "label": "weekly", "count": 4 }, { "label": "daily", "count": 7 }] | No |
 ## Inputs (Security Group - DR Cluster)
 
 | Name                  | Description                                                                                                   | Type           | Default                              | Required |
@@ -79,7 +79,7 @@ git clone https://github.com/NetApp/FSx-ONTAP-samples-scripts
 #### 2. Navigate to the directory
 
 ```shell
-cd Terraform/fsxn-replicate
+cd FSx-ONTAP-samples-scripts/Terraform/fsxn-replicate
 ```
 
 #### 3. Initialize Terraform
@@ -92,7 +92,7 @@ terraform init
 
 A succesfull initialization should display the following output:
 
-```shell
+```
 
 Initializing the backend...
 Initializing modules...
@@ -146,7 +146,7 @@ You can see that Terraform recognizes the modules required by our configuration:
                                        "primarysub" = "subnet-11111111"
                                        "secondarysub" = "subnet-33333333"
                                     }
-    dr_svm_name                   = "fsx-dr"
+    dr_svm_name                   = "fsx_dr"
     dr_security_group_name_prefix = "fsxn-sg"
     dr_vpc_id                     = "vpc-xxxxxxxx"
     dr_username_pass_secrets_id   = "<Name of AWS secret>"
