@@ -37,7 +37,7 @@ provider "netapp-ontap" {
   connection_profiles = [
     {
       name = var.prime_clus_name
-      hostname = var.prime_hostname
+      hostname = join("", data.aws_fsx_ontap_file_system.source_fsxn.endpoints[0].management[0].ip_addresses)
       username = jsondecode(data.aws_secretsmanager_secret_version.ontap_prime_username_pass.secret_string)["username"]
       password = jsondecode(data.aws_secretsmanager_secret_version.ontap_prime_username_pass.secret_string)["password"]
       validate_certs = var.validate_certs
