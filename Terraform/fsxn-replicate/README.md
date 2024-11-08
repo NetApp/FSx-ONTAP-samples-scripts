@@ -24,7 +24,6 @@ These variables are to be filled in the terraform.tfvars file, please see instru
 
 | Name                  | Description                                                                                                   | Type           | Default                              | Required |
 | --------------------- | ------------------------------------------------------------------------------------------------------------- | -------------- | ------------------------------------ | :------: |
-| prime_hostname        | Hostname or IP address of primary FSx for ONTAP file system.                                                  | `string`       |                                      |   Yes    |
 | prime_fsxid           | FSx for ONTAP file system ID of the primary cluster.                                                          | `string`       |                                      |   Yes    |
 | prime_svm             | Name of the primary SVM for the volumes that will be replicated.                                              | `string`       |                                      |   Yes    |
 | prime_cluster_vserver | Name of the ONTAP cluster vserver for intercluster LIFs in the primary cluster.  Can be found by running `network interface show -services default-intercluster` on the primary cluster. It will have the format FsxId#################  | `string` |    | Yes  |
