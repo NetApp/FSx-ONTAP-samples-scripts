@@ -174,6 +174,32 @@ Run the following command to execute the Terrafom code and apply the changes pro
 terraform apply
 ```
 
+There will be a lot of output from the `terraform apply` command. At the end, the output
+should look simlar to:
+```
+Apply complete! Resources: 33 added, 0 changed, 0 destroyed.
+
+Outputs:
+
+dr_fsxn_system = {
+  "cluster_mgmt_ip" = toset([
+    "192.168.61.96",
+  ])
+}
+snapmirror_details = {
+  "unix" = {
+    "destination_path" = "fsx_dr:unix_dp"
+    "policy_name" = "dr_policy"
+    "source_path" = "vs1fsxninjas:unix"
+  }
+  "unix2" = {
+    "destination_path" = "fsx_dr:unix2_dp"
+    "policy_name" = "dr_policy"
+    "source_path" = "vs1fsxninjas:unix2"
+  }
+}
+```
+The above give you the cluster management IP address of the DR FSx for ONTAP file system, and the SnapMirror details for the volumes that were replicated.
 ## Author Information
 
 This repository is maintained by the contributors listed on [GitHub](https://github.com/NetApp/FSx-ONTAP-samples-scripts/graphs/contributors).
