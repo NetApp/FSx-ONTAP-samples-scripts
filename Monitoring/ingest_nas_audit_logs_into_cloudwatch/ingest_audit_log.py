@@ -348,7 +348,7 @@ def lambda_handler(event, context):
             continue
         #
         # Get all the files in the volume that match the audit file pattern.
-        endpoint = f'https://{fsxn}/api/storage/volumes/{volumeUUID}/files?name=audit_{config['vserverName']}_D*&order_by=name%20asc&fields=name'
+        endpoint = f"https://{fsxn}/api/storage/volumes/{volumeUUID}/files?name=audit_{config['vserverName']}_D*&order_by=name%20asc&fields=name"
         response = http.request('GET', endpoint, headers=headersQuery, timeout=5.0)
         data = json.loads(response.data.decode('utf-8'))
         for file in data['records']:
