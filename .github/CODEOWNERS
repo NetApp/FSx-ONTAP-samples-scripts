@@ -21,3 +21,4 @@
 /Terraform/deploy-fsx-ontap-sqlserver/ @varunrai
 /Terraform/deploy-fsx-ontap-fileshare-access/ @varunrai
 /Terraform/deploy-fsx-ontap/ @kcantrel
+/Terraform/fsxn-replicate/ @nichollri
