@@ -160,36 +160,36 @@ def createCWEvent(event):
     t = int(t * 1000 + msecond)
     #
     # Build the message to send to CloudWatch.
-    str  = f"Date={event['System']['TimeCreated']['@SystemTime']}, "
-    str += f"Event={event['System']['EventName'].replace(' ', '-')}, " # Replace spaces with dashes.
-    str += f"fs={event['System']['Computer'].split('/')[0]}, "
-    str += f"svm={event['System']['Computer'].split('/')[1]}, "
-    str += f"Result={event['System']['Result'].replace(' ', '-')}"     # Replace spaces with dashes.
+    cwData  = f"Date={event['System']['TimeCreated']['@SystemTime']}, "
+    cwData += f"Event={event['System']['EventName'].replace(' ', '-')}, " # Replace spaces with dashes.
+    cwData += f"fs={event['System']['Computer'].split('/')[0]}, "
+    cwData += f"svm={event['System']['Computer'].split('/')[1]}, "
+    cwData += f"Result={event['System']['Result'].replace(' ', '-')}"     # Replace spaces with dashes.
     #
     # Add the data fields to the message. Some fields are ignored. Some required special handling.
     for data in event['EventData']['Data']:
         if data['@Name'] not in ignoredDataFields:
             if data['@Name'] == 'SubjectIP':
-                str += f", IP={data['#text']}"
+                cwData += f", IP={data['#text']}"
             elif data['@Name'] == 'SubjectUnix':
-                str += f", UnixID={data['@Uid']}, GroupID={data['@Gid']}"
+                cwData += f", UnixID={data['@Uid']}, GroupID={data['@Gid']}"
             elif data['@Name'] == 'SubjectUserSid':
-                str += f", UserSid={data['#text']}"
+                cwData += f", UserSid={data['#text']}"
             elif data['@Name'] == 'SubjectUserName':
-                str += f", UserName={data['#text']}"
+                cwData += f", UserName={data['#text']}"
             elif data['@Name'] == 'SubjectDomainName':
-                str += f", Domain={data['#text']}"
+                cwData += f", Domain={data['#text']}"
             elif data['@Name'] == 'ObjectName' or data['@Name'] == 'FileName':
-                str += f", volume={data['#text'].split(';')[0].replace('(', '').replace(')', '')}, name={data['#text'].split(';')[1]}"
+                cwData += f", volume={data['#text'].split(';')[0].replace('(', '').replace(')', '')}, name={data['#text'].split(';')[1]}"
             elif data['@Name'] == 'InformationSet':
                 if data.get('#text') == None:
-                    str += ", InformationSet=Null"
+                    cwData += ", InformationSet=Null"
                 else:
-                    str += f", InformationSet={data['#text']}"
+                    cwData += f", InformationSet={data['#text']}"
             else: # Assume the rest of the fields don't need special handling.
-                str += f", {data['@Name']}={data['#text']}"
+                cwData += f", {data['@Name']}={data['#text']}"
 
-    return {'timestamp': t, 'message': str}
+    return {'timestamp': t, 'message': cwData}
 
 ################################################################################
 # This function uploads the audit log events stored in XML format to a
@@ -201,9 +201,9 @@ def ingestAuditFile(auditLogPath, auditLogName):
     # Convert the XML audit log file into a dictionary.
     f = open(auditLogPath, 'r')
     data = f.read()
-    dict = xmltodict.parse(data)
+    dictData = xmltodict.parse(data)
 
-    if dict.get('Events') == None or dict['Events'].get('Event') == None:
+    if dictData.get('Events') == None or dictData['Events'].get('Event') == None:
         print(f"No events found in {auditLogName}")
         return
     #
@@ -218,20 +218,30 @@ def ingestAuditFile(auditLogPath, auditLogName):
     #
     # If there is only one event, then the dict['Events']['Event'] will be a
     # dictionary, otherwise it will be a list of dictionaries.
-    if type(dict['Events']['Event']) == list:
+    if isinstance(dictData['Events']['Event'], list):
         cwEvents = []
-        for event in dict['Events']['Event']:
+        for event in dictData['Events']['Event']:
             cwEvents.append(createCWEvent(event))
             if len(cwEvents) == 5000:  # The real maximum is 10000 events, but there is also a size limit, so we will use 5000.
-                print(f"Putting 5000 events")
-                reponse=cwLogsClient.put_log_events(logGroupName=config['logGroupName'], logStreamName=auditLogName, logEvents=cwEvents)
+                print("Putting 5000 events")
+                response = cwLogsClient.put_log_events(logGroupName=config['logGroupName'], logStreamName=auditLogName, logEvents=cwEvents)
+                if response.get('rejectedLogEventsInfo') != None:
+                    if response['rejectedLogEventsInfo'].get('tooNewLogEventStartIndex') > 0:
+                        print(f"Warning: Too new log event start index: {response['rejectedLogEventsInfo']['tooNewLogEventStartIndex']}")
+                    if response['rejectedLogEventsInfo'].get('tooOldLogEventStartIndex') > 0:
+                        print(f"Warning: Too old log event start index: {response['rejectedLogEventsInfo']['tooOldLogEventStartIndex']}")
                 cwEvents = []
     else:
-        cwEvents = [createCWEvent(dict['Events']['Event'])]
+        cwEvents = [createCWEvent(dictData['Events']['Event'])]
 
     if len(cwEvents) > 0:
         print(f"Putting {len(cwEvents)} events")
         response = cwLogsClient.put_log_events(logGroupName=config['logGroupName'], logStreamName=auditLogName, logEvents=cwEvents)
+        if response.get('rejectedLogEventsInfo') != None:
+            if response['rejectedLogEventsInfo'].get('tooNewLogEventStartIndex') > 0:   
+                print(f"Warning: Too new log event start index: {response['rejectedLogEventsInfo']['tooNewLogEventStartIndex']}")
+            if response['rejectedLogEventsInfo'].get('tooOldLogEventStartIndex') > 0:   
+                print(f"Warning: Too old log event start index: {response['rejectedLogEventsInfo']['tooOldLogEventStartIndex']}")
 
 ################################################################################
 # This function checks that all the required configuration variables are set.
@@ -240,15 +250,15 @@ def checkConfig():
     global config
 
     config = {
-        'volumeName': volumeName if 'volumeName' in globals() else None,
-        'logGroupName': logGroupName if 'logGroupName' in globals() else None,
-        'fsxRegion': fsxRegion if 'fsxRegion' in globals() else None,
-        'secretRegion': secretRegion if 'secretRegion' in globals() else None,
-        'secretArn': secretArn if 'secretArn' in globals() else None,
-        's3BucketRegion': s3BucketRegion if 's3BucketRegion' in globals() else None,
-        's3BucketName': s3BucketName if 's3BucketName' in globals() else None,
-        'statsName': statsName if 'statsName' in globals() else None,
-        'vserverName': vserverName if 'vserverName' in globals() else None
+        'volumeName': volumeName if 'volumeName' in globals() else None,               # pylint: disable=E0602
+        'logGroupName': logGroupName if 'logGroupName' in globals() else None,         # pylint: disable=E0602
+        'fsxRegion': fsxRegion if 'fsxRegion' in globals() else None,                  # pylint: disable=E0602
+        'secretRegion': secretRegion if 'secretRegion' in globals() else None,         # pylint: disable=E0602
+        'secretArn': secretArn if 'secretArn' in globals() else None,                  # pylint: disable=E0602
+        's3BucketRegion': s3BucketRegion if 's3BucketRegion' in globals() else None,   # pylint: disable=E0602
+        's3BucketName': s3BucketName if 's3BucketName' in globals() else None,         # pylint: disable=E0602
+        'statsName': statsName if 'statsName' in globals() else None,                  # pylint: disable=E0602
+        'vserverName': vserverName if 'vserverName' in globals() else None             # pylint: disable=E0602
     }
 
     for item in config:
@@ -261,7 +271,7 @@ def checkConfig():
 # This is the main function that checks that everything is configured correctly
 # and then processes all the FSxNs.
 ################################################################################
-def lambda_handler(event, context):
+def lambda_handler(event, context):     # pylint: disable=W0613
     global http, cwLogsClient, config
     #
     # Check that we have all the configuration variables we need.
