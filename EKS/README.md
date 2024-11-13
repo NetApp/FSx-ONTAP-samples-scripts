@@ -3,7 +3,7 @@ This subfolder contains samples that can help you create solutions using AWS EKS
 
 | Tool | Description |
 | --- | --- |
-| [FSxN as PVC for EKS](/EKS/FSxN-as-PVC-for-EKS) | This sample shows how to create a sandbox environment that demonstrates how to use FSx for NetApp ONTAP as a persistent volume for an EKS cluster. |
+| [FSxN as PVC for EKS](/EKS/FSxN-as-PVC-for-EKS) | This sample shows how to create a sandbox environment that demonstrates how to use FSx for NetApp ONTAP as a persistent storage for an EKS cluster. |
 
 ## Author Information
 
