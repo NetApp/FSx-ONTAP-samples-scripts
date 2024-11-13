@@ -3,7 +3,10 @@
 ## Introduction
 
 This solution provides the ability to export LUN metrics from an FSx for ONTAP file system into Amazon CloudWatch. It exports the Latency, IOPS, and Throughput metrics for a single file system.
-The solution is based on a CloudFormation template that you need to deploy for each file system. The template creates the following resources:
+The solution is based on a CloudFormation template that you need to deploy for each file system.
+![Screenshot](images/LUN-Monitoring-Dashboard.png)
+
+The template creates the following resources:
 
 1. Lambda - The service that monitors the file system and collects the metrics.
 2. Scheduler - The Amazon EventBridge scheduler that triggers the Lambda collection every minute.
