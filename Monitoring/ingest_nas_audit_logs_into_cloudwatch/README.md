@@ -12,7 +12,10 @@ You can run this script as a standalone program or as a Lambda function. These d
 
 ## Prerequisites
 - An FSx for Data ONTAP file system.
-- Have NAS auditing configured and enabled on the FSx for Data ONTAP file system. Ensure you have selected the XML format for the audit logs. You can read this
+- An S3 bucket to store the "stats" file. The "stats" file is used to keep track of the last time the Lambda function successfully
+ingested audit logs from each file system. Its size will be small (i.e. less than a few megabytes).
+- Have NAS auditing configured and enabled on the FSx for Data ONTAP file system. **Ensure you have selected the XML format for the audit logs.** Also,
+ensure you have set up a rotation schedule. The program will only act on audit log files that have been finalized, and not the "active" one. You can read this
 [knowledge based article](https://kb.netapp.com/on-prem/ontap/da/NAS/NAS-KBs/How_to_set_up_NAS_auditing_in_ONTAP_9) for instructions on how to setup NAS auditing.
 - Have the NAS auditing configured to store the audit logs in a volume with the same name on all FSx for Data ONTAP file
 systems that you want to ingest the audit logs from.
@@ -35,6 +38,7 @@ Therefore, there needs to be an VPC endpoint for all the AWS services that the L
   - EC2.
 - You have created a role with the necessary permissions to allow the Lambda function to do the following:
 
+<!--- Using HTML to create a table that has rowspan attributes since the markdown table syntax does not support that. --->
 <table>
 <tr><th>Service</td><th>Actions</td><th>Resources</th></tr>
 <tr><td>Fsx</td><td>fsx:DescribeFileSystems</td><td>&#42;</td></tr>
@@ -56,9 +60,11 @@ Where:
 - &lt;secretName&gt; - is the name of the secret that contains the credentials for the fsxadmin accounts.
 
 Notes:
-- Since the Lambda function runs within your VPC it needs to be able to create an delete network interfaces.
+- Since the Lambda function runs within your VPC it needs to be able to create and delete network interfaces.
+- The AWS Security Group Policy builder incorrectly generates resource lines for the `CreateNetworkInterface`
+and `DeleteNetworkInterface` actions. The correct resource line is `arn:aws:ec2:&lt;region&gt;:&lt;accountID&gt;:&#42;`.
 - It needs to be able to create a log groups so it can create a log group for the diagnostic output from the Lambda function.
-- Since the ARN of any Secrets Manager secret has random characters at the end of it, you must add the `*` at the end.
+- Since the ARN of any Secrets Manager secret has random characters at the end of it, you must add the `*` at the end, or provide the full ARN of the secret.
 
 ## Deployment
 1. Create a Lambda deployment package by:
@@ -72,7 +78,9 @@ Notes:
 2. Within the AWS console, or using the AWS API, create a Lambda function with:
     1. Python 3.10, or higher, as the runtime.
     1. Set the permissions to the role created above.
-    1. Under `Additional Configurations` select `Enable VPC` and select a VPC and Subnet that will have access to all the FSx for ONtAP file system management endpoints that you want to gather audit logs from.
+    1. Under `Additional Configurations` select `Enable VPC` and select a VPC and Subnet that will have access to all the FSx for ONTAP
+file system management endpoints that you want to gather audit logs from. Also, select a Security Group that allows TCP port 443 outbound.
+Inbound rules don't matter since the Lambda function is not accessible from a network.
     1. Click `Create Function` and on the next page, under the `Code` tab, select `Upload From -> .zip file.` Provide the .zip file created by the steps above. 
     1. From the `Configuration -> General` tab set the timeout to at least 30 seconds. You will may need to increase that if it has to process a lot of audit entries and/or process a lot of FSx for ONTAP file systems.
 

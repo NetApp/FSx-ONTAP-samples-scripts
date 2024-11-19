@@ -336,7 +336,7 @@ def lambda_handler(event, context):     # pylint: disable=W0613
         # Get the password
         password = secrets.get(fsId)
         if password == None:
-            print(f'No password found for {fsId}.')
+            print(f'Warning: No password found for {fsId}.')
             continue
         #
         # Create a header with the basic authentication.
@@ -354,13 +354,17 @@ def lambda_handler(event, context):     # pylint: disable=W0613
                 volumeUUID = data['records'][0]['uuid']  # Since we specified the volume, and vserver name, there should only be one record.
 
         if volumeUUID == None:
-            print(f"Volume {config['volumeName']} not found for {fsId}.")
+            print(f"Warning: Volume {config['volumeName']} not found for {fsId} under SVM: {config['vserverName']}.")
             continue
         #
         # Get all the files in the volume that match the audit file pattern.
-        endpoint = f"https://{fsxn}/api/storage/volumes/{volumeUUID}/files?name=audit_{config['vserverName']}_D*&order_by=name%20asc&fields=name"
+        endpoint = f"https://{fsxn}/api/storage/volumes/{volumeUUID}/files?name=audit_{config['vserverName']}_D*.xml&order_by=name%20asc&fields=name"
         response = http.request('GET', endpoint, headers=headersQuery, timeout=5.0)
         data = json.loads(response.data.decode('utf-8'))
+        if data.get('num_records') == 0:
+            print(f"Warning: No XML audit log files found on FsID: {fsId}; SvmID: {config['vserverName']}; Volume: {config['volumeName']}.")
+            continue
+
         for file in data['records']:
             filePath = file['name']
             if lastFileRead.get(fsxn) == None or getEpoch(filePath) > lastFileRead[fsxn]:
