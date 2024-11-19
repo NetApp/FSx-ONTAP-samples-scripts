@@ -62,7 +62,7 @@ Where:
 Notes:
 - Since the Lambda function runs within your VPC it needs to be able to create and delete network interfaces.
 - The AWS Security Group Policy builder incorrectly generates resource lines for the `CreateNetworkInterface`
-and `DeleteNetworkInterface` actions. The correct resource line is `arn:aws:ec2:&lt;region&gt;:&lt;accountID&gt;:&#42;`.
+and `DeleteNetworkInterface` actions. The correct resource line is `arn:aws:ec2:<region>:<accountID>:*`.
 - It needs to be able to create a log groups so it can create a log group for the diagnostic output from the Lambda function.
 - Since the ARN of any Secrets Manager secret has random characters at the end of it, you must add the `*` at the end, or provide the full ARN of the secret.
 
