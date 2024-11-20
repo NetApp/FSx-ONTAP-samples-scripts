@@ -518,12 +518,12 @@
                             "properties": {
                                 "metrics": [
                                     [ { "expression": "SELECT SUM(\"DataReadOperations\")\nFROM SCHEMA(\"AWS/FSx\", \"FileSystemId\")\nGROUP BY \"FileSystemId\"\nORDER BY SUM() DESC\nLIMIT topFsx", "label": "${LABEL}", "id": "q1", "region": {"Ref": "AWS::Region"}, "period": 300, "stat": "Sum", "visible": false } ],
-                                    [ { "expression": "q1/PERIOD(FIRST(q1))", "label": "", "id": "e1", "region": {"Ref": "AWS::Region"} } ]
+                                    [ { "expression": "FLOOR(q1/PERIOD(FIRST(q1))*100)/100", "label": "", "id": "e1", "region": {"Ref": "AWS::Region"} } ]
                                 ],
                                 "yAxis": {
                                     "left": {
                                         "showUnits": false,
-                                        "label": "operations per second"
+                                        "label": "Operations per second"
                                     }
                                 },
                                 "view": "timeSeries",
@@ -531,7 +531,7 @@
                                 "region": {"Ref": "AWS::Region"},
                                 "stat": "Sum",
                                 "period": 300,
-                                "title": "Top topFsx NetApp-FSx DataReadOperations"
+                                "title": "Top topFsx NetApp-FSx Client Read Operations"
                             }
                         }, 
                         {
@@ -543,12 +543,12 @@
                             "properties": {
                                 "metrics": [
                                     [ { "expression": "SELECT SUM(\"DataWriteOperations\")\nFROM SCHEMA(\"AWS/FSx\", \"FileSystemId\")\nGROUP BY \"FileSystemId\"\nORDER BY SUM() DESC\nLIMIT topFsx", "label": "${LABEL}", "id": "q1", "region": {"Ref": "AWS::Region"}, "period": 300, "stat": "Sum", "visible": false } ],
-                                    [ { "expression": "q1/PERIOD(FIRST(q1))", "label": "", "id": "e1", "region": {"Ref": "AWS::Region"} } ]
+                                    [ { "expression": "FLOOR(q1/PERIOD(FIRST(q1))*100)/100", "label": "", "id": "e1", "region": {"Ref": "AWS::Region"} } ]
                                 ],
                                 "yAxis": {
                                     "left": {
                                         "showUnits": false,
-                                        "label": "operations per second"
+                                        "label": "Operations per second"
                                     }
                                 },
                                 "view": "timeSeries",
@@ -556,7 +556,7 @@
                                 "region": {"Ref": "AWS::Region"},
                                 "stat": "Sum",
                                 "period": 300,
-                                "title": "Top topFsx NetApp-FSx DataWriteOperations"
+                                "title": "Top topFsx NetApp-FSx Client Write Operations"
                             }
                         },                                               
                         {
@@ -568,12 +568,12 @@
                             "properties": {
                                 "metrics": [
                                     [ { "expression": "SELECT SUM(\"MetadataOperations\")\nFROM SCHEMA(\"AWS/FSx\", \"FileSystemId\")\nGROUP BY \"FileSystemId\"\nORDER BY SUM() DESC\nLIMIT topFsx", "label": "${LABEL}", "id": "q1", "region": {"Ref": "AWS::Region"}, "period": 300, "visible": false } ],
-                                    [ { "expression": "q1/PERIOD(FIRST(q1))", "label": "", "id": "e1", "region": {"Ref": "AWS::Region"} } ]
+                                    [ { "expression": "FLOOR(q1/PERIOD(FIRST(q1))*100)/100", "label": "", "id": "e1", "region": {"Ref": "AWS::Region"} } ]
                                 ],
                                 "yAxis": {
                                     "left": {
                                         "showUnits": false,
-                                        "label": "operations per second"
+                                        "label": "Operations per second"
                                     }
                                 },
                                 "view": "timeSeries",
@@ -581,7 +581,7 @@
                                 "region": {"Ref": "AWS::Region"},
                                 "stat": "Sum",
                                 "period": 300,
-                                "title": "Top topFsx NetApp-FSx MetadataOperations"
+                                "title": "Top topFsx NetApp-FSx Client Metadata Operations"
                             }
                         },
                         {
@@ -593,20 +593,20 @@
                             "properties": {
                                 "metrics": [
                                     [ { "expression": "SELECT SUM(\"DataReadBytes\")\nFROM SCHEMA(\"AWS/FSx\", \"FileSystemId\")\nGROUP BY \"FileSystemId\"\nORDER BY SUM() DESC\nLIMIT topFsx", "label": "${LABEL}", "id": "q1", "region": {"Ref": "AWS::Region"}, "period": 300, "visible": false } ],
-                                    [ { "expression": "q1/PERIOD(FIRST(q1))", "label": "", "id": "e1", "region": {"Ref": "AWS::Region"} } ]
+                                    [ { "expression": "FLOOR(q1/PERIOD(FIRST(q1))/1024/1024*100)/100", "label": "", "id": "e1", "region": {"Ref": "AWS::Region"} } ]
                                 ],
                                 "yAxis": {
                                     "left": {
                                         "showUnits": false,
-                                        "label": "bytes per second"
+                                        "label": "MiB per second"
                                     }
                                 },
                                 "view": "timeSeries",
                                 "stacked": false,
                                 "region": {"Ref": "AWS::Region"},
-                                "stat": "Average",
+                                "stat": "Sum",
                                 "period": 300,
-                                "title": "Top topFsx NetApp-FSx DataReadBytes"
+                                "title": "Top topFsx NetApp-FSx Client Read Megabytes"
                             }
                         },
                         {
@@ -618,20 +618,120 @@
                             "properties": {
                                 "metrics": [
                                     [ { "expression": "SELECT SUM(\"DataWriteBytes\")\nFROM SCHEMA(\"AWS/FSx\", \"FileSystemId\")\nGROUP BY \"FileSystemId\"\nORDER BY SUM() DESC\nLIMIT topFsx", "label": "${LABEL}", "id": "q1", "region": {"Ref": "AWS::Region"}, "period": 300, "visible": false } ],
-                                    [ { "expression": "q1/PERIOD(FIRST(q1))", "label": "", "id": "e1", "region": {"Ref": "AWS::Region"} } ]
+                                    [ { "expression": "FLOOR(q1/PERIOD(FIRST(q1))/1024/1024*100)/100", "label": "", "id": "e1", "region": {"Ref": "AWS::Region"} } ]
                                 ],
                                 "yAxis": {
                                     "left": {
                                         "showUnits": false,
-                                        "label": "bytes per second"
+                                        "label": "MiB per second"
                                     }
                                 },
                                 "view": "timeSeries",
                                 "stacked": false,
                                 "region": {"Ref": "AWS::Region"},
-                                "stat": "Average",
+                                "stat": "Sum",
                                 "period": 300,
-                                "title": "Top topFsx NetApp-FSx DataWriteBytes"
+                                "title": "Top topFsx NetApp-FSx Client Write Megabytes"
+                            }
+                        },
+                        {
+                            "height": 8,
+                            "width": 8,
+                            "y": 20,
+                            "x": 0,
+                            "type": "metric",
+                            "properties": {
+                                "metrics": [
+                                    [ { "expression": "SELECT SUM(\"DiskReadOperations\")\nFROM SCHEMA(\"AWS/FSx\", \"FileSystemId\")\nGROUP BY \"FileSystemId\"\nORDER BY SUM() DESC\nLIMIT topFsx", "label": "${LABEL}", "id": "q1", "region": {"Ref": "AWS::Region"}, "period": 300, "visible": false } ],
+                                    [ { "expression": "FLOOR(q1/PERIOD(FIRST(q1))*100)/100", "label": "", "id": "e1", "region": {"Ref": "AWS::Region"} } ]
+                                ],
+                                "yAxis": {
+                                    "left": {
+                                        "showUnits": false,
+                                        "label": "Operations per second"
+                                    }
+                                },
+                                "view": "timeSeries",
+                                "stacked": false,
+                                "region": {"Ref": "AWS::Region"},
+                                "stat": "Sum",
+                                "period": 300,
+                                "title": "Top topFsx NetApp-FSx Disk Read Operations"
+                            }
+                        },
+                        {
+                            "height": 8,
+                            "width": 8,
+                            "y": 20,
+                            "x": 8,
+                            "type": "metric",
+                            "properties": {
+                                "metrics": [
+                                    [ { "expression": "SELECT SUM(\"DiskWriteOperations\")\nFROM SCHEMA(\"AWS/FSx\", \"FileSystemId\")\nGROUP BY \"FileSystemId\"\nORDER BY SUM() DESC\nLIMIT topFsx", "label": "${LABEL}", "id": "q1", "region": {"Ref": "AWS::Region"}, "period": 300, "visible": false } ],
+                                    [ { "expression": "FLOOR(q1/PERIOD(FIRST(q1))*100)/100", "label": "", "id": "e1", "region": {"Ref": "AWS::Region"} } ]
+                                ],
+                                "yAxis": {
+                                    "left": {
+                                        "showUnits": false,
+                                        "label": "Operations per second"
+                                    }
+                                },
+                                "view": "timeSeries",
+                                "stacked": false,
+                                "region": {"Ref": "AWS::Region"},
+                                "stat": "Sum",
+                                "period": 300,
+                                "title": "Top topFsx NetApp-FSx Disk Write Operations"
+                            }
+                        },
+                        {
+                            "height": 8,
+                            "width": 8,
+                            "y": 28,
+                            "x": 0,
+                            "type": "metric",
+                            "properties": {
+                                "metrics": [
+                                    [ { "expression": "SELECT SUM(\"DiskReadBytes\")\nFROM SCHEMA(\"AWS/FSx\", \"FileSystemId\")\nGROUP BY \"FileSystemId\"\nORDER BY SUM() DESC\nLIMIT topFsx", "label": "${LABEL}", "id": "q1", "region": {"Ref": "AWS::Region"}, "period": 300, "visible": false } ],
+                                    [ { "expression": "FLOOR(q1/1024/1024/PERIOD(FIRST(q1))*100)/100", "label": "", "id": "e1", "region": {"Ref": "AWS::Region"} } ]
+                                ],
+                                "yAxis": {
+                                    "left": {
+                                        "showUnits": false,
+                                        "label": "MiB per second"
+                                    }
+                                },
+                                "view": "timeSeries",
+                                "stacked": false,
+                                "region": { "Ref": "AWS::Region" },
+                                "stat": "Sum",
+                                "period": 300,
+                                "title": "Top topFsx NetApp-FSx Disk Read Megabytes"
+                            }
+                        },
+                        {
+                            "height": 8,
+                            "width": 8,
+                            "y": 28,
+                            "x": 8,
+                            "type": "metric",
+                            "properties": {
+                                "metrics": [
+                                    [ { "expression": "SELECT SUM(\"DiskWriteBytes\")\nFROM SCHEMA(\"AWS/FSx\", \"FileSystemId\")\nGROUP BY \"FileSystemId\"\nORDER BY SUM() DESC\nLIMIT topFsx", "label": "${LABEL}", "id": "q1", "region": {"Ref": "AWS::Region"}, "period": 300, "visible": false } ],
+                                    [ { "expression": "FLOOR(q1/1024/1024/PERIOD(FIRST(q1))*100)/100", "label": "", "id": "e1", "region": {"Ref": "AWS::Region"} } ]
+                                ],
+                                "yAxis": {
+                                    "left": {
+                                        "showUnits": false,
+                                        "label": "MiB per second"
+                                    }
+                                },
+                                "view": "timeSeries",
+                                "stacked": false,
+                                "region": {"Ref": "AWS::Region"},
+                                "stat": "Sum",
+                                "period": 300,
+                                "title": "Top topFsx NetApp-FSx Disk Write Megabytes"
                             }
                         },
                         {
@@ -642,158 +742,8 @@
                             "type": "metric",
                             "properties": {
                                 "metrics": [
-                                    [ { "expression": "SELECT SUM(\"DiskReadOperations\")\nFROM SCHEMA(\"AWS/FSx\", \"FileSystemId\")\nGROUP BY \"FileSystemId\"\nORDER BY SUM() DESC\nLIMIT topFsx", "label": "${LABEL}", "id": "q1", "region": {"Ref": "AWS::Region"}, "period": 300, "visible": false } ],
-                                    [ { "expression": "q1/PERIOD(FIRST(q1))", "label": "", "id": "e1", "region": {"Ref": "AWS::Region"} } ]
-                                ],
-                                "yAxis": {
-                                    "left": {
-                                        "showUnits": false,
-                                        "label": "operations per second"
-                                    }
-                                },
-                                "view": "timeSeries",
-                                "stacked": false,
-                                "region": {"Ref": "AWS::Region"},
-                                "stat": "Sum",
-                                "period": 300,
-                                "title": "Top topFsx NetApp-FSx DiskReadOperations"
-                            }
-                        },
-                        {
-                            "height": 8,
-                            "width": 8,
-                            "y": 20,
-                            "x": 0,
-                            "type": "metric",
-                            "properties": {
-                                "metrics": [
-                                    [ { "expression": "SELECT SUM(\"DiskWriteOperations\")\nFROM SCHEMA(\"AWS/FSx\", \"FileSystemId\")\nGROUP BY \"FileSystemId\"\nORDER BY SUM() DESC\nLIMIT topFsx", "label": "${LABEL}", "id": "q1", "region": {"Ref": "AWS::Region"}, "period": 300, "visible": false } ],
-                                    [ { "expression": "q1/PERIOD(FIRST(q1))", "label": "", "id": "e1", "region": {"Ref": "AWS::Region"} } ]
-                                ],
-                                "yAxis": {
-                                    "left": {
-                                        "showUnits": false,
-                                        "label": "operations per second"
-                                    }
-                                },
-                                "view": "timeSeries",
-                                "stacked": false,
-                                "region": {"Ref": "AWS::Region"},
-                                "stat": "Sum",
-                                "period": 300,
-                                "title": "Top topFsx NetApp-FSx DiskWriteOperations"
-                            }
-                        },
-                        {
-                            "height": 8,
-                            "width": 8,
-                            "y": 20,
-                            "x": 8,
-                            "type": "metric",
-                            "properties": {
-                                "metrics": [
-                                    [ { "expression": "SELECT SUM(\"DiskReadBytes\")\nFROM SCHEMA(\"AWS/FSx\", \"FileSystemId\")\nGROUP BY \"FileSystemId\"\nORDER BY SUM() DESC\nLIMIT topFsx", "label": "${LABEL}", "id": "q1", "region": {"Ref": "AWS::Region"}, "period": 300, "visible": false } ],
-                                    [ { "expression": "q1/1024/1024/PERIOD(FIRST(q1))", "label": "", "id": "e1", "region": {"Ref": "AWS::Region"} } ]
-                                ],
-                                "yAxis": {
-                                    "left": {
-                                        "showUnits": false,
-                                        "label": "megabytes per second"
-                                    }
-                                },
-                                "view": "timeSeries",
-                                "stacked": false,
-                                "region": { "Ref": "AWS::Region" },
-                                "stat": "Average",
-                                "period": 300,
-                                "title": "Top topFsx NetApp-FSx DiskReadMegabytes"
-                            }
-                        },
-                        {
-                            "height": 8,
-                            "width": 8,
-                            "y": 20,
-                            "x": 16,
-                            "type": "metric",
-                            "properties": {
-                                "metrics": [
-                                    [ { "expression": "SELECT SUM(\"DiskWriteBytes\")\nFROM SCHEMA(\"AWS/FSx\", \"FileSystemId\")\nGROUP BY \"FileSystemId\"\nORDER BY SUM() DESC\nLIMIT topFsx", "label": "${LABEL}", "id": "q1", "region": {"Ref": "AWS::Region"}, "period": 300, "visible": false } ],
-                                    [ { "expression": "q1/1024/1024/PERIOD(FIRST(q1))", "label": "", "id": "e1", "region": {"Ref": "AWS::Region"} } ]
-                                ],
-                                "yAxis": {
-                                    "left": {
-                                        "showUnits": false,
-                                        "label": "megabytes per second"
-                                    }
-                                },
-                                "view": "timeSeries",
-                                "stacked": false,
-                                "region": {"Ref": "AWS::Region"},
-                                "stat": "Average",
-                                "period": 300,
-                                "title": "Top topFsx NetApp-FSx DiskWriteMegabytes"
-                            }
-                        },
-                        {
-                            "height": 8,
-                            "width": 8,
-                            "y": 28,
-                            "x": 0,
-                            "type": "metric",
-                            "properties": {
-                                "metrics": [
-                                    [ { "expression": "SELECT SUM(DataReadOperationTime) FROM SCHEMA(\"AWS/FSx\",FileSystemId) GROUP BY FileSystemId ORDER BY SUM() DESC LIMIT topFsx", "label": "${LABEL}", "id": "q1", "region": {"Ref": "AWS::Region"}, "visible": false } ],
-                                    [ { "expression": "q1*1000", "label": "", "id": "e1", "region": {"Ref": "AWS::Region"} } ]
-                                ],
-                                "yAxis": {
-                                    "left": {
-                                        "showUnits": false,
-                                        "label": "milliseconds"
-                                    }
-                                },
-                                "view": "timeSeries",
-                                "stacked": false,
-                                "region": {"Ref": "AWS::Region"},
-                                "stat": "Average",
-                                "period": 300,
-                                "title": "Top topFsx NetApp-FSx DataReadOperationTime"
-                            }
-                        },
-                        {
-                            "height": 8,
-                            "width": 8,
-                            "y": 28,
-                            "x": 8,
-                            "type": "metric",
-                            "properties": {
-                                "metrics": [
-                                    [ { "expression": "SELECT SUM(DataWriteOperationTime) FROM SCHEMA(\"AWS/FSx\",FileSystemId) GROUP BY FileSystemId ORDER BY SUM() DESC LIMIT topFsx", "label": "${LABEL}", "id": "q1", "region": {"Ref": "AWS::Region"}, "visible": false } ],
-                                    [ { "expression": "q1*1000", "label": "", "id": "e1", "region": {"Ref": "AWS::Region"} } ]
-                                ],
-                                "yAxis": {
-                                    "left": {
-                                        "showUnits": false,
-                                        "label": "milliseconds"
-                                    }
-                                },
-                                "view": "timeSeries",
-                                "stacked": false,
-                                "region": {"Ref": "AWS::Region"},
-                                "stat": "Average",
-                                "period": 300,
-                                "title": "Top topFsx NetApp-FSx DataWriteOperationTime"
-                            }
-                        },
-                        {
-                            "height": 8,
-                            "width": 8,
-                            "y": 28,
-                            "x": 16,
-                            "type": "metric",
-                            "properties": {
-                                "metrics": [
-                                    [ { "expression": "SELECT SUM(StorageUsed) FROM SCHEMA(\"AWS/FSx\", DataType,FileSystemId,StorageTier) WHERE StorageTier = 'SSD' GROUP BY FileSystemId ORDER BY SUM() DESC LIMIT topFsx", "label": "${LABEL}", "id": "q1", "region": {"Ref": "AWS::Region"}, "visible": false } ],
-                                    [ { "expression": "q1*\t9.313225746154785e-10", "label": "", "id": "e1", "region": {"Ref": "AWS::Region"} } ]
+                                    [ { "expression": "SELECT AVG(StorageUsed) FROM SCHEMA(\"AWS/FSx\", DataType,FileSystemId,StorageTier) WHERE StorageTier = 'SSD' GROUP BY FileSystemId ORDER BY AVG() DESC LIMIT topFsx", "label": "${LABEL}", "id": "q1", "region": {"Ref": "AWS::Region"}, "visible": false } ],
+                                    [ { "expression": "FLOOR(q1*9.313225746154785e-10)", "label": "", "id": "e1", "region": {"Ref": "AWS::Region"} } ]
                                 ],
                                 "yAxis": {
                                     "left": {
@@ -806,19 +756,19 @@
                                 "region": {"Ref": "AWS::Region"},
                                 "stat": "Average",
                                 "period": 300,
-                                "title": "Top topFsx NetApp-FSx SSD StorageUsed"
+                                "title": "Top topFsx NetApp-FSx SSD Storage Used"
                             }
                         },                        
                         {
                             "height": 8,
                             "width": 8,
-                            "y": 36,
-                            "x": 0,
+                            "y": 20,
+                            "x": 16,
                             "type": "metric",
                             "properties": {
                                 "metrics": [
-                                    [ { "expression": "SELECT SUM(StorageUsed) FROM SCHEMA(\"AWS/FSx\", DataType,FileSystemId,StorageTier) WHERE StorageTier = 'StandardCapacityPool' GROUP BY FileSystemId ORDER BY SUM() DESC LIMIT topFsx", "label": "${LABEL}", "id": "q1", "region": {"Ref": "AWS::Region"}, "visible": false } ],
-                                    [ { "expression": "q1*\t9.313225746154785e-10", "label": "", "id": "e1", "region": {"Ref": "AWS::Region"} } ]
+                                    [ { "expression": "SELECT AVG(StorageUsed) FROM SCHEMA(\"AWS/FSx\", DataType,FileSystemId,StorageTier) WHERE StorageTier = 'StandardCapacityPool' GROUP BY FileSystemId ORDER BY AVG() DESC LIMIT topFsx", "label": "${LABEL}", "id": "q1", "region": {"Ref": "AWS::Region"}, "visible": false } ],
+                                    [ { "expression": "FLOOR(q1*9.313225746154785e-10)", "label": "", "id": "e1", "region": {"Ref": "AWS::Region"} } ]
                                 ],
                                 "yAxis": {
                                     "left": {
@@ -831,7 +781,7 @@
                                 "region": {"Ref": "AWS::Region"},
                                 "stat": "Average",
                                 "period": 300,
-                                "title": "Top topFsx NetApp-FSx StandardCapacityPool"
+                                "title": "Top topFsx NetApp-FSx Capacity Pool"
                             }
                         },
                         {
@@ -868,12 +818,15 @@
                             "height": 8,
                             "properties": {
                                 "metrics": [
-                                    [ "AWS/FSx", "DataReadOperations", "FileSystemId", "\"\"", { "id": "m1", "label": "DataReadOperations", "region": {"Ref": "AWS::Region"} } ],
-                                    [ ".", "DataWriteOperations", ".", ".", { "id": "m2", "region": {"Ref": "AWS::Region"} } ],
-                                    [ ".", "MetadataOperations", ".", ".", { "id": "m3", "region": {"Ref": "AWS::Region"} } ],
-                                    [ { "id": "e1", "expression": "SUM(METRICS())/PERIOD(m1)", "label": "Total client IOPS", "color": "#1F77B4", "region": {"Ref": "AWS::Region"} } ]
+                                    [ "AWS/FSx", "DataWriteOperations", "FileSystemId", "\"\"", { "id": "m1", "visible": false, "region": {"Ref": "AWS::Region"} } ],
+                                    [ ".", "DataReadOperations", ".", ".", { "id": "m2", "visible": false, "region": {"Ref": "AWS::Region"} } ],
+                                    [ ".", "MetadataOperations", ".", ".", { "id": "m3", "visible": false, "region": {"Ref": "AWS::Region"} } ],
+                                    [ { "expression": "FLOOR(m1/PERIOD(m1)*100)/100", "label": "Client Write OPS", "id": "e1" } ],
+                                    [ { "expression": "FLOOR(m2/PERIOD(m2)*100)/100", "label": "Client Read OPS", "id": "e2" } ],
+                                    [ { "expression": "FLOOR(m3/PERIOD(m3)*100)/100", "label": "Client Meta OPS", "id": "e3" } ],
+                                    [ { "expression": "FLOOR(SUM(METRICS())/PERIOD(m2)*100)/100", "label": "Total Client OPS", "id": "e4" } ]
                                 ],
-                                "title": "Total Client IOPS",
+                                "title": "Client IOPS",
                                 "view": "timeSeries",
                                 "period": 60,
                                 "stacked": false,
@@ -895,19 +848,21 @@
                             "height": 8,
                             "properties": {
                                 "metrics": [
-                                    [ "AWS/FSx", "DataReadBytes", "FileSystemId", "\"\"", { "id": "m1", "label": "DataReadBytes", "region": {"Ref": "AWS::Region"} } ],
-                                    [ ".", "DataWriteBytes", ".", ".", { "id": "m2", "region": {"Ref": "AWS::Region"} } ],
-                                    [ { "id": "e1", "expression": "SUM(METRICS())/PERIOD(m1)", "label": "Total client throughput", "color": "#1F77B4", "region": {"Ref": "AWS::Region"} } ]
+                                    [ "AWS/FSx", "DataReadBytes", "FileSystemId", "\"\"", { "id": "m1", "visible": false, "region": {"Ref": "AWS::Region"} } ],
+                                    [ ".", "DataWriteBytes", ".", ".", { "id": "m2", "visible": false, "region": {"Ref": "AWS::Region"} } ],
+                                    [ { "id": "e1", "expression": "FLOOR(SUM(METRICS())/PERIOD(m1)/1024/1024*100)/100", "label": "Total client throughput", "color": "#1F77B4" } ],
+                                    [ { "id": "e2", "expression": "FLOOR(m1/PERIOD(m1)/1024/1024*100)/100", "label": "Client MiB Read" }],
+                                    [ { "id": "e3", "expression": "FLOOR(m2/PERIOD(m2)/1024/1024*100)/100", "label": "Client MiB Written" }]
                                 ],
                                 "view": "timeSeries",
-                                "title": "Total Client Throughput",
+                                "title": "Client Throughput",
                                 "period": 60,
                                 "stacked": false,
                                 "stat": "Sum",
                                 "yAxis": {
                                     "left": {
                                         "showUnits": false,
-                                        "label": "Bytes per second"
+                                        "label": "MiB per second"
                                     }
                                 },
                                 "region": {"Ref": "AWS::Region"}
@@ -921,16 +876,18 @@
                             "height": 8,
                             "properties": {
                                 "metrics": [
-                                    [ "AWS/FSx", "DiskReadOperations", "FileSystemId", "\"\"", { "id": "m1", "region": {"Ref": "AWS::Region"}, "label": "DiskReadOperations" } ],
-                                    [ ".", "DiskWriteOperations", ".", ".", { "id": "m2", "region": {"Ref": "AWS::Region"}, "label": "DiskWriteOperations" } ],
-                                    [ { "expression": "SUM([METRICS(\"m1\"), METRICS(\"m2\")])/300", "label": "Total disk ops", "id": "e5", "region": {"Ref": "AWS::Region"}, "yAxis": "left" } ]
+                                    [ "AWS/FSx", "DiskReadOperations", "FileSystemId", "\"\"", { "id": "m1", "visible": false, "region": {"Ref": "AWS::Region"} } ],
+                                    [ ".", "DiskWriteOperations", ".", ".", { "id": "m2", "visible": false, "region": {"Ref": "AWS::Region"} } ],
+                                    [ { "id": "e1", "expression": "FLOOR(m1/PERIOD(m1)*100)/100", "label": "Disk Read Ops"} ],
+                                    [ { "id": "e2", "expression": "FLOOR(m2/PERIOD(m2)*100)/100", "label": "Disk Write Ops"} ],
+                                    [ { "id": "e3", "expression": "FLOOR(SUM(METRICS())/PERIOD(m1)*100)/100", "label": "Total disk Ops", "region": {"Ref": "AWS::Region"}, "yAxis": "left" } ]
                                 ],
                                 "view": "timeSeries",
                                 "stacked": false,
                                 "region": {"Ref": "AWS::Region"},
                                 "stat": "Sum",
                                 "period": 300,
-                                "title": "Disk Performance",
+                                "title": "Disk OPS",
                                 "yAxis": {
                                     "left": {
                                         "showUnits": false,
@@ -949,20 +906,20 @@
                                 "metrics": [
                                     [ "AWS/FSx", "DiskReadBytes", "FileSystemId", "\"\"", { "id": "m1", "region": {"Ref": "AWS::Region"}, "label": "DiskReadBytes", "visible": false } ],
                                     [ ".", "DiskWriteBytes", ".", ".", { "id": "m2", "region": {"Ref": "AWS::Region"}, "label": "DiskReadBytes", "visible": false } ],
-                                    [ { "expression": "m1/1024/1024/PERIOD(m1)", "label": "DiskReadMegabytes", "id": "e1", "region": {"Ref": "AWS::Region"}, "yAxis": "left" } ],
-                                    [ { "expression": "m2/1024/1024/PERIOD(m2)", "label": "DiskWriteMegabytes", "id": "e2", "region": {"Ref": "AWS::Region"}, "yAxis": "left" } ],
-                                    [ { "expression": "e1+e2", "label": "Total disk Mbs", "id": "e3", "region": {"Ref": "AWS::Region"}, "yAxis": "left" } ]
+                                    [ { "expression": "FLOOR(m1/1024/1024/PERIOD(m1)*100)/100", "label": "DiskReadMegabytes", "id": "e1", "region": {"Ref": "AWS::Region"}, "yAxis": "left" } ],
+                                    [ { "expression": "FLOOR(m2/1024/1024/PERIOD(m2)*100)/100", "label": "DiskWriteMegabytes", "id": "e2", "region": {"Ref": "AWS::Region"}, "yAxis": "left" } ],
+                                    [ { "expression": "FLOOR((e1+e2)*100)/100", "label": "Total disk MBs", "id": "e3", "region": {"Ref": "AWS::Region"}, "yAxis": "left" } ]
                                 ],
                                 "view": "timeSeries",
                                 "stacked": false,
                                 "region": {"Ref": "AWS::Region"},
                                 "stat": "Sum",
                                 "period": 300,
-                                "title": "Disk Performance",
+                                "title": "Disk Throughput",
                                 "yAxis": {
                                     "left": {
                                         "showUnits": false,
-                                        "label": "Megabytes per second"
+                                        "label": "MiB per second"
                                     }
                                 }
                             }
@@ -975,10 +932,10 @@
                             "height": 8,
                             "properties": {
                                 "metrics": [
-                                    [ { "id": "e1", "expression": "1000 * m2/(m1+0.000001)", "label": "Write operations", "color": "#1F77B4", "region": {"Ref": "AWS::Region"} } ],
-                                    [ { "id": "e2", "expression": "1000 * m4/(m3+0.000001)", "label": "Read operations", "color": "#F89256", "region": {"Ref": "AWS::Region"} } ],
-                                    [ { "id": "e3", "expression": "1000 * m6/(m5+0.000001)", "label": "Metadata operations", "color": "#2CA02C", "region": {"Ref": "AWS::Region"} } ],
-                                    [ { "id": "e4", "expression": "e1+e2+e3", "label": "Total operations", "region": {"Ref": "AWS::Region"} } ],
+                                    [ { "id": "e1", "expression": "FLOOR(1000 * m2/(m1+0.000001)*100)/100", "label": "Write operations", "color": "#1F77B4", "region": {"Ref": "AWS::Region"} } ],
+                                    [ { "id": "e2", "expression": "FLOOR(1000 * m4/(m3+0.000001)*100)/100", "label": "Read operations", "color": "#F89256", "region": {"Ref": "AWS::Region"} } ],
+                                    [ { "id": "e3", "expression": "FLOOR(1000 * m6/(m5+0.000001)*100)/100", "label": "Metadata operations", "color": "#2CA02C", "region": {"Ref": "AWS::Region"} } ],
+                                    [ { "id": "e4", "expression": "FLOOR((e1+e2+e3)*100)/100", "label": "Total operations", "region": {"Ref": "AWS::Region"} } ],
                                     [ "AWS/FSx", "DataWriteOperations", "FileSystemId", "\"\"", { "id": "m1", "visible": false, "region": {"Ref": "AWS::Region"} } ],
                                     [ ".", "DataWriteOperationTime", ".", ".", { "id": "m2", "visible": false, "region": {"Ref": "AWS::Region"} } ],
                                     [ ".", "DataReadOperations", ".", ".", { "id": "m3", "visible": false, "region": {"Ref": "AWS::Region"} } ],
@@ -994,7 +951,7 @@
                                 "yAxis": {
                                     "left": {
                                         "showUnits": false,
-                                        "label": "Milliseconds per operation",
+                                        "label": "Milliseconds",
                                         "min": 0
                                     }
                                 },
@@ -1009,11 +966,12 @@
                             "height": 8,
                             "properties": {
                                 "metrics": [
-                                    [ "AWS/FSx", "StorageUsed", "FileSystemId", "\"\"", "StorageTier", "SSD", "DataType", "All", { "id": "m3", "label": "Primary tier - used", "visible": true, "color": "#1F77B4", "region": {"Ref": "AWS::Region"} } ],
+                                    [ "AWS/FSx", "StorageUsed", "FileSystemId", "\"\"", "StorageTier", "SSD", "DataType", "All", { "id": "m3", "visible": false, "region": {"Ref": "AWS::Region"} } ],
                                     [ ".", "StorageCapacity", ".", ".", ".", ".", ".", ".", { "id": "m1", "visible": false, "region": {"Ref": "AWS::Region"} } ],
-                                    [ { "id": "e1", "expression": "(m1-m3)", "label": "Primary tier - available", "color": "#2CA02C", "region": {"Ref": "AWS::Region"} } ]
+                                    [ { "id": "e1", "expression": "FLOOR((m1-m3)/1024/1024/1024)", "label": "Primary tier - available", "color": "#2CA02C", "region": {"Ref": "AWS::Region"} } ],
+                                    [ { "id": "e2", "expression": "FLOOR(m3/1024/1024/1024)", "label": "Primary tier - used", "color": "#1F77B4", "region": {"Ref": "AWS::Region"} } ]
                                 ],
-                                "title": "Storage Distribution",
+                                "title": "Primary Tier - Storage Utilization",
                                 "view": "pie",
                                 "period": 60,
                                 "stacked": false,
@@ -1034,10 +992,10 @@
                             "height": 8,
                             "properties": {
                                 "metrics": [
-                                    [ { "expression": "m1*9.3132257461548E-10", "label": "Capacity pool tier (GiB)", "id": "e1", "region": {"Ref": "AWS::Region"} } ],
+                                    [ { "expression": "FLOOR(m1*9.3132257461548E-10)", "label": "Capacity pool tier (GiB)", "id": "e1", "region": {"Ref": "AWS::Region"} } ],
                                     [ "AWS/FSx", "StorageUsed", "FileSystemId", "\"\"", "StorageTier", "StandardCapacityPool", "DataType", "All", { "id": "m1", "label": "Capacity pool tier (Bytes)", "color": "#F89256", "region": {"Ref": "AWS::Region"}, "visible": false } ]
                                 ],
-                                "title": "Capacity Tiered",
+                                "title": "Capacity Tier",
                                 "view": "singleValue",
                                 "period": 60,
                                 "stacked": false,
@@ -1108,12 +1066,14 @@
                             "type": "metric",
                             "properties": {
                                 "metrics": [
-                                    [ "AWS/FSx", "StorageCapacityUtilization", "VolumeId", "\"\"", "FileSystemId", "\"\"", { "region": {"Ref": "AWS::Region"} } ]
+                                    [ "AWS/FSx", "StorageCapacityUtilization", "VolumeId", "\"\"", "FileSystemId", "\"\"", { "region": {"Ref": "AWS::Region"}, "id": "m1", "visible": false } ],
+                                    [ { "expression": "FLOOR(m1)", "label": "StorageCapacityUtilization", "id": "e1", "region": {"Ref": "AWS::Region"} } ]
                                 ],
                                 "yAxis": {
                                     "left": {
                                         "showUnits": false,
-                                        "label": "precentage"
+                                        "label": "Precentage",
+                                        "min": 0
                                     }
                                 },
                                 "view": "timeSeries",
@@ -1133,17 +1093,17 @@
                             "properties": {
                                 "metrics": [
                                     [ "AWS/FSx", "DataWriteOperations", "VolumeId", "\"\"", "FileSystemId", "\"\"", { "region": {"Ref": "AWS::Region"}, "id": "m1", "visible": false } ],
-                                    [ { "expression": "m1/PERIOD(m1)", "label": "DataWriteOperations", "id": "e2", "region": {"Ref": "AWS::Region"} } ],
+                                    [ { "expression": "FLOOR(m1/PERIOD(m1)*100)/100", "label": "DataWriteOperations", "id": "e2", "region": {"Ref": "AWS::Region"} } ],
                                     [ "AWS/FSx", "DataReadOperations", "VolumeId", "\"\"", "FileSystemId", "\"\"", { "region": {"Ref": "AWS::Region"}, "id": "m2", "visible": false } ],
-                                    [ { "expression": "m2/PERIOD(m2)", "label": "DataReadOperations", "id": "e3", "region": {"Ref": "AWS::Region"} } ],
+                                    [ { "expression": "FLOOR(m2/PERIOD(m2)*100)/100", "label": "DataReadOperations", "id": "e3", "region": {"Ref": "AWS::Region"} } ],
                                     [ "AWS/FSx", "MetadataOperations", "VolumeId", "\"\"", "FileSystemId", "\"\"", { "region": {"Ref": "AWS::Region"}, "id": "m3", "visible": false } ],
-                                    [ { "expression": "m3/PERIOD(m3)", "label": "MetadataOperations", "id": "e4", "region": {"Ref": "AWS::Region"} } ],
-                                    [ { "expression": "SUM(METRICS())/PERIOD(m1)", "label": "Total IOPS", "id": "e1", "region": {"Ref": "AWS::Region"} } ]
+                                    [ { "expression": "FLOOR(m3/PERIOD(m3)*100)/100", "label": "MetadataOperations", "id": "e4", "region": {"Ref": "AWS::Region"} } ],
+                                    [ { "expression": "FLOOR(SUM(METRICS())/PERIOD(m1)*100)/100", "label": "Total IOPS", "id": "e1", "region": {"Ref": "AWS::Region"} } ]
                                 ],
                                 "yAxis": {
                                     "left": {
                                         "showUnits": false,
-                                        "label": "operations per second"
+                                        "label": "Operations per second"
                                     }
                                 },
                                 "view": "timeSeries",
@@ -1163,15 +1123,15 @@
                             "properties": {
                                 "metrics": [
                                     [ "AWS/FSx", "DataReadBytes", "VolumeId", "\"\"", "FileSystemId", "\"\"", { "region": {"Ref": "AWS::Region"}, "id": "m1", "label": "DataReadBytes", "visible": false } ],
-                                    [ { "expression": "m1/PERIOD(m1)", "label": "DataReadBytes", "id": "e1", "region": {"Ref": "AWS::Region"} } ],
                                     [ "AWS/FSx", "DataWriteBytes", "VolumeId", "\"\"", "FileSystemId", "\"\"", { "region": {"Ref": "AWS::Region"}, "id": "m2", "label": "DataWriteBytes", "visible": false } ],
-                                    [ { "expression": "m2/PERIOD(m2)", "label": "DataWriteBytes", "id": "e2", "region": {"Ref": "AWS::Region"} } ],
-                                    [ { "expression": "SUM(METRICS())/PERIOD(m1)", "label": "Total Throughput Utilization", "id": "e3", "region": {"Ref": "AWS::Region"} } ]
+                                    [ { "expression": "FLOOR(m1/PERIOD(m1)/1024/1024*100)/100", "label": "DataReadBytes", "id": "e1", "region": {"Ref": "AWS::Region"} } ],
+                                    [ { "expression": "FLOOR(m2/PERIOD(m2)/1024/1024*100)/100", "label": "DataWriteBytes", "id": "e2", "region": {"Ref": "AWS::Region"} } ],
+                                    [ { "expression": "FLOOR(SUM(METRICS())/PERIOD(m1)/1024/1024*100)/100", "label": "Total Throughput", "id": "e3", "region": {"Ref": "AWS::Region"} } ]
                                 ],
                                 "yAxis": {
                                     "left": {
                                         "showUnits": false,
-                                        "label": "bytes per second"
+                                        "label": "MiB per second"
                                     }
                                 },
                                 "view": "timeSeries",
@@ -1179,7 +1139,7 @@
                                 "region": {"Ref": "AWS::Region"},
                                 "stat": "Sum",
                                 "period": 300,
-                                "title": "Volume Throughput Utilization"
+                                "title": "Volume Throughput"
                             }
                         },
                         {
