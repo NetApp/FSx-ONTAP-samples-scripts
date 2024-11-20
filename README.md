@@ -42,7 +42,7 @@ Have a great idea? We'd love to hear it! Please email us at [ng-fsxn-github-samp
     * [k8s applications non-stdout logs collection into ELK](/Solutions/EKS-logs-to-ELK)
 * [Terraform](/Terraform)
     * [FSx ONTAP deployment using Terraform](/Terraform/deploy-fsx-ontap)
-    * [FSx ONTAP Replication](/Terraform/fsxn-replication)
+    * [FSx ONTAP Replication](/Terraform/fsxn-replicate)
     * [Deployment of SQL Server on EC2 with FSx ONTAP](/Terraform/deploy-fsx-ontap-sqlserver)
     * [Deployment of FSx ONTAP with VPN for File Share Access](/Terraform/deploy-fsx-ontap-fileshare-access)
 
