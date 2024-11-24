@@ -5,11 +5,18 @@ export type ChunkingStrategy = 'sentences' | 'words' | 'characters';
 export type MessageType = 'ANSWER' | 'ERROR';
 export type LoginProvider = 'cognito' | 'clerk';
 
-export interface SignInResult {
+export interface SignInResultCognito extends SignInResult {
+    doLogin: (email?: string, password?: string, externalProviderName?: string) => void,
+}
+
+export interface SignInResultClerk extends SignInResult {
+    doLogin: (email?: string, password?: string) => void,
+}
+
+interface SignInResult {
     isLoading: boolean,
     email?: string,
     password?: string,
-    doLogin: (email?: string, password?: string) => void,
     jwtToken?: string,
     error?: string,
     userName?: string
