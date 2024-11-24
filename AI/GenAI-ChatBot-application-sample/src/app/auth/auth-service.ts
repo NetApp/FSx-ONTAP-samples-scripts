@@ -19,7 +19,7 @@ export class AuthService {
         await Auth.signUp({
             username,
             password,
-        }).then(data => {
+        }).then(() => {
 
             logger.info("Registering " + username);
 
@@ -131,7 +131,7 @@ export class AuthService {
                     data: data
                 });
             })
-            .catch(err => {
+            .catch(() => {
                 logger.error("Couldn't sign out for some reason");
                 Hub.dispatch(AuthService.CHANNEL, {
                     event: AuthService.AUTH_EVENTS.SIGN_OUT,

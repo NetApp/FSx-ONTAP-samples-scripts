@@ -6,6 +6,10 @@
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
     color: #404040;
 
+    &.isHidden {
+        opacity: 0;
+    }
+
     &.font-variants {
         --semibold-font-weight: 500;
 
@@ -37,7 +41,7 @@
             font-size: 20px;
             line-height: 32px;
             font-weight: 400;
-          }
+        }
 
         .Regular_14 {
             font-size: 14px;

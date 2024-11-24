@@ -3,10 +3,14 @@ import useRunOnce from "../hooks/useRunOnce";
 import awsConfig from "../cognito/aws-configs";
 import { useEffect, useState } from "react";
 import { AuthService } from "../auth/auth-service";
-import { CognitoPayload } from "../cognito/cognito.types";
-import { SignInResult } from "@/lib/api/api.types";
+import {CognitoPayload} from "../cognito/cognito.types";
+import {SignInResultCognito} from "@/lib/api/api.types";
+import {CognitoUser} from "amazon-cognito-identity-js";
+import awsConfigs from "../cognito/aws-configs";
 
-const CognitoSignIn = (): SignInResult => {
+const isLoginEternalProvider:boolean = !!process.env.NEXT_PUBLIC_LOGIN_EXTERNAL_PROVIDER;
+
+const CognitoSignIn = (): SignInResultCognito => {
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [email, setEmail] = useState<string | undefined>();
     const [password, setPassword] = useState<string | undefined>();
@@ -15,6 +19,7 @@ const CognitoSignIn = (): SignInResult => {
     const [userName, setUserName] = useState<string | undefined>();
 
     useRunOnce(() => {
+        if (awsConfig.oauth && typeof awsConfig.oauth === "string") awsConfigs.oauth = JSON.parse(awsConfigs.oauth!)
         Amplify.configure(awsConfig);
     })
 
@@ -52,7 +57,17 @@ const CognitoSignIn = (): SignInResult => {
 
         const updateUser = async () => {
             try {
-                await Auth.currentAuthenticatedUser()
+                const authenticatedUser:CognitoUser = await Auth.currentAuthenticatedUser()
+                if (isLoginEternalProvider){
+                        Hub.dispatch(AuthService.CHANNEL, {
+                                event: AuthService.AUTH_EVENTS.LOGIN,
+                                    // @ts-ignore
+                                    success: true,
+                                    message: "",
+                                    username: authenticatedUser.getUsername(),
+                                    user: authenticatedUser
+                            });
+                }
             } catch {
             }
         }
@@ -64,13 +79,17 @@ const CognitoSignIn = (): SignInResult => {
         };
     }, []);
 
-    const doLogin = async (email?: string, password?: string) => {
+    const doLogin = async (email?: string, password?: string,externalProviderName?:string) => {
         setError(undefined);
 
         setEmail(email || '');
         setPassword(password || '');
 
-        if (email && password) {
+        if (externalProviderName){
+            setIsLoading(true);
+            await Auth.federatedSignIn({ provider: externalProviderName as any });
+        }
+        else if (email && password){
             setIsLoading(true);
             await AuthService.login(email, password);
         }
