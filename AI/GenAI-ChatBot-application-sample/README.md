@@ -37,6 +37,18 @@ To get started, you need to configure one of the supported login providers. Conf
     - NEXT_PUBLIC_AWS_USER_POOLS_ID=YOUR_AWS_USER_POOLS_ID
     - NEXT_PUBLIC_AWS_USER_WEB_CLIENT_ID=YOUR_AWS_USER_WEB_CLIENT_ID
 
+#### Configure Active Directory with Amazon Cognito
+1. To integrate Active Directory with Amazon Cognito, follow the [A guide to AD FS federation with Amazon Cognito user pools instructions (Steps 1 to 4)](https://aws.amazon.com/blogs/security/simplify-web-app-authentication-a-guide-to-ad-fs-federation-with-amazon-cognito-user-pools/).
+2. To configure SAML request signing, follow the instructions in [Signing SAML requests](https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-pools-SAML-signing-encryption.html#cognito-user-pools-SAML-signing).
+3. Specify the federated identity provider and authorization by adding the following variables to the `.env.local` file, with values that match your environment.
+    - NEXT_PUBLIC_LOGIN_EXTERNAL_PROVIDER=YOUR_COGNITO_IDENTITY_PROVIDER_NAME
+    - NEXT_PUBLIC_AWS_OAUTH={"domain":"<DOMAIN_PREFIX>.auth.<REGION>.amazoncognito.com","scope":["openid", "profile", "email"],"redirectSignIn":"http://localhost:9091","redirectSignOut":"http://localhost:9091","responseType":"code"} 
+    - Domain - The domain for your Cognito user pool.
+    - Scope - Scopes specifying the access privileges.
+    - redirectSignIn - The URL to redirect to after a successful sign-in.
+    - redirectSignOut - The URL to redirect to after a successful sign-out.
+    - responseType - The type of response to receive from the authorization server.
+
 ### Set up Clerk
 1. Follow the [Sign up](https://dashboard.clerk.com/sign-in?redirect_url=https%3A%2F%2Fdashboard.clerk.com%2F) instructions to sign up for a Clerk account. 
 2. Download and unpack the Workload Factory GenAI sample application source package.
@@ -49,21 +61,8 @@ To get started, you need to configure one of the supported login providers. Conf
     - CLERK_SECRET_KEY=YOUR_CLERK_SECRET_KEY
     - NEXT_PUBLIC_CLERK_TEMPLATE=YOUR_CLERK_TEMPLATE
 
-## Download the application
-To download the application, clone the GitHub repository. Then, change to the sample application directory so that you can build or run it:
-
-1. 
-    ```bash
-    git clone https://github.com/NetApp/FSx-ONTAP-samples-scripts
-    ```
-
-2. 
-    ```bash
-    cd FSx-ONTAP-samples-scripts/AI/GenAI-ChatBot-application-sample
-    ```
-
-## Install dependencies
-To install dependencies for the sample application, run the following command:
+## Install the application
+To install the sample application, run the following command:
 
 ```bash
 npm install
@@ -92,20 +91,3 @@ npm run build
 - To learn more about Next.js, take a look at the following resources:
     - [Next.js documentation](https://nextjs.org/docs) - learn about Next.js features and API.
     - [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-## Author Information
-
-This repository is maintained by the contributors listed on [GitHub](https://github.com/NetApp/FSx-ONTAP-samples-scripts/graphs/contributors).
-
-## License
-
-Licensed under the Apache License, Version 2.0 (the "License").
-
-You may obtain a copy of the License at [apache.org/licenses/LICENSE-2.0](http://www.apache.org/licenses/LICENSE-2.0).
-
-Unless required by applicable law or agreed to in writing, software distributed under the License
-is distributed on an _"AS IS"_ basis, without WARRANTIES or conditions of any kind, either express or implied.
-
-See the License for the specific language governing permissions and limitations under the License.
-
-© 2024 NetApp, Inc. All Rights Reserved.
