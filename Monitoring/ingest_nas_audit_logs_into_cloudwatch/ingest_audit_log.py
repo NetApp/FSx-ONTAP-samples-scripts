@@ -326,9 +326,6 @@ def lambda_handler(event, context):     # pylint: disable=W0613
     else:
         lastFileRead = json.loads(response['Body'].read().decode('utf-8'))
     #
-    # Only update the lastFileRead if we actually copied a new file.
-    lastFileReadChanged = False
-    #
     # Process each FSxN.
     for fsxn in fsxNs:
         fsId = fsxn.split('.')[1]
@@ -372,11 +369,7 @@ def lambda_handler(event, context):     # pylint: disable=W0613
                 # Process the file.
                 processFile(fsxn, headersDownload, volumeUUID, filePath)
                 lastFileRead[fsxn] = getEpoch(filePath)
-                lastFileReadChanged = True
-    #
-    # Save the last read stats file.
-    if lastFileReadChanged:
-        s3Client.put_object(Key=config['statsName'], Bucket=config['s3BucketName'], Body=json.dumps(lastFileRead).encode('UTF-8'))
+                s3Client.put_object(Key=config['statsName'], Bucket=config['s3BucketName'], Body=json.dumps(lastFileRead).encode('UTF-8'))
 #
 # If this script is not running as a Lambda function, then call the lambda_handler function.
 if os.environ.get('AWS_LAMBDA_FUNCTION_NAME') == None:
