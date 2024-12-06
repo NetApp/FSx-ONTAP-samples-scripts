@@ -1,0 +1,36 @@
+#
+# This Ansible playbook generates a SnapMirrorreport for all the
+# SnapMirror relationships, in all the FSxNs, in all regions,
+#################################################################################
+---
+- vars:
+    report_name: output.csv
+    secrets_list_file: secrets_list.csv
+    secrets_region: us-west-2
+#################################################################################
+#
+# Don't change anything below this line.
+#
+#################################################################################
+    fsxn_regions: []
+    opted_in_regions: []
+
+  name: Playbook to generate a SnapMirror report on all the FSxNs.
+  hosts: localhost
+  collections:
+    - amazon.aws
+  gather_facts: false
+
+  tasks:
+    - name: Delete previous report while adding the header line.
+      ansible.builtin.shell:
+        cmd: echo fs,source,destination,state,healthy,lag_time > {{ report_name }}
+
+    - name: Get all the regions that support FSxN that I am opted into.
+      include_tasks: get_fsxn_regions.yaml
+
+    - name: Generate the report for all the FSxNs.
+      include_tasks: process_region.yaml
+      loop: "{{ fsxn_regions }}"
+      loop_control:
+        loop_var: region

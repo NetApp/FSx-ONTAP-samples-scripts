@@ -1,0 +1,24 @@
+#
+# Set a "catch-all" owner. Should be set to the current active admin for the repo.
+* @kcantrel
+#
+# Set the owner for all the individual samples, if the owner is known and they want to continue to maintain the sample:
+/AI/GenAI-ChatBot-application-sample/ @cbenbass
+/CloudFormation/deploy-fsx-ontap/ @kcantrel
+/Ansible/fsx_inventory_report/ @kcantrel
+/Ansible/snapmirror_report/ @kcantrel
+/EKS/FSxN-as-PVC-for-EKS/ @mickeysh
+/Management-Utilities/auto_create_sm_relationships/ @kcantrel
+/Management-Utilities/auto_set_fsxn_auto_grow/ @kcantrel
+/Management-Utilities/fsx-ontap-aws-cli-scripts/ @kcantrel
+/Management-Utilities/fsxn-rotate-secret/ @kcantrel
+/Management-Utilities/warm_performance_tier/ @kcantrel
+/Monitoring/CloudWatch-FSx/ @LirazRom10
+/Monitoring/LUN-monitoring/ @LirazRom10
+/Monitoring/auto-add-cw-alarms/ @kcantrel
+/Monitoring/monitor-ontap-services/ @kcantrel
+/Monitoring/ingest_nas_audit_logs_into_cloudwatch/ @kcantrel
+/Terraform/deploy-fsx-ontap-sqlserver/ @varunrai
+/Terraform/deploy-fsx-ontap-fileshare-access/ @varunrai
+/Terraform/deploy-fsx-ontap/ @kcantrel
+/Terraform/fsxn-replicate/ @nichollri

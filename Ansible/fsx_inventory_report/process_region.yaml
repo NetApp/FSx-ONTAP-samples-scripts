@@ -1,0 +1,24 @@
+#
+# Since Ansible can't handle nested loops, this is a block of tasked that is
+# run for each region. It assume that the calling playbook used 'region' as
+# its loop variable.
+################################################################################
+---
+- name: Get all the FSxNs for the specified region.
+  ansible.builtin.shell:
+    cmd: aws fsx describe-file-systems --region {{ region }} --query 'FileSystems[*].{FileSystemId:FileSystemId}' --output text | sed -e '/^$/d'
+  register: fsxn_ids_per_region
+
+- name: Get all the SVMs and volumes for each FSxN.
+  ansible.builtin.shell:
+    cmd: |
+      echo "Region: {{ region }}" >> {{ report_name }};
+      fs={{ item }};
+      echo "  File System ID: ${fs}" >> {{ report_name }};
+      svms=$(aws fsx describe-storage-virtual-machines --filters Name=file-system-id,Values=${fs} --region {{ region }} --output=text --query 'StorageVirtualMachines[*].StorageVirtualMachineId');
+      for svm in $svms; do
+        echo "    SVM ID: ${svm}" >> {{ report_name }};
+        echo "      Volume IDs:" >> {{ report_name }};
+        aws fsx describe-volumes --filters Name=storage-virtual-machine-id,Values=${svm} --region {{ region }} --output=json --query 'Volumes[*].{Size: OntapConfiguration.SizeInMegabytes, ID: VolumeId, Name: Name, Type: OntapConfiguration.OntapVolumeType, Style: OntapConfiguration.SecurityStyle}' | jq -r '.[] | "        \(.ID) \(.Type) \(.Style) \(.Size) \(.Name)"' >> {{ report_name }};
+      done
+  loop: "{{ fsxn_ids_per_region.stdout_lines }}"

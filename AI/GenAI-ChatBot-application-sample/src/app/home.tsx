@@ -1,21 +1,25 @@
 'use client';
 
+import React from 'react';
 import styles from './global.module.scss';
-import LoginForm from "./components/loginForm/loginForm";
+import LoginForm, { LoginType } from "./components/loginForm/loginForm";
 import ChatBot from '@/app/svgs/login/chatBot.png'
 import Cloud from '@/app/svgs/login/cloud.png'
 import Image from 'next/image';
 import { _Classes } from '@/utils/cssHelper.util';
 import { useAppSelector } from '@/lib/hooks';
 import rootSelector from '@/lib/selectors/root.selector';
+import { useState } from "react";
 
 const Home = () => {
   const { accessToken, isSuccess } = useAppSelector(rootSelector.auth);
-
+  const [loginType, setLoginType] = useState<LoginType | undefined>(undefined);
   return (
-    <div className={styles.genAi}>
-      {!accessToken && isSuccess && <>
-        <LoginForm />
+    <div className={_Classes(styles.genAi, loginType === 'AD' ? styles.isHidden : '')}>
+      {(!accessToken && isSuccess) && <>
+        <LoginForm onLoginSuccess={
+          setLoginType
+        } />
         <div className={styles.welcomeContent}>
           <Image
             src={ChatBot}

@@ -101,7 +101,11 @@ else
 fi
 
 if [ ! -z "$fileSystemName" ]; then
-  fileSystemID=$(aws fsx describe-file-systems --output=json 2> /dev/null | jq -r '.FileSystems[] | if((.Tags[] | select(.Key == "Name") .Value) == "'"${fileSystemName}"'") then .FileSystemId else empty end' 2> /dev/null)
+  fileSystemID=$(aws fsx describe-file-systems --output=json --region=$region 2> /dev/null | jq -r '.FileSystems[] | if((.Tags[] | select(.Key == "Name") .Value) == "'"${fileSystemName}"'") then .FileSystemId else empty end' 2> /dev/null)
+  if [ -z "$fileSystemID" ]; then
+    echo "Error, failed to find a file system with the name '$fileSystemName'. Maybe in a different region?" 1>&2
+    exit 1
+  fi
 fi
 #
 # Loop on all the regions.

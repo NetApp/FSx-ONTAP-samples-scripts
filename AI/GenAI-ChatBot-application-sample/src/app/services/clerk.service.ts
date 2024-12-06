@@ -1,8 +1,8 @@
-import { SignInResult } from "@/lib/api/api.types";
+import { SignInResultClerk } from "@/lib/api/api.types";
 import { useAuth, useClerk, useSignIn, useUser } from "@clerk/nextjs";
 import { useEffect, useState } from "react";
 
-export const ClerkSignIn = (): SignInResult => {
+export const ClerkSignIn = (): SignInResultClerk => {
     const [email, setEmail] = useState<string | undefined>();
     const [password, setPassword] = useState<string | undefined>();
     const [isLoading, setIsLoading] = useState<boolean>(false);

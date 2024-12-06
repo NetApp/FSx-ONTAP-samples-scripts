@@ -1,0 +1,26 @@
+#
+# These tasks are used to set a variable named 'fsnx_regions' that contains a
+# list of regions that support FSxN and are opted-in.
+################################################################################
+- name: Get all the opted-in regions
+  amazon.aws.aws_region_info:
+  register: region_info
+
+- name: Get region names
+  set_fact:
+    enabled_regions: "{{ region_info.regions | map(attribute='region_name') | list }}"
+
+- name: Get the capabilities of all regions
+  set_fact:
+    regions_capabilities: "{{ lookup('ansible.builtin.url', 'https://api.regional-table.region-services.aws.a2z.com/index.json', split_lines=false) }}"
+
+- name: Filter regions that support FSxN and are opted-in
+  set_fact:
+    fsxn_regions: >-
+      {{
+        regions_capabilities.prices
+        | selectattr("attributes.aws:serviceName", "equalto", "Amazon FSx for NetApp ONTAP")
+        | selectattr("attributes.aws:region", "in", enabled_regions)
+        | map(attribute="attributes.aws:region")
+        | list
+      }}

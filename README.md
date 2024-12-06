@@ -18,6 +18,9 @@ Have a great idea? We'd love to hear it! Please email us at [ng-fsxn-github-samp
 
 * [AI](/AI)
     * [GenAI ChatBot application sample](/AI/GenAI-ChatBot-application-sample)
+* [Anisble](/Ansible)
+    * [FSx ONTAP inventory report](/Ansible/fsx_inventory_report)
+    * [SnapMirror report](/Ansible/snapmirror_report)
 * [CloudFormation](/CloudFormation)
     * [deploy-fsx-ontap](/CloudFormation/deploy-fsx-ontap)
 * [EKS](/EKS)
@@ -30,6 +33,7 @@ Have a great idea? We'd love to hear it! Please email us at [ng-fsxn-github-samp
     * [FSx ONTAP iscsi volume creation automation for Windows](/Management-Utilities/iscsi-vol-create-and-mount)
     * [Warm Performance Tier](/Management-Utilities/warm_performance_tier)
 * [Monitoring](/Monitoring)
+    * [CloudWatch Dashboard for FSx for ONTAP](/Monitoring/CloudWatch-FSx)
     * [Export LUN metrics from an FSx ONTAP to Amazon CloudWatch](/Monitoring/LUN-monitoring)
     * [Automatically Add CloudWatch Alarms for FSx Resources](/Monitoring/auto-add-cw-alarms)
     * [Monitor ONTAP metrics from FSx ONTAP using python Lambda function](/Monitoring/monitor-ontap-services)
@@ -38,6 +42,7 @@ Have a great idea? We'd love to hear it! Please email us at [ng-fsxn-github-samp
     * [k8s applications non-stdout logs collection into ELK](/Solutions/EKS-logs-to-ELK)
 * [Terraform](/Terraform)
     * [FSx ONTAP deployment using Terraform](/Terraform/deploy-fsx-ontap)
+    * [FSx ONTAP Replication](/Terraform/fsxn-replicate)
     * [Deployment of SQL Server on EC2 with FSx ONTAP](/Terraform/deploy-fsx-ontap-sqlserver)
     * [Deployment of FSx ONTAP with VPN for File Share Access](/Terraform/deploy-fsx-ontap-fileshare-access)
 

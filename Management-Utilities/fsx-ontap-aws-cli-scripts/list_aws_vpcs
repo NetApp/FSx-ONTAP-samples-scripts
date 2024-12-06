@@ -59,7 +59,7 @@ vpcFormatStr="%21s  %19s  %s\n"
 for region in $regions; do
   [ "$quiet" != "True" ] && printf "\nRegion: $region\n"
   first=True
-  aws ec2 describe-vpcs --region $region | jq -r '.Vpcs[] | .VpcId + " " + .CidrBlock + " " + (if (.Tags != null) then (.Tags[] | (select(.Key == "Name") .Value)) else "" end)' |  \
+  aws ec2 describe-vpcs --region=$region | jq -r '.Vpcs[] | .VpcId + " " + .CidrBlock + " " + (if (has("Tags")) then .Tags[] | (select(.Key == "Name") .Value) else "" end)' |  \
     while read vpcId cidr name; do
       if [ "$quiet" != "True" -a "$first" == "True" ]; then
         printf "\n$vpcFormatStr" "VPC IP" "CIDR" "Name"
@@ -69,7 +69,7 @@ for region in $regions; do
       
       if [ "$subnets" == "True" ]; then
         printf "\n\tSubnets:\n"
-        aws ec2 describe-subnets --filters '[{"Name": "vpc-id", "Values": ["'$vpcId'"]}]' | jq -r '.Subnets[] | .VpcId + " " + .SubnetId + " " + .CidrBlock + " " + (first(.Tags[] | select(.Key == "Name").Value) // "")' | awk 'BEGIN {formatStr="\t\t%24s  %18s  %s\n"; printf(formatStr, "Subnet ID", "CIDR", "Name")} {name=$4; for (i=5; i<=NF; i++) {name=name " " $(i)}; printf(formatStr , $2, $3, name)}'
+        aws ec2 describe-subnets --region=$region --filters '[{"Name": "vpc-id", "Values": ["'$vpcId'"]}]' | jq -r '.Subnets[] | .VpcId + " " + .SubnetId + " " + .CidrBlock + " " + (if(has("Tags")) then first(.Tags[] | select(.Key == "Name").Value) // "" else "" end)' | awk 'BEGIN {formatStr="\t\t%24s  %18s  %s\n"; printf(formatStr, "Subnet ID", "CIDR", "Name")} {name=$4; for (i=5; i<=NF; i++) {name=name " " $(i)}; printf(formatStr , $2, $3, name)}'
         first=True
       fi
   done

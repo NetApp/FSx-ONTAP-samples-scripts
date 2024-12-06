@@ -21,12 +21,14 @@
 ################################################################################
 usage () {
 cat 1>&2 <<EOF
-Usage: $(basename $0) -i svmID -n volumeName [-r region] [-s size] [-w]
+Usage: $(basename $0) -i svmID -n volumeName [-r region] [-s size] [-v volumeStyle] [-a aggregate] [-w]
 where
   svmID: is the SVM ID in the filesystem you want to create the volume.
   volumeName: is the name you want to assign the volume.
   region: is the AWS region where the FSxN filesystem resides.
   size: is size, in megabytes, you want the filesystem. Default is 20.
+  volumeStyle: Is the style of the volume. Either FlexVol or FlexGroup. Default is flexvol.
+  aggregate: is the name of the aggregate you want the volume put on. Required for FlexVol volumes on Scale-Out deployments. Default is aggr1.
   -w : wait for the volume to be created before returning.
 EOF
   exit 1
@@ -38,12 +40,25 @@ EOF
 tmpout=/tmp/create_volume.$$
 trap 'rm -f $tmpout' exit
 #
+# Set the maximum number of times to check that a volume has been
+# created. Multiple it by the SleepTime set below to the total amount of
+# time allowed.
+maxIterations=24
+#
+# Set the number of seconds to wait between checks that a volume and/or SVM has been deleted.
+sleepTime=5
+#
+intergerRegex='^[0-9]+$'
+#
 # Set some defaults.
 size=20
 region=$(aws configure list | egrep '^.*egion ' | awk '{print $2}')
+waitForCompletion=false
+volumeStyle="flexvol"
+aggregateOption=""
 #
 # Process command line arguments.
-while getopts "hi:n:r:s:w" option; do
+while getopts "ha:i:n:r:s:v:w" option; do
   case $option in
     i) svmId=$OPTARG
       ;;
@@ -52,8 +67,16 @@ while getopts "hi:n:r:s:w" option; do
     r) region=$OPTARG
       ;;
     s) size=$OPTARG
+      if ! [[ $size =~ $intergerRegex ]]; then
+        echo "Error, size must be an integer." 1>&2
+        usage
+      fi
       ;;
-    w) wait=1
+    v) volumeStyle=$OPTARG
+      ;;
+    a) aggregateOption='"AggregateConfiguration":{"Aggregates":["'$OPTARG'"]},'
+      ;;
+    w) waitForCompletion=true
       ;;
     *) usage
       ;;
@@ -66,15 +89,23 @@ if [ -z "$volumeName" -o -z "$svmId" ]; then
   usage
 fi
 
-aws fsx create-volume --volume-type ONTAP --name $volumeName --ontap-configuration "{
-  \"JunctionPath\": \"/$volumeName\",
-  \"SecurityStyle\": \"UNIX\",
-  \"SizeInMegabytes\" : $size,
-  \"StorageEfficiencyEnabled\": true, 
-  \"StorageVirtualMachineId\": \"$svmId\",
-  \"TieringPolicy\" : {\"CoolingPeriod\": 31, \"Name\": \"SNAPSHOT_ONLY\"},
-  \"OntapVolumeType\": \"RW\",
-  \"SnapshotPolicy\": \"default\"}" --region=$region --output=json > $tmpout 2>&1
+volumeStyle=$(echo $volumeStyle | tr '[a-z] ' '[A-Z]')
+if [ $volumeStyle != "FLEXVOL" -a $volumeStyle != "FLEXGROUP" ]; then
+  echo "Error, volume style must be either FlexVol or FlexGroup." 1>&2
+  usage
+fi
+
+aws fsx create-volume --volume-type ONTAP --name $volumeName --ontap-configuration '{
+  "JunctionPath": "/'$volumeName'",
+  "SecurityStyle": "UNIX",
+  "SizeInMegabytes" : '$size',
+  "StorageEfficiencyEnabled": true,
+  "StorageVirtualMachineId": "'$svmId'",
+  "TieringPolicy" : {"CoolingPeriod": 31, "Name": "SNAPSHOT_ONLY"},
+  "OntapVolumeType": "RW",
+  "VolumeStyle": "'$volumeStyle'",
+  '$aggregateOption'
+  "SnapshotPolicy": "default"}' --region=$region --output=json > $tmpout 2>&1
 
 if [ $? != "0" ]; then
   echo "Failed to create the FSxN volume." 1>&2
@@ -84,21 +115,40 @@ else
   status=$(jq -r .Volume.Lifecycle $tmpout 2> /dev/null)
   if [ "$status" == "CREATING" -o "$status" == "PENDING" ]; then
     volumeId=$(jq -r .Volume.VolumeId $tmpout)
-    echo "FSxN volume '$volumeName'($volumeId) is being created."
-    if [ ! -z "$wait" ]; then
-      echo -n "Waiting for volume to be created."
-      while [ $status == "CREATING" -o $status == "PENDING" ]; do
-        sleep 4
+    printf "Volume '$volumeName'($volumeId) is being created."
+    if [ "$waitForCompletion" == "true" ]; then
+      i=0
+      while [ $i -lt $maxIterations ]; do
         aws fsx describe-volumes --volume-ids $volumeId --region=$region --output=json > $tmpout 2>&1
         status=$(jq -r .Volumes[0].Lifecycle $tmpout 2> /dev/null)
+        if [ $status == "CREATED" ]; then
+          printf "\nVolume '$volumeName'($volumeId) has been created.\n"
+          break
+        fi
+        if [ $status != "CREATING" -a $status != "PENDING" ]; then
+          echo "Error, volume $volumeId creation failed." 1>&2
+          reason="$(jq -r '.Volumes[0].LifecycleTransitionReason.Message' $tmpout 2> /dev/null)"
+          if [ -n "$reason" ]; then
+            echo "Reason: $reason" 1>&2
+          else
+            cat $tmpout 1>&2
+          fi
+          exit 1
+        fi
         echo -n "."
+        sleep $sleepTime
       done
-      printf "\nVolume as been $status.\n"
+      if [ $i -gt $maxIterations ]; then
+        printf "\nError, volume creation failed. Took too long." 1>&2
+        exit 1
+      fi
+    else
+      printf "\n"
     fi
-    exit 0
   else
     echo "Unknown status '$status'. Complete output returned from the AWS api:" 1>&2
     cat $tmpout 1>&2
     exit 1
   fi
 fi
+exit 0
