@@ -310,8 +310,8 @@ Resources:
           # mode to 'grow' on the volume therefore it most run within the VPC where the
           # FSx for ONTAP file system is located.
           #
-          # Version: v1.11
-          # Date: 2024-12-06-11:29:44
+          # Version: v1.1
+          # Date: 2024-12-06-20:30:19
           ################################################################################
           
           import json
@@ -398,7 +398,7 @@ Resources:
               global dynamoDbRegion, dynamoDbSecretsTableName, secretsTable, maxWaitTime, logger
           
               if os.environ.get('dynamoDbRegion') != None:
-                  dynamoDbRegion = os.environ'dynamoDbRegion']
+                  dynamoDbRegion = os.environ['dynamoDbRegion']
               if os.environ.get('dynamoDbSecretsTableName') != None:
                   dynamoDbSecretsTableName = os.environ['dynamoDbSecretsTableName']
               if os.environ.get('secretsManagerRegion') != None:
