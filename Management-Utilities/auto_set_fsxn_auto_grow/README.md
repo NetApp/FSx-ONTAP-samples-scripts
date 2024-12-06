@@ -51,7 +51,7 @@ Where the values associated with each key are as follows:
 
 ## Deployment
 There are two ways to deploy this script. The first way to is use the CloudFormation
-template provided in the cloudformation.yaml file. The second way is to follow the
+template provided in the `cloudformation.yaml` file. The second way is to follow the
 steps in the "Manual Setup" section below.
 
 ### CloudFormation Deployment
@@ -85,7 +85,7 @@ so you might want to keep it short, but meaningful. After the stack name you wil
 | maxWaitTime| The maximum time, in seconds, that the script will wait for the volume to be created before it will give up and exit. This can happen if a lot of volumes are created at the same time. |
 
 Once you have filled in these parameters, click `Next`. On the next page you must accept that this
-script can, and does, create roles. Click `Next`. Finally, on the last page, you can review the stack and click `Submit`.
+template can, and does, create roles. Click `Next`. Finally, on the last page, you can review the stack and click `Submit`.
 
 After the stack has been created everything should be ready. To test, simply create a volume in the
 AWS console and check from the ONTAP CLI that auto size mode appropriately. If it isn't set, check the CloudWatch
