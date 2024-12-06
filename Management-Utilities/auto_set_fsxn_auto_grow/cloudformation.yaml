@@ -184,7 +184,7 @@ Resources:
       MetricName: "Errors"
       Dimensions:
         - Name: "FunctionName"
-          Value: !Sub "auto-set-auto-grow-${AWS::StackName}"
+          Value: !Sub "auto-set-fsxn-auto-grow-${AWS::StackName}"
       Statistic: "Maximum"
       Period: 300
       EvaluationPeriods: 1
