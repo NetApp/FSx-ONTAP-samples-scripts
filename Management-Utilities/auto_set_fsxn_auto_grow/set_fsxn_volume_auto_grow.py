@@ -107,7 +107,7 @@ def setConfigurationVariables():
     global dynamoDbRegion, dynamoDbSecretsTableName, secretsTable, maxWaitTime, logger
 
     if os.environ.get('dynamoDbRegion') != None:
-        dynamoDbRegion = os.environ'dynamoDbRegion']
+        dynamoDbRegion = os.environ['dynamoDbRegion']
     if os.environ.get('dynamoDbSecretsTableName') != None:
         dynamoDbSecretsTableName = os.environ['dynamoDbSecretsTableName']
     if os.environ.get('secretsManagerRegion') != None:
