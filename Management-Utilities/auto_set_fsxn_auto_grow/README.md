@@ -13,19 +13,21 @@ ONTAP side, either using the ONTAP CLI, System Manager, or REST API. So, it is a
 if you are creating them that way, that you will set them with the auto size mode set
 the way you want.
 
-Note that since the Lambda function has to communicate with the FSx for ONTAP management
+Since the Lambda function has to communicate with the FSx for ONTAP management
 endpoint, it has to run within a VPC that has that connectivity. Because of the way
 AWS allows a Lambda function to run within a VPC, it will not have access to the Internet
-even if normally from that subnet it is running in would. Therefore, you will have to set up
-VPC endpoints for the AWS services that the Lambda function will need to communicate with.
-This includes:
+even if normally it would from that subnet. Therefore, you will have to set up
+VPC endpoints for the AWS services that the Lambda function uses. This includes:
 - FSx
 - AWS Secrets Manager
 - DynamoDB if you are using it to store the secrets table
 
-These endpoints are created for you if you use the CloudFormation template provided in this
-repository. If you are setting up the Lambda function manually, you will have to create
-these endpoints yourself.
+If you use the CloudFormation template provided in this repository to deploy the sample
+you will be given the option to have it create these service endpoints for you. If you are
+setting up the Lambda function manually, you will have to create these endpoints yourself.
+
+Note that you can only have one service endpoint per service per VPC. So, don't attempt
+to add one if one already exists for the VPC you are going to run the Lambda function in.
 
 The way this script authenticates to the FSx for ONTAP management endpoint is by using
 the credentials stored in AWS Secrets Manager. Since it can manage multiple FSxN file
@@ -48,6 +50,11 @@ Where the values associated with each key are as follows:
 | `secretName` | The name of the secret in Secrets Manager. | `fsxn-credentials` |
 | `usernameKey` | The key in the secret that contains the username. | `username` |
 | `passwordKey` | The key in the secret that contains the password. | `password` |
+
+:bulb: **NOTE:** If you are going to maintain the `secretsTable` in the source code, and use the
+CloudFormation template to deploy the Lambda function, you will have to update the `secretsTable`
+variable in the code after the CloudFormation stack is created. Or, edit the source code within
+the Cloudformation template itself.
 
 ## Deployment
 There are two ways to deploy this script. The first way to is use the CloudFormation
@@ -72,9 +79,9 @@ so you might want to keep it short, but meaningful. After the stack name you wil
 | secretsManagerRegion| The region where the AWS Secrets Manager secrets are located. |
 | createWatchdogAlarm | If set to `true` a CloudWatch alarm will be created that will trigger if the Lambda function fails while trying to set the auto size mode on a volume. |
 | snsTopicArn| The ARN of the SNS topic that the CloudWatch alarm will send a message to if the Lambda function fails. |
-| createSecretManagerEndpoint| If set to `true` a Secrets Manager VPC endpoint will be created. |
-| createFSxEndpoint| If set to `true` a FSx VPC endpoint will be created. |
-| createDynamoDbEndpoint| If set to `true` a DynamoDB VPC endpoint will be created. |
+| createSecretManagerEndpoint| If set to `true` a Secrets Manager VPC endpoint will be created. Note that you can only have one VPC service endpoint per service per VPC. |
+| createFSxEndpoint| If set to `true` a FSx VPC endpoint will be created. Note that you can only have one VPC service endpoint per service per VPC. |
+| createDynamoDbEndpoint| If set to `true` a DynamoDB VPC endpoint will be created. Note that you can only have one VPC service endpoint per service per VPC. |
 | routeTableIds| Since the DynamoDB endpoint is a `Gateway` type, routing tables have to be updated to use it. Set this parameter to any route table IDs you want updated. |
 | endpointSecurityGroupIds| The security group that the VPC endpoints will use. This security group should allow access to the AWS service the endpoints from the Lambda function over port 443. Since the Lambda function will have the security group specified above assigned to it, it can be used as a network `source` for this security group. |
 | autoSizeMode| The auto size mode you want to set the volume to. Valid values are: `grow`, `grow_shrink`, and `off`. |
@@ -87,11 +94,18 @@ so you might want to keep it short, but meaningful. After the stack name you wil
 Once you have filled in these parameters, click `Next`. On the next page you must accept that this
 template can, and does, create roles. Click `Next`. Finally, on the last page, you can review the stack and click `Submit`.
 
-After the stack has been created everything should be ready. To test, simply create a volume in the
-AWS console and check from the ONTAP CLI that auto size mode appropriately. If it isn't set, check the CloudWatch
-logs for the Lambda function to see what went wrong. You can quickly go to the correct Lambda
-function by clicking on the Resources tab within the CloudFormation stack and clicking on the
-link to the Lambda function.
+After the stack has been created if you plan to maintain the `secretsTable` within the source code, now would
+be the best time to modify it. To do so, go to the Lambda service, find the Lambda function (the name
+will start with "auto-set-fsxn-auto-grow" and end with the name you gave the CloudFormation stack)
+and use the inline editor to modify the `secretsTable` variable.
+
+To test the function, simply create a volume in the AWS console and check from the ONTAP CLI
+that auto size mode appropriately. If it isn't set, check the CloudWatch
+logs for the Lambda function to see what went wrong.
+
+:warning: **NOTE:** This program is expecting to be called by a CloudWatch event, if you just click
+on the `Test` button within the Lambda console, it will fail since the 'event' structure will not
+be set appropriately.
 
 ### Manual Setup
 If for some reason you can't run the CloudFormation template, here are the steps you can use to manually setup the service:
@@ -127,6 +141,9 @@ function will run in:
 - SecretsManager
 - DynamoDB - You only need this one if you are going to store your `secretsTable` in DynamoDB. It is recommended that this be a `Gateway` type endpoint. However, if you do that you will also have to update the routing tables associated with the subnets that the Lambda function is deployed on in order for the Lambda function to be able to use it.
 
+:warning: Note that you can only have one service endpoint per service per VPC. So, don't attempt
+to add one if one already exists for the VPC you are going to run the Lambda function in.
+
 #### Create the Lambda Function
 Create a Lambda function with the following parameters:
 
@@ -147,8 +164,8 @@ is a dictionary with the following keys:
     - usernameKey - The name of the key in the secret that contains the username.
     - passwordKey - The name of the key in the secret that contains the password.
 
-    **NOTE:** Instead of defining the secretsTable in the script, you can define
-dynamoDbSecretsTableName and dynamoDbRegion and the script will read in the
+    :bulb: **NOTE:** Instead of defining the secretsTable in the code, you can define
+dynamoDbSecretsTableName and dynamoDbRegion and the program will read in the
 secretsTable information from the specified DynamoDB table. The table should have
 the same fields as the `secretsTable` defined above.
 
@@ -163,7 +180,7 @@ the same fields as the `secretsTable` defined above.
 - minShrinkSizePercentage - The minimum size the volume can auto shrink to, expressed in terms of a percentage of the initial volume size.
 - maxWaitTime - The maximum time, in seconds, the script will wait for the volume to be created before it will give up and exit.
 
-**NOTE:** Do not delete the variables or set them to None or empty strings, as the script will not run properly if done so.
+:warning: **NOTE:** Do not delete the variables or set them to None or empty strings, as the script will not run properly if done so.
 
 Once you have updated the program, click on the "Deploy" button.
 
