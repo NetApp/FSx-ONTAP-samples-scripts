@@ -18,6 +18,9 @@
 # volume is created. The function uses the ONTAP API to set the auto size
 # mode to 'grow' on the volume therefore it most run within the VPC where the
 # FSx for ONTAP file system is located.
+#
+# Version: %%VERSION%%
+# Date: %%DATE%%
 ################################################################################
 
 import json
@@ -26,18 +29,32 @@ import urllib3
 from urllib3.util import Retry
 import logging
 import boto3
+import os
+#
+################################################################################
+# Configuration settings.
+#
+# You can either set the variables in the code below, or set environment variables
+# with the same name as the variables below. Except for the secretsTable, you must
+# set that in the code if you are not going to use DynamoDb to hold your secrets
+# table.
+#
+# NOTE: The environment variables will take precedence over the variables
+# set in the code.
+#
+################################################################################
 #
 # Create a table of secret names and keys for the username and password for
 # each of the FSxIds. In the example below, it shows using the same
 # secret for four different FSxIds, but you can set it up to use
 # a different secret and/or keys for the username and password for each
 # of the FSxId.
-secretsTable = [
-        {"fsxId": "fs-0e8d9172fa5XXXXXX", "secretName": "fsxn-credentials", "usernameKey": "fsxn-username", "passwordKey": "fsxn-password"},
-        {"fsxId": "fs-020de2687bdXXXXXX", "secretName": "fsxn-credentials", "usernameKey": "fsxn-username", "passwordKey": "fsxn-password"},
-        {"fsxId": "fs-07bcb7ad84aXXXXXX", "secretName": "fsxn-credentials", "usernameKey": "fsxn-username", "passwordKey": "fsxn-password"},
-        {"fsxId": "fs-077b5ff4195XXXXXX", "secretName": "fsxn-credentials", "usernameKey": "fsxn-username", "passwordKey": "fsxn-password"}
-    ]
+#secretsTable = [
+#        {"fsxId": "fs-0e8d9172fa5XXXXXX", "secretName": "fsxn-credentials", "usernameKey": "username", "passwordKey": "password"},
+#        {"fsxId": "fs-020de2687bdXXXXXX", "secretName": "fsxn-credentials", "usernameKey": "username", "passwordKey": "password"},
+#        {"fsxId": "fs-07bcb7ad84aXXXXXX", "secretName": "fsxn-credentials", "usernameKey": "username", "passwordKey": "password"},
+#        {"fsxId": "fs-077b5ff4195XXXXXX", "secretName": "fsxn-credentials", "usernameKey": "username", "passwordKey": "password"}
+#    ]
 #
 # If you don't want to define the secretsTable in this script, you can
 # define the following variables to use a DynamoDB table to get the
@@ -45,11 +62,11 @@ secretsTable = [
 #
 # NOTE: If both the secretsTable, and dynamodbSecretsTableName are defined,
 # then the secretsTable will be used.
-#dynamodbRegion="us-west-2"
-#dynamodbSecretsTableName="fsx_secrets"
+dynamoDbRegion=None
+dynamoDbSecretsTableName=None
 #
 # Set the region where the secrets are stored.
-secretsManagerRegion="us-west-2"
+secretsManagerRegion=None
 #
 # Set the auto size mode. Supported values are "grow", "grow_shrink", and "off".
 autoSizeMode = "grow"
@@ -79,6 +96,64 @@ minShrinkSizePercentage = 100
 # volumes at the same time, you might need to either adjust this number really
 # high, or come up with another way to get the auto size mode.
 maxWaitTime=60
+
+################################################################################
+# This function sets the configuration variables from environment variables if
+# they are defined.
+################################################################################
+def setConfigurationVariables():
+    global secretsTable, secretsManagerRegion, autoSizeMode, growThresholdPercentage
+    global maxGrowSizePercentage, shrinkThresholdPercentage, minShrinkSizePercentage
+    global dynamoDbRegion, dynamoDbSecretsTableName, secretsTable, maxWaitTime, logger
+
+    if os.environ.get('dynamoDbRegion') != None:
+        dynamoDbRegion = os.environ['dynamoDbRegion']
+    if os.environ.get('dynamoDbSecretsTableName') != None:
+        dynamoDbSecretsTableName = os.environ['dynamoDbSecretsTableName']
+    if os.environ.get('secretsManagerRegion') != None:
+        secretsManagerRegion = os.environ['secretsManagerRegion']
+    if os.environ.get('autoSizeMode') != None:
+        autoSizeMode = os.environ['autoSizeMode']
+    if os.environ.get('growThresholdPercentage') != None:
+        growThresholdPercentage = int(os.environ['growThresholdPercentage'])
+    if os.environ.get('maxGrowSizePercentage') != None:
+        maxGrowSizePercentage = int(os.environ['maxGrowSizePercentage'])
+    if os.environ.get('shrinkThresholdPercentage') != None:
+        shrinkThresholdPercentage = int(os.environ['shrinkThresholdPercentage'])
+    if os.environ.get('minShrinkSizePercentage') != None:
+        minShrinkSizePercentage = int(os.environ['minShrinkSizePercentage'])
+    if os.environ.get('maxWaitTime') != None:
+        maxWaitTime = int(os.environ['maxWaitTime'])
+    #
+    # Check that all the required variables are set.
+    message = ""
+    if dynamoDbRegion == None and dynamoDbSecretsTableName == None and 'secretsTable' not in globals():
+        message += 'Error, you must either define the secretsTable array at the top of this script, or define dynamodbRegion and dynamoDbSecretsTableName environment variables.\n'
+
+    if secretsManagerRegion == None:
+        message += 'Error, you must define the secretsManagerRegion environment variable.\n'
+
+    if autoSizeMode == None or autoSizeMode not in ['grow', 'grow_shrink', 'off']:
+        message += 'Error, you must define the autoSizeMode environment variable to either "grow", "grow_shrink", or "off".\n'
+
+    if growThresholdPercentage == None or isinstance(growThresholdPercentage, int) == False or growThresholdPercentage < 0 or growThresholdPercentage > 100:
+        message += 'Error, you must define the growThresholdPercentage environment variable between 0 and 100.\n'
+
+    if maxGrowSizePercentage == None or isinstance(maxGrowSizePercentage, int) == False or maxGrowSizePercentage < 0 or maxGrowSizePercentage > 1000:
+        message += 'Error, you must define the maxGrowSizePercentage environment variable between 0 and 1000.\n'
+
+    if shrinkThresholdPercentage == None or isinstance(shrinkThresholdPercentage, int) == False or shrinkThresholdPercentage < 0 or shrinkThresholdPercentage > 100:
+        message += 'Error, you must define the shrinkThresholdPercentage environment variable between 0 and 100.\n'
+
+    if minShrinkSizePercentage == None or isinstance(minShrinkSizePercentage, int) == False or minShrinkSizePercentage < 0 or minShrinkSizePercentage > 100:
+        message += 'Error, you must define the minShrinkSizePercentage environment variable between 0 and 100.\n'
+
+    if maxWaitTime == None or isinstance(maxWaitTime, int) == False or maxWaitTime < 0 or maxWaitTime > 600:
+        message += 'Error, you must define the maxWaitTime environment variable between 0 and 600.\n'
+
+    if message != "":
+        logger.critical(message)
+        raise Exception(message)
 
 ################################################################################
 # This function is used to obtain the username and password from AWS's Secrets
@@ -137,6 +212,9 @@ def lambda_handler(event, context):
     logging.getLogger("boto3").setLevel(logging.WARNING)
     logging.getLogger("urllib3").setLevel(logging.WARNING)
     #
+    # Set the configuration variables from environment variables if they are defined.
+    setConfigurationVariables()
+    #
     # If this is an event from a failed call. Report that and return.
     if event['detail'].get('errorCode') != None:
         logger.warning(f"This is reporting on a error event. Error Code: {event['detail']['errorCode']}. Error Message: {event['detail']['errorMessage']}.")
@@ -150,21 +228,16 @@ def lambda_handler(event, context):
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
     #
     # Set the https retries to 1.
-    retries = Retry(total=None, connect=1, read=1, redirect=10, status=0, other=0)  # pylint: disable=E1123
+    retries = Retry(total=None, connect=1, read=1, redirect=10, status=0, other=0)
     http = urllib3.PoolManager(cert_reqs='CERT_NONE', retries=retries)
     #
     # Read in the secretTable if it is not already defined.
-    if 'dynamodbRegion' in globals():
-        dynamodbClient = boto3.resource("dynamodb", region_name=dynamodbRegion) # pylint: disable=E0602
-
+    # It is safe to assume dynamoDbRegion and dynamoDbSecretsTableName are defined
+    # because the setConfigurationVariables function would have errored out if they
+    # were not.
     if 'secretsTable' not in globals():
-        if 'dynamodbRegion' not in globals() or 'dynamodbSecretsTableName' not in globals():
-            message = 'Error, you must either define the secretsTable array at the top of this script, or define dynamodbRegion and dynamodbSecretsTableName.'
-            logger.critcal(message)
-            raise Exception(message)
-
-        table = dynamodbClient.Table(dynamodbSecretsTableName) # pylint: disable=E0602
-
+        dynamodbClient = boto3.resource("dynamodb", region_name=dynamoDbRegion)
+        table = dynamodbClient.Table(dynamoDbSecretsTableName)
         response = table.scan()
         secretsTable = response["Items"]
     #
@@ -176,8 +249,7 @@ def lambda_handler(event, context):
     volumeARN  = event['detail']['responseElements']['volume']['resourceARN']
     if fsxId == "" or regionName == "" or volumeId == "" or volumeName == "" or volumeARN == "":
         message = "Couldn't obtain the fsxId, region, volume name, volume ID or volume ARN from the CloudWatch evevnt."
-        logger.critcal(message)
-#        raise Exception(message)
+        logger.critical(message)
         return
 
     logger.debug(f'Data from CloudWatch event: FSxID={fsxId}, Region={regionName}, VolumeName={volumeName}, volumeId={volumeId}.')
@@ -187,7 +259,6 @@ def lambda_handler(event, context):
     if username == "" or password == "":
         message = f'No credentials for FSxN ID: {fsxId}.'
         logger.critical(message)
-#        raise Exception(message)
         return
     #
     # Build a header that is used for all the ONTAP API requests.
@@ -201,7 +272,6 @@ def lambda_handler(event, context):
     if fsxnIp == "":
         message = f"Can't find management IP for FSxN file system with an ID of '{fsxId}'."
         logger.critical(message)
-#        raise Exception(message)
         return
     #
     # Get the volume UUID and volume size based on the volume ID.
@@ -209,7 +279,6 @@ def lambda_handler(event, context):
     if volumeData == None:
         message=f'Failed to get volume information for volumeID: {volumeId}.'
         logger.critical(message)
-#        raise Exception(message)
         return
     volumeUUID = volumeData["OntapConfiguration"]["UUID"]
     volumeSizeInMegabytes = volumeData["OntapConfiguration"]["SizeInMegabytes"]
@@ -219,6 +288,10 @@ def lambda_handler(event, context):
         endpoint = f'https://{fsxnIp}/api/storage/volumes/{volumeUUID}'
         maximum = volumeSizeInMegabytes * maxGrowSizePercentage / 100 * 1024 * 1024
         minimum = volumeSizeInMegabytes * minShrinkSizePercentage / 100 * 1024 * 1024
+        #
+        # Make sure the minimum is at least 20MB.
+        if minimum < 20 * 1024 * 1024:
+            minimum = 20 * 1024 * 1024
         data = json.dumps({"autosize": {"mode": autoSizeMode, "grow_threshold": growThresholdPercentage, "maximum": maximum, "minimum": minimum, "shrink_threshold": shrinkThresholdPercentage}})
         logger.debug(f'Trying {endpoint} with {data}.')
         response = http.request('PATCH', endpoint, headers=headers, timeout=5.0, body=data)

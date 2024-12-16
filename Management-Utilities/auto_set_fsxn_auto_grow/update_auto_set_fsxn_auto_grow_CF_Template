@@ -1,0 +1,46 @@
+#!/bin/bash
+#
+# This script is used to update the CloudFormation template with the latest
+# version of the Lambda function. It will also update the version number in
+# the template.
+#################################################################################
+
+majorVersionNum=1
+file="set_fsxn_volume_auto_grow.py"
+
+tmpfile1=$(mktemp /tmp/tmpfile1.XXXXXX)
+tmpfile2=$(mktemp /tmp/tmpfile2.XXXXXX)
+trap "rm -f $tmpfile1 $tmpfile2" exit
+#
+# First get the existing code out of the CF template.
+sed -e '1,/ZipFile/d' cloudformation.yaml > cloudformation.yaml.tmp
+#
+# Now get the Date and Version lines out of both files.
+egrep -v '^          # Date:|^          # Version' cloudformation.yaml.tmp > $tmpfile1
+egrep -v '^# Date:|^# Version:' $file > $tmpfile2
+
+if diff -w $tmpfile1 $tmpfile2 > /dev/null; then
+  echo "No changes to the monitor code."
+  rm -f cloudformation.yaml.tmp
+  rm -f $tmpfile1 $tmpfile2
+  exit 0
+fi
+#
+# Get the number of commits in the git history for the file to calculate the minor version number.
+minorVersionNum="$(git log "$file" | egrep '^commit' | wc -l)"
+if [ -z "$minorVersionNum" ]; then
+  echo "Failed to calculate version number." 1>&2
+  exit 1
+fi
+
+version="v${majorVersionNum}.${minorVersionNum}"
+#
+# Strip out the monitoring code.
+sed -e '/ZipFile/,$d' cloudformation.yaml > cloudformation.yaml.tmp
+echo "        ZipFile: |" >> cloudformation.yaml.tmp
+#
+# Add the monitoring code to the CF template while updating the version and date.
+cat "$file" | sed -e 's/^/          /' -e "s/%%VERSION%%/${version}/" -e "s/%%DATE%%/$(date +%Y-%m-%d-%H:%M:%S)/" >> cloudformation.yaml.tmp
+
+echo "Updating cloudformation.yaml"
+mv cloudformation.yaml.tmp cloudformation.yaml
