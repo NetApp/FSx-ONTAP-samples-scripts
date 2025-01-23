@@ -1,10 +1,12 @@
 # Trident Protect Migrate PVC Storage Class
 
-A simple sample for setting up your application to be backed up by Trident Protect with an option for in place migration from EBS to FSx for ONTAP.
+This is a sample for setting up your Kubernetes application to be backed up by Trident Protect with an option to migrate it from one storage class to another.
 
 ## Prerequisites:
 The following items should be already be deployed before install Trident Protect.
-- EKS cluster. If you don't already have one, refer to the [FSx for NetApp ONTAP as persistent storage](https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/EKS/FSxN-as-PVC-for-EKS) GitHub repo for an example of how to not only deploy an EKS cluster, but also deploy an FSx for ONTAP file system with Tident installed and its backend and storage classes configured. If you follow it, it will provide the rest of the prerequisites listed below.
+- An AWS EKS cluster. If you don't already have one, refer to the [FSx for NetApp ONTAP as persistent storage](https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/EKS/FSxN-as-PVC-for-EKS)
+GitHub repo for an example of how to not only deploy an EKS cluster, but also deploy an FSx for ONTAP file system with
+Trident installed with its backend and storage classes configured. If you follow it, it will provide the rest of the prerequisites listed below.
 - Trident installed. Please refer to this [Trident installation documentation](https://docs.netapp.com/us-en/trident/trident-get-started/kubernetes-deploy-helm.html) for the easiest way to do that.
 - Configure Trident Backend. Refer to the NetApp Trident documentation for guidance on creating [TridentBackendConfig resources](https://docs.netapp.com/us-en/trident/trident-use/backend-kubectl.html).
 - Install the Trident CSI drivers for SAN and NAS type storage. Refer to NetApp documentation for [installation instructions](https://docs.netapp.com/us-en/trident/trident-use/trident-fsx-storage-backend.html).
@@ -12,8 +14,8 @@ The following items should be already be deployed before install Trident Protect
 - kubectl installed - Refer to [this documentation](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/) on how to install it.
 - helm installed - Refer to [this documentation](https://helm.sh/docs/intro/install/) on how to install it.
 
-## Preperation
-The following are the steps required before you can use Trident Protect to backup your EKS application.
+## Preparation
+The following are the steps required before you can use Trident Protect to backup or migrate your EKS application.
 
 1. [Configure Trident Backend](#1-make-sure-trident-backend-is-configured-correctly)
 1. [Configure Storage Classes for Trident storage types](#2-make-sure-trident-csi-drivers-for-nas-and-san-are-installed)
@@ -37,7 +39,8 @@ kubectl get tbc -n trident -o jsonpath='{.items[?(@.spec.storageDriverName=="ont
 kubectl get tbc -n trident -o jsonpath='{.items[?(@.spec.storageDriverName=="ontap-nas")].metadata.name}'
 ```
 
-If no matching TridentBackendConfig resources are found, you may need to create one. Refer to the prerequisites section above for more information on how to do that.
+If no matching TridentBackendConfig resources are found, you will need to create them. Refer to the prerequisites section above for more information on how to do that.
+
 ### 2. Make Sure Trident CSI Drivers for NAS and SAN are Installed
 Run the follwing kubectl commands to check that a storageclass exist for both SAN and NAS type storage.
 
@@ -53,10 +56,11 @@ Checks for StorageClasses in Kubernetes that use 'ontap-nas' as their backend ty
 kubectl get storageclass -o jsonpath='{.items[?(@.parameters.backendType=="ontap-nas")].metadata.name}'
 ```
 
-If one or both are not found, you may need to create them. Refer to the prerequisites section above for more information on how to do that.
+If one or both are not found, you will need to create them. Refer to the prerequisites section above for more information on how to do that.
 
 ### 3. Install the Kubernetes External Snapshotter
-Run the following commands to install the Kubernetes External Snapshotter. For more information please consult the official [external-snapshotter documentation](https://github.com/kubernetes-csi/external-snapshotter).
+Trident Protect depends on the Snapshotter CRDs and controller. Please run the following commands to install the Kubernetes External Snapshotter.
+For more information please consult the official [external-snapshotter documentation](https://github.com/kubernetes-csi/external-snapshotter).
 
 ```bash
 kubectl kustomize https://github.com/kubernetes-csi/external-snapshotter/client/config/crd | kubectl create -f -
@@ -105,7 +109,7 @@ helm repo add netapp-trident-protect https://netapp.github.io/trident-protect-he
 helm install trident-protect-crds netapp-trident-protect/trident-protect-crds --create-namespace --namespace trident-protect
 helm install trident-protect netapp-trident-protect/trident-protect --set autoSupport.enabled=false --set clusterName=trident-protect-cluster --namespace trident-protect
 ```
-Note that the above commands should install the latest version. If you want to install a specific version add the --version option and provide the version you want to sue. Please use version `100.2410.1` or later.
+Note that the above commands should install the latest version. If you want to install a specific version add the --version option and provide the version you want to use. Please use version `100.2410.1` or later.
 
 ### 6. Create Private S3 Bucket for Backup Data and Metadata
 
@@ -118,12 +122,16 @@ Replace:
 - `<aws_region>` the AWS region you want the bucket to reside.
 
 ### 7. Create a Kubernetes secret for the S3 bucket
-If required, create a service account within AWS IAM that has rights to read and write to the S3 bucketd create. Then create an access key.
+If required, create a service account within AWS IAM that has rights to read and write to the S3 bucket create. Then, create an access key.
 Once you have the Access Key Id and Secret Access Key, create a Kubernetes secret with the following command:
 
 ```markdown
 kubectl create secret generic -n trident-protect s3 --from-literal=accessKeyID=<AccessKeyID> --from-literal=secretAccessKey=<secretAccessKey>
 ```
+
+Replace:
+- `<AccessKeyID>` with the Access Key ID.
+- `<secretAccessKey>` with the Secret Access Key.
 
 ## Configure Trident Protect to backup your application
 Preform these steps to configure Trident Protect to backup your application:
@@ -161,7 +169,7 @@ spec:
 
 Replace:
 - `<APP VAULT NAME>` with the name you want assigned to the Trident Vault
-- `<APP VAULT BUCKET NAME>` with the name of the bucket you created in step 5 above.
+- `<APP VAULT BUCKET NAME>` with the name of the bucket you created in step 6 above.
 - `<S3 ENDPOINT>` the hostname of the S3 endpoint. For example: `s3.us-west-2.amazonaws.com`.
 
 Now run the following command to create the Trident Vault:
@@ -173,10 +181,10 @@ kubectl apply -f trident-vault.yaml
 SECURITY NOTE:
 
 If you want to avoid storing AWS credentials explicitly in Kubernetes secrets, a more secure approach would be to use IAM roles for service accounts (IRSA):
- - Create an IAM policy with minimal S3 access permissions for the specific bucket.
- - Create an IAM role and attach the policy to it.
- - Configure your EKS cluster to use IAM roles for service accounts (IRSA).
- - Create a Kubernetes service account in the trident-protect namespace and associate it with the IAM role
+- Create an IAM policy with minimal S3 access permissions for the specific bucket.
+- Create an IAM role and attach the policy to it.
+- Configure your EKS cluster to use IAM roles for service accounts (IRSA).
+- Create a Kubernetes service account in the trident-protect namespace and associate it with the IAM role
 
 ### Create a Trident Application
 You create a Trident application with the specification of your application in order to back it up. You do that by creating a file named `trident-application.yaml` with the following contents:
@@ -203,7 +211,7 @@ kubectl apply -f trident-application.yaml
 ```
 
 ### Run Backup for Application
-To perform an on-demand backup of the application first create a backup configuration file named `trident-backup.yaml` with the following contents:
+To perform an on-demand backup of the application, first create a backup configuration file named `trident-backup.yaml` with the following contents:
 
 ```markdown
 apiVersion: protect.trident.netapp.io/v1
@@ -235,20 +243,57 @@ To check the status of the backup run the following command:
 kubectl get backup -n <APP NAMESPACE> <APP BACKUP NAME> -o jsonpath='{.status.state}'
 ```
 
-- If status is `Completed` Backup completed successfully 
-- If status is `Running` run the command again in a few minutes to check status
-- If status is `Failed` check the error message:
+- If status is `Completed` Backup completed successfully .
+- If status is `Running` run the command again in a few minutes to check status.
+- If status is `Failed` or `Error` check the error message with:
 
 ```markdown
 kubectl get backup -n <APP NAMESPACE> <APP BACKUP NAME> -o jsonpath='{.status.error}'
 ```
-## Perform an restore of the backup
+
+## Perform a Restore of a Backup
 There are two ways to restore a backup:
-- [Restore backup to a different namespace](#restore-backup-to-a-different-namespace)
 - [Restore backup to the same namespace](#restore-backup-to-the-same-namespace)
+- [Restore backup to a different namespace](#restore-backup-to-a-different-namespace)
+
+### Restore backup to the same namespace
+To restore your appilcation in the same namespace, create an `BackupInPlaceRestore` configuration file named `backupinplacerestore.yaml` with the following contents:
+
+```markdown
+apiVersion: protect.trident.netapp.io/v1
+kind: BackupInplaceRestore
+metadata:
+  name:  <APP BACKUP RESTORE NAME>
+  namespace: <APP NAMESPACE>
+spec:
+  appArchivePath: <APP ARCHIVE PATH>
+  appVaultRef: <APP VAULT NAME>
+```
+
+Replace:
+- `<APP BACKUP RESTORE NAME>` with the name you want to assign the restore configuration
+- `<APP NAMESPACE>` with the namespace where the application was backed up from.
+- `<APP VAULT NAME>` with the name of the backup configuration used to create the backup you want to restore from.
+- `<APP ARCHIVE PATH>` with the path to the backup archive. You can get this by running the following command:
+
+```markdown
+kubectl get backup -n <APP NAMESPACE> <APP BACKUP NAME> -o jsonpath='{.status.appArchivePath}'
+```
+
+Once the yaml file is created, run the following command to start the restore:
+
+```markdown
+kubectl apply -f backupinplacerestore.yaml
+```
+
+Verify application restore was successful run the following command:
+
+```markdown
+kubectl get <APP BACKUP RESTORE NAME> -n <APP NAMESPACE> -o jsonpath='{.status.state}'
+```
 
 ### Restore backup to a different namespace
-To restore the backup you created above to a different namespace, you first need to create a restore configuration file named `trident-restore.yaml` with the following contents:
+To restore the backup to a different namespace and optionally to a different storage class, you first need to create a restore configuration file named `trident-migrate.yaml` with the following contents:
 
 ```markdown
 apiVersion: protect.trident.netapp.io/v1
@@ -262,15 +307,23 @@ spec:
   namespaceMapping: 
     - source: <SOURCE NAMESPACE>
       destination: <DESTINATION NAMESPACE>
+  storageClassMapping:
+    - source: <SOURCE STORAGE CLASS>
+      destination: <DESTINATION STORAGE CLASS>
 ```
 
-Where:
-    - `<APP RESTORE NAME>` with the name you want to assign the restore configuration
-    - `<DESTINATION NAMESPACE>` with the namespace where you want to restore the application
-    - `<APP VAULT NAME>` with the name of the backup configuration used to create the backup you want to restore from.
-    - `<SOURCE NAMESPACE>` with the namespace where the application was backed up from.
-    - `<DESTINATION NAMESPACE>` with the namespace where you want the application to be restored to.
-    - `<APP ARCHIVE PATH>` with the path to the backup archive. You can get this by running the following command:
+Replace:
+- `<APP RESTORE NAME>` with the name you want to assign the restore configuration.
+- `<DESTINATION NAMESPACE>` with the namespace where you want to restore the application.
+- `<APP VAULT NAME>` with the name of the Trident Vault used when creating the backup.
+- `<SOURCE NAMESPACE>` with the namespace where the application was backed up from.
+- `<DESTINATION NAMESPACE>` with the namespace where you want the application to be restored to.
+- `<SOURCE STORAGE CLASS>` with the name of storage class of the PVCs in the source namespace.
+- `<DESTINATION STORAGE CLASS>` with the name of storage class you want to be used for the PVC(s) when the data is restored.
+- `<APP ARCHIVE PATH>` with the path to the backup archive. You can get this by running the following command:
+
+Note that with the above example, you are migrating the PVCs from one storage class to another. If you don't want to do that, you can remove the `storageClassMapping` section from the yaml file.
+
 ```markdown
 kubectl get backup -n <APP NAMESPACE> <APP BACKUP NAME> -o jsonpath='{.status.appArchivePath}'
 ```
@@ -278,7 +331,7 @@ kubectl get backup -n <APP NAMESPACE> <APP BACKUP NAME> -o jsonpath='{.status.ap
 Run the following command to start the restore:
 
 ```markdown
-kubectl apply -f trident-restore.yaml
+kubectl apply -f trident-migrate.yaml
 ```
 
 You can check the status of the restore by running the following command:
@@ -287,45 +340,7 @@ You can check the status of the restore by running the following command:
 kubectl get backuprestore -n <DESTINATION NAMESPACE> <APP RESTORE NAME> -o jsonpath='{.status.state}'
 ```
 
-## Restore backup to the same namespace
-Run the restore by first creating an in place restore configuration file named `backupinplacerestore.yaml` with the following contents:
-
-```markdown
-apiVersion: protect.trident.netapp.io/v1
-kind: BackupInplaceRestore
-metadata:
-  name:  <APP BACKUP RESTORE NAME>
-  namespace: <APP NAMESPACE>
-spec:
-  appArchivePath: <APP ARCHIVE PATH>
-  appVaultRef: <APP VAULT NAME>
-  storageClassMapping: 
-    - source: <SOURCE STORAGE CLASS>
-      destination: <DESTINATION STORAGE CLASS>
-```
-
-Replace:
-- `<APP BACKUP RESTORE NAME>` with the name you want to assign the restore configuration
-- `<APP NAMESPACE>` with the namespace where the application was backed up from.
-- `<APP VAULT NAME>` with the name of the backup configuration used to create the backup you want to restore from.
-- `<SOURCE STORAGE CLASS>` with the storage class of the PVC you want to migrate from.
-- `<DESTINATION STORAGE CLASS>` with the storage class of the PVC you want to migrate to.
-- `<APP ARCHIVE PATH>` with the path to the backup archive. You can get this by running the following command:
-
-```markdown
-kubectl get backup -n <APP NAMESPACE> <APP BACKUP NAME> -o jsonpath='{.status.appArchivePath}'
-```
-
-Note in the above example, not only are we reestoring to the same namespace, but we are also migrating the PVCs from one storage class to anther. If you don't want to do that, you can remove the `storageClassMapping` section from the yaml file.
-
-Once the yaml file is created, run the following command to start the restore:
-
-```markdown
-kubectl apply -f backupinplacerestore.yaml
-```
-
-Verify application restore was successful run the following command:
-
-```markdown
-kubectl get <APP BACKUP RESTORE NAME> -n <APP NAMESPACE> -o jsonpath='{.status.state}'
-```
+## Final Notes
+This is a simple example of how to use Trident Protect to backup and restore your application.
+There are a lot of other features and options available with Trident Protect that are not covered here.
+For more information please refer to the official [Trident Protect documentation](https://docs.netapp.com/us-en/trident/trident-protect/trident-protect-installation.html).
