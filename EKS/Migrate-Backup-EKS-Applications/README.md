@@ -1,4 +1,4 @@
-# Trident Protect Migrate PVC Storage Class
+# Migrate and Backup EKS Applications with Trident Protect
 
 This is a sample for setting up your Kubernetes application to be backed up by Trident Protect with an option to migrate it from one storage class to another.
 
@@ -178,14 +178,6 @@ Now run the following command to create the Trident Vault:
 kubectl apply -f trident-vault.yaml
 ```
 
-SECURITY NOTE:
-
-If you want to avoid storing AWS credentials explicitly in Kubernetes secrets, a more secure approach would be to use IAM roles for service accounts (IRSA):
-- Create an IAM policy with minimal S3 access permissions for the specific bucket.
-- Create an IAM role and attach the policy to it.
-- Configure your EKS cluster to use IAM roles for service accounts (IRSA).
-- Create a Kubernetes service account in the trident-protect namespace and associate it with the IAM role
-
 ### Create a Trident Application
 You create a Trident application with the specification of your application in order to back it up. You do that by creating a file named `trident-application.yaml` with the following contents:
 
@@ -342,5 +334,9 @@ kubectl get backuprestore -n <DESTINATION NAMESPACE> <APP RESTORE NAME> -o jsonp
 
 ## Final Notes
 This is a simple example of how to use Trident Protect to backup and restore your application.
-There are a lot of other features and options available with Trident Protect that are not covered here.
+There are a lot of other features and options available with Trident Protect that are not covered here for example:
+- Creating snapshots of your application.
+- Scheduling backups.
+- Replicating backups to another FSxN file system with SnapMirror.
+
 For more information please refer to the official [Trident Protect documentation](https://docs.netapp.com/us-en/trident/trident-protect/trident-protect-installation.html).

@@ -43,6 +43,12 @@ resource "random_id" "id" {
 # Get access to the aws provider identity data to get account ID.
 data "aws_caller_identity" "current" {}
 #
+# Add pod-identity add-on to the EKS cluster.
+resource "aws_eks_addon" "pod_identity_agent" {
+  cluster_name = module.eks.cluster_name
+  addon_name   = "eks-pod-identity-agent"
+}
+#
 # Add Trident to the EKS cluster with a role that will allow it to read secrets
 # add manage the fsxn file system.
 resource "aws_eks_addon" "fsxn_csi_addon" {

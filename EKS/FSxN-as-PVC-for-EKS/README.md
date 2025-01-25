@@ -5,7 +5,7 @@
 * [Installation Overview](#Installation-Overview)
 * [Detailed Instructions](#Detailed-instructions)
   * [Clone the "NetApp/FSx-ONTAP-samples-scripts" repo from GitHub](#Clone-the-NetAppFSx-ONTAP-samples-scripts-repo-from-GitHub)
-  * [Make any desired changes to the variables.tf file](#Make-any-desired-changes-to-the-variablestf-file)
+  * [Make any desired changes to the configuration variables](#Make-any-desired-changes-to-the-configuration-variables)
   * [Initialize the Terraform environment](#Initialize-the-Terraform-environment)
   * [Deploy the resources](#Deploy-the-resources)
   * [SSH to the jump server to complete the setup](#SSH-to-the-jump-server-to-complete-the-setup)
@@ -78,21 +78,19 @@ terraform files are located:
 git clone https://github.com/NetApp/FSx-ONTAP-samples-scripts.git
 cd FSx-ONTAP-samples-scripts/EKS/FSxN-as-PVC-for-EKS/terraform
 ```
-### Make any desired changes to the variables.tf file.
-Variables that can be changed include:
+### Make any desired changes to the configuration variables
+To configure the deployment first copy the `terraform.tfvars.template` file to `terraform.tfvars`. Then, modify it to suit your needs. Here are the variables you can set:
 - aws_region - The AWS region where you want to deploy the resources.
 - aws_secrets_region - The region where the fsx password secret will be created.
 - fsx_name - The name you want applied to the FSx for NetApp ONTAP File System. Must not already exist.
-- secret_name_prefix - The base name of the AWS SecretsManager secrets that will be created that will hold the FSxN adminstrator, and SVM, passwords.
+- secret_name_prefix - The base name of the AWS SecretsManager secrets that will be created that will hold the FSxN administrator, and SVM, passwords.
 A random string will be appended to this name to ensure uniqueness.
-- fsx_storage_capacity - The storage capacity of the FSx for NetApp ONTAP File System.
-Read the "description" of the variable to see the valid range.
-- fsx_throughput_capacity - The throughput capacity of the FSx for NetApp ONTAP File System.
-Read the "description" of the variable to see valid values.
+- fsx_storage_capacity - The storage capacity of the FSx for NetApp ONTAP File System.  Read the "description" of the variable in the `variables.tf` file to see the valid range.
+- fsx_throughput_capacity - The throughput capacity of the FSx for NetApp ONTAP File System.  Read the "description" of the variable in the `varaibles.tf` file to see valid values.
 - key_pair_name - The name of the EC2 key pair to use to access the jump server.
 - secure_ips - The IP address ranges to allow SSH access to the jump server. The default is wide open.
 
-:warning: **NOTE:** You must change the key_pair_name variable, otherwise the deployment will not complete succesfully.
+:warning: **NOTE:** You must change the key_pair_name variable, otherwise the deployment will not complete successfully.
 ### Initialize the Terraform environment
 Run the following command to initialize the terraform environment.
 ```bash
