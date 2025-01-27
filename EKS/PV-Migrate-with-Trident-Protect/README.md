@@ -205,7 +205,7 @@ kubectl apply -f trident-application.yaml
 ```
 
 ### Run Backup for Application
-Before you can migrate the data to a new store class you must back up the data first. You do that by first creating a backup configuration file named `trident-backup.yaml` with the following contents:
+Before you can migrate the data to a different store class you must back up the data first. You do that by first creating a backup configuration file named `trident-backup.yaml` with the following contents:
 
 ```markdown
 apiVersion: protect.trident.netapp.io/v1
@@ -242,7 +242,7 @@ kubectl get backup -n <APP NAMESPACE> <APP BACKUP NAME>
 - If status is `Failed` the error message will give you a clue as to what went wrong. If you need more information, try using `kubectl describe` instead of `kubectl get` to get more information.
 
 ## Perform the migration
-To restore the backup to a storage class, you first need to create a restore configuration file named `trident-restore-diff-sc.yaml` with the following contents:
+To restore the backup to a different storage class, you first need to create a restore configuration file named `trident-restore-diff-sc.yaml` with the following contents:
 
 ```markdown
 apiVersion: protect.trident.netapp.io/v1
