@@ -113,6 +113,8 @@ Note that the above commands should install the latest version. If you want to i
 
 ### 6. Create Private S3 Bucket for Backup Data and Metadata
 
+If you don't already have an S3 bucket, you can create one with the following command:
+
 ```markdown
 aws s3 mb s3://<bucket_name> --region <aws_region>
 ```
@@ -168,7 +170,7 @@ spec:
 ```
 
 Replace:
-- `<APP VAULT NAME>` with the name you want assigned to the Trident Vault
+- `<APP VAULT NAME>` with the name you want assigned to the Trident Vault.
 - `<APP VAULT BUCKET NAME>` with the name of the bucket you created in step 6 above.
 - `<S3 ENDPOINT>` the hostname of the S3 endpoint. For example: `s3.us-west-2.amazonaws.com`.
 
@@ -218,7 +220,7 @@ spec:
 
 Replace:
 - `<APP NAMESPACE>` with the namespace where the application resides.
-- `<APP BACKUP NAME>` with the name you want assigned to the backup. This has to be unique.
+- `<APP BACKUP NAME>` with the name you want assigned to the backup. This has to be different from any other backup ever run.
 - `<APP NAME>` with the name of the application defined in the step above.
 - `<APP VAULT NAME>` with the name of the Trident Vault created in the step above.
 
@@ -232,16 +234,12 @@ kubectl apply -f trident-backup.yaml
 To check the status of the backup run the following command:
 
 ```markdown
-kubectl get backup -n <APP NAMESPACE> <APP BACKUP NAME> -o jsonpath='{.status.state}'
+kubectl get backup -n <APP NAMESPACE> <APP BACKUP NAME>
 ```
 
 - If status is `Completed` Backup completed successfully .
 - If status is `Running` run the command again in a few minutes to check status.
-- If status is `Failed` or `Error` check the error message with:
-
-```markdown
-kubectl get backup -n <APP NAMESPACE> <APP BACKUP NAME> -o jsonpath='{.status.error}'
-```
+- If status is `Failed` the error message will give you a clue as to what went wrong. If you need more information, try using `kubectl describe` instead of `kubectl get` to get more information.
 
 ## Perform a Restore of a Backup
 There are two ways to restore a backup:
@@ -249,7 +247,7 @@ There are two ways to restore a backup:
 - [Restore backup to a different namespace](#restore-backup-to-a-different-namespace)
 
 ### Restore backup to the same namespace
-To restore your appilcation in the same namespace, create an `BackupInPlaceRestore` configuration file named `backupinplacerestore.yaml` with the following contents:
+To restore your appilcation in the same namespace, create an `BackupInPlaceRestore` configuration file named `trident-restore-inplace.yaml` with the following contents:
 
 ```markdown
 apiVersion: protect.trident.netapp.io/v1
@@ -275,17 +273,17 @@ kubectl get backup -n <APP NAMESPACE> <APP BACKUP NAME> -o jsonpath='{.status.ap
 Once the yaml file is created, run the following command to start the restore:
 
 ```markdown
-kubectl apply -f backupinplacerestore.yaml
+kubectl apply -f trident-restore-inplace.yaml
 ```
 
 Verify application restore was successful run the following command:
 
 ```markdown
-kubectl get <APP BACKUP RESTORE NAME> -n <APP NAMESPACE> -o jsonpath='{.status.state}'
+kubectl get BackupInplaceRestore <APP BACKUP RESTORE NAME> -n <APP NAMESPACE>
 ```
 
 ### Restore backup to a different namespace
-To restore the backup to a different namespace and optionally to a different storage class, you first need to create a restore configuration file named `trident-migrate.yaml` with the following contents:
+To restore the backup to a different namespace, you first need to create a restore configuration file named `trident-restore-diff-ns.yaml` with the following contents:
 
 ```markdown
 apiVersion: protect.trident.netapp.io/v1
@@ -299,9 +297,6 @@ spec:
   namespaceMapping: 
     - source: <SOURCE NAMESPACE>
       destination: <DESTINATION NAMESPACE>
-  storageClassMapping:
-    - source: <SOURCE STORAGE CLASS>
-      destination: <DESTINATION STORAGE CLASS>
 ```
 
 Replace:
@@ -310,33 +305,45 @@ Replace:
 - `<APP VAULT NAME>` with the name of the Trident Vault used when creating the backup.
 - `<SOURCE NAMESPACE>` with the namespace where the application was backed up from.
 - `<DESTINATION NAMESPACE>` with the namespace where you want the application to be restored to.
-- `<SOURCE STORAGE CLASS>` with the name of storage class of the PVCs in the source namespace.
-- `<DESTINATION STORAGE CLASS>` with the name of storage class you want to be used for the PVC(s) when the data is restored.
 - `<APP ARCHIVE PATH>` with the path to the backup archive. You can get this by running the following command:
-
-Note that with the above example, you are migrating the PVCs from one storage class to another. If you don't want to do that, you can remove the `storageClassMapping` section from the yaml file.
 
 ```markdown
 kubectl get backup -n <APP NAMESPACE> <APP BACKUP NAME> -o jsonpath='{.status.appArchivePath}'
 ```
 
-Run the following command to start the restore:
+Once the yaml file has been created, run the following command to start the restore:
 
 ```markdown
-kubectl apply -f trident-migrate.yaml
+kubectl apply -f trident-restore-diff-ns.yaml
 ```
 
 You can check the status of the restore by running the following command:
 
 ```markdown
-kubectl get backuprestore -n <DESTINATION NAMESPACE> <APP RESTORE NAME> -o jsonpath='{.status.state}'
+kubectl get backuprestore -n <DESTINATION NAMESPACE> <APP RESTORE NAME>
 ```
 
 ## Final Notes
-This is a simple example of how to use Trident Protect to backup and restore your application.
-There are a lot of other features and options available with Trident Protect that are not covered here for example:
-- Creating snapshots of your application.
+There are a lot of other features and options available with Trident Protect that are not covered here, for example:
+- Creating zero space snapshots of your application.
+- Restoring backups to a different storage class and therefore migrate the data from one storage class to another. You can refer to this [PV Migrate with Trident Protect](https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/EKS/FSxN-as-PVC-for-EKS) for an example of how to do that.
 - Scheduling backups.
 - Replicating backups to another FSxN file system with SnapMirror.
 
 For more information please refer to the official [Trident Protect documentation](https://docs.netapp.com/us-en/trident/trident-protect/trident-protect-installation.html).
+
+## Author Information
+
+This repository is maintained by the contributors listed on [GitHub](https://github.com/NetApp/FSx-ONTAP-samples-scripts/graphs/contributors).
+
+## License
+
+Licensed under the Apache License, Version 2.0 (the "License").
+
+You may obtain a copy of the License at [apache.org/licenses/LICENSE-2.0](http://www.apache.org/licenses/LICENSE-2.0).
+
+Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an _"AS IS"_ basis, without WARRANTIES or conditions of any kind, either express or implied.
+
+See the License for the specific language governing permissions and limitations under the License.
+
+© 2025 NetApp, Inc. All Rights Reserved.

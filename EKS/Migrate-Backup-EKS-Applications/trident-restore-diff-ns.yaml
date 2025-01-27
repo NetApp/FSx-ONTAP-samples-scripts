@@ -9,6 +9,3 @@ spec:
   namespaceMapping: 
     - source: <SOURCE NAMESPACE>
       destination: <DESTINATION NAMESPACE>
-  storageClassMapping:
-    - source: <SOURCE STORAGE CLASS>
-      destination: <DESTINATION STORAGE CLASS>
