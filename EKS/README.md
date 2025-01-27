@@ -3,7 +3,9 @@ This subfolder contains samples that can help you create solutions using AWS EKS
 
 | Tool | Description |
 | --- | --- |
+| [Backup EKS Applications with Trident Protect](/EKS/Backup-EKS-Applications-with-Trident-Protect) | This sample shows how to backup and restore PVCs in an EKS cluster using Trident Protect. |
 | [FSxN as PVC for EKS](/EKS/FSxN-as-PVC-for-EKS) | This sample shows how to create a sandbox environment that demonstrates how to use FSx for NetApp ONTAP as a persistent storage for an EKS cluster. |
+| [PV Migrate with Trident Protect](/EKS/PV-Migrate-with-Trident-Protect) | This sample shows how to backup and restore PVCs in an EKS cluster using Trident Protect. |
 
 ## Author Information
 

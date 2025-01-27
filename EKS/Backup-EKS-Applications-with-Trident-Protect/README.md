@@ -1,6 +1,6 @@
-# Migrate and Backup EKS Applications with Trident Protect
+# Backup EKS Applications with Trident Protect
 
-This is a sample for setting up your Kubernetes application to be backed up by Trident Protect with an option to migrate it from one storage class to another.
+This is a sample for setting up your Kubernetes application to be backed up by Trident Protect.
 
 ## Prerequisites:
 The following items should be already be deployed before install Trident Protect.
@@ -19,7 +19,7 @@ The following are the steps required before you can use Trident Protect to backu
 
 1. [Configure Trident Backend](#1-make-sure-trident-backend-is-configured-correctly)
 1. [Configure Storage Classes for Trident storage types](#2-make-sure-trident-csi-drivers-for-nas-and-san-are-installed)
-1. [Install the Kubnernettes external snapshotter](#3-install-the-kubernetes-external-snapshotter)
+1. [Install the Kubernetes external snapshotter](#3-install-the-kubernetes-external-snapshotter)
 1. [Create VolumeStoraeClass for Storage Provider](#4-create-volumestorageclasses-for-your-storage-provider)
 1. [Install Trident Protect](#5-install-trident-protect)
 1. [Create S3 Bucket](#6-create-private-s3-bucket-for-backup-data-and-metadata)
@@ -27,7 +27,7 @@ The following are the steps required before you can use Trident Protect to backu
 
 ### 1. Make sure Trident Backend is configured correctly 
 
-Run the follwing kubectl commands to check if TridentBackendConfig for ontap-san and ontap-nas exists and configured correctly. These commands should output the name of any matching TridentBackendConfigs:
+Run the following kubectl commands to confirm that the TridentBackendConfig for ontap-san and ontap-nas exist and are configured correctly. These commands should output the name of any matching TridentBackendConfigs:
 
 #### SAN Backend
 ```bash
@@ -42,16 +42,16 @@ kubectl get tbc -n trident -o jsonpath='{.items[?(@.spec.storageDriverName=="ont
 If no matching TridentBackendConfig resources are found, you will need to create them. Refer to the prerequisites section above for more information on how to do that.
 
 ### 2. Make Sure Trident CSI Drivers for NAS and SAN are Installed
-Run the follwing kubectl commands to check that a storageclass exist for both SAN and NAS type storage.
+Run the following kubectl commands to check that a storage class exist for both SAN and NAS type storage.
 
 #### SAN StorageClass
-Checks for StorageClasses in Kubernetes that use 'ontap-san' as their backend type. It outputs the name of any matching StorageClass:
+Checks for storage classes in Kubernetes that use 'ontap-san' as their backend type. It outputs the name of any matching StorageClass:
 ```bash
 kubectl get storageclass -o jsonpath='{.items[?(@.parameters.backendType=="ontap-san")].metadata.name}'
 ```
 
 #### NAS Driver
-Checks for StorageClasses in Kubernetes that use 'ontap-nas' as their backend type. It outputs the name of any matching StorageClass:
+Checks for storage classes in Kubernetes that use 'ontap-nas' as their backend type. It outputs the name of any matching StorageClass:
 ```bash
 kubectl get storageclass -o jsonpath='{.items[?(@.parameters.backendType=="ontap-nas")].metadata.name}'
 ```
@@ -102,7 +102,7 @@ kubectl apply -f <VolumeSnapshotClass.yaml>
 ```
 
 ### 5. Install Trident Protect
-Execute the following commands to install Trident Protect. For more info please consult official [Trident Protect documentation](https://docs.netapp.com/us-en/trident/trident-protect/trident-protect-installation.html).
+Execute the following commands to install Trident Protect. For more information please consult official [Trident Protect documentation](https://docs.netapp.com/us-en/trident/trident-protect/trident-protect-installation.html).
 
 ```markdown
 helm repo add netapp-trident-protect https://netapp.github.io/trident-protect-helm-chart
@@ -247,7 +247,7 @@ There are two ways to restore a backup:
 - [Restore backup to a different namespace](#restore-backup-to-a-different-namespace)
 
 ### Restore backup to the same namespace
-To restore your appilcation in the same namespace, create an `BackupInPlaceRestore` configuration file named `trident-restore-inplace.yaml` with the following contents:
+To restore your application in the same namespace, create an `BackupInPlaceRestore` configuration file named `trident-restore-inplace.yaml` with the following contents:
 
 ```markdown
 apiVersion: protect.trident.netapp.io/v1
@@ -326,7 +326,8 @@ kubectl get backuprestore -n <DESTINATION NAMESPACE> <APP RESTORE NAME>
 ## Final Notes
 There are a lot of other features and options available with Trident Protect that are not covered here, for example:
 - Creating zero space snapshots of your application.
-- Restoring backups to a different storage class and therefore migrate the data from one storage class to another. You can refer to this [PV Migrate with Trident Protect](https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/EKS/FSxN-as-PVC-for-EKS) for an example of how to do that.
+- Restoring backups to a different storage class and therefore migrate the data from one storage class to another.
+You can refer to this [PV Migrate with Trident Protect](https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/EKS/PV-Migrate-with-Trident-Protect) for an example of how to do that.
 - Scheduling backups.
 - Replicating backups to another FSxN file system with SnapMirror.
 
