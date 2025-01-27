@@ -1,6 +1,6 @@
 module "eks" {
   source          = "terraform-aws-modules/eks/aws"
-  version         = "~> 20.0.0"
+  version         = "~> 20.33"
   cluster_name    = local.cluster_name
   cluster_version = var.kubernetes_version
   subnet_ids      = module.vpc.private_subnets
@@ -115,8 +115,16 @@ resource "aws_iam_role" "trident_role" {
         }
     ]
   })
+}
 
-  managed_policy_arns = [aws_iam_policy.trident_policy.arn]
+resource "aws_iam_role_policy_attachment" "trident_policy_attachment" {
+  role       = aws_iam_role.trident_role.name
+  policy_arn = aws_iam_policy.trident_policy.arn
+}
+
+resource "aws_iam_role_policy_attachments_exclusive" "trident_policy_attachment_exclusive" {
+  role_name   = aws_iam_role.trident_role.name
+  policy_arns = [aws_iam_policy.trident_policy.arn]
 }
 
 data "cloudinit_config" "cloudinit" {
