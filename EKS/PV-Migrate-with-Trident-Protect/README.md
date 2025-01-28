@@ -1,9 +1,9 @@
-# Migrate Kubernates PVs with Trident Protect
+# Migrate Kubernetes PVs with Trident Protect
 
-This is a sample for setting up your Kubernetes application to be migrated to a different storage class using Trident Protect.
+This is a sample for setting up your Kubernetes application to be migrated from one storage class to another using Trident Protect.
 
 ## Prerequisites:
-The following items should be already be deployed before install Trident Protect.
+The following items should already be deployed before installing Trident Protect.
 - An AWS EKS cluster. If you don't already have one, refer to the [FSx for NetApp ONTAP as persistent storage](https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/EKS/FSxN-as-PVC-for-EKS)
 GitHub repo for an example of how to not only deploy an EKS cluster, but also deploy an FSx for ONTAP file system with
 Trident installed with its backend and storage classes configured. If you follow it, it will provide the rest of the prerequisites listed below.
@@ -20,60 +20,65 @@ The following are the steps required before you can use Trident Protect to backu
 1. [Configure Trident Backend](#1-make-sure-trident-backend-is-configured-correctly)
 1. [Configure Storage Classes for Trident storage types](#2-make-sure-trident-csi-drivers-for-nas-and-san-are-installed)
 1. [Install the Kubernetes external snapshotter](#3-install-the-kubernetes-external-snapshotter)
-1. [Create VolumeStoraeClass for Storage Provider](#4-create-volumestorageclasses-for-your-storage-provider)
+1. [Create VolumeStorageClass for Storage Provider](#4-create-volumestorageclasses-for-your-storage-provider)
 1. [Install Trident Protect](#5-install-trident-protect)
 1. [Create S3 Bucket](#6-create-private-s3-bucket-for-backup-data-and-metadata)
 1. [Create Kubernetes secret for S3 bucket](#7-create-a-kubernetes-secret-for-the-s3-bucket)
 
 ### 1. Make sure Trident Backend is configured correctly 
 
-Run the following kubectl commands to confirm that the TridentBackendConfig for ontap-san and ontap-nas exist and are configured correctly. These commands should output the name of any matching TridentBackendConfigs:
+Depending on whether you are using block (SAN), or NAS (NFS), or both, will dictate which TridentBackendConfig you need configured.
 
 #### SAN Backend
+Run the following command to confirm that the TridentBackendConfig for ontap-san exists and is configured correctly:
 ```bash
 kubectl get tbc -n trident -o jsonpath='{.items[?(@.spec.storageDriverName=="ontap-san")].metadata.name}'
 ```
 
 ### NAS Backend
+Run the following command to confirm that the TridentBackendConfig for ontap-nas exists and is configured correctly:
 ```bash
 kubectl get tbc -n trident -o jsonpath='{.items[?(@.spec.storageDriverName=="ontap-nas")].metadata.name}'
 ```
 
-If no matching TridentBackendConfig resources are found, you will need to create them. Refer to the prerequisites section above for more information on how to do that.
+If no matching TridentBackendConfig resources are found, you will need to create the ones you need. Refer to the prerequisites section above for more information on how to do that.
 
-### 2. Make Sure Trident CSI Drivers for NAS and SAN are Installed
-Run the following kubectl commands to check that a storage class exist for both SAN and NAS type storage.
+### 2. Make Sure the required Trident Storage Classes are installed
+Depending on whether you are using block (SAN), or NAS (NFS), or both, will dictate which Storage Classes you need to have configured.
 
 #### SAN StorageClass
-Checks for storage classes in Kubernetes that use 'ontap-san' as their backend type. It outputs the name of any matching StorageClass:
+Run the following command to check that the storage class in Kubernetes that use 'ontap-san' as their backend type has been installed. It outputs the name of any matching StorageClass:
 ```bash
 kubectl get storageclass -o jsonpath='{.items[?(@.parameters.backendType=="ontap-san")].metadata.name}'
 ```
 
 #### NAS Driver
-Checks for storage classes in Kubernetes that use 'ontap-nas' as their backend type. It outputs the name of any matching StorageClass:
+Run the following command to check that the storage class in Kubernetes that use 'ontap-nas' as their backend type has been installed. It outputs the name of any matching StorageClass:
 ```bash
 kubectl get storageclass -o jsonpath='{.items[?(@.parameters.backendType=="ontap-nas")].metadata.name}'
 ```
 
-If one or both are not found, you will need to create them. Refer to the prerequisites section above for more information on how to do that.
+If one, or both, are not found, you will need to create them. Refer to the prerequisites section above for more information on how to do that.
 
 ### 3. Install the Kubernetes External Snapshotter
 Trident Protect depends on the Snapshotter CRDs and controller. Please run the following commands to install the Kubernetes External Snapshotter.
-For more information please consult the official [external-snapshotter documentation](https://github.com/kubernetes-csi/external-snapshotter).
+For more information, please consult the official [external-snapshotter documentation](https://github.com/kubernetes-csi/external-snapshotter).
 
 ```bash
-kubectl kustomize https://github.com/kubernetes-csi/external-snapshotter/client/config/crd | kubectl create -f -
-kubectl -n kube-system kustomize deploy/kubernetes/snapshot-controller | kubectl create -f - 
-kubectl kustomize https://github.com/kubernetes-csi/external-snapshotter/deploy/kubernetes/csi-snapshotter | kubectl create -f -
+git clone https://github.com/kubernetes-csi/external-snapshotter
+cd external-snapshotter/
+kubectl kustomize client/config/crd | kubectl create -f -
+kubectl -n kube-system kustomize deploy/kubernetes/snapshot-controller | kubectl create -f -
+kubectl kustomize deploy/kubernetes/csi-snapshotter | kubectl create -f -
+cd ..
 ```
 
 ### 4. Create VolumeSnapshotClasses for your storage provider.
-Trident Protect requires a VolumeSnapshotClass to be created for the storage CSI driver you are using. You can use the following command to see if you already one defined:
+Trident Protect requires a VolumeSnapshotClass to be created for the storage CSI driver you are using. You can use the following command to see if you already have one defined:
 ```
 kubectl get VolumeSnapshotClass
 ```
-If you don't have one defined you'll need to create one. Here is an example of a yaml file that defines a VolumeSnapshotClass for Trident CSI driver:
+If you don't have one defined, you'll need to create one. Here is an example of a yaml file that defines a VolumeSnapshotClass for Trident CSI driver:
 ```
 apiVersion: snapshot.storage.k8s.io/v1
 kind: VolumeSnapshotClass
@@ -124,7 +129,7 @@ Replace:
 - `<aws_region>` the AWS region you want the bucket to reside.
 
 ### 7. Create a Kubernetes secret for the S3 bucket
-If required, create a service account within AWS IAM that has rights to read and write to the S3 bucket create. Then, create an access key.
+If required, create a service account within AWS IAM that has rights to read and write to the S3 bucket created above. Then, create an access key.
 Once you have the Access Key Id and Secret Access Key, create a Kubernetes secret with the following command:
 
 ```markdown
@@ -205,7 +210,7 @@ kubectl apply -f trident-application.yaml
 ```
 
 ### Run Backup for Application
-Before you can migrate the data to a different store class you must back up the data first. You do that by first creating a backup configuration file named `trident-backup.yaml` with the following contents:
+To perform an on-demand backup of the application, first create a backup configuration file named `trident-backup.yaml` with the following contents:
 
 ```markdown
 apiVersion: protect.trident.netapp.io/v1
