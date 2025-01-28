@@ -5,4 +5,4 @@ metadata:
   namespace: <APP NAMESPACE>
 spec:
   includedNamespaces:
-    - namespace:  <APP NAMESPACE>
+    - namespace: <APP NAMESPACE>
