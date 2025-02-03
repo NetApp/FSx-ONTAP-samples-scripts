@@ -1,0 +1,118 @@
+#!/bin/bash
+#
+################################################################################
+# This script creates a NetApp Workload Factory Link in a given region.
+#################################################################################
+
+usage () {
+cat <<EOF
+Usage: $(basename $0) -r region -s subnetIds -g securityGroupIds -n name
+Where: 
+  -r region - The region you want the link to be created in.
+  -s subnetIds - The subnet IDs to be used for the link. Comma separated, no spaces.
+  -g securityGroupIds - The security group IDs to be used for the link. Comma separated, no spaces.
+  -n name - The name you want associated with the link.
+EOF
+}
+
+#################################################################################
+#################################################################################
+get_stack_status () {
+  local region=$1
+  local stack_name=$2
+  aws cloudformation describe-stacks --region "$region" --stack-name "$stack_name" --query "Stacks[0].StackStatus" --output text
+}
+
+#################################################################################
+#################################################################################
+wait_for_stack () {
+  local region=$1
+  local stack_name=$2
+  local status=""
+
+  while [ "$status" != "COMPLETE" ]; do
+    sleep 10
+    status=$(get_stack_status "$region" "$stack_name")
+    echo "Current stack status: $status"
+    #
+    # Just look for "COMPLETE" at the end of the status string.
+    status=$(echo "$status" | sed -e 's/.*_\(.*\)/\1/')
+  done
+}
+
+#################################################################################
+#################################################################################
+while getopts "r:s:g:n:h" opt; do
+  case $opt in
+    n)
+      name=$OPTARG
+      ;;
+    s)
+      subnetIds=$OPTARG
+      ;;
+    r)
+      region=$OPTARG
+      ;;
+    g)
+      securityGroupIds=$OPTARG
+      ;;
+    h)
+      usage
+      exit 1
+      ;;
+  esac
+done
+
+if [ -z "$name" -o -z "$subnetIds" -o -z "$securityGroupIds" -o -z "$region" ]; then
+  usage
+  exit 1
+fi
+
+body='
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Deploy a NetApp Workload Factory Link
+
+Parameters:
+  SubnetIds:
+    Description: "The subnet IDs to be used for the link."
+    Type: CommaDelimitedList
+
+  SecurityGroupIds:
+    Description: "The security group IDs to be used for the link."
+    Type: CommaDelimitedList
+
+  LinkName:
+    Description: "The name you want associated with the link."
+    Type: String
+
+Resources:
+  MyLink:
+    Type: NetApp::FSxN::Link::MODULE
+    Properties:
+      SubnetIds: !Ref SubnetIds
+      SecurityGroupIds: !Ref SecurityGroupIds
+      LinkName: !Ref LinkName
+
+Outputs:
+  LinkArn:
+    Value:
+      Fn::GetAtt: MyLinkLambdaFunction.Arn
+'
+#
+# Since for some reason the AWS cli wants to assume that if there is a comma in
+# a string, you are defining an array of strings and that's not what a 
+# CommaDelimitedList" is expecting for "input." So, we need to escape the commas.
+subnetIds=$(echo $subnetIds | sed 's/,/\\,/g')
+securityGriupIds=$(echo $securityGriupIds | sed 's/,/\\,/g')
+stackId=$(aws cloudformation create-stack --region $region --stack-name "deploy-WF-Link-$$" --capabilities CAPABILITY_AUTO_EXPAND CAPABILITY_NAMED_IAM --template-body "$body" --parameters \
+   ParameterKey=LinkName,ParameterValue=$name \
+   ParameterKey=SubnetIds,ParameterValue=$subnetIds \
+   ParameterKey=SecurityGroupIds,ParameterValue=$securityGroupIds --output text)
+
+wait_for_stack "$region" "$stackId"
+
+if [ "$(get_stack_status $region $stackId)" == CREATE_COMPLETE ]; then
+  aws cloudformation describe-stacks --region $region --stack-name $stackId --query "Stacks[0].Outputs[*]" --output text
+else
+  echo "Error creating stack."
+fi

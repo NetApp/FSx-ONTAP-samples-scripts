@@ -1,0 +1,79 @@
+#!/bin/bash
+#
+################################################################################
+# This script creates an export policy for an FSx for ONTAP file system.
+# It is dependent on a CloudFormation template that uses the NetApp
+# CloudFormation extensions. The template should be passed in as an argument.
+################################################################################
+
+################################################################################
+################################################################################
+usage () {
+cat <<EOF
+Usage: $(basename $0) [-r region] -l link_ARN -s secret_ARN -k secret_key -f fsxId -v svm_name -n policy_name [-p protocols] -c match_CIDR -t templete_filename
+Notes:
+    The default region is whatever the default region is set in the AWS CLI.
+    The default protocols is "any"
+EOF
+}
+#
+# Set the default values.
+linkArn=""
+secretArn=""
+secretKey="password"
+fsxId=""
+svmName=""
+policyName=""
+protocols="any"
+matchCidr="0.0.0.0/0"
+template=""
+
+region=$(aws configure list | awk '/region/{print $2}')
+
+while getopts "hr:l:s:k:f:v:n:p:c:t:" opt; do
+  case $opt in
+    r) region=$OPTARG
+      ;;
+    l) linkArn=$OPTARG
+      ;;
+    s) secretArn=$OPTARG
+      ;;
+    k) secretKey=$OPTARG
+      ;;
+    f) fsxId=$OPTARG
+      ;;
+    v) svmName=$OPTARG
+      ;;
+    n) policyName=$OPTARG
+      ;;
+    p) protocols=$OPTARG
+      ;;
+    c) matchCidr=$OPTARG
+      ;;
+    t) template=$OPTARG
+      ;;
+    h) usage
+      exit 1
+      ;;
+  esac
+done
+
+if [ ! -r "$template" ]; then
+  echo "Cannot read template file '$template'."
+  usage
+  exit 1
+fi
+body=$(cat "$template")
+#
+# Since, for some crazy reason, the aws command interprets a comma as a list of strings we have to escape it.
+protocols=$(echo "$protocols" | sed -e 's/,/\\,/g')
+stackName="create-export-$$"
+aws cloudformation create-stack --region $region --stack-name $stackName --template-body "$body" --parameters \
+  ParameterKey=FileSystemId,ParameterValue=$fsxId \
+  ParameterKey=SecretArn,ParameterValue=$secretArn \
+  ParameterKey=SecretKey,ParameterValue=$secretKey \
+  ParameterKey=LinkArn,ParameterValue=$linkArn \
+  ParameterKey=PolicyName,ParameterValue=$policyName \
+  ParameterKey=MatchCidr,ParameterValue=$matchCidr \
+  ParameterKey=SvmName,ParameterValue=$svmName \
+  ParameterKey=Protocols,ParameterValue="$protocols"

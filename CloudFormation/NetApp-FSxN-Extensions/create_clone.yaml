@@ -1,0 +1,58 @@
+Description: "Create a clone of a FSx for ONTAP volume."
+
+Parameters:
+  FileSystemId:
+    Description: "The File System ID."
+    Type: String
+
+  SecretArn:
+    Description: "The Secret ARN."
+    Type: String
+
+  SecretKey:
+    Description: "The key to use within the AWS secret."
+    Default: "password"
+    Type: String
+
+  LinkArn:
+    Description: "The ARN to the Lambda link function."
+    Type: String
+
+  SvmName:
+    Description: "The name of the SVM that hold the parent volume."
+    Type: String
+
+  CloneVolumeName:
+    Description: "The desired name for the cloned volume."
+    Type: String
+
+  ParentVolumeName:
+    Description: "The name of the parent volume."
+    Type: String
+
+  IsCloned:
+    Description: "Set to false, during an update, to split the clone from its parent."
+    Type: String
+    Default: "true"
+
+Resources:
+  CloneVolume:
+    Type: "NetApp::FSxN::Volume"
+
+    Properties:
+      FsxAdminPasswordSource:
+        Secret:
+          SecretArn: !Ref SecretArn
+          SecretKey: !Ref SecretKey
+      FileSystemId: !Ref FileSystemId
+      LinkArn: !Ref LinkArn
+      SVM:
+        Name: !Ref SvmName
+      Name: !Ref CloneVolumeName
+
+      Clone:
+        ParentSVM:
+          Name: !Ref SvmName
+        ParentVolume:
+          Name: !Ref ParentVolumeName
+        IsCloned: !Ref IsCloned

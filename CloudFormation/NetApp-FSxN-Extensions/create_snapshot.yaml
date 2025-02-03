@@ -1,0 +1,48 @@
+Description: "Create a snapshot of an FSx for ONTAP volume."
+
+Parameters:
+  FileSystemId:
+    Description: "The File System ID."
+    Type: String
+
+  SecretArn:
+    Description: "The Secret ARN that holds the fsxadmin password."
+    Type: String
+
+  SecretKey:
+    Description: "The key to use within the AWS secret that holds the fsxadmin password"
+    Default: "password"
+    Type: String
+
+  LinkArn:
+    Description: "The ARN to the Lambda link function."
+    Type: String
+
+  SvmName:
+    Description: "The SVM Name."
+    Type: String
+
+  VolumeName:
+    Description: "The Volume Name."
+    Type: String
+
+  SnapshotName:
+    Description: "The name to assigned to the Snapshot."
+    Type: String
+
+Resources:
+  Snapshot:
+    Type: "NetApp::FSxN::Snapshot"
+
+    Properties:
+      FsxAdminPasswordSource:
+        Secret:
+          SecretArn: !Ref SecretArn
+          SecretKey: !Ref SecretKey
+      FileSystemId: !Ref FileSystemId
+      LinkArn: !Ref LinkArn
+      SVM:
+        Name: !Ref SvmName
+      Volume:
+        Name: !Ref VolumeName
+      Name: !Ref SnapshotName
