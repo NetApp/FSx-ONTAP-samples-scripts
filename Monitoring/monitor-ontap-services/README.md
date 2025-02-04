@@ -54,7 +54,7 @@ To install the program using the CloudFormation template, you will need to do th
 
 |Parameter Name | Notes|
 |---|---|
-|Stackname|The name you want to assign to the CloudFormation stack. Note that this name is used as a base name for the resources it creates, so please keep it under 25 characters.|
+|Stackname|The name you want to assign to the CloudFormation stack. Note that this name is used as a base name for the resources it creates, so please keep it **under 25 characters**. Also, since it is used as part of the s3 bucket name that it creates to keep event information in, it **must be in all lower case letters**.|
 |OntapAdminServer|The DNS name, or IP address, of the management endpoint of the FSxN file system you wish to monitor.|
 |SubnetIds|The subnet IDs that the Lambda function will be attached to. Must have connectivity to the FSxN file system you wish to monitor.|
 |SecurityGroupIds|The security group IDs that the Lambda function will be attached to. The security group most allow outbound traffic over port 443 to the SNS, Secrets Manager and S3 endpoints, as well as the FSxN file system you want to monitor.|
