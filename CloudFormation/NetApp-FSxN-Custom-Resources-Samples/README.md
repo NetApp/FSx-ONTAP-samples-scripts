@@ -78,7 +78,7 @@ To make deploying the Workload Factory Link easy you can use the `deploy_link` s
 It invokes the `NetApp::FSxN::Link::Module` module with the appropriate parameters and will output the ARN
 of the Workload Factory Link Lambda function that will be used in all of the CloudFormation templates that use these FSxN extensions.
 
-Here is the synopis of how to use the `deploy_link` script:
+Here is the synopsis of how to use the `deploy_link` script:
 ```
 ./deploy_link -r <aws-region> -s <subnet-id>,<subnet-id> -g <security-group-id>,<security-group-id> -n <link_name>
 ```
@@ -100,6 +100,8 @@ Once you have done this, you are ready to start using the examples in this repos
 |create_sm_without_peering.yaml|Creates a SnapMirror relationship with a specified source volume. It assumes that there is already a peering relationship between the source and destination clusters and vservers.|
 |create_snapshot.yaml|Creates a snapshot of an FSx for NetApp ONTAP volume.|
 |create_volume.yaml|Creates an FSx for NetApp ONTAP volume.|
+
+Note that there is a script, in the `scripts` directory, for each of these CloudFormation templates that can be used to deploy them via the AWS CLI.
 
 ## Author Information
 
