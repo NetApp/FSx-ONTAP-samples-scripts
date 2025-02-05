@@ -190,8 +190,8 @@ Resources:
           # Lastly, you can create an override for the SSD alarm, by creating a tag
           # with the name "SSD_Alarm_Threshold" on the file system resource.
           #
-          # Version: v2.13
-          # Date: 2024-10-03-12:30:21
+          # Version: v2.1
+          # Date: 2025-01-31-20:33:33
           #
           ################################################################################
           #
@@ -719,9 +719,9 @@ Resources:
           dryRun = False
           #
           # Check to see if there any any environment variables set.
-          customerId = os.environ.get('customerId', '')
-          accountId  = os.environ.get('accountId', '')
-          SNStopic   = os.environ.get('SNStopic', '')
+          customerId = os.environ.get('customerId', customerId)
+          accountId  = os.environ.get('accountId', accountId)
+          SNStopic   = os.environ.get('SNStopic', SNStopic)
           onlyFilesystemId = None
           defaultCPUThreshold    = int(os.environ.get('defaultCPUThreshold',    defaultCPUThreshold))
           defaultSSDThreshold    = int(os.environ.get('defaultSSDThreshold',    defaultSSDThreshold))

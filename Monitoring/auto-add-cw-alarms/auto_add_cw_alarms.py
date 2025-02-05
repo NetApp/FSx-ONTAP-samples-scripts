@@ -556,9 +556,9 @@ regions = []
 dryRun = False
 #
 # Check to see if there any any environment variables set.
-customerId = os.environ.get('customerId', '')
-accountId  = os.environ.get('accountId', '')
-SNStopic   = os.environ.get('SNStopic', '')
+customerId = os.environ.get('customerId', customerId)
+accountId  = os.environ.get('accountId', accountId)
+SNStopic   = os.environ.get('SNStopic', SNStopic)
 onlyFilesystemId = None
 defaultCPUThreshold    = int(os.environ.get('defaultCPUThreshold',    defaultCPUThreshold))
 defaultSSDThreshold    = int(os.environ.get('defaultSSDThreshold',    defaultSSDThreshold))
