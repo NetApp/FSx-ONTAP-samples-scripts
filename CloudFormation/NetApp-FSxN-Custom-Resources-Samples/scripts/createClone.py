@@ -129,7 +129,6 @@ except getopt.error as err:
 # Check that all the required parameters are present.
 if secretArn == "" or secretKey == "" or linkArn == "" or fsxId == "" or svmName == "" or parentVolumeName == "" or cloneVolumeName == "":
     print("Missing required parameters.")
-    print(f"secretArn == {secretArn}\nsecretKey == {secretKey}\nlinkArn == {linkArn}\nfsxId == {fsxId}\nsvmName == {svmName}\nparentVolumeName == {parentVolumeName}\ncloneVolumeName == {cloneVolumeName}\n\n")
     usage()
     sys.exit(1)
 #
