@@ -100,3 +100,19 @@ Once you have done this, you are ready to start using the examples in this repos
 |create_sm_without_peering.yaml|Creates a SnapMirror relationship with a specified source volume. It assumes that there is already a peering relationship between the source and destination clusters and vservers.|
 |create_snapshot.yaml|Creates a snapshot of an FSx for NetApp ONTAP volume.|
 |create_volume.yaml|Creates an FSx for NetApp ONTAP volume.|
+
+## Author Information
+
+This repository is maintained by the contributors listed on [GitHub](https://github.com/NetApp/FSx-ONTAP-samples-scripts/graphs/contributors).
+
+## License
+
+Licensed under the Apache License, Version 2.0 (the "License").
+
+You may obtain a copy of the License at [apache.org/licenses/LICENSE-2.0](http://www.apache.org/licenses/LICENSE-2.0).
+
+Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an _"AS IS"_ basis, without WARRANTIES or conditions of any kind, either express or implied.
+
+See the License for the specific language governing permissions and limitations under the License.
+
+© 2025 NetApp, Inc. All Rights Reserved.

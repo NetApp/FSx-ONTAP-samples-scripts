@@ -28,37 +28,56 @@ Parameters:
 
   Size:
     Description: "The size of the volume in bytes."
-    Default: 20971520
     Type: Number
+    Default: 20971520
+    MinValue: 20971520
 
   Aggregates:
     Description: "The aggregates to use."
     Type: CommaDelimitedList
 
   AutoSizeMode:
-    Description: "The mode of the auto size. The supported values are 'grow', 'grown_shrink' or 'off'."
-    Default: "off"
+    Description: "The mode of the auto size. The supported values are 'grow', 'grow_shrink' or 'off'."
     Type: String
+    AllowedValues: ["off", "grow", "grow_shrink"]
+    Default: "off"
 
   MinimumShrinkSize:
     Description: "The minimum size the volume can shrink to in bytes."
-    Default: 20971520
     Type: Number
+    MinValue: 20971520
+    Default: 20971520
 
   MaximumGrowSize:
-    Description: "The maximum size of the volume can grow to in bytes."
-    Default: 107374182400
     Type: Number
+    Description: "The maximum size of the volume can grow to in bytes. Default is a 160TB."
+    Default: 175921860444160
 
   GrowThresholdPercentage:
     Description: "The percentage of the volume size at which the volume is considered full."
     Default: 80
+    MaxValue: 100
+    MinValue: 0
     Type: Number
 
   ShrinkThresholdPercentage:
     Description: "The percentage of the volume size at which the volume is considered empty."
     Default: 50
+    MaxValue: 100
+    MinValue: 0
     Type: Number
+
+  State:
+    Description: "The state of the volume. Either 'online', 'offline' or 'restricted'. Defaults to 'online'."
+    Type: String
+    Default: "online"
+    AllowedValues: ["online", "offline", "restricted"]
+
+  Type:
+    Description: "The type of the volume. Either 'rw' or 'dp'. Defaults to 'rw'."
+    Type: String
+    Default: "rw"
+    AllowedValues: ["rw", "dp"]
 
 Resources:
   FSxNVolume:
@@ -77,6 +96,8 @@ Resources:
 
       Size: !Ref Size
       Aggregates: !Ref Aggregates
+      State: !Ref State
+      Type: !Ref Type
 
       Autosize:
         Mode: !Ref AutoSizeMode

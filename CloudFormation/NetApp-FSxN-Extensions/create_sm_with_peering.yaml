@@ -1,4 +1,4 @@
-Description: "Create a SM relationship between two volumes. Includes peering the clusters and vservers."
+Description: "Create a SM relationship between two volumes. Includes peering the clusters and vservers. It assumes the destination volume does not exist and will create it."
 
 Parameters:
   SourceLinkArn:
@@ -51,8 +51,8 @@ Parameters:
     Description: "The name of the destination volume."
     Type: String
 
-  DestinationAggregates:
-    Description: "The aggregates to use when creating the destination volume."
+  DestinationAggregate:
+    Description: "The aggregate to use when creating the destination volume."
     Type: CommaDelimitedList
     Default: "aggr1"
 
@@ -98,7 +98,7 @@ Resources:
         Volume: !Ref DestinationVolumeName
 
       SnapMirrorDestinationCreation:
-        Aggregates: !Ref DestinationAggregates
+        Aggregates: !Ref DestinationAggregate
 
       Policy: !Ref Policy
       Reverse: !Ref Reverse

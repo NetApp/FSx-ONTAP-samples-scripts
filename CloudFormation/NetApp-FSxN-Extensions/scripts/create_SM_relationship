@@ -4,20 +4,22 @@
 # This script is used to create a SnapMirror relationship between two volumes 
 # in two different SVMs in two different file systems. It is dependent on a
 # a CloudFormation template that uses the NetApp CloudFormation extension. The
-# template should be passed as a parameter to this script.
+# template should be passed as a parameter to this script. The template
+# assumes that the destination volume does not already exist.
 ################################################################################
 
 ################################################################################
 ################################################################################
 usage () {
 cat <<EOF
-Usage: $(basename $0) [--region region] --source-link-arn linkArn --source-secret-arn secretArn [--source-secret-key password] --source-fsx fsxId --source-svm svmName  --source-vol volName \
-                                          --dest-link-arn linkArn   --dest-secret_arn secretAnr   [--dest-sceret-key password]   --dest-fsx FsxId   --dest-svm svmName [--dest-vol volName_dp] \
-                       --template templete_filename
+Usage: $(basename $0) [--region region] --source-link-arn link_arn --source-secret-arn secret_arn [--source-secret-key password] --source-fsx fsx_id --source-svm svm_name  --source-vol vol_name \\
+                                          --dest-link-arn link_arn   --dest-secret-arn secret_arn   [--dest-sceret-key password]   --dest-fsx fsx_id   --dest-svm svm_name [--dest-vol vol_name_dp] \\
+                               --template templete_filename [--dest-aggr aggregate1]
 Notes:
-  The default regions is whatever the default region is in the AWS CLI configuration.
+  The default region is whatever the default region is in the AWS CLI configuration.
   The default secret key is 'password'.
   The default destination volume name is the source volume name with '_dp' appended.
+  The default aggregate is 'aggr1'.
 EOF
 }
 #
@@ -33,6 +35,7 @@ destinationSecretArn=""
 destinationSecretKey="password"
 destinationFsxId=""
 destinationSvmName=""
+destinationAggregate="aggr1"
 template=""
 #
 # Get the default region from the AWS CLI configuration
@@ -79,6 +82,9 @@ while [ ! -z "$1" ]; do
   elif [ "$1" == "--dest-vol" ]; then
     destinationVolumeName=$2
     shift 1
+  elif [ "$1" == "--dest-aggrs" ]; then
+    destinationAggregate=$2
+    shift 1
   elif [ "$1" == "--template" ]; then
     template=$2
     shift 1
@@ -90,7 +96,7 @@ while [ ! -z "$1" ]; do
   shift 1
 done
 
-if [ -z "destinationVolumeName" ]; then
+if [ -z "$destinationVolumeName" ]; then
   destinationVolumeName="${sourceVolumeName}_dp"
 fi
 
@@ -121,4 +127,5 @@ aws cloudformation create-stack --region $region --stack-name $stackName --templ
   ParameterKey=DestinationSecretKey,ParameterValue=$destinationSecretKey \
   ParameterKey=DestinationFileSystemId,ParameterValue=$destinationFsxId \
   ParameterKey=DestinationSvmName,ParameterValue=$destinationSvmName \
-  ParameterKey=DestinationVolumeName,ParameterValue=$destinationVolumeName 
+  ParameterKey=DestinationVolumeName,ParameterValue=$destinationVolumeName \
+  ParameterKey=DestinationAggregate,ParameterValue=$destinationAggregate

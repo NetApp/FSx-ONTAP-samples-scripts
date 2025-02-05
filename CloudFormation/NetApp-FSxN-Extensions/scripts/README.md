@@ -15,3 +15,19 @@ There are also a couple scripts that can be used to help enable the NetApp FSxN 
 |deactivate_extensions | This script will deactivate all the NetApp FSxN CloudFormation extensions in the AWS account for a specific region.|
 |deploy_link | This script will use CloudFormation to deploy a Workload Factory Link.|
 |createClone.py | This is a Python script that will create a clone of a volume using boto to deploy a CloudFormation stack that creates a clone.|
+
+## Author Information
+
+This repository is maintained by the contributors listed on [GitHub](https://github.com/NetApp/FSx-ONTAP-samples-scripts/graphs/contributors).
+
+## License
+
+Licensed under the Apache License, Version 2.0 (the "License").
+
+You may obtain a copy of the License at [apache.org/licenses/LICENSE-2.0](http://www.apache.org/licenses/LICENSE-2.0).
+
+Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an _"AS IS"_ basis, without WARRANTIES or conditions of any kind, either express or implied.
+
+See the License for the specific language governing permissions and limitations under the License.
+
+© 2025 NetApp, Inc. All Rights Reserved.

@@ -2,7 +2,7 @@
 #
 ################################################################################
 # This script is used to deactivate all the NetApp FSxN CloudFormation
-# extensions.
+# custom resources and modules in a given region.
 ################################################################################
 #
 usage () {

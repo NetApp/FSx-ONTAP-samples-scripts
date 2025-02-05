@@ -1,9 +1,9 @@
 #!/bin/bash
 #
 ################################################################################
-# This script creates a FSx for ONtAP volume. It is depenent on
+# This script creates a FSx for ONTAP volume. It is depenent on
 # a CloudFormation template that uses the NetApp CloudFormation
-# extensions. The template is passed as an argument to the script.
+# custom resources. The template is passed as an argument to the script.
 ################################################################################
 
 ################################################################################
