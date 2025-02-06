@@ -56,7 +56,7 @@ Outputs:
 ```
 You can use the above template to create the role by running the following command:
 ```
-aws cloudformation create-stack --stack-name create_execution_role_for_NetApp_CF_extensions --template-body file://<path-to-template> --capabilities CAPABILITY_NAMED_IAM
+aws cloudformation create-stack --stack-name CreateExecutionRoleForNetAppCFextensions --template-body file://<path-to-template> --capabilities CAPABILITY_NAMED_IAM
 ```
 
 ### Step 2: Activate the Extensions
@@ -86,7 +86,8 @@ Where:
 - `<aws-region>` is the AWS region you want to activate the extensions in.
 - `<subnet-id>,<subnet-id>` are the subnet(s) you want to deploy the link in. No spaces between the subnet IDs.
 Only one is required, but is recommended to have at least two. These subnets must have access to the FSxN management endpoint.
-- `<security-group-id>,<security-group-id>` are the security group that will be attached to the Lambda Link function.
+- `<security-group-id>,<security-group-id>` are the security group(s) that will be attached to the Lambda Link function.
+The security groups must allow access to the FSxN management endpoint over port 443.
 No spaces between the security group IDs. Only one is required.
 - `<link_name>` is the name you want to give the link. It is also used as the name assigned to the link Lambda function.
 
