@@ -1,13 +1,11 @@
 variable "aws_region" {
   description = "The AWS region where you want the resources deployed."
   type        = string
-  default     = "us-west-2"
 }
 
 variable "aws_secrets_region" {
   description = "The AWS region where you want the FSxN and SVM secrets stored within AWS Secrets Manager."
   type        = string
-  default     = "us-west-2"
 }
 
 variable "fsx_name" {
@@ -62,13 +60,13 @@ variable "secure_ips" {
 
 variable "trident_version" {
   description = "The version of Astra Trident to 'add-on' to the EKS cluster."
-  default     = "v24.2.0-eksbuild.1"
+  default     = "v24.10.0-eksbuild.1"
   type        = string
 }
 
 variable "kubernetes_version" {
   description = "kubernetes version"
-  default     = 1.29
+  default     = 1.31
   type        = string
 }
 

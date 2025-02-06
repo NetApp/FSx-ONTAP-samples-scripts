@@ -1,0 +1,14 @@
+apiVersion: protect.trident.netapp.io/v1
+kind: BackupRestore
+metadata:
+  name: <APP RESTORE NAME>
+  namespace: <DESTINATION NAMESPACE>
+spec:
+  appArchivePath: <APP ARCHIVE PATH>
+  appVaultRef: <APP VAULT NAME>
+  namespaceMapping: 
+    - source: <SOURCE NAMESPACE>
+      destination: <DESTINATION NAMESPACE>
+  storageClassMapping:
+    - source: <SOURCE SC>
+      destination: <DESTINATION SC>

@@ -1,6 +1,6 @@
 module "eks" {
   source          = "terraform-aws-modules/eks/aws"
-  version         = "~> 20.0.0"
+  version         = "~> 20.33"
   cluster_name    = local.cluster_name
   cluster_version = var.kubernetes_version
   subnet_ids      = module.vpc.private_subnets
@@ -42,6 +42,12 @@ resource "random_id" "id" {
 #
 # Get access to the aws provider identity data to get account ID.
 data "aws_caller_identity" "current" {}
+#
+# Add pod-identity add-on to the EKS cluster.
+resource "aws_eks_addon" "pod_identity_agent" {
+  cluster_name = module.eks.cluster_name
+  addon_name   = "eks-pod-identity-agent"
+}
 #
 # Add Trident to the EKS cluster with a role that will allow it to read secrets
 # add manage the fsxn file system.
@@ -109,8 +115,16 @@ resource "aws_iam_role" "trident_role" {
         }
     ]
   })
+}
 
-  managed_policy_arns = [aws_iam_policy.trident_policy.arn]
+resource "aws_iam_role_policy_attachment" "trident_policy_attachment" {
+  role       = aws_iam_role.trident_role.name
+  policy_arn = aws_iam_policy.trident_policy.arn
+}
+
+resource "aws_iam_role_policy_attachments_exclusive" "trident_policy_attachment_exclusive" {
+  role_name   = aws_iam_role.trident_role.name
+  policy_arns = [aws_iam_policy.trident_policy.arn]
 }
 
 data "cloudinit_config" "cloudinit" {
@@ -119,6 +133,19 @@ data "cloudinit_config" "cloudinit" {
 
   part {
     content_type = "text/x-shellscript"
-    content      = file("scripts/iscsi.sh")
+    content      = <<EOT
+#!/bin/bash
+sudo yum install -y lsscsi iscsi-initiator-utils sg3_utils device-mapper-multipath
+rpm -q iscsi-initiator-utils
+sudo sed -i 's/^\(node.session.scan\).*/\1 = manual/' /etc/iscsi/iscsid.conf
+cat /etc/iscsi/initiatorname.iscsi
+sudo mpathconf --enable --with_multipathd y --find_multipaths n
+#
+# Blacklist any EBS volume since they don't support them!
+sed -i -e '/^blacklist {/,/^}/{/^}/i\    device {\n        vendor "NVME"\n        product "Amazon Elastic Block Store"\n    }\n' -e '}' /etc/multipath.conf
+sudo systemctl restart multipathd
+sudo systemctl enable --now iscsid multipathd
+sudo systemctl enable --now iscsi
+EOT
   }
 }

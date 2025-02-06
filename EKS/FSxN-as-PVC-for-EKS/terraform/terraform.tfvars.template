@@ -1,0 +1,5 @@
+aws_region="us-west-2"
+aws_secrets_region="us-west-2"
+fsx_name="eks-poc-fsx"
+key_pair_name="MUST REPLACE WITH YOUR KEY PAIR NAME"
+secure_ips=["0.0.0.0/0"]
