@@ -1,0 +1,61 @@
+Description: "Create an export policy for an FSx for ONTAP file system.."
+
+Parameters:
+  FileSystemId:
+    Description: "The File System ID."
+    Type: String
+
+  SecretArn:
+    Description: "The Secret ARN."
+    Type: String
+
+  SecretKey:
+    Description: "The key within the AWS secret that holds the password."
+    Default: "password"
+    Type: String
+
+  LinkArn:
+    Description: "The ARN to the Lambda link function."
+    Type: String
+
+  SvmName:
+    Description: "The SVM Name."
+    Type: String
+
+  PolicyName:
+    Description: "The Desired Export Policy Name."
+    Type: String
+
+  MatchCidr:
+    Description: "The IP CIDR to match."
+    Type: String
+
+  Protocols:
+    Description: "The protocols to allow."
+    Type: CommaDelimitedList
+
+Resources:
+  ExportPolicy:
+    Type: "NetApp::FSxN::ExportPolicy"
+
+    Properties:
+      FsxAdminPasswordSource:
+        Secret:
+          SecretArn: !Ref SecretArn
+          SecretKey: !Ref SecretKey
+      FileSystemId: !Ref FileSystemId
+      LinkArn: !Ref LinkArn
+      SVM:
+        Name: !Ref SvmName
+      Name: !Ref PolicyName
+      Rules:
+        - AllowSuid: true
+          Clients:
+            - Match: !Ref MatchCidr
+          Protocols: !Ref Protocols
+          RoRule:
+            - any
+          RwRule:
+            - any
+          Superuser:
+            - any

@@ -4,6 +4,7 @@ This subfolder contains samples that can help you create CloudFormation template
 | Tool | Description |
 | --- | --- |
 | [Deploy FSx for ONTAP](/CloudFormation/deploy-fsx-ontap) | This sample shows how to deploy an FSx for ONTAP cluster using CloudFormation. |
+| [NetApp CloudFormation Custom Resources Samples](/CloudFormation/NetApp-FSxN-Custom-Resources-Samples) | This folder has examples of using the NetApp FSxN custom resources to manage FSx for ONTAP file system. |
 
 ## Author Information
 

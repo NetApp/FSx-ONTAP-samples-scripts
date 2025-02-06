@@ -1,0 +1,54 @@
+#!/bin/bash
+#
+################################################################################
+# This script is used to deactivate all the NetApp FSxN CloudFormation
+# custom resources and modules in a given region.
+################################################################################
+#
+usage () {
+cat <<EOF
+Usage: $(basename $0) -r <region>
+  Where:
+    -r <region>  : AWS region to activate the extensions in.
+EOF
+}
+
+################################################################################
+# Main code start here.
+################################################################################
+while getopts "r:" opt; do
+  case $opt in
+    r) region="$OPTARG"
+    ;;
+    \?) usage
+        exit 1
+    ;;
+  esac
+done
+
+if [ -z "$region" ]; then
+  usage
+  exit 1
+fi
+
+aws cloudformation list-types --region $region --visibility PRIVATE --type MODULE --filters TypeNamePrefix="NetApp" --query 'TypeSummaries[*].TypeArn' --output text | tr '\t' '\n' | \
+  while read extensionArn; do
+    echo "Deactivating module: $extensionArn in region $region"
+    if aws cloudformation deactivate-type --region $region --type MODULE --arn $extensionArn > /dev/null; then
+      :
+    else
+      echo "Failed to activate extension: $extensionArn"
+      exit 1
+    fi
+done
+
+aws cloudformation list-types --region $region --visibility PRIVATE --type RESOURCE --filters TypeNamePrefix="NetApp" --query 'TypeSummaries[*].TypeArn' --output text | tr '\t' '\n' | \
+  while read extensionArn; do
+    echo "Deactivating resource: $extensionArn in region $region"
+    if aws cloudformation deactivate-type --region $region --type RESOURCE --arn $extensionArn > /dev/null; then
+      :
+    else
+      echo "Failed to set configuration for extension: $extensionArn"
+      exit 1
+    fi
+done

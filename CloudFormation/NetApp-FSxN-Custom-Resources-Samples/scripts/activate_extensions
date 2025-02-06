@@ -1,0 +1,78 @@
+#!/bin/bash
+#
+# This script is used to activate all the NetApp FSxN CloudFormation
+# custom resources.
+################################################################################
+#
+################################################################################
+################################################################################
+usage () {
+cat <<EOF
+Usage: $(basename $0) -r <region> -a <roleArn> -p <previewKey> [-e | -m]
+  Where:
+    -r <region>  : AWS region to activate the extensions in.
+    -a <roleArn> : The ARN of the role the extensions will assume. Not needed if activating just the modules.
+    -p <previewKey> : The preview key to use to autrhorize the extensions. Note needed if activating just the modules.
+    -e           : Activate just the resources.
+    -m           : Activate just the modules.
+EOF
+}
+
+################################################################################
+# Main code start here.
+################################################################################
+activateModules=true
+activateResources=true
+while getopts "r:a:p:em" opt; do
+  case $opt in
+    r) region="$OPTARG"
+    ;;
+    a) roleArn="$OPTARG"
+    ;;
+    p) previewKey="$OPTARG"
+    ;;
+    e) activateModules=false
+    ;;
+    m) activateResources=false
+    ;;
+    \?) usage
+        exit 1
+    ;;
+  esac
+done
+
+if [[ -z "$region" || (( -z "$roleArn" || -z "$previewKey" ) && "$activateResources" == true ) ]]; then
+  usage
+  exit 1
+fi
+
+if [ "$activateModules" == true ]; then
+  aws cloudformation list-types --region $region --visibility PUBLIC --type MODULE --filters Category=THIRD_PARTY,TypeNamePrefix="NetApp" --query 'TypeSummaries[*].TypeArn' --output text | tr '\t' '\n' | \
+    while read extension_arn; do
+      echo "Activating module: $extension_arn in region $region"
+      if aws cloudformation activate-type --region $region --type MODULE --public-type-arn $extension_arn > /dev/null; then
+        :
+      else
+        echo "Failed to activate extension: $extension_arn"
+        exit 1
+      fi
+  done
+fi
+
+if [ "$activateResources" == true ]; then
+  aws cloudformation list-types --region $region --visibility PUBLIC --type RESOURCE --filters Category=THIRD_PARTY,TypeNamePrefix="NetApp" --query 'TypeSummaries[*].TypeArn' --output text | tr '\t' '\n' | \
+    while read extensionPublicArn; do
+      echo "Activating resource: $extensionPublicArn in region $region"
+      extensionArn=$(aws cloudformation activate-type --region $region --type RESOURCE --public-type-arn $extensionPublicArn --execution-role-arn $roleArn --output text)
+      if [ $? -ne 0 -o -z "$extensionArn" ]; then
+        echo "Failed to activate extension: $extensionPublicArn"
+        exit 1
+      fi
+      if aws cloudformation set-type-configuration --region $region --type RESOURCE --type-arn $extensionArn --configuration-alias default --configuration "{\"PreviewKey\":\"$previewKey\"}" > /dev/null; then
+        :
+      else
+        echo "Failed to set configuration for extension: $extensionArn"
+        exit 1
+      fi
+  done
+fi

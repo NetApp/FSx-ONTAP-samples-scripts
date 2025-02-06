@@ -1,0 +1,148 @@
+Description: "Create a SM relationship between two volumes. Includes peering the clusters and vservers. It assumes the destination volume does not exist and will create it."
+
+Parameters:
+  SourceLinkArn:
+    Description: "The ARN to the Lambda link function."
+    Type: String
+
+  SourceSecretArn:
+    Description: "The Secret ARN that holds the source fsxadmin password."
+    Type: String
+
+  SourceSecretKey:
+    Description: "The key to use within the AWS secret that holds the faxadmin password."
+    Default: "password"
+    Type: String
+
+  SourceFileSystemId:
+    Description: "The File System ID of the source volume."
+    Type: String
+
+  SourceSvmName:
+    Description: "The SVM name that holds the source volume."
+    Type: String
+
+  SourceVolumeName:
+    Description: "The name of the source volume."
+    Type: String
+
+  DestinationLinkArn:
+    Description: "The ARN to the Lambda link function that manages the destination FSxN file system."
+    Type: String
+
+  DestinationSecretArn:
+    Description: "The Secret ARN that holds the destination fsxadmin password."
+    Type: String
+
+  DestinationSecretKey:
+    Description: "The key to use within the AWS secret that holds the destination fsxadmin password."
+    Default: "password"
+    Type: String
+
+  DestinationFileSystemId:
+    Description: "The File System ID of the destination file system."
+    Type: String
+
+  DestinationSvmName:
+    Description: "The name of the SVM that holds the destination volume."
+    Type: String
+
+  DestinationVolumeName:
+    Description: "The name of the destination volume."
+    Type: String
+
+  DestinationAggregate:
+    Description: "The aggregate to use when creating the destination volume."
+    Type: CommaDelimitedList
+    Default: "aggr1"
+
+  Policy:
+    Description: "The SnapMirror policy to use."
+    Type: String
+    Default: "MirrorAllSnapshots"
+
+  Reverse:
+    Description: "Reverse the relationship. Can be set to 'true' during an CloudFormation update to reverse the relationship."
+    Type: String
+    Default: "false"
+
+Resources:
+  SnapMirrorRelationship:
+    Type: "NetApp::FSxN::SnapMirror"
+
+    DependsOn: "SvmPeerRelations"
+    Properties:
+      FsxAdminPasswordSource:
+        Secret:
+          SecretArn: !Ref SourceSecretArn
+          SecretKey: !Ref SourceSecretKey
+      FileSystemId: !Ref SourceFileSystemId
+      LinkArn: !Ref SourceLinkArn
+
+      FsxnDestinationInfo:
+        FsxAdminPasswordSource:
+          Secret:
+            SecretArn: !Ref DestinationSecretArn
+            SecretKey: !Ref DestinationSecretKey
+        FileSystemId: !Ref DestinationFileSystemId
+        LinkArn: !Ref DestinationLinkArn
+
+      SnapMirrorSourceEndpoint:
+        SVM:
+          Name: !Ref SourceSvmName
+        Volume: !Ref SourceVolumeName
+
+      SnapMirrorEndpoint:
+        SVM:
+          Name: !Ref DestinationSvmName
+        Volume: !Ref DestinationVolumeName
+
+      SnapMirrorDestinationCreation:
+        Aggregates: !Ref DestinationAggregate
+
+      Policy: !Ref Policy
+      Reverse: !Ref Reverse
+
+  ClusterPeerRelations:
+    Type: "NetApp::FSxN::ClusterPeer"
+
+    Properties:
+      FsxAdminPasswordSource:
+        Secret:
+          SecretArn: !Ref SourceSecretArn
+          SecretKey: !Ref SourceSecretKey
+      FileSystemId: !Ref SourceFileSystemId
+      LinkArn: !Ref SourceLinkArn
+
+      FsxnDestinationInfo:
+        FsxAdminPasswordSource:
+          Secret:
+            SecretArn: !Ref DestinationSecretArn
+            SecretKey: !Ref DestinationSecretKey
+        FileSystemId: !Ref DestinationFileSystemId
+        LinkArn: !Ref DestinationLinkArn
+
+  SvmPeerRelations:
+    Type: "NetApp::FSxN::SvmPeer"
+
+    DependsOn: "ClusterPeerRelations"
+    Properties:
+      FsxAdminPasswordSource:
+        Secret:
+          SecretArn: !Ref SourceSecretArn
+          SecretKey: !Ref SourceSecretKey
+      FileSystemId: !Ref SourceFileSystemId
+      LinkArn: !Ref SourceLinkArn
+
+      FsxnDestinationInfo:
+        FsxAdminPasswordSource:
+          Secret:
+            SecretArn: !Ref DestinationSecretArn
+            SecretKey: !Ref DestinationSecretKey
+        FileSystemId: !Ref DestinationFileSystemId
+        LinkArn: !Ref DestinationLinkArn
+
+      PeerSvmName: !Ref DestinationSvmName
+      SVM:
+        Name: !Ref SourceSvmName
+      Applications: ["snapmirror"]
