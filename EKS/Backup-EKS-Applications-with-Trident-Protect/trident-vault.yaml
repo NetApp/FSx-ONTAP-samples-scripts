@@ -1,0 +1,20 @@
+apiVersion: protect.trident.netapp.io/v1
+kind: AppVault
+metadata:
+  name: <APP VAULT NAME>
+  namespace: trident-protect
+spec:
+  providerType: AWS
+  providerConfig:
+    s3:
+      bucketName: <APP VAULT BUCKET NAME>
+      endpoint: <S3 ENDPOINT>
+  providerCredentials:
+    accessKeyID:
+      valueFromSecret:
+        key: accessKeyID
+        name: s3
+    secretAccessKey:
+      valueFromSecret:
+        key: secretAccessKey
+        name: s3

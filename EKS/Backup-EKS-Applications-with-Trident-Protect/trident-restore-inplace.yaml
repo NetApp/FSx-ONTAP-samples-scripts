@@ -1,0 +1,8 @@
+apiVersion: protect.trident.netapp.io/v1
+kind: BackupInplaceRestore
+metadata:
+  name: <APP BACKUP RESTORE NAME>
+  namespace: <APP NAMESPACE>
+spec:
+  appArchivePath: <APP ARCHIVE PATH>
+  appVaultRef: <APP VAULT NAME>

@@ -1,0 +1,8 @@
+apiVersion: protect.trident.netapp.io/v1
+kind: Backup
+metadata:
+  namespace: <APP NAMESPACE>
+  name: <APP BACKUP NAME>
+spec:
+  applicationRef: <APP NAME> 
+  appVaultRef: <APP VAULT NAME>

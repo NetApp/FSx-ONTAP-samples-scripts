@@ -26,6 +26,8 @@ resource "aws_instance" "eks_jump_server" {
   user_data       = <<EOF
 #!/bin/bash
 #
+ARCH=amd64
+#
 # Get the system up to date:
 apt update
 apt upgrade -y
@@ -41,11 +43,17 @@ unzip -q awscliv2.zip
 rm -rf awscliv2.zip aws
 #
 # Install kubectl:
-curl -sLO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+curl -sLO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/$ARCH/kubectl"
 install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 #
 # Install helm:
 snap install helm --classic
+#
+# Install eksctl:
+PLATFORM=$(uname -s)_$ARCH
+curl -sLO "https://github.com/eksctl-io/eksctl/releases/latest/download/eksctl_$PLATFORM.tar.gz"
+tar -xzf eksctl_$PLATFORM.tar.gz -C /tmp && rm eksctl_$PLATFORM.tar.gz
+sudo mv /tmp/eksctl /usr/local/bin
 #
 # Install the eks samples repo into the ubuntu home directory:
 cd /home/ubuntu
