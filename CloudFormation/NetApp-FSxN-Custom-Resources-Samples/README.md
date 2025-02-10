@@ -91,7 +91,23 @@ The security groups must allow access to the FSxN management endpoint over port 
 No spaces between the security group IDs. Only one is required.
 - `<link_name>` is the name you want to give the link. It is also used as the name assigned to the link Lambda function.
 
-Once you have done this, you are ready to start using the examples in this repository.
+### Step 4: Create an AWS Secret Manager Secret
+All of the extensions use an AWS Secrets Manager secret to obtain the credentials needed to manage the FSx for ONTAP file system.
+The secret should be a JSON object with the one key. The key can be named anything, but the value should be of the form `"username:passwwrd"`.
+This allows you to use any username you want. If you want to use fsxadmin (the default admin for an FSx for ONTAP file system), then the value can be just that user's password.
+
+The following command can be used to create a secret:
+```
+aws secretsmanager create-secret --name <secret-name> --secret-string '{"<key-name>":"<username>:<password>"}'
+
+Where
+<secret-name> is the name you want to give the secret.
+<key-name> is the name of the key in the secret. It can be anything you want.
+<username> is the username you want to use to manage the FSx for ONTAP file system.
+<password> is the password for the username.
+```
+
+Once you have done the above steps you are ready to start using the examples in this repository.
 
 | File | Description |
 |------|-------------|
