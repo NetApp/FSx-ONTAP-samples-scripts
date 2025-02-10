@@ -99,14 +99,16 @@ This allows you to use any username you want. If you want to use fsxadmin (the d
 The following command can be used to create a secret:
 ```
 aws secretsmanager create-secret --name <secret-name> --secret-string '{"<key-name>":"<username>:<password>"}'
-
-Where
+```
+Where:
+```
 <secret-name> is the name you want to give the secret.
 <key-name> is the name of the key in the secret. It can be anything you want.
 <username> is the username you want to use to manage the FSx for ONTAP file system.
 <password> is the password for the username.
 ```
 
+## Sample CloudFormation Templates
 Once you have done the above steps you are ready to start using the examples in this repository.
 
 | File | Description |
