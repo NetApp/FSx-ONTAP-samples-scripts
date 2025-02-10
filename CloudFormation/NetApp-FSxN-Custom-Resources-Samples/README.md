@@ -93,7 +93,7 @@ No spaces between the security group IDs. Only one is required.
 
 ### Step 4: Create an AWS Secret Manager Secret
 All of the extensions use an AWS Secrets Manager secret to obtain the credentials needed to manage the FSx for ONTAP file system.
-The secret should be a JSON object with the one key. The key can be named anything, but the value should be of the form `"username:passwwrd"`.
+The secret should be a JSON object with the one key. The key can be named anything, but the value should be of the form `"username:password"`.
 This allows you to use any username you want. If you want to use fsxadmin (the default admin for an FSx for ONTAP file system), then the value can be just that user's password.
 
 The following command can be used to create a secret:
