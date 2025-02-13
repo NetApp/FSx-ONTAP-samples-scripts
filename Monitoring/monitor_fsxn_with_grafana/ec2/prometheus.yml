@@ -9,14 +9,14 @@ rule_files:
   - 'ems_alert_rules.yml'
 
 scrape_configs:
-- job_name: 'prometheus'
-  static_configs:
-  - targets: ['localhost:9090']
-- job_name: 'harvest'
-  file_sd_configs:
-    - files:
-      - 'harvest_targets*.yml'
-- job_name: yace
-  static_configs:
-    - targets:
-        - ['yace:8080']
+  - job_name: 'prometheus'
+    static_configs:
+    - targets: ['localhost:9090']
+  - job_name: 'harvest'
+    file_sd_configs:
+      - files:
+        - 'harvest_targets*.yml'
+  - job_name: yace
+    static_configs:
+      - targets:
+          - ['yace:8080']
