@@ -20,7 +20,7 @@ The template creates the following resources:
 4. Lambda Role - The IAM role that allows the Lambda function to run.
 5. Scheduler Role - The IAM role that allows the scheduler to trigger the Lambda function.
 6. SecretManager endpoint - The Lambda function runs inside a VPC, which by default lacks outgoing internet connectivity. To
-enable the function to securely access the fsxadmin passwords stored in AWS Secrets Manager, a VPC endpoint for the Secrets
+enable the function to securely access the fsx credentials stored in AWS Secrets Manager, a VPC endpoint for the Secrets
 Manager service is required. This endpoint allows the Lambda function to retrieve sensitive information from Secrets Manager
 without needing direct internet access, maintaining security while ensuring the function can access the necessary credentials.
 7. CloudWatch endpoint - The Lambda function runs inside a VPC, which by default lacks outgoing internet connectivity. To enable
@@ -64,13 +64,19 @@ function to send calls to FSxService to retrieve file systems information.
     * "scheduler:CreateSchedule"
     * "scheduler:DeleteSchedule"
     * "logs:PutRetentionPolicy"
-    * "secretsmanager:GetSecretValue" (on specific secert)
-2. Optional: create a secret in AWS Secrets Manager with key-value pairs of file system IDs and their corresponding fsxadmin 
-passwords. This secret is necessary for making direct ONTAP API calls to monitor resources, such as SnapMirror relations.
-Example secret structure:
+    * "secretsmanager:GetSecretValue" (on specific secret)
+2. Optional: create a secret in AWS Secrets Manager with key-value pairs of file system IDs and their corresponding credentials value.  
+Value can be provided in two formats. The first format is simply the password for the 'fsxadmin' user. The second format includes both the username and password, separated by a colon.
+This secret is necessary for making direct ONTAP API calls to monitor resources, such as SnapMirror relations.
+Examples secret structure:
 ```
     {
         "fs-111222333": "Password1",
+        "fs-444555666": "Password2"
+    }
+    or 
+    {
+        "fs-111222333": "myUserName:Password1",
         "fs-444555666": "Password2"
     }	
 ```
@@ -90,21 +96,42 @@ systems.
 4. Security Group IDs - The IDs of the Security Groups that will be associated with the Lambda function when it runs. These Security 
 Groups must allow connectivity to the file systems.
 5. Create FSx Service Endpoint - A boolean flag indicating whether you plan to create a FSxService VPC endpoint inside the VPC. Set 
-this to true if you want to create the endpoint, or false if you don't. The decision to create this endpoint depends on whether you already have this type of endpoint. If you already have one, set this to false; otherwise, set it to true.	
+this to true if you want to create the endpoint, or false if you don't. The decision to create this endpoint depends on whether you already have this type of endpoint in the subnet where the Lambda function is to run. If you already have one, set this to false; otherwise, set it to true.	
 6. Create Secret Manager Endpoint - A boolean flag indicating whether you plan to create a SecretManager VPC endpoint inside the 
-VPC. Set this to true if you want to create the endpoint, or false if you don't. The decision to create this endpoint depends on whether you already have this type of endpoint. If you already have one, set this to false; otherwise, set it to true.
+VPC. Set this to true if you want to create the endpoint, or false if you don't. The decision to create this endpoint depends on whether you already have this type of endpoint in the subnet where the Lambda function is to run. If you already have one, set this to false; otherwise, set it to true.
 7. Create CloudWatch Endpoint - A boolean flag indicating whether you plan to create a CloudWatch VPC endpoint inside the VPC. Set 
-this to true if you want to create the endpoint, or false if you don't. The decision to create this endpoint depends on whether you already have this type of endpoint. If you already have one, set this to false; otherwise, set it to true.
-8. Secret Manager FSx Admin Passwords ARN - Optional - The ARN of the AWS Secrets Manager secret containing the fsxadmin passwords.
+this to true if you want to create the endpoint, or false if you don't. The decision to create this endpoint depends on whether you already have this type of endpoint in the subnet where the Lambda function is to run. If you already have one, set this to false; otherwise, set it to true.
+8. Secret Manager FSx Admin Passwords ARN - Optional - The ARN of the AWS Secrets Manager secret containing the fsx credentials.
 This ARN is required for certain functionalities, such as snapmirror metrics collection. 
-If not provided, some features may not operate correctly. This secret should contain key-value pairs. 
-The key is the File System ID, and the value is the fsxadmin password. For example:
-```
-    {
-        "fs-111222333":"Password1",
-        "fs-444555666":"Password2"
-    }
-```
+If not provided, some features may not operate correctly. This secret should contain key-value pairs as described in Prerequisites section above.
+9. SNS Topic ARN for CloudWatch alarms - Optional - The ARN of the SNS topic to which CloudWatch alarms will be sent. If not provided, alarms will not be notified to any SNS topic.
+
+## Alarms Configuration
+The Lambda function is responsible for creating alarms based on the thresholds set via environment variables. These environment variables can be set from the AWS console, under the Configuration tab of the dashboard Lambda function. You can find the specific Lambda function by its name “FSxNDashboard-<CloudFormation-Stack-Name>.
+The following environment variables are used:
+    1. CLIENT_THROUGHPUT_ALARM_THRESHOLD: This sets the threshold for the client throughput alarm. The default value is "90", but this can be customized as needed. When the client throughput exceeds this value (expressed as a percentage), an alarm will be triggered.
+    1. DISK_PERFORMANCE_ALARM_THRESHOLD: This sets the threshold for the disk performance alarm. The default value is "90", but this can be customized as needed. When the disk performance exceeds this value (expressed as a percentage), an alarm will be triggered.
+    1. DISK_THROUGHPUT_UTILIZATION_ALARM_THRESHOLD: This sets the threshold for the disk throughput utilization alarm. The default value is "90", but this can be customized as needed. When disk throughput utilization exceeds this value (expressed as a percentage), an alarm will be triggered.
+    1. SNAPMIRROR_UNHEALTHY_ALARM_THRESHOLD: This sets the threshold for the SnapMirror unhealthy alarm. The default value is "0", but this can be customized as needed. When the number of unhealthy SnapMirror relationships exceeds this value, an alarm will be triggered.
+    1. STORAGE_CAPACITY_UTILIZATION_ALARM_THRESHOLD: This sets the threshold for the storage capacity utilization alarm. The default value is "80", but this can be customized as needed. When storage capacity utilization exceeds this value (expressed as a percentage), an alarm will be triggered.
+    1. VOLUME_STORAGE_CAPACITY_UTILIZATION_ALARM_THRESHOLD: This sets the threshold for the volume storage capacity utilization alarm. The default value is "80", but this can be customized as needed. When volume storage capacity utilization exceeds this value (expressed as a percentage), an alarm will be triggered.
+
+In addition to the environment variables, you can use tags on the FSx and volume resources to override default thresholds or skip alarm management for specific resources. If a threshold is set to 100, the alarm will not be created. Similarly, skip tag is set to true, the alarm will be skipped.
+
+The tag keys used for this purpose are:
+
+    1. client-throughput-alarm-threshold
+    1. skip-client-throughput-alarm
+    1. disk-performance-alarm-threshold
+    1. skip-disk-performance-alarm
+    1. disk-throughput-utilization-threshold
+    1. skip-disk-throughput-utilization-alarm
+    1. storage-capacity-utilization-alarm-threshold
+    1. skip-storage-capacity-utilization-alarm
+    1. volume-storage-capacity-utilization-alarm-threshold
+    1. skip-volume-storage-capacity-utilization-alarm
+    1. snapMirror-unhealthy-relations-alarm-threshold
+    1. skip-snapmirror-unhealthy-relations-alarm
 
 ## Important Disclaimer: CloudWatch Alarms Deletion
 Please note that when you delete the CloudFormation stack associated with this project, the CloudWatch Alarms created by the stack will not be automatically deleted. 
