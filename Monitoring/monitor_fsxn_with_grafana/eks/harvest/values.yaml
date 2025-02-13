@@ -19,16 +19,16 @@ promethues:
 
 fsxs:
   clusters:
-  - name: fsxtest01
-    managment_lif: 
-    promPort: 12990
-    secretName: 
-    region: 
-  - name: fsxtest02
-    managment_lif: 
-    promPort: 12990
-    secretName: 
-    region: 
+    - name: fsxtest01
+      managment_lif: 
+      promPort: 12990
+      secretName: 
+      region: 
+    - name: fsxtest02
+      managment_lif: 
+      promPort: 12990
+      secretName: 
+      region: 
 
 
 

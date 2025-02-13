@@ -16,5 +16,4 @@ rules:
   new-line-at-end-of-file: disable
 ignore:
   - '**/templates/**'
-  - '**/eks/harvest/values.yaml'
   - '**/cloudformation/fsx-ontap-harvest-grafana.yaml'
