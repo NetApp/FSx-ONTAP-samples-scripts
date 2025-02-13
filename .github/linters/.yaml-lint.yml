@@ -17,3 +17,4 @@ rules:
 ignore:
   - '**/templates/**'
   - '**/eks/harvest/values.yaml'
+  - '**/cloudformation/fsx-ontap-harvest-grafana.yaml'
