@@ -24,6 +24,22 @@
                     "Parameters": [
                         "PasswordsSecretArn"
                     ]
+                },
+                {
+                    "Label" : {
+                        "default": "Lambda Configuration"
+                    },
+                    "Parameters": [
+                        "SnsTopicArn"
+                    ]
+                },
+                {
+                    "Label": {
+                        "default": "Usage Data"
+                    },
+                    "Parameters": [
+                        "SendUsage"
+                    ]
                 }                
             ],
             "ParameterLabels": {
@@ -47,6 +63,12 @@
                 },
                 "PasswordsSecretArn": {
                     "default": "Secret Manager FSx admin passwords ARN - Optional"
+                },
+                "SnsTopicArn": {
+                    "default": "SNS Topic ARN for CloudWatch alarms - Optional"
+                },
+                "SendUsage": {
+                    "default": "Agree to Send Usage Data"
                 }                          
             }
         }
@@ -75,6 +97,12 @@
             "Description": "The ARN of the AWS Secrets Manager secret containing fsxadmin passwords for ONTAP file systems. The secret should be structured as key-value pairs, where keys are file system IDs and values are their corresponding passwords. These credentials are required for ONTAP API calls, enabling functions like SnapMirror relation monitoring. If not provided, certain monitoring capabilities may be limited.",
             "Default": ""
         },
+        "SnsTopicArn": {
+            "Type": "String",
+            "Description": "The ARN of the SNS topic to which CloudWatch alarms will be sent. If not provided, alarms will not be notified to any SNS topic.",
+            "AllowedPattern": "^(arn:aws:sns:[a-zA-Z0-9-]{1,50}:[0-9]{12}:[a-zA-Z0-9-_]{1,256}(\\.fifo)?)?$",
+            "ConstraintDescription": "Must be a valid SNS topic ARN."
+        },
         "CreateSecretManagerEndpoint": {
             "Type": "String",
             "AllowedValues": ["true", "false"],
@@ -86,6 +114,12 @@
             "AllowedValues": ["true", "false"],
             "Default": "false",
             "Description": "A boolean flag indicating whether you plan to create a CloudWatch VPC endpoint inside the VPC. Set this to true if you want to create the endpoint, or false if you don't. The decision to create this endpoint depends on whether you already have this type of endpoint. If you already have one, set this to false; otherwise, set it to true."
+        },
+        "SendUsage": {
+            "Type": "String",
+            "AllowedValues": ["true", "false"],
+            "Default": "false",
+            "Description": "This is a Boolean flag that indicates whether you agree to send usage data to NetApp. Set this to 'true' if you agree, or 'false' if you don't. Please note that we only collect data related to the usage of the CloudFormation template. No personal or identifiable information is collected or sent. Your consent helps us improve our product and provide better support by understanding how our templates are used."
         }               
     },
     "Conditions": {
@@ -124,9 +158,34 @@
                     ]
                 }
             ]
+        },
+        "NeedToSendUsage": {
+            "Fn::Equals": [
+                {
+                    "Ref": "SendUsage"
+                },
+                "true"
+            ]
         }
     },    
     "Resources": {
+        "SendDeploymentUsage": {
+            "Type": "Custom::ReportUsage",
+            "Condition": "NeedToSendUsage",
+            "Properties": {
+                "ServiceToken": {
+                    "Fn::Sub": [
+                        "arn:aws:lambda:${Region}:052582346341:function:reporting-monitoring-dashboard-usage",
+                        {
+                            "Region": {
+                                "Ref": "AWS::Region"
+                            }
+                        }
+                     ]
+                },
+                "Region": {"Ref": "AWS::Region"}
+            }
+        },
         "SecretManagerEndPoint": {
             "Type": "AWS::EC2::VPCEndpoint",
             "Condition": "NeedToCreateSSMEP",
@@ -224,6 +283,7 @@
                                         "cloudwatch:PutMetricData",
                                         "fsx:DescribeFileSystems",
                                         "fsx:DescribeVolumes",
+                                        "fsx:ListTagsForResource",
                                         "cloudwatch:DescribeAlarms",
                                         "cloudwatch:PutMetricAlarm"
                                     ],
@@ -303,7 +363,14 @@
                     "Variables": {
                         "NODE_TLS_REJECT_UNAUTHORIZED": "0",
                         "Version": "1.0.0",
-                        "Region": {"Ref": "AWS::Region"}
+                        "Region": {"Ref": "AWS::Region"},
+                        "SNS_ARN": {"Ref": "SnsTopicArn"},
+                        "CLIENT_THROUGHPUT_ALARM_THRESHOLD": "90",
+                        "DISK_PERFORMANCE_ALARM_THRESHOLD": "90",
+                        "DISK_THROUGHPUT_UTILIZATION_ALARM_THRESHOLD": "90",
+                        "SNAPMIRROR_UNHEALTHY_ALARM_THRESHOLD": "0",
+                        "STORAGE_CAPACITY_UTILIZATION_ALARM_THRESHOLD": "80",
+                        "VOLUME_STORAGE_CAPACITY_UTILIZATION_ALARM_THRESHOLD": "80"
                     }
                 }
             }
@@ -480,7 +547,15 @@
                             "label": "alarmState",
                             "defaultValue": "All",
                             "visible": false
-                        }                                                                                                    
+                        },
+                        {
+                            "type": "property",
+                            "property": "LunPath",
+                            "inputType": "input",
+                            "id": "LunPath",
+                            "label": "LunPath",
+                            "visible": false
+                        }                                                                                                                              
                     ],                    
                     "widgets": [
                         {
@@ -499,13 +574,13 @@
                                 "params": {
                                     "action": "showFsxOverview",
                                     "limitFsx": "topFsx",
-                                    "limitVolumes": "topVolumes",
                                     "FileSystemId": "",
                                     "FileSystemName": "",
                                     "VolumeId": "",
                                     "VolumeName": "",
                                     "alarmCategory": "All",
-                                    "alarmState": "All"
+                                    "alarmState": "All",
+                                    "LunPath": ""
                                 }
                             }
                         },
@@ -637,6 +712,31 @@
                         {
                             "height": 8,
                             "width": 8,
+                            "y": 12,
+                            "x": 16,
+                            "type": "metric",
+                            "properties": {
+                                "metrics": [
+                                    [ { "expression": "SELECT AVG(StorageUsed) FROM SCHEMA(\"AWS/FSx\", DataType,FileSystemId,StorageTier) WHERE StorageTier = 'SSD' GROUP BY FileSystemId ORDER BY AVG() DESC LIMIT topFsx", "label": "${LABEL}", "id": "q1", "region": {"Ref": "AWS::Region"}, "visible": false } ],
+                                    [ { "expression": "FLOOR(q1*9.313225746154785e-10)", "label": "", "id": "e1", "region": {"Ref": "AWS::Region"} } ]
+                                ],
+                                "yAxis": {
+                                    "left": {
+                                        "showUnits": false,
+                                        "label": "GiB"
+                                    }
+                                },
+                                "view": "timeSeries",
+                                "stacked": false,
+                                "region": {"Ref": "AWS::Region"},
+                                "stat": "Average",
+                                "period": 300,
+                                "title": "Top topFsx NetApp-FSx SSD Storage Used"
+                            }
+                        },                         
+                        {
+                            "height": 8,
+                            "width": 8,
                             "y": 20,
                             "x": 0,
                             "type": "metric",
@@ -684,6 +784,31 @@
                                 "title": "Top topFsx NetApp-FSx Disk Write Operations"
                             }
                         },
+                        {
+                            "height": 8,
+                            "width": 8,
+                            "y": 20,
+                            "x": 16,
+                            "type": "metric",
+                            "properties": {
+                                "metrics": [
+                                    [ { "expression": "SELECT AVG(StorageUsed) FROM SCHEMA(\"AWS/FSx\", DataType,FileSystemId,StorageTier) WHERE StorageTier = 'StandardCapacityPool' GROUP BY FileSystemId ORDER BY AVG() DESC LIMIT topFsx", "label": "${LABEL}", "id": "q1", "region": {"Ref": "AWS::Region"}, "visible": false } ],
+                                    [ { "expression": "FLOOR(q1*9.313225746154785e-10)", "label": "", "id": "e1", "region": {"Ref": "AWS::Region"} } ]
+                                ],
+                                "yAxis": {
+                                    "left": {
+                                        "showUnits": false,
+                                        "label": "GiB"
+                                    }
+                                },
+                                "view": "timeSeries",
+                                "stacked": false,
+                                "region": {"Ref": "AWS::Region"},
+                                "stat": "Average",
+                                "period": 300,
+                                "title": "Top topFsx NetApp-FSx Capacity Pool"
+                            }
+                        },                        
                         {
                             "height": 8,
                             "width": 8,
@@ -735,59 +860,9 @@
                             }
                         },
                         {
-                            "height": 8,
-                            "width": 8,
-                            "y": 12,
-                            "x": 16,
-                            "type": "metric",
-                            "properties": {
-                                "metrics": [
-                                    [ { "expression": "SELECT AVG(StorageUsed) FROM SCHEMA(\"AWS/FSx\", DataType,FileSystemId,StorageTier) WHERE StorageTier = 'SSD' GROUP BY FileSystemId ORDER BY AVG() DESC LIMIT topFsx", "label": "${LABEL}", "id": "q1", "region": {"Ref": "AWS::Region"}, "visible": false } ],
-                                    [ { "expression": "FLOOR(q1*9.313225746154785e-10)", "label": "", "id": "e1", "region": {"Ref": "AWS::Region"} } ]
-                                ],
-                                "yAxis": {
-                                    "left": {
-                                        "showUnits": false,
-                                        "label": "GiB"
-                                    }
-                                },
-                                "view": "timeSeries",
-                                "stacked": false,
-                                "region": {"Ref": "AWS::Region"},
-                                "stat": "Average",
-                                "period": 300,
-                                "title": "Top topFsx NetApp-FSx SSD Storage Used"
-                            }
-                        },                        
-                        {
-                            "height": 8,
-                            "width": 8,
-                            "y": 20,
-                            "x": 16,
-                            "type": "metric",
-                            "properties": {
-                                "metrics": [
-                                    [ { "expression": "SELECT AVG(StorageUsed) FROM SCHEMA(\"AWS/FSx\", DataType,FileSystemId,StorageTier) WHERE StorageTier = 'StandardCapacityPool' GROUP BY FileSystemId ORDER BY AVG() DESC LIMIT topFsx", "label": "${LABEL}", "id": "q1", "region": {"Ref": "AWS::Region"}, "visible": false } ],
-                                    [ { "expression": "FLOOR(q1*9.313225746154785e-10)", "label": "", "id": "e1", "region": {"Ref": "AWS::Region"} } ]
-                                ],
-                                "yAxis": {
-                                    "left": {
-                                        "showUnits": false,
-                                        "label": "GiB"
-                                    }
-                                },
-                                "view": "timeSeries",
-                                "stacked": false,
-                                "region": {"Ref": "AWS::Region"},
-                                "stat": "Average",
-                                "period": 300,
-                                "title": "Top topFsx NetApp-FSx Capacity Pool"
-                            }
-                        },
-                        {
                             "height": 6,
                             "width": 24,
-                            "y": 44,
+                            "y": 36,
                             "x": 0,
                             "type": "custom",
                             "properties": {
@@ -800,20 +875,20 @@
                                 "params": {
                                     "action": "showMetricsByFsx",
                                     "limitFsx": "topFsx",
-                                    "limitVolumes": "topVolumes",
                                     "FileSystemId": "",
                                     "FileSystemName": "",
                                     "VolumeId": "",
                                     "VolumeName": "",
                                     "alarmCategory": "All",
-                                    "alarmState": "All"                                    
+                                    "alarmState": "All",
+                                    "LunPath": ""                                    
                                 }
                             }
                         },
                         {
                             "type": "metric",
                             "x": 0,
-                            "y": 50,
+                            "y": 42,
                             "width": 8,
                             "height": 8,
                             "properties": {
@@ -843,7 +918,7 @@
                         {
                             "type": "metric",
                             "x": 8,
-                            "y": 50,
+                            "y": 42,
                             "width": 8,
                             "height": 8,
                             "properties": {
@@ -871,7 +946,7 @@
                         {
                             "type": "metric",
                             "x": 16,
-                            "y": 50,
+                            "y": 42,
                             "width": 8,
                             "height": 8,
                             "properties": {
@@ -899,7 +974,7 @@
                         {
                             "type": "metric",
                             "x": 0,
-                            "y": 58,
+                            "y": 50,
                             "width": 8,
                             "height": 8,
                             "properties": {
@@ -927,7 +1002,7 @@
                         {
                             "type": "metric",
                             "x": 8,
-                            "y": 58,
+                            "y": 50,
                             "width": 8,
                             "height": 8,
                             "properties": {
@@ -961,7 +1036,7 @@
                         {
                             "type": "metric",
                             "x": 16,
-                            "y": 58,
+                            "y": 50,
                             "width": 8,
                             "height": 8,
                             "properties": {
@@ -987,8 +1062,8 @@
                         {
                             "type": "metric",
                             "x": 0,
-                            "y": 66,
-                            "width": 5,
+                            "y": 58,
+                            "width": 8,
                             "height": 8,
                             "properties": {
                                 "metrics": [
@@ -1010,9 +1085,60 @@
                         },
                         {
                             "height": 8,
-                            "width": 19,
+                            "width": 8,
+                            "y": 58,
+                            "x": 8,
+                            "type": "metric",
+                            "properties": {
+                                "metrics": [
+                                    [ "AWS/FSx", "CapacityPoolWriteBytes", "FileSystemId", "\"\"", { "id": "write_bytes", "region": {"Ref": "AWS::Region"}, "stat": "Sum", "visible": false } ],
+                                    [ { "expression": "FLOOR((write_bytes/(1024*1024*1024))*100)/100", "id": "write_gib", "label": "Write data", "region": {"Ref": "AWS::Region"} } ],
+                                    [ "AWS/FSx", "CapacityPoolReadBytes", "FileSystemId", "\"\"", { "id": "read_bytes", "region": {"Ref": "AWS::Region"}, "stat": "Sum", "visible": false } ],
+                                    [ { "expression": "FLOOR((read_bytes/(1024*1024*1024))*100)/100", "id": "read_gib", "label": "Read data", "region": {"Ref": "AWS::Region"} } ]
+                                ],
+                                "title": "Capacity Pool Data",
+                                "view": "timeSeries",
+                                "period": 300,
+                                "stacked": false,
+                                "yAxis": {
+                                    "left": {
+                                        "showUnits": false,
+                                        "label": "GiB"
+                                    }
+                                },
+                                "region": {"Ref": "AWS::Region"}
+                            }
+                        },
+                        {
+                            "height": 8,
+                            "width": 8,
+                            "y": 58,
+                            "x": 16,
+                            "type": "metric",
+                            "properties": {
+                                "metrics": [
+                                    [ "AWS/FSx", "CapacityPoolWriteOperations", "FileSystemId", "\"\"", { "id": "write_operations", "region": {"Ref": "AWS::Region"}, "label": "Write operations" } ],
+                                    [ "AWS/FSx", "CapacityPoolReadOperations", "FileSystemId", "\"\"", { "id": "read_operations", "region": {"Ref": "AWS::Region"}, "label": "Read operations" } ]
+                                ],
+                                "title": "Capacity Pool Operations",
+                                "view": "timeSeries",
+                                "period": 300,
+                                "stacked": false,
+                                "stat": "Sum",
+                                "yAxis": {
+                                    "left": {
+                                        "showUnits": false,
+                                        "label": "Operations"
+                                    }
+                                },
+                                "region": {"Ref": "AWS::Region"}
+                            }
+                        },                                                
+                        {
+                            "height": 8,
+                            "width": 24,
                             "y": 66,
-                            "x": 5,
+                            "x": 0,
                             "type": "custom",
                             "properties": {
                                 "endpoint": { "Fn::Sub": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:FSxNDashboard-${AWS::StackName}"},
@@ -1023,11 +1149,10 @@
                                 },
                                 "params": {
                                     "action": "showSnapMirrorCommand",
-                                    "params": {
-                                        "FileSystemId": "",
-                                        "secretArn": {"Ref": "PasswordsSecretArn"},
-                                        "region": {"Ref": "AWS::Region"}
-                                    }
+                                    "FileSystemId": "",
+                                    "secretArn": {"Ref": "PasswordsSecretArn"},
+                                    "region": {"Ref": "AWS::Region"}
+                                    
                                 },
                                 "title": "SnapMirror Relationships"
                             }
@@ -1048,13 +1173,13 @@
                                 "params": {
                                     "action": "showMetricsByVolume",
                                     "limitFsx": "topFsx",
-                                    "limitVolumes": "topVolumes",
                                     "FileSystemId": "",
                                     "FileSystemName": "",
                                     "VolumeId": "",
                                     "VolumeName": "",
                                     "alarmCategory": "All",
-                                    "alarmState": "All"                                    
+                                    "alarmState": "All",
+                                    "LunPath": ""                                    
                                 }
                             }
                         },
@@ -1072,7 +1197,7 @@
                                 "yAxis": {
                                     "left": {
                                         "showUnits": false,
-                                        "label": "Precentage",
+                                        "label": "Percentage",
                                         "min": 0
                                     }
                                 },
@@ -1124,8 +1249,8 @@
                                 "metrics": [
                                     [ "AWS/FSx", "DataReadBytes", "VolumeId", "\"\"", "FileSystemId", "\"\"", { "region": {"Ref": "AWS::Region"}, "id": "m1", "label": "DataReadBytes", "visible": false } ],
                                     [ "AWS/FSx", "DataWriteBytes", "VolumeId", "\"\"", "FileSystemId", "\"\"", { "region": {"Ref": "AWS::Region"}, "id": "m2", "label": "DataWriteBytes", "visible": false } ],
-                                    [ { "expression": "FLOOR(m1/PERIOD(m1)/1024/1024*100)/100", "label": "DataReadBytes", "id": "e1", "region": {"Ref": "AWS::Region"} } ],
-                                    [ { "expression": "FLOOR(m2/PERIOD(m2)/1024/1024*100)/100", "label": "DataWriteBytes", "id": "e2", "region": {"Ref": "AWS::Region"} } ],
+                                    [ { "expression": "FLOOR(m1/PERIOD(m1)/1024/1024*100)/100", "label": "DataReadMiB", "id": "e1", "region": {"Ref": "AWS::Region"} } ],
+                                    [ { "expression": "FLOOR(m2/PERIOD(m2)/1024/1024*100)/100", "label": "DataWriteMiB", "id": "e2", "region": {"Ref": "AWS::Region"} } ],
                                     [ { "expression": "FLOOR(SUM(METRICS())/PERIOD(m1)/1024/1024*100)/100", "label": "Total Throughput", "id": "e3", "region": {"Ref": "AWS::Region"} } ]
                                 ],
                                 "yAxis": {
@@ -1143,11 +1268,147 @@
                             }
                         },
                         {
-                            "type": "custom",
-                            "x": 0,
-                            "y": 88,
+                            "height": 8,
                             "width": 24,
-                            "height": 13,
+                            "y": 88,
+                            "x": 0,
+                            "type": "metric",
+                            "properties": {
+                                "metrics": [
+                                    [ { "expression": "SELECT AVG(LUN_Throughput_Total) FROM \"Netapp::FSx::Lun\" WHERE FileSystemId = '${FileSystemId}' GROUP BY LunPath ORDER BY AVG() DESC LIMIT 5", "label": "${LABEL}", "id": "throughput_total_bps", "region": {"Ref": "AWS::Region"}, "period": 300, "visible": false } ],
+                                    [ { "expression": "FLOOR(throughput_total_bps/1024/1024*100)/100", "id": "throughput_total_MiB", "region": {"Ref": "AWS::Region"} } ]
+                                ],
+                                "yAxis": {
+                                    "left": {
+                                        "showUnits": false,
+                                        "label": "MiB per second"
+                                    }
+                                },
+                                "view": "timeSeries",
+                                "stacked": false,
+                                "region": {"Ref": "AWS::Region"},
+                                "period": 300,
+                                "title": "Top 5 LUNs Throughput Path"
+                            }
+                        },                        
+                        {
+                            "height": 8,
+                            "width": 12,
+                            "y": 96,
+                            "x": 0,
+                            "type": "custom",
+                            "properties": {
+                                "endpoint": { "Fn::Sub": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:FSxNDashboard-${AWS::StackName}"},
+                                "updateOn": {
+                                    "refresh": true,
+                                    "resize": true,
+                                    "timeRange": true
+                                },
+                                "params": {
+                                    "action": "showMetricsByLun",
+                                    "limitFsx": "topFsx",
+                                    "FileSystemId": "",
+                                    "FileSystemName": "",
+                                    "VolumeId": "",
+                                    "VolumeName": "",   
+                                    "alarmCategory": "All",
+                                    "alarmState": "All",
+                                    "secretArn": {"Ref": "PasswordsSecretArn"},
+                                    "region": {"Ref": "AWS::Region"},
+                                    "LunPath": ""                                 
+                                }
+                            }
+                        },
+                        {
+                            "height": 8,
+                            "width": 12,
+                            "y": 96,
+                            "x": 12,
+                            "type": "metric",
+                            "properties": {
+                                "metrics": [
+                                    [ "Netapp::FSx::Lun", "LUN_Throughput_Read", "LunPath", "\"\"", "FileSystemId", "\"\"", { "region": {"Ref": "AWS::Region"}, "id": "raw_read_bps", "visible": false, "label": "raw_read_metric" } ],
+                                    [ { "expression": "FLOOR(raw_read_bps/1024/1024*100)/100", "label": "Data_Read_MiB", "id": "read_metric_rounded", "region": {"Ref": "AWS::Region"} } ],
+                                    [ "Netapp::FSx::Lun", "LUN_Throughput_Write", "LunPath", "\"\"", "FileSystemId", "\"\"", { "region": {"Ref": "AWS::Region"}, "id": "raw_write_bps", "visible": false, "label": "raw_write_metric" } ],
+                                    [ { "expression": "FLOOR(raw_write_bps/1024/1024*100)/100", "label": "Data_Write_MiB", "id": "write_metric_rounded", "region": {"Ref": "AWS::Region"} } ],
+                                    [ "Netapp::FSx::Lun", "LUN_Throughput_Total", "LunPath", "\"\"", "FileSystemId", "\"\"", { "region": {"Ref": "AWS::Region"}, "id": "raw_total_bps", "visible": false, "label": "raw_total_metric" } ],
+                                    [ { "expression": "FLOOR(raw_total_bps/1024/1024*100)/100", "label": "Data_Total_MiB", "id": "total_metric_rounded", "region": {"Ref": "AWS::Region"} } ]
+                                ],
+                                "yAxis": {
+                                    "left": {
+                                        "showUnits": false,
+                                        "label": "MiB per second"
+                                    }
+                                },
+                                "view": "timeSeries",
+                                "stacked": false,
+                                "region": {"Ref": "AWS::Region"},
+                                "stat": "Average",
+                                "period": 300,
+                                "title": "LUN Throughput"
+                            }
+                        },
+                        {
+                            "height": 8,
+                            "width": 12,
+                            "y": 104,
+                            "x": 0,
+                            "type": "metric",
+                            "properties": {
+                                "metrics": [
+                                    [ "Netapp::FSx::Lun", "LUN_IOPS_Read", "LunPath", "\"\"", "FileSystemId", "\"\"", { "region": {"Ref": "AWS::Region"}, "id": "raw_read", "label": "Read_OPS" } ],
+                                    [ "Netapp::FSx::Lun", "LUN_IOPS_Write", "LunPath", "\"\"", "FileSystemId", "\"\"", { "region": {"Ref": "AWS::Region"}, "id": "raw_write", "label": "Write_OPS" } ],
+                                    [ "Netapp::FSx::Lun", "LUN_IOPS_Total", "LunPath", "\"\"", "FileSystemId", "\"\"", { "region": {"Ref": "AWS::Region"}, "id": "raw_total", "label": "Total_OPS" } ]
+                                ],
+                                "yAxis": {
+                                    "left": {
+                                        "showUnits": false,
+                                        "label": "Operations per second"
+                                    }
+                                },
+                                "view": "timeSeries",
+                                "stacked": false,
+                                "region": {"Ref": "AWS::Region"},
+                                "stat": "Average",
+                                "period": 300,
+                                "title": "LUN IOPS"
+                            }
+                        },
+                        {
+                            "height": 8,
+                            "width": 12,
+                            "y": 104,
+                            "x": 12,
+                            "type": "metric",
+                            "properties": {
+                                "metrics": [
+                                    [ "Netapp::FSx::Lun", "LUN_Latency_Read", "LunPath", "\"\"", "FileSystemId", "\"\"", { "region": {"Ref": "AWS::Region"}, "id": "raw_read_microseconds", "label": "Latency_Read_Microseconds", "visible": false } ],
+                                    [ ".", "LUN_Latency_Write", ".", ".", ".", ".", { "region": {"Ref": "AWS::Region"}, "id": "raw_write_microseconds", "label": "Latency_Write_Microseconds", "visible": false } ],
+                                    [ ".", "LUN_Latency_Total", ".", ".", ".", ".", { "region": {"Ref": "AWS::Region"}, "id": "raw_total_microseconds", "label": "Latency_Total_Microseconds", "visible": false } ],
+                                    [ { "expression": "FLOOR(raw_read_microseconds/1000*100)/100", "label": "Latency_Read", "id": "read_milliseconds_rounded", "region": {"Ref": "AWS::Region"} } ],
+                                    [ { "expression": "FLOOR(raw_write_microseconds/1000*100)/100", "label": "Latency_Write", "id": "write_milliseconds_rounded", "region": {"Ref": "AWS::Region"} } ],
+                                    [ { "expression": "FLOOR(raw_total_microseconds/1000*100)/100", "label": "Latency_Total", "id": "total_milliseconds_rounded", "region": {"Ref": "AWS::Region"} } ]
+                                ],
+                                "yAxis": {
+                                    "left": {
+                                        "showUnits": false,
+                                        "label": "Milliseconds"
+                                    }
+                                },
+                                "view": "timeSeries",
+                                "stacked": false,
+                                "region": {"Ref": "AWS::Region"},
+                                "stat": "Average",
+                                "period": 300,
+                                "title": "LUN Latency"
+                            }
+                        },                                                
+                        {
+                            "width": 24,                            
+                            "height": 20,
+                            "y": 112,
+                            "x": 0,
+                            "type": "custom",
                             "properties": {
                                 "endpoint": { "Fn::Sub": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:FSxNDashboard-${AWS::StackName}"},
                                 "updateOn": {
@@ -1158,17 +1419,16 @@
                                 "params": {
                                     "action": "showAlarms",
                                     "limitFsx": "topFsx",
-                                    "limitVolumes": "topVolumes",
                                     "FileSystemId": "",
                                     "FileSystemName": "",
                                     "VolumeId": "",
                                     "VolumeName": "",
                                     "alarmCategory": "All",
-                                    "alarmState": "All"
+                                    "alarmState": "All",
+                                    "LunPath": ""
                                 }
                             }
-                        }                                                                                                                        
-
+                        }
                     ]
                 }},
                 "DashboardName" : {"Fn::Join" : [ "-", [ "NetApp-FSx-Dashboard", {"Ref": "AWS::Region"}, {"Fn::Select": ["4", {"Fn::Split": ["-", {"Fn::Select": [2, {"Fn::Split": ["/", {"Ref": "AWS::StackId"}]}]}]}]}     ] ]}
