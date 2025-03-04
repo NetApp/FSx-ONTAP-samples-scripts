@@ -26,7 +26,7 @@ aws secretsmanager create-secret --name <YOUR-SECRET-NAME> --secret-string '{"us
 
 ### 2. Create Instance Profile with Permission to AWS Secret Manager and CloudWatch metrics
 
-#### 2.1. Create Policy with Permissions to AWS Secret Manager
+#### 2.1. Create Policy
 
 Edit the harvest-policy.json file found in this repo with the ARN of the AWS Secret Manager secrets created above.
 If you only have one FSxN and therefore only one secret, remove the comma after the one secret ARN (i.e. the last
@@ -73,13 +73,16 @@ entry should not have a comma after it).
   ],
   "Version": "2012-10-17"
 }
+```
 
+Run the following command to create the policy and obtain the policy ARN:
 ```sh
 POLICY_ARN=$(aws iam create-policy --policy-name harvest-policy --policy-document file://harvest-policy.json --query Policy.Arn --output text)
 ```
 
 #### 2.2. Create Instance Profile Role
 
+Run the following commands to create the instance profile role and attach the policy to it:
 ```sh
 aws iam create-role --role-name HarvestRole --assume-role-policy-document file://trust-policy.json
 aws iam attach-role-policy --role-name HarvestRole --policy-arn $POLICY_ARN
@@ -91,7 +94,7 @@ Note that the `trust-policy.json` file can be found in this repo.
 
 ### 3. Create EC2 Instance
 
-We recommend using a `t2.xlarge` or larger instance type with 20GB disk.
+We recommend using a `t2.xlarge` or larger instance type with at least 20GB disk.
 
 Once you have created your ec2 instance, you can use the following command to attach the instance profile:
 
@@ -148,7 +151,7 @@ Preform the following steps to install Harvest on your EC2 instance:
 
 #### 5.1. Generate Harvest Configuration File
 
-Modify the `harvest.yml` found in this repo with your clusters details. You mostly should just have to change the `<FSxN_ip_X>` to the IP of your FSxN.
+Modify the `harvest.yml` found in this repo with your clusters details. You should just have to change the `<FSxN_ip_X>` with the IP addresses of your FSxNs.
 Add as many pollers as you need to monitor all your FSxNs. There should be an AWS Secrets Manager secret for each FSxN.
 
 ```yaml
@@ -303,7 +306,7 @@ Copy the following to the end of the `harvest-compose.yml` file:
 
 ##### 5.6.3. Add Yet-Another-Exporter target to prometheus.yml:
 ```yaml
-sudo sed -i -e "\$a\- job_name: 'yace'" -e '$a\  static_configs:' -e "\$a\    - targets: ['yace:8080']" container/prometheus/prometheus.yml
+sudo sed -i -e "\$a\- job_name: 'yace'" -e "\$a\  static_configs:" -e "\$a\    - targets: ['yace:8080']" container/prometheus/prometheus.yml
 ```
 
 ##### 6. Bring Everything Up
