@@ -1,0 +1,25 @@
+apiVersion: v1alpha1
+sts-region: <aws_region>
+discovery:
+  jobs:
+    - type: AWS/FSx
+      regions: [<aws_region>]
+      period: 300
+      length: 300
+      metrics:
+        - name: DiskReadOperations
+          statistics: [Sum]
+        - name: DiskWriteOperations
+          statistics: [Sum]
+        - name: DiskReadBytes
+          statistics: [Sum]
+        - name: DiskWriteBytes
+          statistics: [Sum]
+        - name: DiskIopsUtilization
+          statistics: [Average]
+        - name: NetworkThroughputUtilization
+          statistics: [Average]
+        - name: FileServerDiskThroughputUtilization
+          statistics: [Average]
+        - name: CPUUtilization
+          statistics: [Average]

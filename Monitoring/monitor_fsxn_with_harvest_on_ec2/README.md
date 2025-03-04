@@ -1,6 +1,6 @@
 # Deploy NetApp Harvest on EC2
 
-Harvest installation for monitoring Amazon FSxN using Promethues and Grafana stack, integrating AWS Secret Manager for FSxN credentials.
+Harvest installation for monitoring Amazon FSxN using Prometheus and Grafana stack, integrating AWS Secret Manager for FSxN credentials.
 
 ## Introduction
 
@@ -11,22 +11,68 @@ Harvest installation will result in the following:
 * Collecting metrics about your FSxNs and adding existing Grafana dashboards for better visualization.
 
 ### Prerequisites
-* A FSx for ONTAP running in the same VPC.
-* If not running an AWS based Linux, ensure that the `aws` command has been instealled and configured.
+* A FSx for ONTAP file system running in the same VPC as the EC2 instance.
+* If not running an AWS based Linux, ensure that the `aws` command has been installed and configured.
 
 ## Installation Steps
 
 ### 1. Create AWS Secret Manager with Username and Password for each FSxN
+Since this solution uses an AWS Secrets Manager secret to authenticate with the FSx for ONTAP file system
+you will need to create a secret for each FSxN you want to monitor. You can use the following command to create a secret:
 
 ```sh
 aws secretsmanager create-secret --name <YOUR-SECRET-NAME> --secret-string '{"username":"fsxadmin","password":"<YOUR-PASSWORD>"}'
 ```
 
-### 2. Create Instance Profile with Permission to AWS Secret Manager and cloudwatch metrics
+### 2. Create Instance Profile with Permission to AWS Secret Manager and CloudWatch metrics
 
 #### 2.1. Create Policy with Permissions to AWS Secret Manager
 
-Edit the harvest-policy.json file found in this repo with the ARN of the AWS Secret Manager secret created above.
+Edit the harvest-policy.json file found in this repo with the ARN of the AWS Secret Manager secrets created above.
+If you only have one FSxN and therefore only one secret, remove the comma after the one secret ARN (i.e. the last
+entry should not have a comma after it).
+
+```
+{
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:DescribeSecret",
+        "secretsmanager:ListSecrets"
+      ],
+      "Resource": [
+        "<your_secret_1_arn>",
+        "<your_secret_2_arn>"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "tag:GetResources",
+        "cloudwatch:GetMetricData",
+        "cloudwatch:GetMetricStatistics",
+        "cloudwatch:ListMetrics",
+        "apigateway:GET",
+        "aps:ListWorkspaces",
+        "autoscaling:DescribeAutoScalingGroups",
+        "dms:DescribeReplicationInstances",
+        "dms:DescribeReplicationTasks",
+        "ec2:DescribeTransitGatewayAttachments",
+        "ec2:DescribeSpotFleetRequests",
+        "shield:ListProtections",
+        "storagegateway:ListGateways",
+        "storagegateway:ListTagsForResource",
+        "iam:ListAccountAliases"
+      ],
+      "Resource": [
+        "*"
+      ]
+    }
+  ],
+  "Version": "2012-10-17"
+}
 
 ```sh
 POLICY_ARN=$(aws iam create-policy --policy-name harvest-policy --policy-document file://harvest-policy.json --query Policy.Arn --output text)
@@ -45,20 +91,20 @@ Note that the `trust-policy.json` file can be found in this repo.
 
 ### 3. Create EC2 Instance
 
-We recommend using a `t2.xlarge` instance type with 20GB disk and attaching the instance profile.
+We recommend using a `t2.xlarge` or larger instance type with 20GB disk.
 
-If you already have an ec2 instance, you can use the following command to attach the instance profile:
+Once you have created your ec2 instance, you can use the following command to attach the instance profile:
 
 ```sh
 aws ec2 associate-iam-instance-profile --instance-id <INSTANCE-ID> --iam-instance-profile Arn=<Instance-Profile-ARN>,Name=HarvestProfile
 ```
 You should get the instance profile ARN from step 2.2 above.
 
-If your exiting ec2 instance already had an instance profile, then simply add the policy create in step 2.2 above.
+If your exiting ec2 instance already had an instance profile, then simply add the policy create in step 2.2 above to its instance profile role.
 
 ### 4. Install Docker and Docker Compose
 
-Use the following commands if you are running an Red Hat based Linux:
+To install Docker use the following commands if you are running an Red Hat based Linux:
 ```sh
 sudo yum install docker
 sudo curl -L https://download.docker.com/linux/centos/7/x86_64/stable/Packages/docker-compose-plugin-2.6.0-3.el7.x86_64.rpm -o ./compose-plugin.rpm
@@ -75,12 +121,6 @@ sudo docker run hello-world
 
 You should get output similar to the following:
 ```
-Unable to find image 'hello-world:latest' locally
-latest: Pulling from library/hello-world
-e6590344b1a5: Pull complete
-Digest: sha256:bfbb0cc14f13f9ed1ae86abc2b9f11181dc50d779807ed3a3c5e55a6936dbdd5
-Status: Downloaded newer image for hello-world:latest
-
 Hello from Docker!
 This message shows that your installation appears to be working correctly.
 
@@ -104,11 +144,12 @@ For more examples and ideas, visit:
 ```
 ### 5. Install Harvest on EC2
 
-To install Harvest on your EC2 instance following the following steps:
+Preform the following steps to install Harvest on your EC2 instance:
 
 #### 5.1. Generate Harvest Configuration File
 
-Create `harvest.yml` file with your cluster details, below is an example with annotated comments. Modify as needed for your scenario:
+Modify the `harvest.yml` found in this repo with your clusters details. You mostly should just have to change the `<FSxN_ip_X>` to the IP of your FSxN.
+Add as many pollers as you need to monitor all your FSxNs. There should be an AWS Secrets Manager secret for each FSxN.
 
 ```yaml
 Exporters:
@@ -162,11 +203,11 @@ docker run --rm \
   --output harvest-compose.yml
 ```
 
-:warning:**NOTE** Ignore the command that it outputs used to start Harvest.
+:warning: Ignore the command that it outputs that it says will start the cluster.
 
 #### 5.3. Replace Harvest images in the harvest-compose.yml:
 
-Replace the Harvest image that supports using AWS Secret Manager for FSxN credentials:
+Replace the Harvest image with one that supports using AWS Secret Manager for FSxN credentials:
 
 ```yaml
 sed -i 's|ghcr.io/netapp/harvest:latest|ghcr.io/tlvdevops/harvest-fsx:latest|g' harvest-compose.yml
@@ -174,8 +215,10 @@ sed -i 's|ghcr.io/netapp/harvest:latest|ghcr.io/tlvdevops/harvest-fsx:latest|g' 
 
 #### 5.4. Add AWS Secret Manager Names to Docker Compose Environment Variables
 
-`SECRET_NAME` and `AWS_REGION` are required for the credentials script.
+Edit the `harvest-compose.yml` file by adding the "environment" section for each FSxN with the two variables: `SECRET_NAME` and `AWS_REGION`.
+These environment variables are required for the credentials script.
 
+For example:
 ```yaml
 services:
   fsx01:
@@ -209,33 +252,33 @@ AWS has useful metrics regarding the FSxN file system that ONTAP doesn't provide
 an exporter that will expose these metrics. The following steps show how to install a recommended exporter.
 
 ##### 5.6.1 Create the yace configuration file.
-Use the text in the box below to create the configuration file named `yace-config.yaml`. Replace `<your_region>`, in both places, with the region where your FSxN resides:
-
+Edit the `yace-config.yaml` file found in this repo and replace `<aws_region>`, in both places, with the region where your FSxN resides:
 ```yaml
 apiVersion: v1alpha1
-sts-region: <your_region>
+sts-region: <aws_region>
 discovery:
   jobs:
     - type: AWS/FSx
-      regions: [<your_region>]
+      regions: [<aws_region>]
       period: 300
       length: 300
       metrics:
         - name: DiskReadOperations
-          statistics: [Average]
+          statistics: [Sum]
         - name: DiskWriteOperations
-          statistics: [Average]
+          statistics: [Sum]
         - name: DiskReadBytes
-          statistics: [Average]
+          statistics: [Sum]
         - name: DiskWriteBytes
-          statistics: [Average]
+          statistics: [Sum]
         - name: DiskIopsUtilization
           statistics: [Average]
         - name: NetworkThroughputUtilization
           statistics: [Average]
         - name: FileServerDiskThroughputUtilization
           statistics: [Average]
-
+        - name: CPUUtilization
+          statistics: [Average]
 ```
 
 ##### 5.6.2 Add Yet-Another-Exporter to harvest-compose.yaml
