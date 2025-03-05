@@ -1,4 +1,4 @@
-# Harvest, Grafana plus Prometheus Deployment using AWS CloudFormation
+# Harvest/Grafana Deployment using AWS CloudFormation
 This guide provides instructions on how to deploy a Harvest + Grafana + Prometheus stack
 to monitor your Amazon FSx for NetApp ONTAP resources. It also includes
 the Yet Another CloudWatch Exporter (YACE) to collect the AWS FSx for ONTAP CloudWatch metrics.
@@ -43,7 +43,7 @@ This deployment includes:
      - **SecurityGroup**: Ensure inbound ports 22, 3000 and 9090 are open.
      - **SubnetType**: Choose `public` or `private`. `Public` will allocated a public IP address to the EC2 instance.
      - **Subnet**: Specify a subnet that will have connectivity to all the FSxN file systems you plan to monitor over TCP port 433.
-     - **InstanceAmiId**: Select a Red Hat based Linux distrubution (e.g. AWS Linux). The default is the latest AWS Linux 2 distribution.
+     - **InstanceAmiId**: Specify the Amazon Linux 2 AMI ID for the EC2 instance. The default is the latest version.
      - **FSxEndPoint**: Specify the management endpoint IP address of your FSx file system.
      - **SecretName**: Specify the AWS Secrets Manager secret name containing the password for the `fsxadmin` user.
 
@@ -154,7 +154,8 @@ To monitor additional FSxN resources, follow these steps:
 	 ``` 
   - Bring down the Docker Compose stack:
      ```bash
-     docker compose -f prom-stack.yml -f harvest-compose.yml down     ```
+     docker compose -f prom-stack.yml -f harvest-compose.yml down
+     ```
    - Bring the Docker Compose stack back up:
      ```bash
      docker compose -f prom-stack.yml -f harvest-compose.yml up -d --remove-orphans
@@ -162,10 +163,6 @@ To monitor additional FSxN resources, follow these steps:
 
 ---
 
-Feel free to adjust the placeholders (`<FSxN_ip_2>`, `<your_secret_2>`, `<your_region>`, `<container_name>`, `<container-port>`) with your specific details.
 ## Additional Information
-
-
 ---
-
-[1](https://github.com/prometheus-community/yet-another-cloudwatch-exporter): [Yet Another CloudWatch Exporter on GitHub](https://github.com/prometheus-community/yet-another-cloudwatch-exporter)
+[Yet Another CloudWatch Exporter on GitHub](https://github.com/prometheus-community/yet-another-cloudwatch-exporter)
