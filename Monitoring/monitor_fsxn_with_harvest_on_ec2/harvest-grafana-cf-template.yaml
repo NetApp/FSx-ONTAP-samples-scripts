@@ -40,37 +40,19 @@
     InstanceType:
       Description: Select the instance type. Recommended config for every 10 file system's (CPU - 2 cores, Memory - 1GB)
       AllowedValues:
-      - t3.small
-      - t3.medium
-      - t3.large
-      - t3.xlarge
-      - t3.2xlarge
-      - m5.large
-      - m5.xlarge
-      - m5.2xlarge
-      - m5.4xlarge
-      - m5n.large
-      - m5n.xlarge
-      - m5n.2xlarge
-      - m5n.4xlarge
-      - c5.large
-      - c5.xlarge
-      - c5.2xlarge
-      - c5.4xlarge
-      - c5.9xlarge
-      - c5.12xlarge
-      - c5.18xlarge
-      - c5n.xlarge
-      - c5n.2xlarge
-      - c5n.4xlarge
-      - r5n.large
-      - r5n.xlarge
-      - r5n.2xlarge
-      - r5n.4xlarge
+        - t3.medium
+        - t3.large
+        - t3.xlarge
+        - t3.2xlarge
+        - m5n.large
+        - m5n.xlarge
+        - m5n.2xlarge
+        - m5n.4xlarge
       Default: t3.medium
       Type: String
 
     KeyPair:
+      Description: Name of an existing EC2 KeyPair to enable SSH access to the instance.
       Type: AWS::EC2::KeyPair::KeyName
 
     SecurityGroup:
@@ -81,12 +63,12 @@
       Description: Choose between public or private. Public means that an Public facing IP address will be assigned to the instance.
       Type: String
       AllowedValues:
-      - public
-      - private
+        - public
+        - private
 
     Subnet:
-      Type: AWS::EC2::Subnet::Id
       Description: Subnet ID. Specify the same subnet as your Amazon FSx for NetApp ONTAP file system's preferred subnet.
+      Type: AWS::EC2::Subnet::Id
 
     LatestLinuxAmiId:
       Description: 'Instance ID. Defaults to the latest Amazon Linux 2 AMI ID.'
