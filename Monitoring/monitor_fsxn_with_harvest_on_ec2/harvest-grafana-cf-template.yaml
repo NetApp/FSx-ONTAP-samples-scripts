@@ -282,9 +282,9 @@ Outputs:
   PublicURL:
     Condition: CreatePublicIP
     Description: Use below Public IP URL to connect to the Grafana endpoint
-    Value: !Join [ "", ["http://",!GetAtt Instance.PublicIp,":3000" ]]
+    Value: !Join [ "", ["http://", !GetAtt Instance.PublicIp, ":3000" ]]
 
   PrivateURL:
     Condition: CreatePrivateIP
     Description: Use below Private IP URL to connect to the Grafana endpoint
-    Value: !Join [ "", ["http://",!GetAtt Instance.PrivateIp,":3000" ]]
+    Value: !Join [ "", ["http://", !GetAtt Instance.PrivateIp, ":3000" ]]
