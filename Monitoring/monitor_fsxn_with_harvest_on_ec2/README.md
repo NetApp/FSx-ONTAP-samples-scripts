@@ -1,325 +1,171 @@
-# Deploy NetApp Harvest on EC2
+# Harvest, Grafana plus Prometheus Deployment using AWS CloudFormation
+This guide provides instructions on how to deploy a Harvest + Grafana + Prometheus stack
+to monitor your Amazon FSx for NetApp ONTAP resources. It also includes
+the Yet Another CloudWatch Exporter (YACE) to collect the AWS FSx for ONTAP CloudWatch metrics.
 
-Harvest installation for monitoring Amazon FSxN using Prometheus and Grafana stack, integrating AWS Secret Manager for FSxN credentials.
+## Yet Another CloudWatch Exporter (YACE)
+YACE, or Yet Another CloudWatch Exporter, is a Prometheus exporter for AWS CloudWatch metrics. It is written in
+Go and uses the official AWS SDK. YACE supports auto-discovery of resources via tags, structured logging,
+filtering monitored resources via regex, and more. You can read more about YACE capabilities from its
+[Documentation](https://github.com/prometheus-community/yet-another-cloudwatch-exporter).
 
-## Introduction
+## Prerequisites
+The only prerequisite is an FSx for ONTAP file system running in your AWS account.
 
-### What to Expect
+## Overview
 
-Harvest installation will result in the following:
-* Install NetApp Harvest with the latest version on your EC2 instance.
-* Collecting metrics about your FSxNs and adding existing Grafana dashboards for better visualization.
+There are two methods to deploy this solution, either via the AWS CloudFormation template or manually.
+The steps below are geared towrad the CloudFormation deployment method. If you want to deploy manually,
+please refer to these [instructions](README-Manual.md).
 
-### Prerequisites
-* A FSx for ONTAP file system running in the same VPC as the EC2 instance.
-* If not running an AWS based Linux, ensure that the `aws` command has been installed and configured.
+This deployment includes:
+- **Harvest**: Collects ONTAP metrics.
+- **Yet Another CloudWatch Exporter (YACE)**: Collects FSxN CloudWatch metrics.
+- **Prometheus**: Stores the metrics.
+- **Grafana**: Visualizes the metrics.
 
-## Installation Steps
+## Deployment Steps
 
-### 1. Create AWS Secret Manager with Username and Password for each FSxN
-Since this solution uses an AWS Secrets Manager secret to authenticate with the FSx for ONTAP file system
-you will need to create a secret for each FSxN you want to monitor. You can use the following command to create a secret:
+1. **Download the AWS CloudFormation Template file**
+   - Download the `harvest-grafana-cf-template.yaml` file from this repo.
 
-```sh
-aws secretsmanager create-secret --name <YOUR-SECRET-NAME> --secret-string '{"username":"fsxadmin","password":"<YOUR-PASSWORD>"}'
-```
+2. **Create the Stack**
+   - Open the AWS console and to the CloudFormation service page.
+   - Choose **Create stack** and select **With new resources**, 
+   - Select **Choose an existing template** and **Upload a template file** 
+   - Upload the `harvest-grafana-cf-template.yaml` file.
+   - Click **Next**
 
-### 2. Create Instance Profile with Permission to AWS Secret Manager and CloudWatch metrics
+3. **Specify Stack Details**
+   - **Parameters**: Review and modify the parameters as needed for your file system. The default values are:
+     - **InstanceType**: Select the instance type to run the Harvest+Grafana+Prometheus stack. You should allocate at least 2 vCPUs and 1GB of RAM for every 10 FSxN file systems you plan to monitor. The default is `t3.medium`.
+     - **KeyPair**: Specify the key pair to access the EC2 instance.
+     - **SecurityGroup**: Ensure inbound ports 22, 3000 and 9090 are open.
+     - **SubnetType**: Choose `public` or `private`. `Public` will allocated a public IP address to the EC2 instance.
+     - **Subnet**: Specify a subnet that will have connectivity to all the FSxN file systems you plan to monitor over TCP port 433.
+     - **InstanceAmiId**: Select a Red Hat based Linux distrubution (e.g. AWS Linux). The default is the latest AWS Linux 2 distribution.
+     - **FSxEndPoint**: Specify the management endpoint IP address of your FSx file system.
+     - **SecretName**: Specify the AWS Secrets Manager secret name containing the password for the `fsxadmin` user.
 
-#### 2.1. Create Policy
+4. **Configure Stack Options**
+   - Click **Next** for stack options.
 
-Edit the harvest-policy.json file found in this repo with the ARN of the AWS Secret Manager secrets created above.
-If you only have one FSxN and therefore only one secret, remove the comma after the one secret ARN (i.e. the last
-entry should not have a comma after it).
+5. **Review and Create**
+   - Review the stack details and confirm the settings.
+   - Select the check box to acknowledge that the template creates IAM resources.
+   - Choose **Create stack**.
 
-```
-{
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "secretsmanager:GetSecretValue",
-        "secretsmanager:DescribeSecret",
-        "secretsmanager:ListSecrets"
-      ],
-      "Resource": [
-        "<your_secret_1_arn>",
-        "<your_secret_2_arn>"
-      ]
-    },
-    {
-      "Effect": "Allow",
-      "Action": [
-        "tag:GetResources",
-        "cloudwatch:GetMetricData",
-        "cloudwatch:GetMetricStatistics",
-        "cloudwatch:ListMetrics",
-        "apigateway:GET",
-        "aps:ListWorkspaces",
-        "autoscaling:DescribeAutoScalingGroups",
-        "dms:DescribeReplicationInstances",
-        "dms:DescribeReplicationTasks",
-        "ec2:DescribeTransitGatewayAttachments",
-        "ec2:DescribeSpotFleetRequests",
-        "shield:ListProtections",
-        "storagegateway:ListGateways",
-        "storagegateway:ListTagsForResource",
-        "iam:ListAccountAliases"
-      ],
-      "Resource": [
-        "*"
-      ]
-    }
-  ],
-  "Version": "2012-10-17"
-}
-```
+6. **Monitor Stack Creation**
+   - Monitor the status of the stack in the AWS CloudFormation console. The status should change to `CREATE_COMPLETE` in about five minutes.
 
-Run the following command to create the policy and obtain the policy ARN:
-```sh
-POLICY_ARN=$(aws iam create-policy --policy-name harvest-policy --policy-document file://harvest-policy.json --query Policy.Arn --output text)
-```
+## Accessing Grafana
 
-#### 2.2. Create Instance Profile Role
+- After the deployment is complete, log in to the Grafana dashboard using your browser:
+  - URL: `http://<EC2_instance_IP>:3000`
+  - Default credentials:
+    - Username: `admin`
+    - Password: `admin`
+  - **Note**: You will be prompted to change your password upon the first login.
 
-Run the following commands to create the instance profile role and attach the policy to it:
-```sh
-aws iam create-role --role-name HarvestRole --assume-role-policy-document file://trust-policy.json
-aws iam attach-role-policy --role-name HarvestRole --policy-arn $POLICY_ARN
-aws iam create-instance-profile --instance-profile-name HarvestProfile
-aws iam add-role-to-instance-profile --instance-profile-name HarvestProfile --role-name HarvestRole
-```
+## Supported Dashboards
 
-Note that the `trust-policy.json` file can be found in this repo.
+Amazon FSx for NetApp ONTAP exposes a different set of metrics than on-premises NetApp ONTAP. 
+Therefore, only the following out-of-the-box Harvest dashboards tagged with `fsx` are currently supported for use with FSx for ONTAP. 
+Some panels in these dashboards may be missing information that is not supported:
 
-### 3. Create EC2 Instance
+- **FSxN_Clusters**
+- **FSxN_CW_Utilization**
+- **FSxN_Data_protection**
+- **FSxN_LUN**
+- **FSxN_SVM**
+- **FSxN_Volume**
 
-We recommend using a `t2.xlarge` or larger instance type with at least 20GB disk.
+---
 
-Once you have created your ec2 instance, you can use the following command to attach the instance profile:
+## Monitor additional AWS FSx for NetApp ONTAP
 
-```sh
-aws ec2 associate-iam-instance-profile --instance-id <INSTANCE-ID> --iam-instance-profile Arn=<Instance-Profile-ARN>,Name=HarvestProfile
-```
-You should get the instance profile ARN from step 2.2 above.
+To monitor additional FSxN resources, follow these steps:
 
-If your exiting ec2 instance already had an instance profile, then simply add the policy create in step 2.2 above to its instance profile role.
+1. **Log in via SSH to the EC2 instance**
 
-### 4. Install Docker and Docker Compose
+2. **Move to the Harvest Directory**
+   - Navigate to the Harvest directory:
+     ```bash
+     cd /opt/harvest
+     ```
 
-To install Docker use the following commands if you are running an Red Hat based Linux:
-```sh
-sudo yum install docker
-sudo curl -L https://download.docker.com/linux/centos/7/x86_64/stable/Packages/docker-compose-plugin-2.6.0-3.el7.x86_64.rpm -o ./compose-plugin.rpm
-sudo yum install ./compose-plugin.rpm -y
-sudo systemctl start docker
-```
-If you aren't running a Red Hat based Linux, you can follow the instructions [here](https://docs.docker.com/engine/install/).
+3. **Configure Additional AWS FSx for NetApp ONTAP in `harvest.yml`**
+   - Edit the `harvest.yml` file to add the new AWS FSx for NetApp ONTAP configuration. For example:
+   
+     ```yaml
+     fsx02:
+       datacenter: fsx
+       addr: <FSxN_ip_2>
+       collectors:
+         - Rest
+         - RestPerf
+         - Ems
+       exporters:
+         - prometheus1
+       credentials_script:
+         path: /opt/fetch-credentials
+         schedule: 3h
+         timeout: 10s
+     ```
 
-To confirm that docker has been installed correctly, run the following command:
+4. **Update `harvest-compose` with the Additional FSx for NetApp ONTAP**
+   - In the same directory, edit the `harvest-compose.yml` file to include the new FSx for NetApp ONTAP configuration:
+	 
+	 ```yaml
+     fsx02:
+       image: ghcr.io/tlvdevops/harvest-fsx:latest
+       container_name: poller-fsx02
+       restart: unless-stopped
+       ports:
+         - "12991:12991"
+       command: '--poller fsx02 --promPort 12991 --config /opt/harvest.yml'
+       volumes:
+         - ./cert:/opt/harvest/cert
+         - ./harvest.yml:/opt/harvest.yml
+         - ./conf:/opt/harvest/conf
+       environment:
+         - SECRET_NAME=<your_secret_2>
+         - AWS_REGION=<your_region>
+     ```
+   - **Note**: Change the `container_name`, `ports`, `promPort`, and `SECRET_NAME` as needed.
+	           Make sure that you are changing the TCP port used by the new poller, in this example the new fsx02 will use port 12991
+	           If you are adding multiple FSx for NetApp ONTAP, always use a different TCP port.
 
-```sh
-sudo docker run hello-world
-```
 
-You should get output similar to the following:
-```
-Hello from Docker!
-This message shows that your installation appears to be working correctly.
+5. **Add FSx for NetApp ONTAP to Prometheus Targets**
+   - Navigate to the Prometheus directory:
+     ```bash
+     cd /opt/harvest/container/prometheus/
+     ```
+   - Edit the `harvest_targets.yml` file to add the new FSx for NetApp ONTAP target:
+     ```yaml
+     - targets: ['<container_name>:<container-port>']
+     ```
 
-To generate this message, Docker took the following steps:
- 1. The Docker client contacted the Docker daemon.
- 2. The Docker daemon pulled the "hello-world" image from the Docker Hub.
-    (amd64)
- 3. The Docker daemon created a new container from that image which runs the
-    executable that produces the output you are currently reading.
- 4. The Docker daemon streamed that output to the Docker client, which sent it
-    to your terminal.
+6. **Restart Docker Compose**
+  - Navigate to the Harvest directory:
+	 ```bash
+	 cd /opt/harvest
+	 ``` 
+  - Bring down the Docker Compose stack:
+     ```bash
+     docker compose -f prom-stack.yml -f harvest-compose.yml down     ```
+   - Bring the Docker Compose stack back up:
+     ```bash
+     docker compose -f prom-stack.yml -f harvest-compose.yml up -d --remove-orphans
+     ```
 
-To try something more ambitious, you can run an Ubuntu container with:
- $ docker run -it ubuntu bash
+---
 
-Share images, automate workflows, and more with a free Docker ID:
- https://hub.docker.com/
+Feel free to adjust the placeholders (`<FSxN_ip_2>`, `<your_secret_2>`, `<your_region>`, `<container_name>`, `<container-port>`) with your specific details.
+## Additional Information
 
-For more examples and ideas, visit:
- https://docs.docker.com/get-started/
-```
-### 5. Install Harvest on EC2
 
-Preform the following steps to install Harvest on your EC2 instance:
+---
 
-#### 5.1. Generate Harvest Configuration File
-
-Modify the `harvest.yml` found in this repo with your clusters details. You should just have to change the `<FSxN_ip_X>` with the IP addresses of your FSxNs.
-Add as many pollers as you need to monitor all your FSxNs. There should be an AWS Secrets Manager secret for each FSxN.
-
-```yaml
-Exporters:
-    prometheus1:
-        exporter: Prometheus
-        port_range: 12990-14000
-        add_meta_tags: false
-Defaults:
-    use_insecure_tls: true
-Pollers:
-    fsx01:
-        datacenter: fsx
-        addr: <FSxN_ip_1>
-        collectors:
-            - Rest
-            - RestPerf
-            - Ems
-        exporters:
-            - prometheus1
-        credentials_script:
-          path: /opt/fetch-credentails
-          schedule: 3h
-          timeout: 10s
-    fsx02:
-        datacenter: fsx
-        addr: <FSxN_ip_2>
-        collectors:
-            - Rest
-            - RestPerf
-            - Ems
-        exporters:
-            - prometheus1
-        credentials_script:
-          path: /opt/fetch-credentails
-          schedule: 3h
-          timeout: 10s
-```
-
-#### 5.2. Generate a Docker Compose from Harvest Configuration
-
-Run the following command to generate a Docker Compose file from the Harvest configuration:
-
-```sh
-docker run --rm \
-  --env UID=$(id -u) --env GID=$(id -g) \
-  --entrypoint "bin/harvest" \
-  --volume "$(pwd):/opt/temp" \
-  --volume "$(pwd)/harvest.yml:/opt/harvest/harvest.yml" \
-  ghcr.io/netapp/harvest \
-  generate docker full \
-  --output harvest-compose.yml
-```
-
-:warning: Ignore the command that it outputs that it says will start the cluster.
-
-#### 5.3. Replace Harvest images in the harvest-compose.yml:
-
-Replace the Harvest image with one that supports using AWS Secret Manager for FSxN credentials:
-
-```yaml
-sed -i 's|ghcr.io/netapp/harvest:latest|ghcr.io/tlvdevops/harvest-fsx:latest|g' harvest-compose.yml
-```
-
-#### 5.4. Add AWS Secret Manager Names to Docker Compose Environment Variables
-
-Edit the `harvest-compose.yml` file by adding the "environment" section for each FSxN with the two variables: `SECRET_NAME` and `AWS_REGION`.
-These environment variables are required for the credentials script.
-
-For example:
-```yaml
-services:
-  fsx01:
-    image: ghcr.io/tlvdevops/harvest-fsx:latest
-    container_name: poller-fsx01
-    restart: unless-stopped
-    ports:
-      - "12990:12990"
-    command: '--poller fsx01 --promPort 12990 --config /opt/harvest.yml'
-    volumes:
-      - ./cert:/opt/harvest/cert
-      - ./harvest.yml:/opt/harvest.yml
-      - ./conf:/opt/harvest/conf
-    environment:
-      - SECRET_NAME=<your_secret_name>
-      - AWS_REGION=<region_where_secret_resides>
-    networks:
-      - backend
-```
-#### 5.5. Download FSxN dashboards and import into Grafana container:
-The following commands will download the FSxN designed dashboards from this repo and replace the default Grafana dashboards with them:
-```yaml
-wget https://raw.githubusercontent.com/NetApp/FSx-ONTAP-samples-scripts/main/Monitoring/monitor_fsxn_with_grafana/fsx_dashboards.zip
-unzip fsx_dashboards.zip
-rm -rf grafana/dashboards
-mv dashboards grafana/dashboards
-```
-
-#### 5.6. Configure Prometheus to use yet-another-exporter (yace) to gather AWS FSxN metrics
-AWS has useful metrics regarding the FSxN file system that ONTAP doesn't provide. Therefore, it is recommended to install
-an exporter that will expose these metrics. The following steps show how to install a recommended exporter.
-
-##### 5.6.1 Create the yace configuration file.
-Edit the `yace-config.yaml` file found in this repo and replace `<aws_region>`, in both places, with the region where your FSxN resides:
-```yaml
-apiVersion: v1alpha1
-sts-region: <aws_region>
-discovery:
-  jobs:
-    - type: AWS/FSx
-      regions: [<aws_region>]
-      period: 300
-      length: 300
-      metrics:
-        - name: DiskReadOperations
-          statistics: [Sum]
-        - name: DiskWriteOperations
-          statistics: [Sum]
-        - name: DiskReadBytes
-          statistics: [Sum]
-        - name: DiskWriteBytes
-          statistics: [Sum]
-        - name: DiskIopsUtilization
-          statistics: [Average]
-        - name: NetworkThroughputUtilization
-          statistics: [Average]
-        - name: FileServerDiskThroughputUtilization
-          statistics: [Average]
-        - name: CPUUtilization
-          statistics: [Average]
-```
-
-##### 5.6.2 Add Yet-Another-Exporter to harvest-compose.yaml
-
-Copy the following to the end of the `harvest-compose.yml` file:
-```yaml
-  yace:
-    image: quay.io/prometheuscommunity/yet-another-cloudwatch-exporter:latest
-    container_name: yace
-    restart: always
-    expose:
-      - 8080
-    volumes:
-      - ./yace-config.yaml:/tmp/config.yml
-      - $HOME/.aws:/exporter/.aws:ro
-    command:
-      - -listen-address=:8080
-      - -config.file=/tmp/config.yml
-    networks:
-      - backend
-```
-
-##### 5.6.3. Add Yet-Another-Exporter target to prometheus.yml:
-```yaml
-sudo sed -i -e "\$a\- job_name: 'yace'" -e "\$a\  static_configs:" -e "\$a\    - targets: ['yace:8080']" container/prometheus/prometheus.yml
-```
-
-##### 6. Bring Everything Up
-
-```sh
-sudo docker compose -f prom-stack.yml -f harvest-compose.yml up -d --remove-orphans
-```
-
-After bringing up the prom-stack.yml compose file, you can access Grafana at 
-http://IP_OF_GRAFANA:3000.
-
-You will be prompted to create a new password the first time you log in. Grafana's default credentials are:
-```
-username: admin
-password: admin
-```
+[1](https://github.com/prometheus-community/yet-another-cloudwatch-exporter): [Yet Another CloudWatch Exporter on GitHub](https://github.com/prometheus-community/yet-another-cloudwatch-exporter)
