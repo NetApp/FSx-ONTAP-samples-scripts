@@ -160,7 +160,3 @@ To monitor additional FSxN resources, follow these steps:
      ```
 
 ---
-
-## Additional Information
----
-[Yet Another CloudWatch Exporter on GitHub](https://github.com/prometheus-community/yet-another-cloudwatch-exporter)
