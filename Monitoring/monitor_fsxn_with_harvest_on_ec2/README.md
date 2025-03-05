@@ -1,9 +1,7 @@
 # Harvest/Grafana Deployment using AWS CloudFormation
-This guide provides instructions on how to deploy a Harvest + Grafana + Prometheus stack
-to monitor your Amazon FSx for NetApp ONTAP resources. It also includes
-the Yet Another CloudWatch Exporter (YACE) to collect the AWS FSx for ONTAP CloudWatch metrics.
+This is the NetApp FSx for ONTAP deployment for monitoring FSx for ONTAP file systems with Grafana.  
+The following solution leverages Harvest and YACE(Yet Another CloudWatch Exporter) as the exporters for ONTAP and CloudWatch metrics.
 
-## Yet Another CloudWatch Exporter (YACE)
 YACE, or Yet Another CloudWatch Exporter, is a Prometheus exporter for AWS CloudWatch metrics. It is written in
 Go and uses the official AWS SDK. YACE supports auto-discovery of resources via tags, structured logging,
 filtering monitored resources via regex, and more. You can read more about YACE capabilities from its
@@ -19,8 +17,8 @@ The steps below are geared towrad the CloudFormation deployment method. If you w
 please refer to these [instructions](README-Manual.md).
 
 This deployment includes:
-- **Harvest**: Collects ONTAP metrics.
-- **Yet Another CloudWatch Exporter (YACE)**: Collects FSxN CloudWatch metrics.
+- **Harvest**: Collects ONTAP metrics.[Documentation](https://github.com/NetApp/harvest).
+- **Yet Another CloudWatch Exporter (YACE)**: Collects FSxN CloudWatch metrics.[Documentation](https://github.com/prometheus-community/yet-another-cloudwatch-exporter).
 - **Prometheus**: Stores the metrics.
 - **Grafana**: Visualizes the metrics.
 
