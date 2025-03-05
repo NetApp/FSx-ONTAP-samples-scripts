@@ -89,9 +89,9 @@
       Description: Subnet ID. Specify the same subnet as your Amazon FSx for NetApp ONTAP file system's preferred subnet.
 
     LatestLinuxAmiId:
-      Description: 'Instance ID. Defaults to the latest Amazon 2023 AMI ID.'
+      Description: 'Instance ID. Defaults to the latest Amazon Linux 2 AMI ID.'
       Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
-      Default: '/aws/service/ami-amazon-linux-latest/al2023-ami-minimal-kernel-default-x86_64'
+      Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
 
     FSxEndPoint:
       Description: File system management endpoint IP address
@@ -194,13 +194,13 @@
                   length: 300
                   metrics:
                     - name: DiskReadOperations
-                      statistics: [Sum]
+                      statistics: [Average]
                     - name: DiskWriteOperations
-                      statistics: [Sum]
+                      statistics: [Average]
                     - name: DiskReadBytes
-                      statistics: [Sum]
+                      statistics: [Average]
                     - name: DiskWriteBytes
-                      statistics: [Sum]
+                      statistics: [Average]
                     - name: DiskIopsUtilization
                       statistics: [Average]
                     - name: NetworkThroughputUtilization

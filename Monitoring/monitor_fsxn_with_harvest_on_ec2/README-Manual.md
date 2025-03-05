@@ -267,13 +267,13 @@ discovery:
       length: 300
       metrics:
         - name: DiskReadOperations
-          statistics: [Sum]
+          statistics: [Average]
         - name: DiskWriteOperations
-          statistics: [Sum]
+          statistics: [Average]
         - name: DiskReadBytes
-          statistics: [Sum]
+          statistics: [Average]
         - name: DiskWriteBytes
-          statistics: [Sum]
+          statistics: [Average]
         - name: DiskIopsUtilization
           statistics: [Average]
         - name: NetworkThroughputUtilization
