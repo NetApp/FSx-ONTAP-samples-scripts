@@ -6,7 +6,7 @@ Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
       - Label:
-        default: Harvest and Grafana Instance parameters
+          default: Harvest and Grafana Instance parameters
         Parameters:
           - InstanceType
           - KeyPair
@@ -14,7 +14,7 @@ Metadata:
           - SubnetType
           - Subnet
       - Label:
-        default: Amazon FSx for Netapp ONTAP file system parameters
+          default: Amazon FSx for Netapp ONTAP file system parameters
         Parameters:
           - FSxEndPoint
           - SecretName
