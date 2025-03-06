@@ -40,11 +40,11 @@ import botocore
 #   Format of the secret should be:
 #   {"fsId": "fsxadmin-password", "fsId": "fsxadmin-password", ...}
 #secretRegion = "us-west-2"
-#secretArn = "arn:aws:secretsmanager:us-west-2:759995470648:secret:FSXN_passwords-MJixz9"
+#secretArn = ""
 #
 # Where to store last read stats.
 #s3BucketRegion = "us-west-2"
-#s3BucketName = "keith-test-mon-ems-events"
+#s3BucketName = ""
 #statsName = "lastFileRead"
 #
 # The region to process the FSxNs in.
