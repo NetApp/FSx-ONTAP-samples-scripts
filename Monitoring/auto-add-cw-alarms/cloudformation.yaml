@@ -191,7 +191,7 @@ Resources:
           # with the name "SSD_Alarm_Threshold" on the file system resource.
           #
           # Version: v2.1
-          # Date: 2025-01-31-20:33:33
+          # Date: 2025-03-06-19:51:27
           #
           ################################################################################
           #
@@ -615,92 +615,104 @@ Resources:
               for region in regions:
                   if region in fsxRegions:
                       print(f'Scanning {region}')
-                      fsx = boto3.client('fsx', region_name=region, config=boto3Config)
-                      cw = boto3.client('cloudwatch', region_name=region, config=boto3Config)
-                      #
-                      # Get all the file systems, volumes and alarm in the region.
-                      fss     = getFss(fsx)
-                      volumes = getVolumes(fsx)
-                      alarms  = getAlarms(cw)
-                      #
-                      # Scan for filesystems without CPU Utilization Alarm.
-                      for fs in fss:
-                          if(fs['FileSystemType'] == "ONTAP"):
-                              threshold = int(getCPUAlarmThresholdTagValue(fs['Tags']))
-                              if(threshold != 100):
-                                  fsId = fs['FileSystemId']
-                                  fsName = fsId.replace('fs-', 'FsxId')
-                                  alarmName = alarmPrefixCPU + fsId
-                                  alarmDescription = f"CPU utilization alarm for file system {fsName}{customerId} in region {region}."
+                      try:
+                          fsx = boto3.client('fsx', region_name=region, config=boto3Config)
+                          cw = boto3.client('cloudwatch', region_name=region, config=boto3Config)
+                          #
+                          # Get all the file systems, volumes and alarm in the region.
+                          fss     = getFss(fsx)
+                          volumes = getVolumes(fsx)
+                          alarms  = getAlarms(cw)
+                          #
+                          # Scan for filesystems without CPU Utilization Alarm.
+                          for fs in fss:
+                              if(fs['FileSystemType'] == "ONTAP"):
+                                  threshold = int(getCPUAlarmThresholdTagValue(fs['Tags']))
+                                  if(threshold != 100):
+                                      fsId = fs['FileSystemId']
+                                      fsName = fsId.replace('fs-', 'FsxId')
+                                      alarmName = alarmPrefixCPU + fsId
+                                      alarmDescription = f"CPU utilization alarm for file system {fsName}{customerId} in region {region}."
           
-                                  if(not contains_alarm(alarmName, alarms) and onlyFilesystemId == None or
-                                     not contains_alarm(alarmName, alarms) and onlyFilesystemId != None and onlyFilesystemId == fsId):
-                                      print(f'Adding CPU Alarm for {fs["FileSystemId"]}')
-                                      add_cpu_alarm(cw, fsId, alarmName, alarmDescription, threshold, region)
-                      #
-                      # Scan for CPU alarms without a FSxN filesystem.
-                      for alarm in alarms:
-                          alarmName = alarm['AlarmName']
-                          if(alarmName[:len(alarmPrefixCPU)] == alarmPrefixCPU):
-                              fsId = alarmName[len(alarmPrefixCPU):]
-                              if(not contains_fs(fsId, fss) and onlyFilesystemId == None or
-                                 not contains_fs(fsId, fss) and onlyFilesystemId != None and onlyFilesystemId == fsId):
-                                  print("Deleting alarm: " + alarmName + " in region " + region)
-                                  delete_alarm(cw, alarmName)
-                      #
-                      # Scan for filesystems without SSD Utilization Alarm.
-                      for fs in fss:
-                          if(fs['FileSystemType'] == "ONTAP"):
-                              threshold = int(getSSDAlarmThresholdTagValue(fs['Tags']))
-                              if(threshold != 100):
-                                  fsId = fs['FileSystemId']
-                                  fsName = fsId.replace('fs-', 'FsxId')
-                                  alarmName = alarmPrefixSSD + fsId
-                                  alarmDescription = f"SSD utilization alarm for file system {fsName}{customerId} in region {region}."
+                                      if(not contains_alarm(alarmName, alarms) and onlyFilesystemId == None or
+                                         not contains_alarm(alarmName, alarms) and onlyFilesystemId != None and onlyFilesystemId == fsId):
+                                          print(f'Adding CPU Alarm for {fs["FileSystemId"]}')
+                                          add_cpu_alarm(cw, fsId, alarmName, alarmDescription, threshold, region)
+                          #
+                          # Scan for CPU alarms without a FSxN filesystem.
+                          for alarm in alarms:
+                              alarmName = alarm['AlarmName']
+                              if(alarmName[:len(alarmPrefixCPU)] == alarmPrefixCPU):
+                                  fsId = alarmName[len(alarmPrefixCPU):]
+                                  if(not contains_fs(fsId, fss) and onlyFilesystemId == None or
+                                     not contains_fs(fsId, fss) and onlyFilesystemId != None and onlyFilesystemId == fsId):
+                                      print("Deleting alarm: " + alarmName + " in region " + region)
+                                      delete_alarm(cw, alarmName)
+                          #
+                          # Scan for filesystems without SSD Utilization Alarm.
+                          for fs in fss:
+                              if(fs['FileSystemType'] == "ONTAP"):
+                                  threshold = int(getSSDAlarmThresholdTagValue(fs['Tags']))
+                                  if(threshold != 100):
+                                      fsId = fs['FileSystemId']
+                                      fsName = fsId.replace('fs-', 'FsxId')
+                                      alarmName = alarmPrefixSSD + fsId
+                                      alarmDescription = f"SSD utilization alarm for file system {fsName}{customerId} in region {region}."
           
-                                  if(not contains_alarm(alarmName, alarms) and onlyFilesystemId == None or
-                                     not contains_alarm(alarmName, alarms) and onlyFilesystemId != None and onlyFilesystemId == fsId):
-                                      print(f'Adding SSD Alarm for {fsId}')
-                                      add_ssd_alarm(cw, fs['FileSystemId'], alarmName, alarmDescription, threshold, region)
-                      #
-                      # Scan for SSD alarms without a FSxN filesystem.
-                      for alarm in alarms:
-                          alarmName = alarm['AlarmName']
-                          if(alarmName[:len(alarmPrefixSSD)] == alarmPrefixSSD):
-                              fsId = alarmName[len(alarmPrefixSSD):]
-                              if(not contains_fs(fsId, fss) and onlyFilesystemId == None or
-                                 not contains_fs(fsId, fss) and onlyFilesystemId != None and onlyFilesystemId == fsId):
-                                  print("Deleteing alarm: " + alarmName + " in region " + region)
-                                  delete_alarm(cw, alarmName)
-                      #
-                      # Scan for volumes without alarms.
-                      for volume in volumes:
-                          if(volume['VolumeType'] == "ONTAP"):
-                              volumeId = volume['VolumeId']
-                              volumeName = volume['Name']
-                              volumeARN = volume['ResourceARN']
-                              fsId = volume['FileSystemId']
+                                      if(not contains_alarm(alarmName, alarms) and onlyFilesystemId == None or
+                                         not contains_alarm(alarmName, alarms) and onlyFilesystemId != None and onlyFilesystemId == fsId):
+                                          print(f'Adding SSD Alarm for {fsId}')
+                                          add_ssd_alarm(cw, fs['FileSystemId'], alarmName, alarmDescription, threshold, region)
+                          #
+                          # Scan for SSD alarms without a FSxN filesystem.
+                          for alarm in alarms:
+                              alarmName = alarm['AlarmName']
+                              if(alarmName[:len(alarmPrefixSSD)] == alarmPrefixSSD):
+                                  fsId = alarmName[len(alarmPrefixSSD):]
+                                  if(not contains_fs(fsId, fss) and onlyFilesystemId == None or
+                                     not contains_fs(fsId, fss) and onlyFilesystemId != None and onlyFilesystemId == fsId):
+                                      print("Deleteing alarm: " + alarmName + " in region " + region)
+                                      delete_alarm(cw, alarmName)
+                          #
+                          # Scan for volumes without alarms.
+                          for volume in volumes:
+                              if(volume['VolumeType'] == "ONTAP"):
+                                  volumeId = volume['VolumeId']
+                                  volumeName = volume['Name']
+                                  volumeARN = volume['ResourceARN']
+                                  fsId = volume['FileSystemId']
           
-                              threshold = int(getAlarmThresholdTagValue(fsx, volumeARN))
+                                  threshold = int(getAlarmThresholdTagValue(fsx, volumeARN))
           
-                              if(threshold != 100):   # No alarm if the value is set to 100.
-                                  alarmName = alarmPrefixVolume + volumeId
-                                  fsName = fsId.replace('fs-', 'FsxId')
-                                  alarmDescription = f"Volume utilization alarm for volumeId {volumeId}{customerId}, File System Name: {fsName}, Volume Name: {volumeName} in region {region}."
-                                  if(not contains_alarm(alarmName, alarms) and onlyFilesystemId == None or
-                                     not contains_alarm(alarmName, alarms) and onlyFilesystemId != None and onlyFilesystemId == fsId):
-                                      print(f'Adding volume utilization alarm for {volumeName} in region {region}.')
-                                      add_volume_alarm(cw, volumeId, alarmName, alarmDescription, fsId, threshold, region)
-                      #
-                      # Scan for volume alarms without volumes.
-                      for alarm in alarms:
-                          alarmName = alarm['AlarmName']
-                          if(alarmName[:len(alarmPrefixVolume)] == alarmPrefixVolume):
-                              volumeId = alarmName[len(alarmPrefixVolume):]
-                              if(not contains_volume(volumeId, volumes) and onlyFilesystemId == None or
-                                 not contains_volume(volumeId, volumes) and onlyFilesystemId != None and onlyFilesystemId == getFileSystemId(alarm)):
-                                  print("Deleteing alarm: " + alarmName + " in region " + region)
-                                  delete_alarm(cw, alarmName)
+                                  if(threshold != 100):   # No alarm if the value is set to 100.
+                                      alarmName = alarmPrefixVolume + volumeId
+                                      fsName = fsId.replace('fs-', 'FsxId')
+                                      alarmDescription = f"Volume utilization alarm for volumeId {volumeId}{customerId}, File System Name: {fsName}, Volume Name: {volumeName} in region {region}."
+                                      if(not contains_alarm(alarmName, alarms) and onlyFilesystemId == None or
+                                         not contains_alarm(alarmName, alarms) and onlyFilesystemId != None and onlyFilesystemId == fsId):
+                                          print(f'Adding volume utilization alarm for {volumeName} in region {region}.')
+                                          add_volume_alarm(cw, volumeId, alarmName, alarmDescription, fsId, threshold, region)
+                          #
+                          # Scan for volume alarms without volumes.
+                          for alarm in alarms:
+                              alarmName = alarm['AlarmName']
+                              if(alarmName[:len(alarmPrefixVolume)] == alarmPrefixVolume):
+                                  volumeId = alarmName[len(alarmPrefixVolume):]
+                                  if(not contains_volume(volumeId, volumes) and onlyFilesystemId == None or
+                                     not contains_volume(volumeId, volumes) and onlyFilesystemId != None and onlyFilesystemId == getFileSystemId(alarm)):
+                                      print("Deleteing alarm: " + alarmName + " in region " + region)
+                                      delete_alarm(cw, alarmName)
+          
+                      except botocore.exceptions.ClientError as e:
+                          if e.response['Error']['Code'] == 'ServiceUnavailableException':
+                              print(f"Warning: Service Unavailable fault while scanning {region}. Skipping")
+                              continue
+                          else:
+                              print(f"boto3 client error: {json.dumps(e.response)}")
+                              raise e
+                      except botocore.exceptions.EndpointConnectionError as e:
+                          print(f"Warning: Endpoint Connection fault while scanning {region}. Skipping")
+                          continue
           
               return
           
