@@ -3,21 +3,21 @@
 ## Overview
 This sample demonstrates a way to ingest the NAS audit logs from an FSx for Data ONTAP file system into a CloudWatch log group
 without having to NFS or CIFS mount a volume to access them.
-It will attempt to gather the audit logs from all the FSx for Data ONTAP file systems that are within a specified region.
+It will attempt to gather the audit logs from all the SVMs within all the FSx for Data ONTAP file systems that are within a specified region.
 It will skip any file systems where the credentials aren't provided in the supplied AWS SecretManager's secret, or that do not have
 the appropriate NAS auditing configuration enabled.
 It will maintain a "stats" file in an S3 bucket that will keep track of the last time it successfully ingested audit logs from each
-file system to try to ensure it doesn't process an audit file more than once.
+SVM to try to ensure it doesn't process an audit file more than once.
 You can run this script as a standalone program or as a Lambda function. These directions assume you are going to run it as a Lambda function.
 
 ## Prerequisites
 - An FSx for Data ONTAP file system.
 - An S3 bucket to store the "stats" file. The "stats" file is used to keep track of the last time the Lambda function successfully
-ingested audit logs from each file system. Its size will be small (i.e. less than a few megabytes).
-- Have NAS auditing configured and enabled on the FSx for Data ONTAP file system. **Ensure you have selected the XML format for the audit logs.** Also,
+ingested audit logs from each SVM. Its size will be small (i.e. less than a few megabytes).
+- Have NAS auditing configured and enabled on the SVM within a FSx for Data ONTAP file system. **Ensure you have selected the XML format for the audit logs.** Also,
 ensure you have set up a rotation schedule. The program will only act on audit log files that have been finalized, and not the "active" one. You can read this
 [knowledge based article](https://kb.netapp.com/on-prem/ontap/da/NAS/NAS-KBs/How_to_set_up_NAS_auditing_in_ONTAP_9) for instructions on how to setup NAS auditing.
-- Have the NAS auditing configured to store the audit logs in a volume with the same name on all FSx for Data ONTAP file
+- Have the NAS auditing configured to store the audit logs in a volume of the same name in all SVMs on all the FSx for Data ONTAP file
 systems that you want to ingest the audit logs from.
 - A CloudWatch log group.
 - An AWS Secrets Manager secret that contains the passwords for the fsxadmin account for all the FSx for Data ONTAP file systems you want to gather audit logs from.
@@ -29,8 +29,8 @@ systems that you want to ingest the audit logs from.
       }
 ```
 - You have applied the necessary SACLs to the files you want to audit. The knowledge base article linked above provides guidance on how to do this.
-- Since the Lambda function runs within your VPC it will not have access to the Internet, even if you can access the Internet from the Subnet it run from.
-Therefore, there needs to be an VPC endpoint for all the AWS services that the Lambda function uses. Specifically, the Lambda function needs to be able to access the following services:
+- Since the Lambda function runs within your VPC it will not have access to the Internet, even if you can access the Internet from the Subnet it runs from.
+Therefore, there needs to be an VPC endpoint for all the AWS services that the Lambda function uses. Specifically, the Lambda function needs to be able to access the following AWS services:
   - FSx.
   - Secrets Manager.
   - CloudWatch Logs.
@@ -82,7 +82,7 @@ and `DeleteNetworkInterface` actions. The correct resource line is `arn:aws:ec2:
 file system management endpoints that you want to gather audit logs from. Also, select a Security Group that allows TCP port 443 outbound.
 Inbound rules don't matter since the Lambda function is not accessible from a network.
     1. Click `Create Function` and on the next page, under the `Code` tab, select `Upload From -> .zip file.` Provide the .zip file created by the steps above. 
-    1. From the `Configuration -> General` tab set the timeout to at least 30 seconds. You will may need to increase that if it has to process a lot of audit entries and/or process a lot of FSx for ONTAP file systems.
+    1. From the `Configuration -> General` tab set the timeout to at least 30 seconds. You will may need to increase that if it has to process a lot of audit entries and/or process a lot of SVMs.
 
 3. Configure the Lambda function by setting the following environment variables. For a Lambda function you do this by clicking on the `Configuration` tab and then the `Environment variables` sub tab.
 
@@ -96,13 +96,12 @@ Inbound rules don't matter since the Lambda function is not accessible from a ne
 | statsName | The name you want to use as the stats file. |
 | logGroupName | The name of the CloudWatch log group to ingest the audit logs into. |
 | volumeName | The name of the volume, on all the FSx for ONTAP file systems, where the audit logs are stored. |
-| vserverName | The name of the vserver, on all the FSx for ONTAP file systems, where the audit logs are stored. |
 
 4. Test the Lambda function by clicking on the `Test` tab and then clicking on the `Test` button. You should see "Executing function: succeeded".
 If not, click on the "Details" button to see what errors there are.
 
 5. After you have tested that the Ladmba function is running correctly, add an EventBridge trigger to have it run periodically.
-You can do this by clicking on the `Add Trigger` button within the AWS console and selecting `EventBridge (CloudWatch Events)`
+You can do this by clicking on the `Add Trigger` button within the AWS console on the Lambda page and selecting `EventBridge (CloudWatch Events)`
 from the dropdown. You can then configure the schedule to run as often as you want. How often depends on how often you have
 set up your FSx for ONTAP file systems to generate audit logs, and how up-to-date you want the CloudWatch logs to be.
 
