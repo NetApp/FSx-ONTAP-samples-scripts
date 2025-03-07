@@ -389,7 +389,10 @@ def lambda_handler(event, context):     # pylint: disable=W0613
                             #
                             # Process the file.
                             processFile(fsxn, headersDownload, volumeUUID, filePath)
-                            lastFileRead[fsxn] = {vserverName: getEpoch(filePath)}
+                            if lastFileRead.get(fsxn) is None:
+                                lastFileRead[fsxn] = {vserverName: getEpoch(filePath)}
+                            else:
+                                lastFileRead[fsxn][vserverName] = getEpoch(filePath)
                             s3Client.put_object(Key=config['statsName'], Bucket=config['s3BucketName'], Body=json.dumps(lastFileRead).encode('UTF-8'))
                 #
                 # Get the next set of SVMs.
