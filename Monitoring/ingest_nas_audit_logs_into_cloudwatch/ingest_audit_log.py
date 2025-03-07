@@ -12,12 +12,10 @@
 # system that doesn't have the specified volume.
 #
 # It assumes:
-#  - That there is only one data vserver per FSxN file system and that it
-#    is named 'fsx'.
 #  - That the administrator username is 'fsxadmin'.
 #  - That the audit log files will be named in the following format:
-#      audit_fsx_D2024-09-24-T13-00-03_0000000000.xml
-#    Where 'fsx' is the vserver name.
+#      audit_vserver_D2024-09-24-T13-00-03_0000000000.xml
+#    Where 'vserver' is the vserver name.
 #
 ################################################################################
 #
@@ -53,6 +51,14 @@ import botocore
 # The name of the volume that holds the audit logs. Assumed to be the same on
 # all FSxNs.
 #volumeName = "audit_logs"
+#
+# The name of the vserver that holds the audit logs. Assumed to be the same on
+# all FSxNs.
+# *NOTE*:The program has been updated to loop on all the vservers within an FSxN
+#        filesystem and not just the one set here. This variable is now used
+#        so it can update the lastFireRead stats file to conform to the new format
+#        that includes the vserver as part of the structure.
+#vserverName = "fsx"
 #
 # The CloudWatch log group to store the audit logs in.
 #logGroupName = "/fsx/audit_logs"
@@ -261,6 +267,9 @@ def checkConfig():
             config[item] = os.environ.get(item)
         if config[item] == None:
             raise Exception(f"{item} is not set.")
+    #
+    # To be backwards compatible, load the vserverName.
+    config['vserverName'] = vserverName if 'vserverName' in globals() else os.environ.get('vserverName')  # pylint: disable=E0602
 
 ################################################################################
 # This is the main function that checks that everything is configured correctly
@@ -324,6 +333,11 @@ def lambda_handler(event, context):     # pylint: disable=W0613
     # Process each FSxN.
     for fsxn in fsxNs:
         fsId = fsxn.split('.')[1]
+        #
+        # Since the format of the lastReadFile sttucture has changed, we need to update it.
+        if lastFileRead.get(fsxn) is not None and config['vserverName'] is not None:
+            if type(lastFileRead[fsxn]) is float:                                  # Old format
+                lastFileRead[fsxn] = {config['vserverName']: lastFileRead[fsxn]}   # New format
         #
         # Get the password
         password = secrets.get(fsId)
