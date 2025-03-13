@@ -1,0 +1,24 @@
+@use '../../../../styles/mixins.scss' as *;
+
+.dsTableFooter {
+    display: flex;
+    flex-direction: column;
+    position: sticky;
+    width: 100%;
+    background-color: var(--background-content);
+    border-top: 1px solid var(--border);
+    box-shadow: 2px 2px 6px 0px var(--border-drop-shadow);
+
+    &.hidden {
+        display: none;
+    }
+
+    .horizontalScroll {
+        width: 100%;
+        @include showScrollbarX();
+
+        .elementWithTableWidth {
+            height: 1px;
+        }
+    }
+}

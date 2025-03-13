@@ -20,7 +20,8 @@ export const paginationApiMockResponseInitial: PaginationApiResponse<any> = {
   isSuccess: false,
 }
 
-export const BASE_URL = 'api.workloads.netapp.com';
+// export const BASE_URL = 'api.workloads.netapp.com';
+export const BASE_URL = 'staging.api.workloads.netapp.com';
 
 export const selfHandleErrors = (args: ApiRequest, api: any) => {
   if (args.isSelfHandleErrors) {

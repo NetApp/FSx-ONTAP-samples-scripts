@@ -110,14 +110,17 @@ export interface History {
     entries: Message[]
 }
 
+export interface FileData {
+    fileName: string,
+    text: string
+}
+
 export interface Message {
     date?: number,
     userId?: string,
     question: string,
     answer: string,
-    filesData?: {
-        fileNames?: string[],
-    }
+    filesData?: FileData[],
     stopReason: null | string,
     type: MessageType
 }

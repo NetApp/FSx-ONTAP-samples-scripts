@@ -1,4 +1,4 @@
-import { NotificationProps } from "@/app/components/dsComponents/Notification";
+import { NotificationProps } from "@/app/[locale]/components/dsComponents/Notification";
 import notificationsSlice from "./slices/notifications.slice";
 import chatSlice from "./slices/chat.slice";
 import authSlice from "./slices/auth.slice";
@@ -7,6 +7,7 @@ import { KnowledgeBase } from "./api/api.types";
 import errorHandelingSlice from "./slices/errorHandeling.slice";
 
 export type MessageType = 'ANSWER' | 'ERROR';
+export type SupportedLocales = 'en' | 'jp';
 
 export interface AiChatState {
     [authSlice.name]: Auth,
@@ -33,14 +34,16 @@ export interface Notification extends NotificationProps {
     persist?: boolean
 }
 
+export interface FileData {
+    fileName: string,
+    text: string
+}
 export interface Message {
     date?: number,
     userId?: string,
     question: string,
     answer: string,
-    filesData?: {
-        fileNames?: string[],
-    }
+    filesData?: FileData[],
     stopReason: null | string,
     type: MessageType
 }

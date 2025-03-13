@@ -1,0 +1,99 @@
+@use '../../../../styles/mixins.scss' as *;
+
+td.dsCell.dsHeaderCell {
+    padding-right: 0;
+    background-color: var(--background-table-header);
+
+    &.freezed {
+        background-color: var(--background-table-header);
+        z-index: 1;
+        box-shadow: none;
+    }
+
+    &.manageColumns {
+        .cellContainer {
+            padding: 0;
+
+            .headerCellContent {
+                justify-content: center;
+            }
+        }
+    }
+
+    &.isLast {
+        .cellContent {
+            .headerCellContent {
+                .cellActions {
+                    padding-right: 0;
+                }
+            }
+        }
+    }
+
+    .cellContent {
+        width: 100%;
+        padding-right: 0;
+
+        .headerCellContent {
+            display: flex;
+            flex-direction: row;
+            gap: 8px;
+
+            .headerValueContent {
+                display: flex;
+                gap: 8px;
+                @include ellipsis(100%);
+            }
+
+            .cellActions {
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                padding-right: 9px;
+                height: 15px;
+                gap: 6px;
+
+                .filterColumns {
+                    width: 12px;
+                    height: 12px;
+                    color: var(--icon-secondary);
+                    cursor: pointer;
+
+                    &:hover {
+                        color: var(--icon-secondary-hover);
+                    }
+                }
+
+                .sortingContainer {
+                    display: flex;
+
+                    svg {
+                        cursor: pointer;
+                        color: var(--icon-secondary);
+                        width: 12px;
+
+                        &:hover {
+                            color: var(--icon-secondary-hover);
+
+                            path {
+                                fill: var(--icon-secondary-hover);
+                            }
+                        }
+                    }
+                }
+
+                .resizeElement {
+                    height: 100%;
+                    width: 5px;
+                    border-right: 1px solid var(--icon-secondary);
+                    pointer-events: none;
+
+                    &.isResizable {
+                        pointer-events: initial;
+                        cursor: col-resize;
+                    }
+                }
+            }
+        }
+    }
+}

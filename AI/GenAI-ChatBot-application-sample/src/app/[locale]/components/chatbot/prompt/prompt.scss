@@ -1,0 +1,341 @@
+@use '../../../styles/mixins.scss' as *;
+
+.promptItem {
+    @include fadeIn(.4s);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    max-width: 1060px;
+    left: 46%;
+    transform: translateX(-50%);
+
+    .dsTable {
+        opacity: 1;
+    }
+
+    .promptContent {
+        display: flex;
+
+        .avatar {
+            box-shadow: 2px 2px 6px 0px var(--drop-shadow);
+            border-radius: 50%;
+            margin-right: 25px;
+            width: 43px;
+            height: 43px;
+        }
+
+        .baloonContainer {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            overflow: hidden;
+            padding: 2px;
+            box-sizing: border-box;
+
+            .baloon {
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                box-shadow: 2px 2px 6px 0px var(--drop-shadow);
+                border-radius: 4px;
+                padding: 12px 16px;
+                overflow-wrap: anywhere;
+                max-width: calc(100% - 80px);
+                min-height: 48px;
+                width: fit-content;
+                box-sizing: border-box;
+
+                &.bot {
+                    max-width: calc(100% - 90px);
+                    background-color: var(--content-background);
+                }
+
+                &.user {
+                    background-color: var(--table-header-background);
+                }
+
+                &.botWriting {
+                    width: 90%;
+                }
+
+                .flashingDots,
+                .textWriting {
+                    margin-bottom: 10px;
+                }
+
+                .promptMessage {
+                    flex: 1;
+                }
+
+                .messageContainer {
+                    display: flex;
+                    flex-direction: column;
+
+                    &.withError {
+                        padding: 12px 16px;
+                        flex-direction: row;
+
+                        .errorIcon {
+                            margin-right: 8px;
+                            width: 18px;
+                        }
+                    }
+
+                }
+
+                .dateAndCopyLayout {
+                    margin-top: 32px;
+                    display: flex;
+                    flex-direction: row;
+                    align-items: center;
+
+                    .copyPrompt {
+                        border-left: 1px solid var(--browser-bg-stroke);
+                        padding-left: 16px;
+                        margin-left: 16px;
+
+                        &.copyToClipboardContainer {
+                            &:hover {
+
+                                .copyToClipboard,
+                                .copyLabel {
+                                    color: var(--text-button-primary-hover);
+
+                                    path {
+                                        fill: var(--text-button-primary-hover);
+                                    }
+                                }
+                            }
+
+                            .copyToClipboard {
+                                width: 16px;
+                                height: 16px;
+
+                                path {
+                                    fill: var(--text-button-primary);
+                                }
+                            }
+                        }
+                    }
+
+                    .copyLabel {
+                        color: var(--text-button-primary);
+                    }
+                }
+
+                .citationsLayout {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 8px;
+                    height: 100%;
+
+                    .sourcesLayout {
+                        display: flex;
+                        flex-direction: row;
+                        align-items: center;
+                        width: fit-content;
+
+                        &:hover {
+
+                            .sourceLabel,
+                            .arrowIcon {
+                                color: var(--text-button-primary-hover);
+
+                                path {
+                                    fill: var(--text-button-primary-hover);
+                                }
+                            }
+                        }
+
+                        .sourceLabel {
+                            cursor: pointer;
+                        }
+
+                        .arrowIcon {
+                            @include transition(transform 0.3s ease);
+                            cursor: pointer;
+                            color: var(--icon-secondary);
+                            height: 24px;
+
+                            &.open {
+                                @include rotate(180deg);
+                            }
+                        }
+                    }
+
+                    .citationsContainer {
+                        display: flex;
+                        flex-direction: column;
+                        gap: 8px;
+                        max-height: 0;
+                        overflow: hidden;
+                        @include transition(max-height .3s ease);
+
+                        @keyframes delay-overflow {
+                            from {
+                                overflow: hidden;
+                            }
+                        }
+
+                        &.open {
+                            animation: 1s delay-overflow;
+                            max-height: 230px;
+                            overflow: visible;
+                        }
+
+                        .citationRowContainer {
+                            position: relative;
+
+                            .childrenContainer {
+
+                                .dsBaloonPopup {
+                                    padding: 0;
+
+                                    .citationPopover {
+                                        width: 480px;
+                                    }
+
+                                    .content {
+                                        display: flex;
+                                        flex-direction: column;
+                                        gap: 10px;
+                                        padding: 16px;
+                                        padding-top: 8px;
+                                        box-sizing: border-box;
+
+                                        .titleLayout {
+                                            display: flex;
+                                            flex-direction: row;
+                                            justify-content: space-between;
+                                            align-items: flex-start;
+
+                                            .nameTitle {
+                                                @include ellipsisMultiLine(2);
+                                            }
+
+                                            .copyToClipboard {
+                                                .citationCopyIcon {
+                                                    width: 24px;
+                                                    height: 24px;
+                                                }
+
+                                                .popoverBaloon {
+                                                    padding: 8px 12px;
+                                                }
+                                            }
+                                        }
+
+                                        .citationText {
+                                            @include ellipsisMultiLine(3);
+                                            white-space: normal;
+                                        }
+                                    }
+
+                                    .citationPathLayout {
+                                        display: flex;
+                                        flex-direction: row;
+                                        gap: 8px;
+                                        background-color: var(--main-background);
+                                        padding: 8px 16px;
+
+                                        .locationIcon {
+                                            width: 16px;
+                                            height: 19px;
+                                        }
+
+                                        .citationPathsText {
+                                            @include ellipsisMultiLine(2);
+                                        }
+                                    }
+                                }
+                            }
+
+                            .citationRowLayout {
+                                display: flex;
+                                flex-direction: row;
+                                gap: 16px;
+                                border: 1px solid var(--border-main);
+                                border-radius: 4px;
+                                padding: 8px 16px;
+                                background-color: var(--main-background);
+
+                                &:hover,
+                                &.open {
+                                    cursor: pointer;
+                                    background-color: var(--hover-background);
+                                }
+
+                                .citationFileName {
+                                    padding-left: 16px;
+                                    border-left: 1px solid var(--border);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            .citation {
+                margin-top: 8px;
+                display: flex;
+                flex-direction: row;
+
+                .promptDateTime {
+                    color: var(--text-secondary);
+                }
+
+                .citationTitle {
+                    border-left: 1px solid var(--border);
+                    color: var(--text-button-primary);
+                    cursor: pointer;
+                    padding-left: 8px;
+                    margin-left: 8px;
+
+                    &:hover {
+                        color: var(--text-button-primary-hover);
+                    }
+                }
+
+                .citationPop {
+                    width: 70%;
+                    left: 5px !important;
+                    max-height: 50vh;
+                    overflow-y: auto;
+
+                    .citationComponent {
+                        padding: 16px;
+                        display: flex;
+                        flex-direction: column;
+                        gap: 16px;
+
+                        .citationItem {
+                            display: flex;
+                            flex-direction: column;
+                            padding-bottom: 16px;
+                            border-bottom: 1px solid var(--border);
+                            gap: 8px;
+
+                            &:last-child {
+                                border-bottom: none;
+                                padding-bottom: 0;
+                            }
+
+                            .citationRow {
+                                display: flex;
+                                flex-direction: row;
+
+                                .citationPopTitle {
+                                    white-space: nowrap;
+                                }
+
+                                .citationValue {
+                                    @include ellipsis(100%);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

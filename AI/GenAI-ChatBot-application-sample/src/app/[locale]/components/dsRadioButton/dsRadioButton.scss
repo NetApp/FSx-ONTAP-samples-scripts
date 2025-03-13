@@ -1,0 +1,123 @@
+.radioButton {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 16px;
+    cursor: pointer;
+    position: relative;
+
+    &.isDisabled {
+        pointer-events: none;
+
+        input {
+            &:checked~.checkmark {
+                border-color: var(--selector-off-border-disabled);
+                
+                .point {
+                    background-color: var(--selector-on-bg-disabled);
+                }
+            }
+
+            &~.checkmark {
+                border-color: var(--selector-off-border-disabled);
+            }
+        }
+
+        .radioLabel {
+            color: var(--text-disabled);
+        }
+    }
+
+    &.tableRadio {
+        &:hover {
+            input {
+                ~.checkmark {
+                    .okPoint {
+                        color: var(--icon-primary);
+                        opacity: 1;
+                    }
+                }
+            }
+        }
+
+        &.isDisabled {
+            input {
+                &:checked~.checkmark {
+                    background-color: var(--selector-off-bg-disabled);
+    
+                    .okPoint {
+                        color: var(--icon-secondary-disabled);
+                        opacity: 1;
+                    }
+                }
+            }
+        }
+
+        .checkmark {
+            height: 24px;
+            width: 24px;
+
+            .okPoint {
+                opacity: 0;
+            }
+        }
+
+        input {
+            &:checked~.checkmark {
+                background-color: var(--selector-on-bg);
+
+                .okPoint {
+                    color: var(--icon-reversed);
+                    opacity: 1;
+                }
+            }
+        }
+    }
+
+    /* Hide the browser's default radio button */
+    input {
+        display: none;
+        position: absolute;
+        opacity: 0;
+        cursor: pointer;
+
+        /* When the radio button is checked, add a blue background */
+        &:checked~.checkmark {
+            border-color: var(--selector-on-bg);
+            
+            .point {
+                background-color: var(--selector-on-bg);
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+            }
+        }
+    }
+
+    /* Create a custom radio button */
+    .checkmark {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 16px;
+        width: 16px;
+        background-color: var(--background-content);
+        border: 1px solid var(--text-secondary);
+        border-radius: 50%;
+    }
+
+    /* Show the indicator (dot/circle) when checked */
+    .container input:checked~.checkmark:after {
+        display: block;
+    }
+
+    /* Style the indicator (dot/circle) */
+    .container .checkmark:after {
+        top: 9px;
+        left: 9px;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: white;
+    }
+}

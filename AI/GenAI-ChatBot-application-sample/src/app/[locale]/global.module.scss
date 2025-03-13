@@ -1,0 +1,88 @@
+.genAi {
+    display: flex;
+    flex-direction: row;
+    width: 100vw;
+    height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+    color: #404040;
+    &.isHidden {
+        opacity: 0;
+        }
+    &.font-variants {
+        --semibold-font-weight: 500;
+
+        .Semibold_43 {
+            font-size: 43px;
+            line-height: 56px;
+            font-weight: var(--semibold-font-weight);
+        }
+
+        .Semibold_20 {
+            font-size: 20px;
+            line-height: 32px;
+            font-weight: var(--semibold-font-weight);
+        }
+
+        .Semibold_14 {
+            font-size: 14px;
+            line-height: 24px;
+            font-weight: var(--semibold-font-weight);
+        }
+
+        .Regular_24 {
+            font-size: 24px;
+            line-height: 56px;
+            font-weight: 400;
+        }
+
+        .Regular_20 {
+            font-size: 20px;
+            line-height: 32px;
+            font-weight: 400;
+          }
+
+        .Regular_14 {
+            font-size: 14px;
+            line-height: 24px;
+            font-weight: 400;
+        }
+    }
+
+    .welcomeContent {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+        position: relative;
+        overflow: hidden;
+        flex: 1;
+        padding: 108px 30px 0 96px;
+        background: radial-gradient(429.85% 80.4% at 70.45% 140.62%, rgba(132, 115, 244, 0.20) 0%, rgba(255, 255, 255, 0.00) 100%), linear-gradient(278deg, #EDF6FF 8.68%, #dfd9f3 91.51%, rgba(252, 252, 252, 0.00) 146.22%);
+
+        .chatBotImage {
+            position: absolute;
+            bottom: 17%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 35%;
+            height: auto;
+        }
+
+        .title {
+            max-width: 800px;
+        }
+
+        .subTitle {
+            z-index: 1;
+            max-width: 700px;
+        }
+
+        .cloudsImage {
+            position: absolute;
+            bottom: 0;
+            right: -10%;
+            width: 70%;
+            max-width: 980px;
+            height: auto;
+        }
+    }
+}

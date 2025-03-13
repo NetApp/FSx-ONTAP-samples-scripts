@@ -1,0 +1,14 @@
+.dsBaloonPopup {
+    padding: 8px 12px;
+    background-color: var(--tooltip-info-bg);
+    border-radius: 4px;
+    box-shadow: 4px 4px 12px var(--border-drop-shadow);
+    min-width: 150px;
+
+    position: fixed;
+    z-index: 999999;
+
+    .childrenContainer {
+        white-space: break-spaces;
+    }
+}
