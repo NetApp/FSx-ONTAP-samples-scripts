@@ -12,12 +12,10 @@
 # system that doesn't have the specified volume.
 #
 # It assumes:
-#  - That there is only one data vserver per FSxN file system and that it
-#    is named 'fsx'.
 #  - That the administrator username is 'fsxadmin'.
 #  - That the audit log files will be named in the following format:
-#      audit_fsx_D2024-09-24-T13-00-03_0000000000.xml
-#    Where 'fsx' is the vserver name.
+#      audit_vserver_D2024-09-24-T13-00-03_0000000000.xml
+#    Where 'vserver' is the vserver name.
 #
 ################################################################################
 #
@@ -54,8 +52,12 @@ import botocore
 # all FSxNs.
 #volumeName = "audit_logs"
 #
-# The name of the vserver that holds the audit logs. Assumed to be the same on 
+# The name of the vserver that holds the audit logs. Assumed to be the same on
 # all FSxNs.
+# *NOTE*:The program has been updated to loop on all the vservers within an FSxN
+#        filesystem and not just the one set here. This variable is now used
+#        so it can update the lastFireRead stats file to conform to the new format
+#        that includes the vserver as part of the structure.
 #vserverName = "fsx"
 #
 # The CloudWatch log group to store the audit logs in.
@@ -118,7 +120,7 @@ def processFile(ontapAdminServer, headers, volumeUUID, filePath):
                 else:
                     f.write(part.content)
         else:
-            print(f'API call to {endpoint} failed. HTTP status code: {response.status}.')
+            print(f'Warning: API call to {endpoint} failed. HTTP status code: {response.status}.')
             break
 
     f.close()
@@ -204,7 +206,7 @@ def ingestAuditFile(auditLogPath, auditLogName):
     dictData = xmltodict.parse(data)
 
     if dictData.get('Events') == None or dictData['Events'].get('Event') == None:
-        print(f"No events found in {auditLogName}")
+        print(f"Info: No events found in {auditLogName}.")
         return
     #
     # Ensure the logstream exists.
@@ -214,7 +216,7 @@ def ingestAuditFile(auditLogPath, auditLogName):
         #
         # This really shouldn't happen, since we should only be processing
         # each file once, but during testing it happens all the time.
-        print(f"Log stream {auditLogName} already exists")
+        print(f"Info: Log stream {auditLogName} already exists.")
     #
     # If there is only one event, then the dict['Events']['Event'] will be a
     # dictionary, otherwise it will be a list of dictionaries.
@@ -223,25 +225,25 @@ def ingestAuditFile(auditLogPath, auditLogName):
         for event in dictData['Events']['Event']:
             cwEvents.append(createCWEvent(event))
             if len(cwEvents) == 5000:  # The real maximum is 10000 events, but there is also a size limit, so we will use 5000.
-                print("Putting 5000 events")
+                print("Info: Putting 5000 events")
                 response = cwLogsClient.put_log_events(logGroupName=config['logGroupName'], logStreamName=auditLogName, logEvents=cwEvents)
                 if response.get('rejectedLogEventsInfo') != None:
-                    if response['rejectedLogEventsInfo'].get('tooNewLogEventStartIndex') > 0:
+                    if response['rejectedLogEventsInfo'].get('tooNewLogEventStartIndex') is not None:
                         print(f"Warning: Too new log event start index: {response['rejectedLogEventsInfo']['tooNewLogEventStartIndex']}")
-                    if response['rejectedLogEventsInfo'].get('tooOldLogEventStartIndex') > 0:
-                        print(f"Warning: Too old log event start index: {response['rejectedLogEventsInfo']['tooOldLogEventStartIndex']}")
+                    if response['rejectedLogEventsInfo'].get('tooOldLogEventEndIndex') is not None:
+                        print(f"Warning: Too old log event end index: {response['rejectedLogEventsInfo']['tooOldLogEventEndIndex']}")
                 cwEvents = []
     else:
         cwEvents = [createCWEvent(dictData['Events']['Event'])]
 
     if len(cwEvents) > 0:
-        print(f"Putting {len(cwEvents)} events")
+        print(f"Info: Putting {len(cwEvents)} events")
         response = cwLogsClient.put_log_events(logGroupName=config['logGroupName'], logStreamName=auditLogName, logEvents=cwEvents)
         if response.get('rejectedLogEventsInfo') != None:
-            if response['rejectedLogEventsInfo'].get('tooNewLogEventStartIndex') > 0:   
+            if response['rejectedLogEventsInfo'].get('tooNewLogEventStartIndex') is not None:
                 print(f"Warning: Too new log event start index: {response['rejectedLogEventsInfo']['tooNewLogEventStartIndex']}")
-            if response['rejectedLogEventsInfo'].get('tooOldLogEventStartIndex') > 0:   
-                print(f"Warning: Too old log event start index: {response['rejectedLogEventsInfo']['tooOldLogEventStartIndex']}")
+            if response['rejectedLogEventsInfo'].get('tooOldLogEventEndIndex') is not None:
+                print(f"Warning: Too old log event end index: {response['rejectedLogEventsInfo']['tooOldLogEventEndIndex']}")
 
 ################################################################################
 # This function checks that all the required configuration variables are set.
@@ -257,8 +259,7 @@ def checkConfig():
         'secretArn': secretArn if 'secretArn' in globals() else None,                  # pylint: disable=E0602
         's3BucketRegion': s3BucketRegion if 's3BucketRegion' in globals() else None,   # pylint: disable=E0602
         's3BucketName': s3BucketName if 's3BucketName' in globals() else None,         # pylint: disable=E0602
-        'statsName': statsName if 'statsName' in globals() else None,                  # pylint: disable=E0602
-        'vserverName': vserverName if 'vserverName' in globals() else None             # pylint: disable=E0602
+        'statsName': statsName if 'statsName' in globals() else None                   # pylint: disable=E0602
     }
 
     for item in config:
@@ -266,6 +267,9 @@ def checkConfig():
             config[item] = os.environ.get(item)
         if config[item] == None:
             raise Exception(f"{item} is not set.")
+    #
+    # To be backwards compatible, load the vserverName.
+    config['vserverName'] = vserverName if 'vserverName' in globals() else os.environ.get('vserverName')  # pylint: disable=E0602
 
 ################################################################################
 # This is the main function that checks that everything is configured correctly
@@ -330,6 +334,11 @@ def lambda_handler(event, context):     # pylint: disable=W0613
     for fsxn in fsxNs:
         fsId = fsxn.split('.')[1]
         #
+        # Since the format of the lastReadFile sttucture has changed, we need to update it.
+        if lastFileRead.get(fsxn) is not None and config['vserverName'] is not None:
+            if type(lastFileRead[fsxn]) is float:                                  # Old format
+                lastFileRead[fsxn] = {config['vserverName']: lastFileRead[fsxn]}   # New format
+        #
         # Get the password
         password = secrets.get(fsId)
         if password == None:
@@ -341,39 +350,67 @@ def lambda_handler(event, context):     # pylint: disable=W0613
         headersDownload = { **auth, 'Accept': 'multipart/form-data' }
         headersQuery = { **auth }
         #
-        # Get the volume UUID for the audit_logs volume.
-        volumeUUID = None
-        endpoint = f"https://{fsxn}/api/storage/volumes?name={config['volumeName']}&svm={config['vserverName']}"
+        # Get the list of SVMs on the FSxN.
+        endpoint = f"https://{fsxn}/api/svm/svms?return_timeout=4"
         response = http.request('GET', endpoint, headers=headersQuery, timeout=5.0)
         if response.status == 200:
-            data = json.loads(response.data.decode('utf-8'))
-            if data['num_records'] > 0:
-                volumeUUID = data['records'][0]['uuid']  # Since we specified the volume, and vserver name, there should only be one record.
+            svmsData = json.loads(response.data.decode('utf-8'))
+            numSvms = svmsData['num_records']
+            #
+            # Loop over all the SVMs.
+            while numSvms > 0:
+                for record in svmsData['records']:
+                    vserverName = record['name']
+                    #
+                    # Get the volume UUID for the audit_logs volume.
+                    volumeUUID = None
+                    endpoint = f"https://{fsxn}/api/storage/volumes?name={config['volumeName']}&svm={vserverName}"
+                    response = http.request('GET', endpoint, headers=headersQuery, timeout=5.0)
+                    if response.status == 200:
+                        data = json.loads(response.data.decode('utf-8'))
+                        if data['num_records'] > 0:
+                            volumeUUID = data['records'][0]['uuid']  # Since we specified the volume, and vserver name, there should only be one record.
 
-        if volumeUUID == None:
-            print(f"Warning: Volume {config['volumeName']} not found for {fsId} under SVM: {config['vserverName']}.")
-            continue
-        #
-        # Get all the files in the volume that match the audit file pattern.
-        endpoint = f"https://{fsxn}/api/storage/volumes/{volumeUUID}/files?name=audit_{config['vserverName']}_D*.xml&order_by=name%20asc&fields=name"
-        response = http.request('GET', endpoint, headers=headersQuery, timeout=5.0)
-        data = json.loads(response.data.decode('utf-8'))
-        if data.get('num_records') == 0:
-            print(f"Warning: No XML audit log files found on FsID: {fsId}; SvmID: {config['vserverName']}; Volume: {config['volumeName']}.")
-            continue
+                    if volumeUUID == None:
+                        print(f"Warning: Volume {config['volumeName']} not found for {fsId} under SVM: {vserverName}.")
+                        continue
+                    #
+                    # Get all the files in the volume that match the audit file pattern.
+                    endpoint = f"https://{fsxn}/api/storage/volumes/{volumeUUID}/files?name=audit_{vserverName}_D*.xml&order_by=name%20asc&fields=name"
+                    response = http.request('GET', endpoint, headers=headersQuery, timeout=5.0)
+                    data = json.loads(response.data.decode('utf-8'))
+                    if data.get('num_records') == 0:
+                        print(f"Warning: No XML audit log files found on FsID: {fsId}; SvmID: {vserverName}; Volume: {config['volumeName']}.")
+                        continue
 
-        for file in data['records']:
-            filePath = file['name']
-            if lastFileRead.get(fsxn) == None or getEpoch(filePath) > lastFileRead[fsxn]:
+                    for file in data['records']:
+                        filePath = file['name']
+                        if lastFileRead.get(fsxn) is None or lastFileRead[fsxn].get(vserverName) is None or getEpoch(filePath) > lastFileRead[fsxn][vserverName]:
+                            #
+                            # Process the file.
+                            processFile(fsxn, headersDownload, volumeUUID, filePath)
+                            if lastFileRead.get(fsxn) is None:
+                                lastFileRead[fsxn] = {vserverName: getEpoch(filePath)}
+                            else:
+                                lastFileRead[fsxn][vserverName] = getEpoch(filePath)
+                            s3Client.put_object(Key=config['statsName'], Bucket=config['s3BucketName'], Body=json.dumps(lastFileRead).encode('UTF-8'))
                 #
-                # Process the file.
-                processFile(fsxn, headersDownload, volumeUUID, filePath)
-                lastFileRead[fsxn] = getEpoch(filePath)
-                s3Client.put_object(Key=config['statsName'], Bucket=config['s3BucketName'], Body=json.dumps(lastFileRead).encode('UTF-8'))
+                # Get the next set of SVMs.
+                if svmsData['_links'].get('next') != None:
+                    endpoint = f"https://{fsxn}{svmsData['_links']['next']['href']}"
+                    response = http.request('GET', endpoint, headers=headersQuery, timeout=5.0)
+                    if response.status == 200:
+                        svmsData = json.loads(response.data.decode('utf-8'))
+                        numSvms = svmsData['num_records']
+                    else:
+                        print(f"Warning: API call to {endpoint} failed. HTTP status code: {response.status}.")
+                        break # Break out of the for all SVMs loop. Maybe the call to the next FSxN will work.
+                else:
+                    numSvms = 0
+        else:
+            print(f"Warning: API call to {endpoint} failed. HTTP status code: {response.status}.")
+            break # Break out of the for all FSxNs loop.
 #
 # If this script is not running as a Lambda function, then call the lambda_handler function.
 if os.environ.get('AWS_LAMBDA_FUNCTION_NAME') == None:
-    lambdaFunction = False
     lambda_handler(None, None)
-else:
-    lambdaFunction = True
