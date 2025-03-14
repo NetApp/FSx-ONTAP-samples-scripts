@@ -1,7 +1,8 @@
 import moment from 'moment';
+import { ReactElement } from 'react';
 
 export interface ValueSymbole {
-    value: number | string | JSX.Element,
+    value: number | string | ReactElement,
     symbol: string
 }
 

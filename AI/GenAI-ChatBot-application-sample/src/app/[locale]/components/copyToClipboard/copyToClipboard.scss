@@ -1,0 +1,35 @@
+.copyToClipboard {
+
+    .copyToClipboardContainer {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        position: relative;
+        cursor: pointer;
+
+        .contentForCopy {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 0;
+            border: none;
+            padding: 0;
+            opacity: 0;
+        }
+
+        .copyToClipboard {
+            width: 24px;
+            height: 24px;
+            color: var(--icon-secondary);
+        }
+    }
+
+    .dsBaloonPopup {
+        min-width: unset;
+
+        .childrenContainer {
+            white-space: nowrap;
+        }
+    }
+}

@@ -1,0 +1,152 @@
+@mixin transition($args...) {
+    -webkit-transition: $args;
+    -moz-transition: $args;
+    -ms-transition: $args;
+    -o-transition: $args;
+    transition: $args;
+}
+
+@mixin standard-scroll($width: 6px, $border-size: 8px) {
+
+    &::-webkit-scrollbar {
+        box-sizing: content-box;
+        width: $width + $border-size;
+        height: $width;
+    }
+
+    ;
+
+    &::-webkit-scrollbar-track {
+        background-color: transparent;
+        margin: 8px 0;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background-color: var(--scroller);
+        border-radius: 4px 16px 16px 4px / 6px;
+        border-right: $border-size solid transparent;
+        background-clip: padding-box;
+    }
+}
+
+@mixin ellipsis($max-width) {
+    display: inline-block;
+    max-width: $max-width;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+@mixin rotate($deg) {
+    transform: rotate($deg);
+}
+
+@keyframes fadeIn {
+    0% {
+        opacity: 0;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
+
+@mixin fadeIn($sec) {
+    animation: fadeIn $sec;
+}
+
+@mixin hideScrollbar() {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+        display: none;
+    }
+}
+
+@mixin ellipsisMultiLine($lines) {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: $lines;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    box-sizing: border-box;
+}
+
+@mixin showScrollbarY() {
+    --scroll-width: 18px;
+    overflow-x: hidden;
+    overflow-y: scroll;
+
+    >* {
+        // width: calc(100% + var(--scroll-width));
+        box-sizing: border-box;
+    }
+
+    &::-webkit-scrollbar {
+        width: var(--scroll-width);
+    }
+
+    &::-webkit-scrollbar-corner {
+        background-color: transparent;
+    }
+
+    /* Handle */
+    &::-webkit-scrollbar-thumb {
+        border: 6px solid rgba(0, 0, 0, 0);
+        background-clip: padding-box;
+        border-radius: 9999px;
+        background-color: var(--scroller);
+    }
+}
+
+@mixin showScrollbarX() {
+    --scroll-width: 18px;
+    overflow-x: scroll;
+
+    >* {
+        box-sizing: border-box;
+    }
+
+    &::-webkit-scrollbar {
+        height: var(--scroll-width);
+        width: 0;
+    }
+
+    &::-webkit-scrollbar-corner {
+        background-color: transparent;
+    }
+
+    /* Handle */
+    &::-webkit-scrollbar-thumb {
+        border: 6px solid rgba(0, 0, 0, 0);
+        background-clip: padding-box;
+        border-radius: 9999px;
+        background-color: var(--border-scroller);
+    }
+}
+
+@mixin capitalFirst() {
+    text-transform: lowercase;
+
+    &::first-letter {
+        text-transform: uppercase;
+    }
+}
+
+@keyframes spinKey {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@mixin spin($duration) {
+    animation-name: spinKey;
+    animation-duration: $duration;
+    animation-iteration-count: infinite;
+    animation-timing-function: linear;
+}

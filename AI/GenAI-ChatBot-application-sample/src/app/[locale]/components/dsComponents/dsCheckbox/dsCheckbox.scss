@@ -1,0 +1,209 @@
+@use '../../../styles/mixins.scss' as *;
+
+.dsCheckBoxContainer {
+    position: relative;
+    height: fit-content;
+    width: fit-content;
+
+    .dsCheckboxBoundriesContainer {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 8px;
+
+        &.isDisabled {
+            pointer-events: none;
+        }
+
+        .dsCheckbox {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 8px;
+            position: relative;
+            cursor: pointer;
+
+            &.indeterminate {
+                input {
+                    &:checked~.checkmark {
+                        .checkedSign {
+                            width: 10px;
+                            height: 2px;
+                            background-color: var(--icon-reversed);
+                        }
+                    }
+                }
+            }
+
+            &:hover {
+                input {
+
+                    &:checked,
+                    &:indeterminate {
+                        &~.checkmark {
+                            background-color: var(--selector-on-bg-hover);
+                        }
+                    }
+
+                    &:indeterminate {
+                        &~.checkmark {
+                            .checkedSign {
+                                background-color: var(--icon-reversed) !important;
+                            }
+                        }
+                    }
+                }
+            }
+
+            &.error {
+                .checkmark {
+                    border-color: var(--notification-error);
+                }
+            }
+
+            &.isDisabled {
+                pointer-events: none;
+
+                input {
+
+                    &:checked,
+                    &:indeterminate {
+                        &~.checkmark {
+                            border-color: var(--selector-on-bg-disabled);
+                            background-color: var(--selector-on-bg-disabled);
+                        }
+                    }
+
+                }
+
+                .checkmark {
+                    border-color: var(--selector-off-border-disabled);
+                    background-color: var(--selector-off-bg-disabled);
+                }
+
+                .radioLabel {
+                    color: var(--text-disabled);
+                }
+            }
+
+            &.tableCheckbox,
+            &.tableHeaderCheckbox {
+                input {
+                    pointer-events: none;
+                }
+
+                &:hover {
+                    input:not(:checked) {
+                        &~.checkmark {
+                            .checkedSign {
+                                color: var(--icon-primary);
+                                opacity: 1;
+                            }
+                        }
+                    }
+                }
+
+                &:hover.indeterminate {
+                    input:not(:checked) {
+                        &~.checkmark {
+                            .checkedSign {
+                                opacity: 1;
+                                width: 10px;
+                                height: 2px;
+                                background-color: var(--icon-primary);
+                            }
+                        }
+                    }
+                }
+
+                .checkmark {
+                    width: 24px;
+                    height: 24px;
+                    border-radius: 3px;
+                }
+            }
+
+            /* Hide the browser's default radio button */
+            input {
+                display: none;
+                position: absolute;
+                opacity: 0;
+                cursor: pointer;
+
+                /* When the radio button is checked, add a blue background */
+                &:checked~.checkmark {
+                    background-color: var(--selector-on-bg);
+                    border-color: var(--selector-on-bg);
+
+                    .checkedSign {
+                        opacity: 1;
+                    }
+                }
+
+                &:indeterminate~.checkmark {
+                    background-color: var(--selector-on-bg);
+                    border-color: var(--selector-on-bg);
+
+                    .checkedSign {
+                        opacity: 1;
+                        width: 10px;
+                        height: 2px;
+                        background-color: var(--icon-reversed);
+                    }
+                }
+            }
+
+            /* Create a custom checkbox */
+            .checkmark {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                height: 16px;
+                width: 16px;
+                background-color: var(--background-content);
+                border: 1px solid var(--text-secondary);
+                border-radius: 2px;
+
+                .checkedSign {
+                    opacity: 0;
+                    color: var(--icon-reversed);
+                }
+            }
+
+            /* Show the indicator (dot/circle) when checked */
+            .container input:checked~.checkmark:after {
+                display: block;
+            }
+
+            /* Style the indicator (dot/circle) */
+            .container .checkmark:after {
+                top: 9px;
+                left: 9px;
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background: white;
+            }
+        }
+
+    }
+
+    .dsMessageContainer {
+        position: absolute;
+        top: calc(100%);
+        left: 1px;
+    }
+
+    .bigCheckbox {
+        position: absolute;
+        top: calc(100% + 2px);
+    }
+
+    .chevronIcon {
+        @include transition(transform 0.3s ease);
+
+        &.isExpanded {
+            @include rotate(180deg);
+        }
+    }
+}

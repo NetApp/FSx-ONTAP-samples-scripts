@@ -1,0 +1,24 @@
+@use '../../../styles/mixins.scss';
+
+.dsPopover {
+    height: fit-content;
+
+    .refDiv {
+        width: 100%;
+
+        .childrenContainer {
+            position: relative;
+
+            .popoverBaloon {
+                &.open {
+                    @include mixins.transition(opacity .1s ease);
+                    opacity: 0;
+
+                    &.show {
+                        opacity: 1;
+                    }
+                }
+            }
+        }
+    }
+}
