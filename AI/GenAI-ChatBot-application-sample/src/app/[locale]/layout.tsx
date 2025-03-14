@@ -11,9 +11,8 @@ import RedirectProvider from "./providers/redirectProvider";
 import GenAiClerkProvider from "./providers/genAiClerkProvider";
 import initTranslations from "../i18n";
 import TranslationsProvider from "./components/translationsProvider";
-import { SupportedLocales } from "@/lib/store.types";
 
-const lang = process.env.NEXT_PUBLIC_LANGUAGE as SupportedLocales;
+const lang = process.env.NEXT_PUBLIC_LANGUAGE;
 
 export const metadata: Metadata = {
   title: "NetApp GenAI Studio",

@@ -3,6 +3,7 @@ import { apiSlice, BASE_URL } from "./api.slice";
 import { History, Message } from "./api.types";
 import { setMessage } from "../slices/chat.slice";
 import { AiChatState } from "../store.types";
+import initTranslations from "@/app/i18n";
 
 interface ChatParams {
     knowledgeBaseId: string
@@ -71,10 +72,13 @@ const getSocket = async (args: { chatId: string, knowledgeBaseId: string, access
         });
     }
 
-    const dispatchErrorMessage = () => {
+    const dispatchErrorMessage = async () => {
+        const lang = process.env.NEXT_PUBLIC_LANGUAGE;
+        const { t } = await initTranslations(lang, ['genAi']);
+
         dispatch(setMessage({
             question,
-            answer: 'We encountered an error. Wait a few minutes and then try again.',
+            answer: t('genAI.messages.errors.generalError'),
             stopReason: TEMP_STOP_REASON,
             type: 'ERROR',
             chatId

@@ -7,7 +7,6 @@ import { KnowledgeBase } from "./api/api.types";
 import errorHandelingSlice from "./slices/errorHandeling.slice";
 
 export type MessageType = 'ANSWER' | 'ERROR';
-export type SupportedLocales = 'en' | 'jp';
 
 export interface AiChatState {
     [authSlice.name]: Auth,
