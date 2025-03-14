@@ -14,7 +14,7 @@ export interface DialogContextProviderProps {
 
 export type DialogContextProps = {
   /** Callback used to show a dialog */
-  setDialog: (dialog: ReactNode,isDisableClose?:boolean) => Promise<unknown> | undefined,
+  setDialog: (dialog: ReactNode, isDisableClose?: boolean) => Promise<unknown> | undefined,
   /** Callback used to change the ability to close with click outside or using escape */
   setDisableClose: (isClosingAllowed: boolean) => void,
   /** Callback used to close the dialog, and pass data */
@@ -43,12 +43,12 @@ export const DialogContextProvider = ({ children }: DialogContextProviderProps) 
     style: undefined,
     columns: undefined
   });
-  const promise = useRef<(data?: any) => Promise<any>>();
+  const promise = useRef<(data?: any) => Promise<any>>(null);
 
   const closeDialog = useCallback((props?: DialogAnswer) => {
     setShownDialog({ dialog: null });
     promise?.current && promise.current(props);
-  },[]);
+  }, []);
 
   const closeDialogHandler = useCallback((e: KeyboardEvent) => {
     if (shownDialog.isDisableClose) {
@@ -71,7 +71,7 @@ export const DialogContextProvider = ({ children }: DialogContextProviderProps) 
     return () => {
       document.removeEventListener('keydown', closeDialogHandler);
     };
-  }, [shownDialog,closeDialogHandler]);
+  }, [shownDialog, closeDialogHandler]);
 
   const setDialog = (dialog: ReactNode, isDisableClose?: boolean) => {
     if (shownDialog.dialog === dialog) {
@@ -108,7 +108,7 @@ export const DialogContextProvider = ({ children }: DialogContextProviderProps) 
           <div className={styles.mask} onClick={shownDialog.isDisableClose ? () => {
           } : closeDialog} />
           <FlexLayout className={styles.modal} ref={modalRef} columns={shownDialog.columns || 6}
-                      style={shownDialog.style}>
+            style={shownDialog.style}>
             {content}
           </FlexLayout>
         </FlexLayout>) : null}

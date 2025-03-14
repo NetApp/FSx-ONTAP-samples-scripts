@@ -1,4 +1,4 @@
-import React, { ReactNode, SyntheticEvent, forwardRef, useRef, useState } from "react";
+import React, { ReactElement, ReactNode, SyntheticEvent, forwardRef, useRef, useState } from "react";
 import './dsTooltipInfo.scss';
 import { DsComponentProps, OpenCloseStatus, TriggerType, WithMouseEvents } from "../dsTypes";
 import { DsTypography } from "../dsTypography/dsTypography";
@@ -12,7 +12,7 @@ export type TooltipStatus = 'opened' | 'closed';
 
 export interface DsTooltipInfoProps extends Omit<DsComponentProps, 'message' | 'isLoading' | 'variant'>, WithMouseEvents<OpenCloseStatus, TriggerType | 'manual'> {
     children?: ReactNode,
-    icon?: JSX.Element,
+    icon?: ReactElement,
     trigger?: TriggerType,
     defaultStatus?: TooltipStatus,
     placement?: 'bottomRight' | 'right' | 'bottomLeft' | 'left' | 'top',

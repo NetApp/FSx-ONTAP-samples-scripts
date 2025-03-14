@@ -4,8 +4,8 @@ import { MonitorPosition } from '../components/dsComponents/dsTypes';
 export interface PositionOffset { top?: number, left?: number }
 
 interface useChangePositionProps {
-    parentRef: RefObject<HTMLElement>,
-    childRef: RefObject<HTMLElement>,
+    parentRef: RefObject<HTMLElement | null>,
+    childRef: RefObject<HTMLElement | null>,
     offsets?: PositionOffset,
     monitorPosition: MonitorPosition,
     userOffest?: PositionOffset

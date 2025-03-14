@@ -1,4 +1,4 @@
-import { MouseEvent } from "react";
+import { MouseEvent, ReactElement } from "react";
 import { ChangeEvent, CSSProperties, ReactNode, SyntheticEvent } from "react";
 
 export type BaseVariant = 'Default';
@@ -56,7 +56,7 @@ export interface DsSelectableComponent<elementType extends HTMLElement> {
 
 export interface Message {
     type: AlertType,
-    value: string | JSX.Element,
+    value: string | ReactElement,
     tooltipValue?: string
 }
 
@@ -68,7 +68,7 @@ export interface DsBaseComponentProps {
 }
 
 export interface DropDownCustomeItem<T> {
-    formatOptionLabel?: (option: T) => JSX.Element
+    formatOptionLabel?: (option: T) => ReactElement
 }
 
 export interface DsComponentProps<variant extends 'Default' | string = 'Default'> extends DsBaseComponentProps {

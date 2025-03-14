@@ -5,8 +5,8 @@ import AddIcon from '@/app/[locale]/svgs/chatbot/add.svg';
 import NotificationIcon from '@/app/[locale]/svgs/notification.svg';
 import { KnowledgeBase } from '@/lib/api/api.types';
 import { DsTypography } from '../../dsComponents/dsTypography/dsTypography';
-import { Popover } from '../../dsComponents/Popover';
 import { useTranslation } from 'react-i18next';
+import { DsPopover } from '../../dsComponents/dsPopover/dsPopover';
 
 export type PanelType = 'history' | 'info'
 
@@ -27,13 +27,13 @@ const ChatBotHeader = ({ isDisabled, knowledgebase, isSendMessageDisabled, setNe
                 <DsTypography isDisabled={isDisabled} variant='Regular_20' title={knowledgebase?.id ? knowledgebase.name : undefined} className={_Classes(styles.knowledgebaseName)}>{`${knowledgebase ? `"${knowledgebase?.name}"` : ''} ${t('genAI.chatBot.title')}`}</DsTypography>
             </div>
             <div className={_Classes(styles.right, { [styles.isDisabled]: isDisabled })}>
-                <Popover placement="bottom-start" trigger={"hover"} container={<AddIcon width={18} title={t('genAI.chatBot.newChat')} className={_Classes(styles.headerIcon, styles.addChatIcon, { [styles.disabled]: isSendMessageDisabled || isDisabled })} onClick={() => setNewChatId(Date.now().toString())} />}>
-                    <DsTypography variant="Regular_14">{t('genAI.chatBot.newChat')}</DsTypography>
-                </Popover>
+                <DsPopover placement="bottomLeft" trigger='hover' title={t('genAI.chatBot.newChat')}>
+                    <AddIcon width={18} title={t('genAI.chatBot.newChat')} className={_Classes(styles.headerIcon, styles.addChatIcon, { [styles.disabled]: isSendMessageDisabled || isDisabled })} onClick={() => setNewChatId(Date.now().toString())} />
+                </DsPopover>
                 <NotificationIcon width={24} className={_Classes(styles.headerIcon, styles.infoIcon, { [styles.disabled]: isDisabled })} onClick={() => setIsExpanded('info')} />
-                <Popover placement="bottom-start" trigger={"hover"} className={_Classes(styles.headerIcon, styles.historyIcon)} container={<HistoryIcon alt={t('genAI.chatBot.history.view')} title={t('genAI.chatBot.history.view')} width={22} onClick={() => setIsExpanded('history')} />}>
-                    <DsTypography variant="Regular_14">{t('genAI.chatBot.history.view')}</DsTypography>
-                </Popover>
+                <DsPopover placement="bottomLeft" trigger='hover' className={_Classes(styles.headerIcon, styles.historyIcon)} title={t('genAI.chatBot.history.view')}>
+                    <HistoryIcon alt={t('genAI.chatBot.history.view')} title={t('genAI.chatBot.history.view')} width={22} onClick={() => setIsExpanded('history')} />
+                </DsPopover>
             </div>
         </div>
     )

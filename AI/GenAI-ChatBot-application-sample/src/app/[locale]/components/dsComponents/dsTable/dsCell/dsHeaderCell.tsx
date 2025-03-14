@@ -1,4 +1,4 @@
-import { RefObject, useEffect, useRef, useState } from "react";
+import { ReactNode, RefObject, useEffect, useRef, useState } from "react";
 import './dsHeaderCell.scss';
 import { DsCell, DsCellBase, DsCellProps, DsCellVariant, FreezColumn } from "./dsCell";
 import SortIcon from "@/app/[locale]/svgs/tableIcons/sort.svg";
@@ -16,7 +16,7 @@ export interface ColumnWidthType {
 export interface DsTableColumn extends DsCellBase {
     id: string,
     isSortable?: boolean,
-    formatCells?: (cell: DsCellProps, row: DsRow, rowIndex: number) => JSX.Element
+    formatCells?: (cell: DsCellProps, row: DsRow, rowIndex: number) => ReactNode
     isResizable?: boolean,
     isFilterable?: boolean,
     isHidden?: boolean,
@@ -29,8 +29,8 @@ export interface DsTableColumn extends DsCellBase {
 export interface DsColumnInner extends DsTableColumn {
     order?: SortType,
     onSortChange: (order: SortType) => void,
-    onColumnStartDragg: (columnId: string, ref: RefObject<HTMLTableCellElement>) => void,
-    onMount: (columnId: string, ref: RefObject<HTMLTableCellElement>) => void,
+    onColumnStartDragg: (columnId: string, ref: RefObject<HTMLTableCellElement | null>) => void,
+    onMount: (columnId: string, ref: RefObject<HTMLTableCellElement | null>) => void,
     onFilterSelect: (columnId: string, values: string[]) => void,
     isLast: boolean,
     filterItemList: string[],

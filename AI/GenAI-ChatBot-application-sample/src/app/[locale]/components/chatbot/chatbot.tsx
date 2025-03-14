@@ -1,6 +1,6 @@
 'use client';
 
-import React, { KeyboardEvent, useEffect, useMemo, useRef, useState } from 'react';
+import React, { KeyboardEvent, ReactElement, useEffect, useMemo, useRef, useState } from 'react';
 import './chatbot.scss'
 import SendIcon from "@/app/[locale]/svgs/chatbot/send.svg";
 import EnterpriseChatIcon from "@/app/[locale]/svgs/chatbot/enterpriseChat.svg";
@@ -154,8 +154,8 @@ const Chatbot = () => {
     }, [messageListFromHistory, promptList]);
 
     const emptyChatContent = useMemo((): {
-        svg: JSX.Element,
-        description: JSX.Element
+        svg: ReactElement,
+        description: ReactElement
     } => {
         const descriptionForNoStarters = () => {
             return (
@@ -258,7 +258,7 @@ const Chatbot = () => {
     }
 
     const ConversationStarterPrompts = () => {
-        const conversationPrompts: JSX.Element[] = [];
+        const conversationPrompts: ReactElement[] = [];
         const listLength = randomStarters.length;
 
         for (let i = 0; i < listLength; i++) {
@@ -364,7 +364,6 @@ const Chatbot = () => {
                                 onChange={event => setMessageInput(event!.target.value)}
                                 onKeyDown={(event: KeyboardEvent<HTMLInputElement>) => event.key === 'Enter' && sendMessage()} />
                             <div className='sendContainer'>
-
                                 <SendIcon width={28} className={`sendButton ${isSendMessageDisabled || !knowledgebase ? 'disabled' : ''}`} onClick={() => sendMessage()} />
                             </div>
                         </div>

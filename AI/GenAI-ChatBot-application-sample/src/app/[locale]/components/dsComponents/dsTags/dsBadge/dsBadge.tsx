@@ -1,4 +1,4 @@
-import React, { forwardRef } from "react";
+import React, { forwardRef, ReactElement } from "react";
 import './dsBadge.scss';
 import { DsTypography } from "../../dsTypography/dsTypography";
 import { DsBaseTag } from "../dsTag/dsTag";
@@ -6,7 +6,7 @@ import { DsBaseTag } from "../dsTag/dsTag";
 type BadgeVariants = 'number' | 'dot';
 export interface DsBadgeProps extends Omit<DsBaseTag<BadgeVariants>, 'isDisabled'> {
     title: number,
-    icon?: JSX.Element,
+    icon?: ReactElement,
     type: 'error' | 'warning' | 'info' | 'success' | 'pending' | 'disabled'
 }
 

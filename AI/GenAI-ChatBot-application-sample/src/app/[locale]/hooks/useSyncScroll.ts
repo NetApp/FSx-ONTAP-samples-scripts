@@ -2,11 +2,11 @@ import { useEffect, RefObject } from 'react';
 
 type ScrollDirection = 'horizontal' | 'vertical' | 'all';
 
-const useSyncScroll = (refs: RefObject<HTMLElement>[], scrollDirection: ScrollDirection): void => {
+const useSyncScroll = (refs: RefObject<HTMLElement | null>[], scrollDirection: ScrollDirection): void => {
     useEffect(() => {
         if (!refs || refs.length === 0) return;
 
-        const handleScroll = (sourceRef: RefObject<HTMLElement>) => {
+        const handleScroll = (sourceRef: RefObject<HTMLElement | null>) => {
             refs.forEach(ref => {
                 if (ref.current && ref.current !== sourceRef.current) {
                     if ((['all', 'vertical'] as ScrollDirection[]).includes(scrollDirection)) ref.current.scrollTop = sourceRef.current!.scrollTop;

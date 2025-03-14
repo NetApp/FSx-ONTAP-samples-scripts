@@ -5,7 +5,7 @@ import { _Classes } from '@/utils/cssHelper.util';
 interface DsTableFooterProps {
     bottomOffset: number,
     tableWidth: number,
-    scrollerRef: RefObject<HTMLDivElement>,
+    scrollerRef: RefObject<HTMLDivElement | null>,
     showHorizontalScroll: boolean
 }
 

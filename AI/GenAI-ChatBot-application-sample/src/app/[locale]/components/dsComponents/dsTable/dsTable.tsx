@@ -557,7 +557,7 @@ export const DsTable = forwardRef<HTMLDivElement, DsTableProps>(({
         return [...tableColumns].reverse().findIndex(col => !col.isHidden && isNotActionCol(col)) === index;
     }
 
-    const onColumnStartDragg = (columnId: string, ref: RefObject<HTMLTableCellElement>) => {
+    const onColumnStartDragg = (columnId: string, ref: RefObject<HTMLTableCellElement | null>) => {
         document.body.style.cursor = 'col-resize';
 
         const handleDragg = (event: MouseEvent) => {

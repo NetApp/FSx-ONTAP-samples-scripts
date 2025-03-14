@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { ReactElement } from 'react';
 import {
     DialogContent,
     DialogFooter,
@@ -9,7 +9,7 @@ import { DsButton, DsButtonProps } from '../../dsComponents/dsButton/dsButton';
 
 interface GeneralModalProps {
     title: string,
-    children: JSX.Element,
+    children: ReactElement,
     buttons: DsButtonProps[],
     className?: string,
     error?: string

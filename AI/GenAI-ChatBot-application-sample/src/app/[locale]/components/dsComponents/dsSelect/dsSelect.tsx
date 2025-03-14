@@ -1,4 +1,4 @@
-import { ChangeEvent, SyntheticEvent, forwardRef, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, ReactElement, SyntheticEvent, forwardRef, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import './dsSelect.scss';
 import { DsTextField, DsTextFieldProps } from "../dsTextField/dsTextField";
 import { DropDownCustomeItem, DsExpandableComponent, SelectionType } from "../dsTypes";
@@ -33,7 +33,7 @@ export interface DsSelectProps extends Omit<DsTextFieldProps, 'countLimiting' | 
     onSelect?: (option: DsSelectItemProps[]) => void,
     selectionType?: SelectionType,
     /** The formatLabel is a type that can get 'chip' or 'count' or a function (value: string[] | undefined) => string | undefined */
-    formatLabel?: 'chip' | 'count' | ((value: string[] | undefined) => string | undefined) | JSX.Element,
+    formatLabel?: 'chip' | 'count' | ((value: string[] | undefined) => string | undefined) | ReactElement,
     isWithActions?: boolean,
     searchMethod?: DsDropDownSearch,
     isCleanable?: boolean,

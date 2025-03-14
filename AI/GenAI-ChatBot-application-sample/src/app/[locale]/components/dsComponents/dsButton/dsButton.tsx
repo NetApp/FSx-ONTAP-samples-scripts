@@ -1,4 +1,4 @@
-import React, { MouseEvent, SyntheticEvent, forwardRef, useEffect, useRef, useState } from "react";
+import React, { MouseEvent, ReactElement, SyntheticEvent, forwardRef, useEffect, useRef, useState } from "react";
 import './dsButton.scss';
 import { DropDownCustomeItem, DsComponentProps, TriggerType } from "../dsTypes";
 import { DsTypography } from "../dsTypography/dsTypography";
@@ -23,7 +23,7 @@ interface Dropdown extends DropDownCustomeItem<DsDropDownListItemProps> {
 }
 
 export interface DsButtonProps extends DsBaseButton {
-    icon?: JSX.Element,
+    icon?: ReactElement,
     /** Used with the link button. Will open a new tab with the provided link */
     externalLink?: string,
     dropDown?: Dropdown,

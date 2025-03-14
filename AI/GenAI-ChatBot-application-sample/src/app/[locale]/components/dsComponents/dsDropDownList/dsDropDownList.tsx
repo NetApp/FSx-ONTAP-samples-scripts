@@ -1,4 +1,4 @@
-import { MouseEvent, RefObject, SyntheticEvent, forwardRef, useEffect, useMemo, useRef, useState } from "react";
+import { MouseEvent, ReactElement, RefObject, SyntheticEvent, forwardRef, useEffect, useMemo, useRef, useState } from "react";
 import './dsDropDownList.scss';
 import { DropDownCustomeItem, DsBaseComponentProps, MonitorPosition, TriggerType } from "../dsTypes";
 import { useOutsideClick } from "@/app/[locale]/hooks/useOutsideClick";
@@ -23,7 +23,7 @@ export interface DsDropDownSearch {
 }
 
 interface DsDropDownListContainerProps {
-    boundariesComponent: JSX.Element,
+    boundariesComponent: ReactElement,
     dropdownlist: DsDropDownListProps
     onClickChild: (event: SyntheticEvent) => void,
     isDisabled: boolean,
@@ -108,7 +108,7 @@ export interface DsDropDownListProps extends DsBaseComponentProps, DropDownCusto
     isExpanded?: boolean,
     onExpandChange?: (isExpanded: boolean, dropWidth?: number) => void
     /** Element reference (useRef) that define the boundaries of the action list  */
-    boundariesRef: RefObject<HTMLDivElement>
+    boundariesRef: RefObject<HTMLDivElement | null>
     /** Maximum dropdown height. Extra items will be visible by scroll */
     maxHeight?: string,
     options: DsDropDownListItemProps[],
