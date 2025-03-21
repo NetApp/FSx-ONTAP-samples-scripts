@@ -16,9 +16,9 @@ or by following the manual instructions found in the [README-MANUEL.md](README-M
 ## Prerequisites
 - An FSx for Data ONTAP file system.
 - An S3 bucket to store the "stats" file and a Lambda layer zip file.
-    - You will need to download the [Lambda layer zip file](https://raw.githubusercontent.com/NetApp/FSx-ONTAP-samples-scripts/main/Monitoring/ingest_nas_audit_logs_into_cloudwatch/lambda_layer.zip) from this repo and upload it to the S3 bucket. Be sure to perserve the name `lambda_layer.zip`.
+    - You will need to download the [Lambda layer zip file](https://raw.githubusercontent.com/NetApp/FSx-ONTAP-samples-scripts/main/Monitoring/ingest_nas_audit_logs_into_cloudwatch/lambda_layer.zip) from this repo and upload it to the S3 bucket. Be sure to preserve the name `lambda_layer.zip`.
     - The "stats" file is maintained by the program. It is used to keep track of the last time the Lambda function successfully ingested audit logs from each SVM. Its size will be small (i.e. less than a few megabytes).
-- A CloudWatch log group to ingest the audit logs into. Each audit log file with get its own log stream within the log group.
+- A CloudWatch log group to ingest the audit logs into. Each audit log file will get its own log stream within the log group.
 - Have NAS auditing configured and enabled on the SVM within a FSx for Data ONTAP file system. **Ensure you have selected the XML format for the audit logs.** Also,
 ensure you have set up a rotation schedule. The program will only act on audit log files that have been finalized, and not the "active" one. You can read this
 [knowledge based article](https://kb.netapp.com/on-prem/ontap/da/NAS/NAS-KBs/How_to_set_up_NAS_auditing_in_ONTAP_9) for instructions on how to setup NAS auditing.
@@ -85,7 +85,7 @@ and `DeleteNetworkInterface` actions. The correct resource line is `arn:aws:ec2:
     |Parameter|Required|Description|
     |---|---|--|
     |Stack Name|Yes|The name of the CloudFormation stack. This can be anything, but since it is used as a suffix for some of the resources it creates, keep it under 40 characters.|
-    |volumeName|Yes|This is the name of the volume that will contain the audit logs. This should be the same on all SVMs on all the FSx for ONTAP file systems you want to ingest the audit logs from.|
+    |volumeName|Yes|This is the name of the volume that will contain the audit logs. This should be the same on all SVMs on all the FSx for ONTAP file systems you want to ingest the NAS audit logs from.|
     |checkInterval|Yes|The interval in minutes that the Lambda function will check for new audit logs. You should set this to match the rotate frequency you have set for your audit logs.|
     |logGroupName|Yes|The name of the CloudWatch log group to ingest the audit logs into. This should have already been created based on your business requirements.|
     |subNetIds|Yes|Select the subnets that you want the Lambda function to run in. Any subnet selected must have connectivity to all the FSxN file system management endpoints that you want to gather audit logs from.|
@@ -103,10 +103,13 @@ and `DeleteNetworkInterface` actions. The correct resource line is `arn:aws:ec2:
     |createS3Endpoint|No|If set to `true` it will create the VPC endpoints for the S3 service|
     |routeTableIds|No|If creating an S3 gateway endpoint, these are the routing tables you want updated to use the endpoint.|
     |vpcId|No|This is the VPC that the endpoint(s) will be created in. Only needed if you are creating an endpoint.|
-    |endpointSecurityGroupIds|No|The security group that the endpoint(s) will be associated with. Only needed if you are creating an endpoint.|
+    |endpointSecurityGroupIds|No|The security group that the endpoint(s) will be associated with. Must allow incoming TCP traffic over port 443. Only needed if you are creating an endpoint.|
 
 6. Click on the `Next` button.
-7. The next page will provide for some additional configuration options. You can leave these as the default values. At the bottom of the page, there is a checkbox that you must check to allow the CloudFormation script to create the necessary IAM roles and policies. Note that if you have provided the ARN to the two required roles, then the CloudFormation script will not create any roles.
+7. The next page will provide for some additional configuration options. You can leave these as the default values.
+At the bottom of the page, there is a checkbox that you must check to allow the CloudFormation script to create the
+necessary IAM roles and policies. Note that if you have provided the ARNs to the two required roles, then the
+CloudFormation script will not create any roles.
 8. Click on the `Next` button.
 9. The next page will provide a summary of the configuration you have provided. Review it to ensure it is correct.
 10. Click on the `Create stack` button.
