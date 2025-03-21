@@ -9,6 +9,7 @@ the appropriate NAS auditing configuration enabled.
 It will maintain a "stats" file in an S3 bucket that will keep track of the last time it successfully ingested audit logs from each
 SVM to try to ensure it doesn't process an audit file more than once.
 You can run this script as a standalone program or as a Lambda function. These directions assume you are going to run it as a Lambda function.
+
 **NOTE**: There are two ways to install this program. Either with the [CloudFormaiton script](cloudformation-template.yaml) found this this repo,
 or by following the manual instructions found in the [README-MANUEL.md](README-MANUAL.md) file.
 
@@ -23,23 +24,27 @@ ensure you have set up a rotation schedule. The program will only act on audit l
 [knowledge based article](https://kb.netapp.com/on-prem/ontap/da/NAS/NAS-KBs/How_to_set_up_NAS_auditing_in_ONTAP_9) for instructions on how to setup NAS auditing.
 - Have the NAS auditing configured to store the audit logs in a volume with the same name in all SVMs on all the FSx for Data ONTAP file
 systems that you want to ingest the audit logs from.
-- An AWS Secrets Manager secret that contains the credentials you want to use to obtain the NAS Audit logs with for all the FSxN file systems.
+- An AWS Secrets Manager secret that contains the credentials for all the FSxNs you want to use to obtain the NAS Audit logs from.
   - The secret should be in the form of key/value pairs where the key is the file system ID and value is a dictionary with the keys `username` and `password`. For example:
 ```json
       {
-        "fs-0e8d9172fa5411111": {"username": "fsxadmin", "password": "superSecretPassword"},
+        "fs-0e8d9172fa5411111": {"username": "fsxadmin",        "password": "superSecretPassword"},
         "fs-0e8d9172fa5422222": {"username": "service_account", "password": "superSecretPassword"}
       }
 ```
 - You have applied the necessary SACLs to the files you want to audit. The knowledge base article linked above provides guidance on how to do this.
 
-You can either create the following items before running the CloudFormaiton script, or allow it to create the items for you.
-- AWS Endpoints. Since the Lambda function runs within your VPC it will not have access to the Internet, even if you can access the Internet from the Subnet it runs from.
-Therefore, there needs to be an VPC endpoint for all the AWS services that the Lambda function uses. Specifically, the Lambda function needs to be able to access the following AWS services:
+**You can either create the following items before running the CloudFormaiton script, or allow it to create the items for you.**
+
+- AWS Endpoints. Since the Lambda function runs within your VPC it will not have access to the Internet, even if you can access the Internet
+from the Subnet it runs from. Although, if you are using an AWS Transit Gateway, you can configure it to allow the Lambda function to access the Internet.
+If you don't have a Transit Gateway then there needs to be an VPC endpoint for all the AWS services that the Lambda function uses.
+Specifically, the Lambda function needs to be able to access the following AWS services:
   - FSx.
   - Secrets Manager.
   - CloudWatch Logs.
-  - S3 - Note that typically there is a Gateway type VPC endpoint for S3, so you should not need to create a VPC endpoint for S3.
+  - S3 - Note that typically there is a Gateway type VPC endpoint for S3, therefore you typically you don't need to create a VPC endpoint for S3.
+
 - Role for the Lambda function. Create a role with the necessary permissions to allow the Lambda function to do the following:
 
 <!--- Using HTML to create a table that has rowspan attributes since the markdown table syntax does not support that. --->
@@ -75,7 +80,8 @@ and `DeleteNetworkInterface` actions. The correct resource line is `arn:aws:ec2:
 1. Go to the CloudFormation page within the AWS console and click on the `Create stack -> With new resources` button.
 1. Select the `Upload a template file` radio button and click on the `Choose file` button. Select the `cloudformation-template.yaml` that you downloaded in step 1.
 1. Click on the `Next` button.
-1. The next page will provide all the configuration parameters you can provide. Some are required, and some aren't
+1. The next page will provide all the configuration parameters you can provide:
+
 |Parameter|Required|Description|
 |---|---|--|
 |Stack Name|Yes|The name of the CloudFormation stack. This can be anything, but since it is used as a suffix for some of the resources it creates, keep it under 40 characters.|
@@ -99,20 +105,20 @@ and `DeleteNetworkInterface` actions. The correct resource line is `arn:aws:ec2:
 |vpcId|No|This is the VPC that the endpoint(s) will be created in. Only needed if you are creating an endpoint.|
 |endpointSecurityGroupIds|No|The security group that the endpoint(s) will be associated with. Only needed if you are creating an endpoint.|
 1. Click on the `Next` button.
-1. The next page will provide for some additional configuration options. You can leave these as the default values. At the bottom of the page, there is a checkbox that you must check to allow the CloudFormation script to create the necessary IAM roles and policies.
+1. The next page will provide for some additional configuration options. You can leave these as the default values. At the bottom of the page, there is a checkbox that you must check to allow the CloudFormation script to create the necessary IAM roles and policies. Note that if you have provided the ARN to the two required roles, then the CloudFormation script will not create any roles.
 1. Click on the `Next` button.
 1. The next page will provide a summary of the configuration you have provided. Review it to ensure it is correct.
 1. Click on the `Create stack` button.
 
 ## After deployment tasks
 ### Confirm that the Lambda function is ingesting audit logs.
-After the CloudFormation script has completed, go to the "resource" tab of the CloudFormation stack and click on the Lambda function hyperlink.
+After the CloudFormation deployment has completed, go to the "resource" tab of the CloudFormation stack and click on the Lambda function hyperlink.
 This will take you to the Lambda function's page.
-Click on the Monitoring sub tab and then click on "View CloudWatch logs". This will take you to the CloudWatch log group that the Lambda function
-is writing its diagnostic output to. You should see a log stream. If you don't, wait a few minutes, and then refresh the page. If you still don't
+Click on the Monitoring sub tab and then click on "View CloudWatch logs". This will take you to the CloudWatch log group where the Lambda function
+writes its diagnostic output to. You should see a log stream. If you don't, wait a few minutes, and then refresh the page. If you still don't
 see a log stream, check the Lambda function's configuration to ensure it is correct. Once a log stream appears, click on it to see the diagnostic
 output from the Lambda function. You should see log messages indicating that it is ingesting audit logs. If you see any "Errors" then you will
-need to investigate and correct the issue. If you can't figure it out, please open an issue in this repository.
+need to investigate and correct the issue. If you can't figure it out, please open an [issue](https://github.com/NetApp/FSx-ONTAP-samples-scripts/issues) in this repository.
 
 
 ## Author Information
