@@ -82,33 +82,34 @@ and `DeleteNetworkInterface` actions. The correct resource line is `arn:aws:ec2:
 1. Click on the `Next` button.
 1. The next page will provide all the configuration parameters you can provide:
 
-|Parameter|Required|Description|
-|---|---|--|
-|Stack Name|Yes|The name of the CloudFormation stack. This can be anything, but since it is used as a suffix for some of the resources it creates, keep it under 40 characters.|
-|volumeName|Yes|This is the name of the volume that will contain the audit logs. This should be the same on all SVMs on all the FSx for ONTAP file systems you want to ingest the audit logs from.|
-|checkInterval|Yes|The interval in minutes that the Lambda function will check for new audit logs. You should set this to match the rotate frequency you have set for your audit logs.|
-|logGroupName|Yes|The name of the CloudWatch log group to ingest the audit logs into. This should have already been created based on your business requirements.|
-|subNetIds|Yes|Select the subnets that you want the Lambda function to run in. Any subnet selected must have connectivity to all the FSxN file system management endpoints that you want to gather audit logs from.|
-|lambdaSecruityGroupsIds|Yes|Select the security groups that you want the Lambda function associated with. The security group must allow outbound traffic on TCP port 443. Inbound rules don't matter since the Lambda function is not accessible from a network.|
-|s3BucketName|Yes|The name of the S3 bucket where the stats file is stored. This bucket must already exist.|
-|s3BucketRegion|Yes|The region of the S3 bucket resides.|
-|secretArn|Yes|The ARN to the secret that contains the credentials for the FSxN file systems that you want to ingest audit logs from.|
-|createWatchdogAlarm|No|If set to `true` it will create a CloudWatch alarm that will alert you if the Lambda function throws in error.|
-|snsTopicArn|No|The ARN of the SNS topic to send the alarm to. This is required if `createWatchdogAlarm` is set to `true`.|
-|lambdaRoleArn|No|The ARN of the role that the Lambda function will use. If not provided, the CloudFormation script will create a role for you.|
-|schedulreRoleArn|No|The ARN of the role that the EventBridge scheduler will run as. If not provided, the CloudFormation script will create a role for you.|
-|createFsxEndpoint|No|If set to `true` it will create the VPC endpoints for the FSx service|
-|createCloudWatchLogsEndpoint|No|If set to `true` it will create the VPC endpoints for the CloudWatch Logs service|
-|createSecretsManagerEndpoint|No|If set to `true` it will create the VPC endpoints for the Secrets Manager service|
-|createS3Endpoint|No|If set to `true` it will create the VPC endpoints for the S3 service|
-|routeTableIds|No|If creating an S3 gateway endpoint, these are the routing tables you want updated to use the endpoint.|
-|vpcId|No|This is the VPC that the endpoint(s) will be created in. Only needed if you are creating an endpoint.|
-|endpointSecurityGroupIds|No|The security group that the endpoint(s) will be associated with. Only needed if you are creating an endpoint.|
-1. Click on the `Next` button.
-1. The next page will provide for some additional configuration options. You can leave these as the default values. At the bottom of the page, there is a checkbox that you must check to allow the CloudFormation script to create the necessary IAM roles and policies. Note that if you have provided the ARN to the two required roles, then the CloudFormation script will not create any roles.
-1. Click on the `Next` button.
-1. The next page will provide a summary of the configuration you have provided. Review it to ensure it is correct.
-1. Click on the `Create stack` button.
+    |Parameter|Required|Description|
+    |---|---|--|
+    |Stack Name|Yes|The name of the CloudFormation stack. This can be anything, but since it is used as a suffix for some of the resources it creates, keep it under 40 characters.|
+    |volumeName|Yes|This is the name of the volume that will contain the audit logs. This should be the same on all SVMs on all the FSx for ONTAP file systems you want to ingest the audit logs from.|
+    |checkInterval|Yes|The interval in minutes that the Lambda function will check for new audit logs. You should set this to match the rotate frequency you have set for your audit logs.|
+    |logGroupName|Yes|The name of the CloudWatch log group to ingest the audit logs into. This should have already been created based on your business requirements.|
+    |subNetIds|Yes|Select the subnets that you want the Lambda function to run in. Any subnet selected must have connectivity to all the FSxN file system management endpoints that you want to gather audit logs from.|
+    |lambdaSecruityGroupsIds|Yes|Select the security groups that you want the Lambda function associated with. The security group must allow outbound traffic on TCP port 443. Inbound rules don't matter since the Lambda function is not accessible from a network.|
+    |s3BucketName|Yes|The name of the S3 bucket where the stats file is stored. This bucket must already exist.|
+    |s3BucketRegion|Yes|The region of the S3 bucket resides.|
+    |secretArn|Yes|The ARN to the secret that contains the credentials for the FSxN file systems that you want to ingest audit logs from.|
+    |createWatchdogAlarm|No|If set to `true` it will create a CloudWatch alarm that will alert you if the Lambda function throws in error.|
+    |snsTopicArn|No|The ARN of the SNS topic to send the alarm to. This is required if `createWatchdogAlarm` is set to `true`.|
+    |lambdaRoleArn|No|The ARN of the role that the Lambda function will use. If not provided, the CloudFormation script will create a role for you.|
+    |schedulreRoleArn|No|The ARN of the role that the EventBridge scheduler will run as. If not provided, the CloudFormation script will create a role for you.|
+    |createFsxEndpoint|No|If set to `true` it will create the VPC endpoints for the FSx service|
+    |createCloudWatchLogsEndpoint|No|If set to `true` it will create the VPC endpoints for the CloudWatch Logs service|
+    |createSecretsManagerEndpoint|No|If set to `true` it will create the VPC endpoints for the Secrets Manager service|
+    |createS3Endpoint|No|If set to `true` it will create the VPC endpoints for the S3 service|
+    |routeTableIds|No|If creating an S3 gateway endpoint, these are the routing tables you want updated to use the endpoint.|
+    |vpcId|No|This is the VPC that the endpoint(s) will be created in. Only needed if you are creating an endpoint.|
+    |endpointSecurityGroupIds|No|The security group that the endpoint(s) will be associated with. Only needed if you are creating an endpoint.|
+
+6. Click on the `Next` button.
+7. The next page will provide for some additional configuration options. You can leave these as the default values. At the bottom of the page, there is a checkbox that you must check to allow the CloudFormation script to create the necessary IAM roles and policies. Note that if you have provided the ARN to the two required roles, then the CloudFormation script will not create any roles.
+8. Click on the `Next` button.
+9. The next page will provide a summary of the configuration you have provided. Review it to ensure it is correct.
+10. Click on the `Create stack` button.
 
 ## After deployment tasks
 ### Confirm that the Lambda function is ingesting audit logs.
