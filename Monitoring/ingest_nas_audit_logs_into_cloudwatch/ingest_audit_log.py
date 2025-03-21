@@ -30,26 +30,30 @@ import boto3
 import botocore
 
 ################################################################################
-# You can configure this script by either setting the following variables, or
-# by setting environment variables with the same name.
+# You can configure this script by either setting the following variables in
+# code below, or by setting environment variables with the same name.
 ################################################################################
 #
-# Specify the secret region and ARN for the fsxadmin passwords.
+# Specify the secret ARN for the fsxadmin passwords.
 #   Format of the secret should be:
-#   {"fsId": "fsxadmin-password", "fsId": "fsxadmin-password", ...}
-#secretRegion = "us-west-2"
+#   {
+#     "fsId-1": {"username": "fsxadmin", "password": "<passowrd>"},
+#     "fsId-2": {"username": "service_account", "password": "<passowrd>"}
+#   }
 #secretArn = ""
 #
-# Where to store last read stats.
+# Specify where to store the "last read" file.
 #s3BucketRegion = "us-west-2"
 #s3BucketName = ""
+#
+# The name of the "last read" file.
 #statsName = "lastFileRead"
 #
 # The region to process the FSxNs in.
 #fsxRegion = "us-west-2"
 #
 # The name of the volume that holds the audit logs. Assumed to be the same on
-# all FSxNs.
+# vservers.
 #volumeName = "audit_logs"
 #
 # The name of the vserver that holds the audit logs. Assumed to be the same on
@@ -129,6 +133,40 @@ def processFile(ontapAdminServer, headers, volumeUUID, filePath):
     ingestAuditFile(tmpFileName, filePath)
 
 ################################################################################
+# This functions converts the timestamp from the XML file to a timestamp in
+# milliseconds. An example format of the time is:
+#    2024-09-22T21:05:27.263864000Z
+################################################################################
+def getTimestampFromEvent(event):
+
+    year = int(event['System']['TimeCreated']['@SystemTime'].split('-')[0])
+    month = int( event['System']['TimeCreated']['@SystemTime'].split('-')[1])
+    day =  int(event['System']['TimeCreated']['@SystemTime'].split('-')[2].split('T')[0])
+    hour =  int(event['System']['TimeCreated']['@SystemTime'].split('T')[1].split(':')[0])
+    minute =  int(event['System']['TimeCreated']['@SystemTime'].split('T')[1].split(':')[1])
+    second =  int(event['System']['TimeCreated']['@SystemTime'].split('T')[1].split(':')[2].split('.')[0])
+    msecond = event['System']['TimeCreated']['@SystemTime'].split('T')[1].split(':')[2].split('.')[1].split('Z')[0]
+    t = datetime.datetime(year, month, day, hour, minute, second, tzinfo=datetime.timezone.utc).timestamp()
+    #
+    # Convert the timestep from a float in seconds to an integer in milliseconds.
+    msecond = int(msecond)/(10 ** (len(msecond) - 3))
+    t = int(t * 1000 + msecond)
+    return t
+
+################################################################################
+# This puts the CloudWatch event into the CloudWatch log stream.
+################################################################################
+def putEventInCloudWatch(cwEvents, auditLogName):
+    global cwLogsClient, config
+
+    response = cwLogsClient.put_log_events(logGroupName=config['logGroupName'], logStreamName=auditLogName, logEvents=cwEvents)
+    if response.get('rejectedLogEventsInfo') != None:
+        if response['rejectedLogEventsInfo'].get('tooNewLogEventStartIndex') is not None:
+            print(f"Warning: Too new log event start index: {response['rejectedLogEventsInfo']['tooNewLogEventStartIndex']}")
+        if response['rejectedLogEventsInfo'].get('tooOldLogEventEndIndex') is not None:
+            print(f"Warning: Too old log event end index: {response['rejectedLogEventsInfo']['tooOldLogEventEndIndex']}")
+
+################################################################################
 # This function returns a CloudWatch event from the XML audit log event.
 ################################################################################
 def createCWEvent(event):
@@ -145,21 +183,8 @@ def createCWEvent(event):
     # SubjectPort: Just the TCP port that the user came in on.
     # OldDirHandle and NewDirHandle: Are the UUIDs of the directory. The OldPath and NewPath are human readable.
     ignoredDataFields = ["ObjectServer", "HandleID", "InformationRequested", "AccessList", "AccessMask", "DesiredAccess", "Attributes", "DirHandleID", "SearchFilter", "SearchPattern", "SubjectPort", "OldDirHandle", "NewDirHandle"]
-    #
-    # Convert the timestamp from the XML file to a timestamp in milliseconds.
-    # An example format of the time is: 2024-09-22T21:05:27.263864000Z
-    year = int(event['System']['TimeCreated']['@SystemTime'].split('-')[0])
-    month = int( event['System']['TimeCreated']['@SystemTime'].split('-')[1])
-    day =  int(event['System']['TimeCreated']['@SystemTime'].split('-')[2].split('T')[0])
-    hour =  int(event['System']['TimeCreated']['@SystemTime'].split('T')[1].split(':')[0])
-    minute =  int(event['System']['TimeCreated']['@SystemTime'].split('T')[1].split(':')[1])
-    second =  int(event['System']['TimeCreated']['@SystemTime'].split('T')[1].split(':')[2].split('.')[0])
-    msecond = event['System']['TimeCreated']['@SystemTime'].split('T')[1].split(':')[2].split('.')[1].split('Z')[0]
-    t = datetime.datetime(year, month, day, hour, minute, second, tzinfo=datetime.timezone.utc).timestamp()
-    #
-    # Convert the timestep from a float in seconds to an integer in milliseconds.
-    msecond = int(msecond)/(10 ** (len(msecond) - 3))
-    t = int(t * 1000 + msecond)
+
+    eventTimestamp = getTimestampFromEvent(event)
     #
     # Build the message to send to CloudWatch.
     cwData  = f"Date={event['System']['TimeCreated']['@SystemTime']}, "
@@ -191,7 +216,7 @@ def createCWEvent(event):
             else: # Assume the rest of the fields don't need special handling.
                 cwData += f", {data['@Name']}={data['#text']}"
 
-    return {'timestamp': t, 'message': cwData}
+    return {'timestamp': eventTimestamp, 'message': cwData}
 
 ################################################################################
 # This function uploads the audit log events stored in XML format to a
@@ -221,29 +246,30 @@ def ingestAuditFile(auditLogPath, auditLogName):
     # If there is only one event, then the dict['Events']['Event'] will be a
     # dictionary, otherwise it will be a list of dictionaries.
     if isinstance(dictData['Events']['Event'], list):
+        #
+        # Make sure not to span more than 24 hours of events in a single put_log_events call.
+        firstEventTimestamp = getTimestampFromEvent(dictData['Events']['Event'][0])
         cwEvents = []
         for event in dictData['Events']['Event']:
+            currentEventTimestamp = getTimestampFromEvent(event)
+            if currentEventTimestamp - firstEventTimestamp > 79200000:  # 23 hours and 55 minutes in milliseconds.
+                print("Info: Putting 24 hours of events.")
+                putEventInCloudWatch(cwEvents, auditLogName)
+                cwEvents = []
+                firstEventTimestamp = currentEventTimestamp
+
             cwEvents.append(createCWEvent(event))
             if len(cwEvents) == 5000:  # The real maximum is 10000 events, but there is also a size limit, so we will use 5000.
                 print("Info: Putting 5000 events")
-                response = cwLogsClient.put_log_events(logGroupName=config['logGroupName'], logStreamName=auditLogName, logEvents=cwEvents)
-                if response.get('rejectedLogEventsInfo') != None:
-                    if response['rejectedLogEventsInfo'].get('tooNewLogEventStartIndex') is not None:
-                        print(f"Warning: Too new log event start index: {response['rejectedLogEventsInfo']['tooNewLogEventStartIndex']}")
-                    if response['rejectedLogEventsInfo'].get('tooOldLogEventEndIndex') is not None:
-                        print(f"Warning: Too old log event end index: {response['rejectedLogEventsInfo']['tooOldLogEventEndIndex']}")
+                putEventInCloudWatch(cwEvents, auditLogName)
                 cwEvents = []
+                firstEventTimestamp = currentEventTimestamp
     else:
         cwEvents = [createCWEvent(dictData['Events']['Event'])]
 
     if len(cwEvents) > 0:
         print(f"Info: Putting {len(cwEvents)} events")
-        response = cwLogsClient.put_log_events(logGroupName=config['logGroupName'], logStreamName=auditLogName, logEvents=cwEvents)
-        if response.get('rejectedLogEventsInfo') != None:
-            if response['rejectedLogEventsInfo'].get('tooNewLogEventStartIndex') is not None:
-                print(f"Warning: Too new log event start index: {response['rejectedLogEventsInfo']['tooNewLogEventStartIndex']}")
-            if response['rejectedLogEventsInfo'].get('tooOldLogEventEndIndex') is not None:
-                print(f"Warning: Too old log event end index: {response['rejectedLogEventsInfo']['tooOldLogEventEndIndex']}")
+        putEventInCloudWatch(cwEvents, auditLogName)
 
 ################################################################################
 # This function checks that all the required configuration variables are set.
@@ -255,7 +281,6 @@ def checkConfig():
         'volumeName': volumeName if 'volumeName' in globals() else None,               # pylint: disable=E0602
         'logGroupName': logGroupName if 'logGroupName' in globals() else None,         # pylint: disable=E0602
         'fsxRegion': fsxRegion if 'fsxRegion' in globals() else None,                  # pylint: disable=E0602
-        'secretRegion': secretRegion if 'secretRegion' in globals() else None,         # pylint: disable=E0602
         'secretArn': secretArn if 'secretArn' in globals() else None,                  # pylint: disable=E0602
         's3BucketRegion': s3BucketRegion if 's3BucketRegion' in globals() else None,   # pylint: disable=E0602
         's3BucketName': s3BucketName if 's3BucketName' in globals() else None,         # pylint: disable=E0602
@@ -283,12 +308,11 @@ def lambda_handler(event, context):     # pylint: disable=W0613
     #
     # Create a Secrets Manager client.
     session = boto3.session.Session()
-    secretsClient = session.client(service_name='secretsmanager', region_name=config['secretRegion'])
+    secretsClient = session.client(service_name='secretsmanager', region_name=config['secretArn'].split(':')[3])
     #
     # Get the fsxadmin passwords for all the file systems.
     secretsInfo = secretsClient.get_secret_value(SecretId=config['secretArn'])
     secrets = json.loads(secretsInfo['SecretString'])
-    username = "fsxadmin"
     #
     # Create a S3 client.
     s3Client = boto3.client('s3', config['s3BucketRegion'])
@@ -334,15 +358,26 @@ def lambda_handler(event, context):     # pylint: disable=W0613
     for fsxn in fsxNs:
         fsId = fsxn.split('.')[1]
         #
-        # Since the format of the lastReadFile sttucture has changed, we need to update it.
+        # Since the format of the lastReadFile structure has changed, we need to update it.
         if lastFileRead.get(fsxn) is not None and config['vserverName'] is not None:
             if type(lastFileRead[fsxn]) is float:                                  # Old format
                 lastFileRead[fsxn] = {config['vserverName']: lastFileRead[fsxn]}   # New format
         #
-        # Get the password
-        password = secrets.get(fsId)
-        if password == None:
-            print(f'Warning: No password found for {fsId}.')
+        # Get the credentials.
+        username = None
+        password = None
+        if secrets.get(fsId) is not None:
+            #
+            # Check for the old format of the secrets.
+            if isinstance(secrets[fsId], str):
+                username = "fsxadmin"
+                password = secrets[fsId]
+            else:
+                username = secrets[fsId].get('username')
+                password = secrets[fsId].get('password')
+        
+        if username is None or password is None:
+            print(f'Warning: The credentials were not found for {fsId} in the secret {config["secretArn"]}.')
             continue
         #
         # Create a header with the basic authentication.
