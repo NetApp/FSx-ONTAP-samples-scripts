@@ -1,3 +1,4 @@
+{{- range .Values.fsxs.clusters }}
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
@@ -5,17 +6,19 @@ metadata:
     release-name: harvest
     release-namespace: harvest
   labels:
-    release: {{ .Values.prometheus }}
-  name: harvest-exporter
-  namespace: harvest
+    release: kube-prometheus-stack
+  name: harvest-exporter-{{ .name }}
+  namespace: {{ $.Release.Namespace }}
 spec:
   endpoints:
     - interval: 30s
-      port: "12990"
+      port: {{ .promPort | quote}}
       path: /metrics
   namespaceSelector:
     matchNames:
-      - harvest
+      - {{ $.Release.Namespace }}
   selector:
     matchLabels:
-      io.kompose.service: harvest-service
+      app: harvest-poller-{{ .name }}
+---
+{{ end }}

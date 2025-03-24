@@ -1,13 +1,11 @@
+{{- range .Values.fsxs.clusters }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  annotations:
-    use-subpath: "true"
-  creationTimestamp: null
   labels:
-    io.kompose.service: harvest-service
-  name: harvest-config
-  namespace: harvest
+    app: harvest-poller-{{ .name }}
+  name: harvest-config-{{ .name }}
+  namespace: {{ $.Release.Namespace }}
 data:
   harvest.yml: |+
     Tools:
@@ -19,17 +17,19 @@ data:
     Defaults:
         use_insecure_tls: true
     Pollers:
-        fsx:
+      {{ .name }}:
             datacenter: fsx
-            addr: {{ .Values.fsx.managment_lif }}
-            username: {{ .Values.fsx.username }}
-            password: {{ .Values.fsx.password }}
+            addr: {{ .managment_lif }}
             collectors:
-                - Zapi
-                - ZapiPerf
                 - Rest
                 - RestPerf
                 - Ems
             exporters:
                 - prometheus1
+            credentials_script:
+              path: /opt/fetch-credentails
+              schedule: 3h
+              timeout: 10s
+---
+{{ end }}
 
