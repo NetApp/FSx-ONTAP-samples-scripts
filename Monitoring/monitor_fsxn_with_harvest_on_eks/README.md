@@ -10,15 +10,13 @@ credentials for the FSxN file systems so those credentials aren't insecurely sto
 ### What to expect
 
 Harvest Helm chart installation will result the following:
-* Install NetApp Harvest with latest version on your EKS
+* Install the latest version of NetApp Harvest on to your EKS cluster.
 * Each FSxN cluster will represent as Kubernetes pod on the cluster.
 * Collecting metrics about your FSxNs and adding existing Grafana dashboards for better visualization.
 
 ### Integration with AWS Secrets Manager
-This Harvest installation supports integration with AWS Secrets Manager. To use it store your FSxN credentials into a
-Secrets Manager secret. Harvest will invoke the script specified in the credentials_script path section which is already
-mapped in Harvest container. The credentails_script will fetch the secret and set the credentials based on its content.
-It expects the secret string to be a json structure with a `username` and `password` keys. For example:
+This Harvest installation uses the AWS Secrets Manager to obtain the credentials for the FSxN file systems.
+The format of the secret string should to be a json structure with a `username` and `password` keys. For example:
 ```json
 {
   "username": "fsxadmin",
