@@ -1,3 +1,5 @@
+:warning: **NOTE:** This repository is no longer being maintain. However, all the code found here has been relocated to a new NetApp managed GitHub repository found here [https://github.com/NetApp/FSx-ONTAP-utils](https://github.com/NetApp/FSx-ONTAP-utils). Please refer to that repository for the latest updates. This repository is being left behind for purely for historical purposes.
+
 # FSx for NetApp ONTAP as persistent storage
 
 ## Table of Contents
