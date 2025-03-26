@@ -1,3 +1,7 @@
+# :warning: **NOTICE:**
+
+This repository is no longer being maintain. However, most the code found in this repository has been relocated to a new NetApp managed GitHub repository. In the particular case, the functionality of this sample has been rolled into the CloudWatch dashboard found here [https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Monitoring/CloudWatch-FSx](https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Monitoring/CloudWatch-FSx). Please refer to that repository for the latest updates. This repository is being left behind purely for historical purposes.
+
 # LUN Monitoring
 
 ## Introduction

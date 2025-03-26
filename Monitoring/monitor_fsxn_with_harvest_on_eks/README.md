@@ -1,3 +1,7 @@
+# :warning: **NOTICE:**
+
+This repository is no longer being maintain. However, all the code found here has been relocated to a new NetApp managed GitHub repository found here [https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Monitoring/Grafana/Monitor-FSxN-with-Harvest-on-EKS](https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Monitoring/Grafana/Monitor-FSxN-with-Harvest-on-EKS). Please refer to that repository for the latest updates. This repository is being left behind purely for historical purposes.
+
 # Deploy NetApp Harvest on EKS 
 
 Harvest helm chart for monitoring Amazon FSx for ONTAP with Harvest, Grafana and Prometheus on EKS.

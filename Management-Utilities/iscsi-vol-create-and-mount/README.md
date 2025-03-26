@@ -1,3 +1,6 @@
+# :warning: **NOTICE:**
+
+This repository is no longer being maintain. However, all the code found here has been relocated to a new NetApp managed GitHub repository found here [https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Samples/Management-Utilities/iSCSI-Vol-Create-and-Mount](https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Samples/Management-Utilities/iSCSI-Vol-Create-and-Mount). Please refer to that repository for the latest updates. This repository is being left behind purely for historical purposes.
 
 # Mount FSxN ISCSI volume on EC2 windows
 Powershell automation for creation FSxN ISCSI volume and mount it on ec2 instance.

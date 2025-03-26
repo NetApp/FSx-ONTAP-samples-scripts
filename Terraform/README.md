@@ -1,3 +1,7 @@
+# :warning: **NOTICE:**
+
+This repository is no longer being maintain. However, all the code found here has been relocated to a new NetApp managed GitHub repository found here [https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Samples/Automation/Terraform](https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Samples/Automation/Terraform). Please refer to that repository for the latest updates. This repository is being left behind purely for historical purposes.
+
 # Terraform Overview
 This subfolder contains various examples of how you can use Terraform to deploy various solutions that use FSx for NetApp ONTAP.
 

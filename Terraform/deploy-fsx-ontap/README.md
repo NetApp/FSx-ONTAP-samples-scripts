@@ -1,3 +1,7 @@
+# :warning: **NOTICE:**
+
+This repository is no longer being maintain. However, all the code found here has been relocated to a new NetApp managed GitHub repository found here [https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Samples/Automation/Terraform/Deploy-FSx-ONTAP](https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Samples/Automation/Terraform/Deploy-FSx-ONTAP). Please refer to that repository for the latest updates. This repository is being left behind purely for historical purposes.
+
 ## Repository Overview
 This repostory contians two different ways of leveraging Terraform to deploy an FSx ONTAP instance in AWS.
 The first method is a standalone module that can be cloned and run locally.

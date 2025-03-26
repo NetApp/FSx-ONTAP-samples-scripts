@@ -1,3 +1,7 @@
+# :warning: **NOTICE:**
+
+This repository is no longer being maintain. However, all the code found here has been relocated to a new NetApp managed GitHub repository found here [https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Samples/Monitoring/Ingest-NAS-Audit-Logs-into-CloudWatch](https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Samples/Monitoring/Ingest-NAS-Audit-Logs-into-CloudWatch). Please refer to that repository for the latest updates. This repository is being left behind purely for historical purposes.
+
 # Ingest FSx for ONTAP NAS audit logs into CloudWatch
 
 ## Overview
@@ -11,7 +15,7 @@ SVM to try to ensure it doesn't process an audit file more than once.
 You can run this script as a standalone program or as a Lambda function. These directions assume you are going to run it as a Lambda function.
 
 **NOTE**: There are two ways to install this program. Either with the [CloudFormaiton script](cloudformation-template.yaml) found this this repo,
-or by following the manual instructions found in the [README-MANUEL.md](README-MANUAL.md) file.
+or by following the manual instructions found in the [README-Manuel.md](README-Manual.md) file.
 
 ## Prerequisites
 - An FSx for Data ONTAP file system.
