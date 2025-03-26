@@ -183,7 +183,8 @@
                         }
                      ]
                 },
-                "Region": {"Ref": "AWS::Region"}
+                "Region": {"Ref": "AWS::Region"},
+                "Source": "MonitoringDashboard"
             }
         },
         "SecretManagerEndPoint": {
