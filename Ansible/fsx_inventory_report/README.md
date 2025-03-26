@@ -1,3 +1,7 @@
+# :warning: **NOTICE:**
+
+This repository is no longer being maintain. However, all the code found here has been relocated to a new NetApp managed GitHub repository found here [https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Samples/Automation/Ansible/FSxN-Inventory-Report](https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Samples/Automation/Ansible/FSxN-Inventory-Report). Please refer to that repository for the latest updates. This repository is being left behind purely for historical purposes.
+
 # Ansible Inventory Report
 This Ansible playbook generates a report of all the FSx for ONTAP file systems within an AWS account.
 In includes all the SVMs and Volumes. The format of the report is as follows:
