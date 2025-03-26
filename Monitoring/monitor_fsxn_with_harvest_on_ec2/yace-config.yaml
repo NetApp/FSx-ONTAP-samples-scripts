@@ -21,5 +21,3 @@ discovery:
           statistics: [Average]
         - name: FileServerDiskThroughputUtilization
           statistics: [Average]
-        - name: CPUUtilization
-          statistics: [Average]
