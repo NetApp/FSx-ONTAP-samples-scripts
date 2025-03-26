@@ -14,14 +14,27 @@ Harvest Helm chart installation will result the following:
 * Each FSxN cluster will represent as Kubernetes pod on the cluster.
 * Collecting metrics about your FSxNs and adding existing Grafana dashboards for better visualization.
 
+### Integration with AWS Secrets Manager
+This Harvest installation supports integration with AWS Secrets Manager. To use it store your FSxN credentials into a
+Secrets Manager secret. Harvest will invoke the script specified in the credentials_script path section which is already
+mapped in Harvest container. The credentails_script will fetch the secret and set the credentials based on its content.
+It expects the secret string to be a json structure with a `username` and `password` keys. For example:
+```json
+{
+  "username": "fsxadmin",
+  "password": "fsxadmin-password"
+}
+```
+A ServiceAccount should be created during the installation with the sufficient permissions to fetch the secrets.
+
 ### Prerequisites
 * `Helm` - for resources installation.
 * An FSx for ONTAP file system deployed in the same VPC as the EKS cluster.
 * Existing `Secrets Manager`secret in the same region as the FSxN file system.
 
-### Deployment
+## Deployment
 
-## Deployment of Prometheus and Grafana
+### Deployment of Prometheus and Grafana
 If you don't already have Prometheus and Grafana running in your EKS cluster, you can deploy both of them
 from the Prometheus community repository by using the following commands:
 
@@ -72,24 +85,10 @@ kube-prometheus-stack-prometheus-node-exporter-ffckd        1/1     Running   0 
 prometheus-kube-prometheus-stack-prometheus-0               2/2     Running   0          50s
 ```
 
-### Integration with AWS Secrets Manager
+### Specify which FSxNs to monitor
 
-This Harvest installation supports integration with AWS Secrets Manager. To use it store your FSxN credentials into a
-Secrets Manager secret. Harvest will invoke the script specified in the credentials_script path section which is already
-mapped in Harvest container. The credentails_script will fetch the secret and set the credentials based on its content.
-It expects the secret string to be a json structure with a `username` and `password` keys. For example:
-```json
-{
-  "username": "fsxadmin",
-  "password": "fsxadmin-password"
-}
-```
-A ServiceAccount should be created during the installation with the sufficient permissions to fetch the secrets.
-
-### Monitoring multiples FSxN
-
-The Helm chart supports monitoring multiple FSxNs. You can add multiples FSxNs by configure it on `values.yaml`.
-For example: 
+The Helm chart supports monitoring multiple FSxNs. You can add multiples FSxNs by editing the `values.yaml` file
+and updating the `clusters` section. For example: 
 ```
 fsxs:
   clusters:
@@ -108,7 +107,7 @@ Of course replace the strings within the <> with your own values.
 
 **NOTE:** Each FSxN cluster should have unique port number for promPort.
 
-### Installation
+### Deployment of the Harvest Helm chart
 Download the Harvest helm chart from this GitHub repository found in the 'harvest' directory. The custom Helm chart includes:
 * `deplyment.yaml` - Harvest deployment using Harvest latest version image
 * `harvest-config.yaml` - Harvest backend configuration
@@ -159,7 +158,7 @@ Note that this creates a variable named `POLICY_ARN` that you will use in the ne
 
 **Create ServiceAccount**:
 
-**note**: If you don't already have a namespace where you want to deploy Harvest, you can create one using the following command:
+**Note**: If you don't already have a namespace where you want to deploy Harvest, you can create one using the following command:
 ```
 kubectl create ns <NAMESPACE>
 ```
@@ -271,7 +270,7 @@ Also apply the region name to FSxN's region in yace-override-values.yaml:
 
 Run the following command to install the yace-exporter helm chart:
 ```text
-helm install nerdswords/yet-another-cloudwatch-exporter -f yace-override-values.yaml
+helm install yace-cw-exporter --namespace <NAMESPACE> nerdswords/yet-another-cloudwatch-exporter -f yace-override-values.yaml
 ```
 
 ### Adding Grafana dashboards and visualize your FSxN metrics on Grafana
