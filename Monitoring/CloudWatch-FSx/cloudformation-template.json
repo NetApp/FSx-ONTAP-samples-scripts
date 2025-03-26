@@ -118,7 +118,7 @@
         "SendUsage": {
             "Type": "String",
             "AllowedValues": ["true", "false"],
-            "Default": "false",
+            "Default": "true",
             "Description": "This is a Boolean flag that indicates whether you agree to send usage data to NetApp. Set this to 'true' if you agree, or 'false' if you don't. Please note that we only collect data related to the usage of the CloudFormation template. No personal or identifiable information is collected or sent. Your consent helps us improve our product and provide better support by understanding how our templates are used."
         }               
     },
