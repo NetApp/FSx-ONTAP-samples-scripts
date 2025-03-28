@@ -173,7 +173,7 @@ The following command will create a role, associated with the policy created abo
 ```
 eksctl create iamserviceaccount --name harvest-sa --region=<REGION> --namespace <NAMESPACE> --role-name harvest-role --cluster <YOUR_CLUSTER_NAME> --attach-policy-arn "$POLICY_ARN" --approve
 ```
-Of course replace all the strings within the <> with your own values. Note that the <NAMESPACE> should
+Of course replace all the strings within the <> with your own values. Note that the `<NAMESPACE>` should
 be where your Prometheus stack is deployed. If you used the command above to install Prometheus
 then the namespace should be `prometheus`.
 
@@ -184,7 +184,7 @@ by running:
 ```text
 helm upgrade --install harvest  -f values.yaml ./ --namespace=<NAMESPACE> --set promethues=<your_promethues_release_name>
 ```
-Note that the <NAMESPACE> should be where your Prometheus stack is deployed. If you used the command above to install Prometheus
+Note that the `<NAMESPACE>` should be where your Prometheus stack is deployed. If you used the command above to install Prometheus
 then it will be `prometheus`.
 
 Once the deployment is complete, Harvest should be listed as a target on Prometheus. You can check that by running
@@ -192,6 +192,7 @@ the following commands. The first one sets up a port forwarder for port 9090 on 
 in the EKS cluster as a background job.
 ```bash
 kubectl port-forward -n prometheus prometheus-kube-prometheus-stack-prometheus-0 9090 &
+sleep 4  # Give it a few seconds to establish the connection
 curl -s http://localhost:9090/api/v1/targets | jq -r '.data.activeTargets[] | select(.labels.service[0:14] == "harvest-poller") | "\(.labels.service) Status = \(.health)"'
 ```
 It should list a status of 'up' for each of the FSxN clusters you are monitoring. For example:
@@ -212,7 +213,7 @@ That kills any background job that has 9090 in the command line, which the port 
 ### Import FSxN CloudWatch metrics into your monitoring stack using YACE
 AWS CloudWatch provides metrics for the FSx for ONTAP file systems which cannot be collected by Harvest.
 Therefore, we recommend to using the [yet-another-cloudwatch-exporter](https://github.com/prometheus-community/yet-another-cloudwatch-exporter)
-(by Prometheus community) for collecting these metrics.
+(by Prometheus community) to collect these metrics.
 
 #### 1. Create Service Account with permissions to get AWS CloudWatch metrics
 The following IAM policy can be used to grant the all permissions required by YACE to fetch the CloudWatch metrics:
@@ -345,17 +346,18 @@ Once you have access to Grafana, you can log in using the default credentials:
 ### Adding Grafana dashboards and visualize your FSxN metrics on Grafana
 Once you login, you'll want to import some dashboards to visualize the metrics collected by Harvest and YACE. You will find
 some example dashboards in the `dashboards` folder in this repository. You can import these dashboards into Grafana by following these steps:
+1. Download the dashboards from the `dashboards` folder in this repository to your local PC.
 1. Log in to your Grafana instance.
-2. Click on the "+" icon on the left-hand side menu and select "Import Dashboard".
-3. Click in the box with "Upload dashboard JSON file" and browse to one of the dashboard JSON files from the `dashboards` folder in this repository.
-4. Click "Import."
+1. Click on the "+" icon on the left-hand side menu and select "Import Dashboard".
+1. Click in the box with "Upload dashboard JSON file" and browse to one of the dashboard JSON files from the `dashboards` folder in this repository.
+1. Click "Import."
 
 You can repeat the steps above for each of the dashboard JSON files you want to import.
 
 You can also import the "default" dashboards from the Harvest repo found [here](https://github.com/NetApp/harvest/tree/main/grafana/dashboards).
 Only consider the dashboards in the `cmode` and `cmode-details` directories. 
 
-:memo: **NOTE:** Since the special 'fsxadmin' account doesn't have access to all the metrics that a traditional 'admin' account would have,
+:memo: **NOTE:** Since the special 'fsxadmin' account doesn't have access to all the metrics that a traditional ONTAP 'admin' account would have,
 some of the metrics and dashboards may not be fully applicable or available. The ones with 'fsx' tag are more relevant for FSxN.
 
 ## Author Information
