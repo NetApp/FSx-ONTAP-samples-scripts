@@ -14,3 +14,5 @@ rules:
   empty-lines: disable
   document-start: disable
   new-line-at-end-of-file: disable
+  ignore:
+    - '**/templates/**' # Ignore templates directories
