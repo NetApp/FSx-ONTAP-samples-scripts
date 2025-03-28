@@ -1,3 +1,5 @@
+# yamllint disable-file
+# This file is not valid YaML because it is a Helm chart template.
 {{- range .Values.fsxs.clusters }}
 apiVersion: apps/v1
 kind: Deployment
