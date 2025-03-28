@@ -1,7 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  labels:
-    io.kompose.service: harvest-service
-  name: harvest-cm
-  namespace: harvest

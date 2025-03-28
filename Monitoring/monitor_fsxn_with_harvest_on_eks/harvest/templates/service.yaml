@@ -1,0 +1,19 @@
+# yamllint disable-file
+# This file is not valid YaML because it is a Helm chart template.
+{{- range .Values.fsxs.clusters }}
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: harvest-poller-{{ .name }}
+  name: harvest-poller-{{ .name }}
+  namespace: {{ $.Release.Namespace }}
+spec:
+  ports:
+  - name: {{ .promPort | quote}}
+    port: {{ .promPort }}
+    targetPort: {{ .promPort }}
+  selector:
+    app: harvest-poller-{{ .name }}
+---
+{{ end }}

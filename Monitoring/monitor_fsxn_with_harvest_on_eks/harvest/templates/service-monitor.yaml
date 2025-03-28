@@ -1,0 +1,26 @@
+# yamllint disable-file
+# This file is not valid YaML because it is a Helm chart template.
+{{- range .Values.fsxs.clusters }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  annotations:
+    release-name: harvest
+    release-namespace: harvest
+  labels:
+    release: kube-prometheus-stack
+  name: harvest-exporter-{{ .name }}
+  namespace: {{ $.Release.Namespace }}
+spec:
+  endpoints:
+    - interval: 30s
+      port: {{ .promPort | quote}}
+      path: /metrics
+  namespaceSelector:
+    matchNames:
+      - {{ $.Release.Namespace }}
+  selector:
+    matchLabels:
+      app: harvest-poller-{{ .name }}
+---
+{{ end }}
