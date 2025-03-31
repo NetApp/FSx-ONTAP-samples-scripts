@@ -27,7 +27,7 @@ A service account should be created during the installation of Harvest with the 
 
 ### Prerequisites
 * An AWS EKS cluster.
-* An FSx for ONTAP file system deployed in the same VPC as the EKS cluster.
+* An FSx for ONTAP file system with connectivity to the EKS cluster.
     * If you don't have an EKS cluster with FSx for ONTAP file system, you can follow the steps in the [FSx as PVC for EKS](https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/add_grafana_eks/EKS/FSxN-as-PVC-for-EKS) repository to build one.
 * `Helm` - for resources installation.
 * `kubectl` - for managing Kubernetes resources.
