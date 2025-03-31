@@ -25,7 +25,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "iteration": 1740487115678,
+  "id": 35,
   "links": [
     {
       "asDropdown": true,
@@ -45,6 +45,10 @@
   "liveNow": false,
   "panels": [
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "description": "Average latency in microseconds for the WAFL filesystem to process all the operations on the volume; not including request processing or network communication time.",
       "fieldConfig": {
         "defaults": {
@@ -52,6 +56,8 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -125,7 +131,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "avg(aws_fsx_disk_read_operations_average{dimension_FileSystemId=~\"$Cluster\"}) by (dimension_FileSystemId) /60",
+          "expr": "avg(aws_fsx_disk_read_operations_average{dimension_FileSystemId=~\"$Cluster\"}) by (dimension_FileSystemId)",
           "interval": "",
           "legendFormat": "{{dimension_FileSystemId}}_read_operations",
           "range": true,
@@ -137,11 +143,9 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "exemplar": true,
-          "expr": "avg(aws_fsx_disk_write_operations_average{dimension_FileSystemId=~\"$Cluster\"}) by (dimension_FileSystemId) /60",
+          "expr": "avg(aws_fsx_disk_write_operations_average{dimension_FileSystemId=~\"$Cluster\"}) by (dimension_FileSystemId)",
           "hide": false,
           "instant": false,
-          "interval": "",
           "legendFormat": "{{dimension_FileSystemId}}_write_operations",
           "range": true,
           "refId": "B"
@@ -152,11 +156,9 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "exemplar": true,
-          "expr": "sum(aws_fsx_disk_write_operations_average{dimension_FileSystemId=~\"$Cluster\"} + aws_fsx_disk_read_operations_average{dimension_FileSystemId=~\"$Cluster\"}) by (dimension_FileSystemId) /60",
+          "expr": "sum(aws_fsx_disk_write_operations_average{dimension_FileSystemId=~\"$Cluster\"} + aws_fsx_disk_read_operations_average{dimension_FileSystemId=~\"$Cluster\"}) by (dimension_FileSystemId)",
           "hide": false,
           "instant": false,
-          "interval": "",
           "legendFormat": "{{dimension_FileSystemId}}_sum_operations",
           "range": true,
           "refId": "C"
@@ -167,6 +169,10 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "description": "Average latency in microseconds for the WAFL filesystem to process all the operations on the volume; not including request processing or network communication time.",
       "fieldConfig": {
         "defaults": {
@@ -174,6 +180,8 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -259,11 +267,9 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "exemplar": true,
           "expr": "avg(aws_fsx_disk_read_bytes_average{dimension_FileSystemId=~\"$Cluster\"}) by (dimension_FileSystemId)  / 1048576",
           "hide": false,
           "instant": false,
-          "interval": "",
           "legendFormat": "{{dimension_FileSystemId}}_read_megabytes",
           "range": true,
           "refId": "B"
@@ -274,11 +280,9 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "exemplar": true,
-          "expr": "sum(aws_fsx_disk_read_bytes_average{dimension_FileSystemId=~\"$Cluster\"} + aws_fsx_disk_write_bytes_average{dimension_FileSystemId=~\"$Cluster\"} ) by (dimension_FileSystemId) / 1048576",
+          "expr": "sum(aws_fsx_disk_read_bytes_average{dimension_FileSystemId=~\"$Cluster\"} + aws_fsx_disk_write_bytes_average{dimension_FileSystemId=~\"$Cluster\"} ) by (dimension_FileSystemId)",
           "hide": false,
           "instant": false,
-          "interval": "",
           "legendFormat": "{{dimension_FileSystemId}}_sum_megabytes",
           "range": true,
           "refId": "C"
@@ -289,6 +293,10 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "description": "Average latency in microseconds for the WAFL filesystem to process all the operations on the volume; not including request processing or network communication time.",
       "fieldConfig": {
         "defaults": {
@@ -296,6 +304,8 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -324,7 +334,6 @@
             }
           },
           "mappings": [],
-          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -344,7 +353,7 @@
               "options": {
                 "mode": "exclude",
                 "names": [
-                  "fs-09261fd9478d5a3e5_network_throughput_utilization"
+                  "fs-038c109c5e023e533_network_throughput_utilization"
                 ],
                 "prefix": "All except:",
                 "readOnly": true
@@ -420,11 +429,9 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "exemplar": true,
-          "expr": "avg(aws_fsx_file_server_disk_throughput_utilization_average{dimension_FileSystemId=~\"$Cluster\"}) by (dimension_FileSystemId)",
+          "expr": "sum(aws_fsx_file_server_disk_throughput_utilization_average{dimension_FileSystemId=~\"$Cluster\"} + aws_fsx_disk_write_bytes_average{dimension_FileSystemId=~\"$Cluster\"} ) by (dimension_FileSystemId)",
           "hide": false,
           "instant": false,
-          "interval": "",
           "legendFormat": "{{dimension_FileSystemId}}_disk_throughput_utilization",
           "range": true,
           "refId": "C"
@@ -436,20 +443,20 @@
       "type": "timeseries"
     }
   ],
-  "refresh": "",
-  "schemaVersion": 34,
+  "refresh": false,
+  "schemaVersion": 38,
   "style": "dark",
   "tags": [],
   "templating": {
     "list": [
       {
         "current": {
-          "selected": true,
+          "selected": false,
           "text": [
-            "fs-09261fd9478d5a3e5"
+            ""
           ],
           "value": [
-            "fs-09261fd9478d5a3e5"
+            ""
           ]
         },
         "datasource": {
@@ -497,6 +504,6 @@
   "timezone": "",
   "title": "FSxN: Utilization",
   "uid": "c467bd93-f82b-4c34-8bc0-3a8b71e39898",
-  "version": 2,
+  "version": 3,
   "weekStart": ""
 }

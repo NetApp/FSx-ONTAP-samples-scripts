@@ -160,8 +160,8 @@ Resources:
           sed -i 's|ghcr.io/netapp/harvest:latest|ghcr.io/tlvdevops/harvest-fsx:latest|g' harvest-compose.yml
 
           # Download grafana dashbaords
-          wget https://raw.githubusercontent.com/TLVDevOps/harvest-fsx/main/dashboards.zip
-          unzip dashboards.zip
+          wget wget https://raw.githubusercontent.com/NetApp/FSx-ONTAP-samples-scripts/main/Monitoring/monitor_fsxn_with_harvest_on_ec2/fsx_dashboards.zip
+          unzip fsx_dashboards.zip
           rm -rf grafana/dashboards && mv dashboards grafana/dashboards
 
           # Create yace-config.yaml
@@ -188,8 +188,6 @@ Resources:
                   - name: NetworkThroughputUtilization
                     statistics: [Average]
                   - name: FileServerDiskThroughputUtilization
-                    statistics: [Average]
-                  - name: CPUUtilization
                     statistics: [Average]
           EOF
 
