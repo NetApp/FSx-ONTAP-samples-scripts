@@ -131,13 +131,14 @@ To monitor additional FSxN resources, follow these steps:
          - AWS_REGION=<your_region>
      ```
    - **Note**: Make the following changes for each system you add:
-               - The name of the block (i.e. the first line of the block).
-               - The `container_name`.
-               - The `ports`. All pollers must use a different port. Just increment by one for each system.
-               - The `command` should be updated with:
-                   - The name after the `--poller` should math the block name.
-                   - The `promPort` should match the ports line set above.
-               - The `SECRET_NAME` as needed.
+
+       - The name of the block (i.e. the first line of the block).
+       - The `container_name`.
+       - The `ports`. All pollers must use a different port. Just increment by one for each system.
+       - The `command` should be updated with:
+           - The name after the `--poller` should math the block name.
+           - The `promPort` should match the ports line set above.
+       - The `SECRET_NAME` as needed.
 
 5. **Add FSx for NetApp ONTAP to Prometheus Targets**
     - Navigate to the Prometheus directory:
