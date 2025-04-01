@@ -7,19 +7,19 @@ Metadata:
     Description: Adi Zalmanovich (adiz@netapp.com)
   AWS::CloudFormation::Interface:
     ParameterGroups:
-    - Label:
+      - Label:
         default: Harvest and Grafana Instance parameters
-      Parameters:
-        - InstanceType
-        - KeyPair
-        - SecurityGroup
-        - SubnetType
-        - Subnet
-    - Label:
+        Parameters:
+          - InstanceType
+          - KeyPair
+          - SecurityGroup
+          - SubnetType
+          - Subnet
+      - Label:
         default: Amazon FSx for Netapp ONTAP file system parameters
-      Parameters:
-        - FSxEndPoint
-        - SecretName
+        Parameters:
+          - FSxEndPoint
+          - SecretName
     ParameterLabels:
       InstanceType:
         default: Instance Type
@@ -65,8 +65,8 @@ Parameters:
     Description: Choose between public or private. Public means that an Public facing IP address will be assigned to the instance.
     Type: String
     AllowedValues:
-    - public
-    - private
+      - public
+      - private
 
   Subnet:
     Type: AWS::EC2::Subnet::Id
@@ -320,11 +320,11 @@ Resources:
                   - '*'
 
 Outputs:
-    PublicURL:
-        Condition: CreatePublicIP
-        Description: Use below Public IP URL to connect to the Grafana endpoint
-        Value: !Join [ "", ["http://",!GetAtt Instance.PublicIp,":3000" ]]
-    PrivateURL:
-        Condition: CreatePrivateIP
-        Description: Use below Private IP URL to connect to the Grafana endpoint
-        Value: !Join [ "", ["http://",!GetAtt Instance.PrivateIp,":3000" ]]
+  PublicURL:
+    Condition: CreatePublicIP
+    Description: Use below Public IP URL to connect to the Grafana endpoint
+    Value: !Join [ "", ["http://",!GetAtt Instance.PublicIp, ":3000" ]]
+  PrivateURL:
+    Condition: CreatePrivateIP
+    Description: Use below Private IP URL to connect to the Grafana endpoint
+    Value: !Join [ "", ["http://",!GetAtt Instance.PrivateIp, ":3000" ]]
