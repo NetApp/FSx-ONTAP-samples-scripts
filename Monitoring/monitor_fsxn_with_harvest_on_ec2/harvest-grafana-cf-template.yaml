@@ -40,7 +40,7 @@ Metadata:
 
 Parameters:
   InstanceType:
-    Description: Select the instance type. Recommended config for every 10 file system's (CPU - 2 cores, Memory - 1GB, Disk - 500MB)
+    Description: Select the instance type. Recommended config for every 10 file system's (CPU - 2 cores, Memory - 1GB)
     AllowedValues:
       - t3.medium
       - t3.large
