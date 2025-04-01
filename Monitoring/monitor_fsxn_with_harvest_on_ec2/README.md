@@ -135,9 +135,9 @@ To monitor additional FSxN resources, follow these steps:
        - The name of the block (i.e. the first line of the block).
        - The `container_name`.
        - The `ports`. All pollers must use a different port. Just increment by one for each system.
-       - The `command` should be updated with:
-           - The name after the `--poller` should math the block name.
-           - The `promPort` should match the ports line set above.
+       - The `command` parameter should be updated with:
+           - The name after the `--poller` should match the block name.
+           - The `promPort` port should match the port in the `ports` line set above.
        - The `SECRET_NAME` as needed.
 
 5. **Add FSx for NetApp ONTAP to Prometheus Targets**
@@ -147,7 +147,7 @@ To monitor additional FSxN resources, follow these steps:
       ```
     - Edit the `harvest_targets.yml` file to add the new FSx for NetApp ONTAP target:
       ```yaml
-      - targets: ['<container_name>:<container-port>']
+      - targets: ['fsx01:12990','fsx02:12291']
       ```
 
 6. **Restart Docker Compose**
