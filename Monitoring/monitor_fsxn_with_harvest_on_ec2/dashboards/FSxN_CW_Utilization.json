@@ -22,7 +22,7 @@
     ]
   },
   "description": "",
-  "editable": true,
+  "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
   "iteration": 1740487115678,
@@ -439,7 +439,11 @@
   "refresh": "",
   "schemaVersion": 34,
   "style": "dark",
-  "tags": [],
+  "tags": [
+      "harvest",
+      "ontap",
+      "fsx"
+  ],
   "templating": {
     "list": [
       {

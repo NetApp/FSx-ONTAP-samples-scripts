@@ -21,7 +21,7 @@
       }
     ]
   },
-  "editable": true,
+  "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
   "id": 36,
@@ -13138,7 +13138,11 @@
   "preload": false,
   "refresh": "",
   "schemaVersion": 40,
-  "tags": [],
+  "tags": [
+      "harvest",
+      "ontap",
+      "fsx"
+  ],
   "templating": {
     "list": [
       {
@@ -13333,7 +13337,7 @@
   },
   "timezone": "",
   "title": "FSxN: Storage Virtual Machine",
-  "uid": "FSxN-svm",
+  "uid": "fsxn-svm",
   "version": 3,
   "weekStart": ""
 }

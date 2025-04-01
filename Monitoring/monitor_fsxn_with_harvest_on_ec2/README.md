@@ -130,33 +130,37 @@ To monitor additional FSxN resources, follow these steps:
          - SECRET_NAME=<your_secret_2>
          - AWS_REGION=<your_region>
      ```
-   - **Note**: Change the `container_name`, `ports`, `promPort`, and `SECRET_NAME` as needed.
-	           Make sure that you are changing the TCP port used by the new poller, in this example the new fsx02 will use port 12991
-	           If you are adding multiple FSx for NetApp ONTAP, always use a different TCP port.
+   - **Note**: Make the following changes for each system you add:
 
+       - The name of the block (i.e. the first line of the block).
+       - The `container_name`.
+       - The `ports`. All pollers must use a different port. Just increment by one for each system.
+       - The `command` parameter should be updated with:
+           - The name after the `--poller` should match the block name.
+           - The `promPort` port should match the port in the `ports` line set above.
+       - The `SECRET_NAME` as needed.
 
 5. **Add FSx for NetApp ONTAP to Prometheus Targets**
-   - Navigate to the Prometheus directory:
-     ```bash
-     cd /opt/harvest/container/prometheus/
-     ```
-   - Edit the `harvest_targets.yml` file to add the new FSx for NetApp ONTAP target:
-     ```yaml
-     - targets: ['<container_name>:<container-port>']
-     ```
+    - Navigate to the Prometheus directory:
+      ```bash
+      cd /opt/harvest/container/prometheus/
+      ```
+    - Edit the `harvest_targets.yml` file to add the new FSx for NetApp ONTAP target:
+      ```yaml
+      - targets: ['fsx01:12990','fsx02:12291']
+      ```
 
 6. **Restart Docker Compose**
-  - Navigate to the Harvest directory:
-	 ```bash
-	 cd /opt/harvest
-	 ``` 
-  - Bring down the Docker Compose stack:
-     ```bash
-     docker compose -f prom-stack.yml -f harvest-compose.yml down
-     ```
-   - Bring the Docker Compose stack back up:
-     ```bash
-     docker compose -f prom-stack.yml -f harvest-compose.yml up -d --remove-orphans
-     ```
-
+    - Navigate to the Harvest directory:
+	  ```bash
+	  cd /opt/harvest
+	  ``` 
+    - Bring down the Docker Compose stack:
+      ```bash
+      docker-compose -f prom-stack.yml -f harvest-compose.yml down
+      ```
+    - Bring the Docker Compose stack back up:
+      ```bash
+      docker-compose -f prom-stack.yml -f harvest-compose.yml up -d --remove-orphans
+      ```
 ---

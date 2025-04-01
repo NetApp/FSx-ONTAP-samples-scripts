@@ -21,7 +21,7 @@
       }
     ]
   },
-  "editable": true,
+  "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
   "id": 18,
@@ -5233,7 +5233,11 @@
   "preload": false,
   "refresh": "",
   "schemaVersion": 40,
-  "tags": [],
+  "tags": [
+      "harvest",
+      "ontap",
+      "fsx"
+  ],
   "templating": {
     "list": [
       {
@@ -5466,7 +5470,7 @@
   },
   "timezone": "",
   "title": "FSxN: LUN",
-  "uid": "cdot-lun",
+  "uid": "fsxn-lun",
   "version": 4,
   "weekStart": ""
 }
