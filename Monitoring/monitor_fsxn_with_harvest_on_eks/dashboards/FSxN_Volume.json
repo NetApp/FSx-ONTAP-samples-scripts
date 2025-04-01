@@ -21,7 +21,7 @@
       }
     ]
   },
-  "editable": true,
+  "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
   "id": 37,
@@ -7700,7 +7700,11 @@
   "preload": false,
   "refresh": "",
   "schemaVersion": 40,
-  "tags": [],
+  "tags": [
+      "harvest",
+      "ontap",
+      "fsx"
+  ],
   "templating": {
     "list": [
       {
@@ -7941,7 +7945,7 @@
   },
   "timezone": "",
   "title": "FSxN: Volume",
-  "uid": "FSxN-volume",
+  "uid": "fsxn-volume",
   "version": 3,
   "weekStart": ""
 }

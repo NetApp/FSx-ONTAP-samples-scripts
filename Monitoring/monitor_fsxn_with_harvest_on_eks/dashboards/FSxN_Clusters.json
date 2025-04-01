@@ -21,7 +21,7 @@
       }
     ]
   },
-  "editable": true,
+  "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
   "id": 6,
@@ -2215,7 +2215,11 @@
   "preload": false,
   "refresh": "",
   "schemaVersion": 40,
-  "tags": [],
+  "tags": [
+      "harvest",
+      "ontap",
+      "fsx"
+  ],
   "templating": {
     "list": [
       {
@@ -2458,7 +2462,7 @@
   },
   "timezone": "",
   "title": "FSxN: Clusters",
-  "uid": "FSxN-cdot",
+  "uid": "fsxn-cdot",
   "version": 2,
   "weekStart": ""
 }
