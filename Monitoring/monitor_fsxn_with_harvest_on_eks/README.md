@@ -13,7 +13,7 @@ Here are some screenshots of a couple of the dashboards that are included to vis
 
 ## Introduction
 
-## Architectural Overview
+### Architectural Overview
 
 This solution uses several components to collect and display all the pertinent metrics from your FSx for ONTAP file system.
 Instead of trying to describe them in words, the following architectural diagram does a great job of showing the components and how they interact with each other:
@@ -32,7 +32,7 @@ The format of the secret string should to be a json structure with a `username` 
 ```json
 {
   "username": "fsxadmin",
-  "password": "fsxadmin-password"
+  "password": "fsxadmin's_password"
 }
 ```
 A service account should be created during the installation of Harvest with the sufficient permissions to fetch the secrets.
