@@ -122,7 +122,7 @@ ARCH=$(uname -m)
 if [ -z "$ARCH"  -o -z "$LATEST_COMPOSE_VERSION" ]; then
   echo "Error: Unable to determine latest version or architecture."
 else
-  sudo curl -L "https://github.com/docker/compose/releases/download/$LATEST_COMPOSE_VERSION/docker-compose-linux-$ARCH" -o /usr/local/bin/docker-compose
+  sudo curl -s -L "https://github.com/docker/compose/releases/download/$LATEST_COMPOSE_VERSION/docker-compose-linux-$ARCH" -o /usr/local/bin/docker-compose
   sudo chmod +x /usr/local/bin/docker-compose
   # Create a symlink in /usr/bin for more accessibility.
   [ ! -L /usr/bin/docker-compose ] && sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
