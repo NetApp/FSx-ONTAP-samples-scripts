@@ -7,10 +7,22 @@ Go and uses the official AWS SDK. YACE supports auto-discovery of resources via 
 filtering monitored resources via regex, and more. You can read more about YACE capabilities from its
 [Documentation](https://github.com/prometheus-community/yet-another-cloudwatch-exporter).
 
+Here are some screenshots of a couple of the dashboards that are included to visualize the metrics collected by Harvest and YACE.
+
+![Screenshot-01](images/grafana-dashboard-01.png)
+
+![Screenshot-02](images/grafana-dashboard-02.png)
+
 ## Prerequisites
 The only prerequisite is an FSx for ONTAP file system running in your AWS account.
 
-## Overview
+## Architectual Overview
+
+This solution uses several components to collect and display all the pertinent metrics from your FSx for ONTAP file system.
+Instead of trying to describe them in words, the following architectual diagram does a great job of showing the components and how they interact with each other:
+![Architectural Diagram](images/harvest-grafana-arch-diagram.png)
+
+## Deployment Overview
 
 There are two methods to deploy this solution, either via the AWS CloudFormation template or manually.
 The steps below are geared towrad the CloudFormation deployment method. If you want to deploy manually,

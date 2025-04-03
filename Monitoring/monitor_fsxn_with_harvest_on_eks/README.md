@@ -5,7 +5,19 @@ into an AWS EKS cluster to monitor multiple FSx for ONTAP file systems using the
 Grafana + Prometheus stack. It uses the AWS Secrets Manager to obtain
 credentials for each of the FSxN file systems so those credentials aren't insecurely stored.
 
+Here are some screenshots of a couple of the dashboards that are included to visualize the metrics collected by Harvest and YACE.
+
+![Screenshot-01](images/grafana-dashboard-01.png)
+
+![Screenshot-02](images/grafana-dashboard-02.png)
+
 ## Introduction
+
+## Architectural Overview
+
+This solution uses several components to collect and display all the pertinent metrics from your FSx for ONTAP file system.
+Instead of trying to describe them in words, the following architectural diagram does a great job of showing the components and how they interact with each other:
+![Architectural Diagram](images/architectural-diagram.png)
 
 ### What to expect
 
