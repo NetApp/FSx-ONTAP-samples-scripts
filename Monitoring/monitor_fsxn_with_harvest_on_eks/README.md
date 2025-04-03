@@ -359,7 +359,7 @@ Once you have access to Grafana, you can log in using the default credentials:
 
 ### Adding Grafana dashboards and visualize your FSxN metrics on Grafana
 Once you login, you'll want to import some dashboards to visualize the metrics collected by Harvest and YACE. You will find
-some example dashboards in the `dashboards` folder in this repository. You can import these dashboards into Grafana by following these steps:
+some example dashboards in the [dashboards](dashboards) folder in this repository. You can import these dashboards into Grafana by following these steps:
 1. Download the dashboards from the `dashboards` folder in this repository to your local PC.
 1. Log in to your Grafana instance.
 1. Click on the "+" icon on the left-hand side menu and select "Import Dashboard".
