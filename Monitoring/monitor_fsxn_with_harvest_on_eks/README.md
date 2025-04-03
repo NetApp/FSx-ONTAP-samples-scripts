@@ -374,6 +374,8 @@ Only consider the dashboards in the `cmode` and `cmode-details` directories.
 :memo: **NOTE:** Since the special 'fsxadmin' account doesn't have access to all the metrics that a traditional ONTAP 'admin' account would have,
 some of the metrics and dashboards may not be fully applicable or available. The ones with 'fsx' tag are more relevant for FSxN.
 
+---
+
 ## Author Information
 
 This repository is maintained by the contributors listed on [GitHub](https://github.com/NetApp/FSx-ONTAP-samples-scripts/graphs/contributors).
