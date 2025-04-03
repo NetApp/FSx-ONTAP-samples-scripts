@@ -26,7 +26,7 @@ Instead of trying to describe them in words, the following architectual diagram 
 
 There are two methods to deploy this solution, either via the AWS CloudFormation template or manually.
 The steps below are geared towrad the CloudFormation deployment method. If you want to deploy manually,
-please refer to these [instructions](README-Manual.md).
+please refer to these [Manual Deployment Instructions](README-Manual.md).
 
 This deployment includes:
 - **Harvest**: Collects ONTAP metrics.[Documentation](https://github.com/NetApp/harvest).
