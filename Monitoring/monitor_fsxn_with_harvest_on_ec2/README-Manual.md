@@ -116,7 +116,7 @@ sudo systemctl enable docker
 If you aren't running a Red Hat based Linux, you can follow the instructions [here](https://docs.docker.com/engine/install/).
 
 Install Docker Compose:
-```sh
+```text
 LATEST_COMPOSE_VERSION=$(curl -s https://api.github.com/repos/docker/compose/releases/latest | jq -r '.tag_name')
 ARCH=$(uname -m)
 if [ -z "$ARCH"  -o -z "$LATEST_COMPOSE_VERSION" ]; then
