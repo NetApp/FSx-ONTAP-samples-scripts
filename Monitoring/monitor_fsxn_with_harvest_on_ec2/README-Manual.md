@@ -110,11 +110,24 @@ If your exiting ec2 instance already had an instance profile, then simply add th
 To install Docker use the following commands if you are running an Red Hat based Linux:
 ```sh
 sudo yum install docker
-sudo curl -L https://download.docker.com/linux/centos/7/x86_64/stable/Packages/docker-compose-plugin-2.6.0-3.el7.x86_64.rpm -o ./compose-plugin.rpm
-sudo yum install ./compose-plugin.rpm -y
 sudo systemctl start docker
+sudo systemctl enable docker
 ```
 If you aren't running a Red Hat based Linux, you can follow the instructions [here](https://docs.docker.com/engine/install/).
+
+Install Docker Compose:
+```sh
+LATEST_COMPOSE_VERSION=$(curl -s https://api.github.com/repos/docker/compose/releases/latest | jq -r '.tag_name')
+ARCH=$(uname -m)
+if [ -z "$ARCH"  -o -z "$LATEST_COMPOSE_VERSION" ]; then
+  echo "Error: Unable to determine latest version or architecture."
+else
+  sudo curl -L "https://github.com/docker/compose/releases/download/$LATEST_COMPOSE_VERSION/docker-compose-linux-$ARCH" -o /usr/local/bin/docker-compose
+  sudo chmod +x /usr/local/bin/docker-compose
+  # Create a symlink in /usr/bin for more accessibility.
+  [ ! -L /usr/bin/docker-compose ] && sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
+fi
+```
 
 To confirm that docker has been installed correctly, run the following command:
 
@@ -145,6 +158,7 @@ Share images, automate workflows, and more with a free Docker ID:
 For more examples and ideas, visit:
  https://docs.docker.com/get-started/
 ```
+
 ### 5. Install Harvest on EC2
 
 Preform the following steps to install Harvest on your EC2 instance:
@@ -312,7 +326,7 @@ sudo sed -i -e "\$a\- job_name: 'yace'" -e "\$a\  static_configs:" -e "\$a\    -
 ##### 6. Bring Everything Up
 
 ```sh
-sudo docker compose -f prom-stack.yml -f harvest-compose.yml up -d --remove-orphans
+sudo docker-compose -f prom-stack.yml -f harvest-compose.yml up -d --remove-orphans
 ```
 
 After bringing up the prom-stack.yml compose file, you can access Grafana at 
@@ -323,3 +337,25 @@ You will be prompted to create a new password the first time you log in. Grafana
 username: admin
 password: admin
 ```
+
+## Adding additional FSx for ONTAP file systems.
+If you need to add additional FSxN file systems to monitor after the initial installation,
+you can do so by following the steps mentioned at the bottom of the [CloudFormation deployment](README.md) version of this read me file.
+
+---
+
+## Author Information
+
+This repository is maintained by the contributors listed on [GitHub](https://github.com/NetApp/FSx-ONTAP-utils/graphs/contributors).
+
+## License
+
+Licensed under the Apache License, Version 2.0 (the "License").
+
+You may obtain a copy of the License at [apache.org/licenses/LICENSE-2.0](http://www.apache.org/licenses/LICENSE-2.0).
+
+Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an _"AS IS"_ basis, without WARRANTIES or conditions of any kind, either express or implied.
+
+See the License for the specific language governing permissions and limitations under the License.
+
+© 2025 NetApp, Inc. All Rights Reserved.
