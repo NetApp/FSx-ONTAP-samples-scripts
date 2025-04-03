@@ -7,14 +7,26 @@ Go and uses the official AWS SDK. YACE supports auto-discovery of resources via 
 filtering monitored resources via regex, and more. You can read more about YACE capabilities from its
 [Documentation](https://github.com/prometheus-community/yet-another-cloudwatch-exporter).
 
+Here are some screenshots of a couple of the dashboards that are included to visualize the metrics collected by Harvest and YACE.
+
+![Screenshot-01](images/grafana-dashboard-01.png)
+
+![Screenshot-02](images/grafana-dashboard-02.png)
+
 ## Prerequisites
 The only prerequisite is an FSx for ONTAP file system running in your AWS account.
 
-## Overview
+## Architectural Overview
+
+This solution uses several components to collect and display all the pertinent metrics from your FSx for ONTAP file system.
+Instead of trying to describe them in words, the following architectural diagram does a great job of showing the components and how they interact with each other:
+![Architectural Diagram](images/FSxN-MonitoringStack-EC2.png)
+
+## Deployment Overview
 
 There are two methods to deploy this solution, either via the AWS CloudFormation template or manually.
-The steps below are geared towrad the CloudFormation deployment method. If you want to deploy manually,
-please refer to these [instructions](README-Manual.md).
+The steps below are geared towards the CloudFormation deployment method. If you want to deploy manually,
+please refer to these [Manual Deployment Instructions](README-Manual.md).
 
 This deployment includes:
 - **Harvest**: Collects ONTAP metrics.[Documentation](https://github.com/NetApp/harvest).
@@ -163,4 +175,21 @@ To monitor additional FSxN resources, follow these steps:
       ```bash
       docker-compose -f prom-stack.yml -f harvest-compose.yml up -d --remove-orphans
       ```
+
 ---
+
+## Author Information
+
+This repository is maintained by the contributors listed on [GitHub](https://github.com/NetApp/FSx-ONTAP-samples-scripts/graphs/contributors).
+
+## License
+
+Licensed under the Apache License, Version 2.0 (the "License").
+
+You may obtain a copy of the License at [apache.org/licenses/LICENSE-2.0](http://www.apache.org/licenses/LICENSE-2.0).
+
+Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an _"AS IS"_ basis, without WARRANTIES or conditions of any kind, either express or implied.
+
+See the License for the specific language governing permissions and limitations under the License.
+
+© 2025 NetApp, Inc. All Rights Reserved.
