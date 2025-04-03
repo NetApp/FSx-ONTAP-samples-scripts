@@ -1,6 +1,6 @@
 # :warning: **NOTICE:**
 
-This repository is no longer being maintain. However, all the code found here has been relocated to a new NetApp managed GitHub repository found here [https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Samples/Monitoring](https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Samples/Monitoring). Please refer to that repository for the latest updates. This repository is being left behind purely for historical purposes.
+This repository is no longer being maintained. However, all the code found here has been relocated to a new NetApp managed GitHub repository found here [https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Samples/Monitoring](https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Samples/Monitoring) where it is continually updated. Please refer to that repository for the latest updates.
 
 # Monitoring Overview
 This subfolder contains tools that can help you monitor your FSx ONTAP file system(s).

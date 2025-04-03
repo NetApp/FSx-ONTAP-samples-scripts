@@ -1,6 +1,6 @@
 # :warning: **NOTICE:**
 
-This repository is no longer being maintain. However, all the code found here has been relocated to a new NetApp managed GitHub repository found here [https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Samples/EKS](https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Samples/EKS). Please refer to that repository for the latest updates. This repository is being left behind purely for historical purposes.
+This repository is no longer being maintained. However, all the code found here has been relocated to a new NetApp managed GitHub repository found here [https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Samples/EKS](https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Samples/EKS) where it is continually updated. Please refer to that repository for the latest updates.
 
 # Solutions Overview
 This subfolder contains samples of solutions that demonstrate how to use FSx for NetApp ONTAP in various scenarios.

@@ -1,6 +1,6 @@
 # :warning: **NOTICE:**
 
-This repository is no longer being maintain. However, all the code found here has been relocated to a new NetApp managed GitHub repository found here [https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Samples/Automation/Ansible/SnapMirror-Report](https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Samples/Automation/Ansible/SnapMirror-Report). Please refer to that repository for the latest updates. This repository is being left behind purely for historical purposes.
+This repository is no longer being maintained. However, all the code found here has been relocated to a new NetApp managed GitHub repository found here [https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Samples/Automation/Ansible/SnapMirror-Report](https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Samples/Automation/Ansible/SnapMirror-Report) where it is continually updated. Please refer to that repository for the latest updates.
 
 # Ansible SnapMirror Report
 This Ansible playbook generates a report of all the FSx for ONTAP SnapMirror relationships within an AWS account.

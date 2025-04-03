@@ -1,6 +1,6 @@
 # :warning: **NOTICE:**
 
-This repository is no longer being maintain. However, all the code found here has been relocated to a new NetApp managed GitHub repository found here [https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Samples/Automation/Ansible](https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Samples/Automation/Ansible). Please refer to that repository for the latest updates. This repository is being left behind purely for historical purposes.
+This repository is no longer being maintained. However, all the code found here has been relocated to a new NetApp managed GitHub repository found here [https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Samples/Automation/Ansible](https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Samples/Automation/Ansible) where it is continually updated. Please refer to that repository for the latest updates.
 
 # Ansible Samples
 Ansible is a general purpose automation engine. It can be used to automate most repetitive IT tasks.

@@ -1,6 +1,6 @@
 # :warning: **NOTICE:**
 
-This repository is no longer being maintain. However, all the code found here has been relocated to a new NetApp managed GitHub repository found here [https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Samples/Automation/Terraform/Deploy-FSx-ONTAP/module](https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Samples/Automation/Terraform/Deploy-FSx-ONTAP/module). Please refer to that repository for the latest updates. This repository is being left behind purely for historical purposes.
+This repository is no longer being maintained. However, all the code found here has been relocated to a new NetApp managed GitHub repository found here [https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Samples/Automation/Terraform/Deploy-FSx-ONTAP/module](https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Samples/Automation/Terraform/Deploy-FSx-ONTAP/module) where it is continually updated. Please refer to that repository for the latest updates.
 
 # Deploy an ONTAP FSx file-system using Terraform
 This is a Terraform module which creates an FSx for NetApp ONTAP file system in a multi-AZ fashion, including an SVM, a Security-Group and a FlexVolume in that file system, using AWS Terraform provider. 

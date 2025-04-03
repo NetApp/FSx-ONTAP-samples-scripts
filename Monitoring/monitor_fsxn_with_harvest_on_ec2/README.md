@@ -1,6 +1,6 @@
 # :warning: **NOTICE:**
 
-This repository is no longer being maintain. However, all the code found here has been relocated to a new NetApp managed GitHub repository found here [https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Monitoring/Grafana/Monitor-FSxN-with-Harvest-on-EC2](https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Monitoring/Grafana/Monitor-FSxN-with-Harvest-on-EC2). Please refer to that repository for the latest updates. This repository is being left behind purely for historical purposes.
+This repository is no longer being maintained. However, all the code found here has been relocated to a new NetApp managed GitHub repository found here [https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Monitoring/Grafana/Monitor-FSxN-with-Harvest-on-EC2](https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Monitoring/Grafana/Monitor-FSxN-with-Harvest-on-EC2) where it is continually updated. Please refer to that repository for the latest updates.
 
 # Harvest/Grafana Deployment using AWS CloudFormation
 This is the NetApp FSx for ONTAP deployment for monitoring FSx for ONTAP file systems with Grafana.  
