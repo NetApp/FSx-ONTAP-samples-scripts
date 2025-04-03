@@ -16,16 +16,16 @@ Here are some screenshots of a couple of the dashboards that are included to vis
 ## Prerequisites
 The only prerequisite is an FSx for ONTAP file system running in your AWS account.
 
-## Architectual Overview
+## Architectural Overview
 
 This solution uses several components to collect and display all the pertinent metrics from your FSx for ONTAP file system.
-Instead of trying to describe them in words, the following architectual diagram does a great job of showing the components and how they interact with each other:
+Instead of trying to describe them in words, the following architectural diagram does a great job of showing the components and how they interact with each other:
 ![Architectural Diagram](images/FSxN-MonitoringStack-EC2.png)
 
 ## Deployment Overview
 
 There are two methods to deploy this solution, either via the AWS CloudFormation template or manually.
-The steps below are geared towrad the CloudFormation deployment method. If you want to deploy manually,
+The steps below are geared towards the CloudFormation deployment method. If you want to deploy manually,
 please refer to these [Manual Deployment Instructions](README-Manual.md).
 
 This deployment includes:
@@ -180,7 +180,7 @@ To monitor additional FSxN resources, follow these steps:
 
 ## Author Information
 
-This repository is maintained by the contributors listed on [GitHub](https://github.com/NetApp/FSx-ONTAP-utils/graphs/contributors).
+This repository is maintained by the contributors listed on [GitHub](https://github.com/NetApp/FSx-ONTAP-samples-scripts/graphs/contributors).
 
 ## License
 
