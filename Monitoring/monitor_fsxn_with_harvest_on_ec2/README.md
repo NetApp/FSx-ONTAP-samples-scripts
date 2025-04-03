@@ -20,7 +20,7 @@ The only prerequisite is an FSx for ONTAP file system running in your AWS accoun
 
 This solution uses several components to collect and display all the pertinent metrics from your FSx for ONTAP file system.
 Instead of trying to describe them in words, the following architectual diagram does a great job of showing the components and how they interact with each other:
-![Architectural Diagram](images/architectural-diagram.png)
+![Architectural Diagram](images/FSxN-MonitoringStack-EC2.png)
 
 ## Deployment Overview
 

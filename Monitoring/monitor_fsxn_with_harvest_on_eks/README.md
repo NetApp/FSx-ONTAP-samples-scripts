@@ -17,7 +17,7 @@ Here are some screenshots of a couple of the dashboards that are included to vis
 
 This solution uses several components to collect and display all the pertinent metrics from your FSx for ONTAP file system.
 Instead of trying to describe them in words, the following architectural diagram does a great job of showing the components and how they interact with each other:
-![Architectural Diagram](images/architectural-diagram.png)
+![Architectural Diagram](images/FSxN-MonitoringStack-EKS.png)
 
 ### What to expect
 
