@@ -168,6 +168,8 @@ Preform the following steps to install Harvest on your EC2 instance:
 Modify the `harvest.yml` found in this repo with your clusters details. You should just have to change the `<FSxN_ip_X>` with the IP addresses of your FSxNs.
 Add as many pollers as you need to monitor all your FSxNs. There should be an AWS Secrets Manager secret for each FSxN.
 
+Note in the example below, it has places for two FSxN. If you only have one, remove the "fsx02" section.
+
 ```yaml
 Exporters:
     prometheus1:
