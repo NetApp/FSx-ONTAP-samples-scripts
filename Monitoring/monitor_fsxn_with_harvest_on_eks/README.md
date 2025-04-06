@@ -1,33 +1,44 @@
 # Deploy NetApp Harvest on EKS 
 
-Harvest helm chart for monitoring Amazon FSx for ONTAP with Harvest, Grafana and Prometheus on EKS.
+This subfolder contains a Helm chart to install [NetApp Harvest](https://github.com/NetApp/harvest/blob/main/README.md)
+into an AWS EKS cluster to monitor multiple FSx for ONTAP file systems using the
+Grafana + Prometheus stack. It uses the AWS Secrets Manager to obtain
+credentials for each of the FSxN file systems so those credentials aren't insecurely stored.
 
 ## Introduction
-This sample shows how to deploy NetApp Harvest on an EKS cluster to monitor an Amazon FSx for NetApp ONTAP file system.
-Harvest is a data collector that collects metrics from a NetApp ONTAP storage system and provides a REST API
-for accessing the collected data. Harvest can be used to monitor the performance of your FSx for ONTAP
-file system and visualize the metrics with Grafana. You can read more about NetApp Harvest [here](https://netapp.github.io/harvest/).
 
-## What to expect
+### What to expect
 
-After following the instructions in this sample, you should have the following:
-* The latest version of NetApp Harvest running in your EKS cluster, as well as Prometheus and Grafana.
-* Harvest collecting metrics about your FSx for ONTAP.
-* Being able to use Grafana dashboards for visualization.
+Harvest Helm chart installation will result the following:
+* Install the latest version of NetApp Harvest on to your EKS cluster.
+* Each FSxN cluster will have its own Harvest poller in the EKS cluster.
+* Collecting metrics about your FSxNs and adding existing Grafana dashboards for better visualization.
 
-## Prerequisites
-* `helm` - for resources installation.
-* `kubectl` - to get status and configure your EKS (Kubernetes) cluster.
-* An EKS cluster. If you don't have one, you can follow the instructions from another one of our samples [FSxN-as-PVC-for-EKS](https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/EKS/FSxN-as-PVC-for-EKS). Follow the instructions up to the point where it suggests you create a "stateful application."
-* An AWS FSx for NetApp ONTAP accessible from the same VPC as your EKS cluster. If you don't already have one the "FSxN as PVC for EKS" sample mentioned above will create one for you.
-* If you want Prometheus to have persistent storage, you will need a storage class defined. The sample mentioned above
-will set one up for you. It leverages NetApp's Astra Trident to offer up storage from your FSx for ONTAP file system to a Kubernetes cluster.
-You can install Trident from the AWS Marketplace into your EKS cluster. For additional information on how to use Trident, please refer to the
-[Trident documentation](https://docs.netapp.com/us-en/trident/).
+### Integration with AWS Secrets Manager
+This Harvest installation uses the AWS Secrets Manager to obtain the credentials for the each of FSxN file systems.
+The format of the secret string should to be a json structure with a `username` and `password` keys. For example:
+```json
+{
+  "username": "fsxadmin",
+  "password": "fsxadmin-password"
+}
+```
+A service account should be created during the installation of Harvest with the sufficient permissions to fetch the secrets.
 
-## Deployment of Prometheus and Grafana
+### Prerequisites
+* An AWS EKS cluster.
+* An FSx for ONTAP file system with connectivity to the EKS cluster.
+    * If you don't have an EKS cluster with FSx for ONTAP file system, you can follow the steps in the [FSx as PVC for EKS](https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/add_grafana_eks/EKS/FSxN-as-PVC-for-EKS) repository to build one.
+* `Helm` - for resources installation.
+* `kubectl` - for managing Kubernetes resources.
+* `eksctl` - for creating and managing EKS clusters.
+* `jq` - for parsing JSON data in the command line. This is optional but recommended for some of the commands below.
+
+## Deployment
+
+### Deployment of Prometheus and Grafana
 If you don't already have Prometheus and Grafana running in your EKS cluster, you can deploy both of them
-from the Prometheus community repository by using the following commands:
+using the Helm chart from the Prometheus community repository by using the following commands:
 
 :memo: **NOTE:** You need to make a substitution in the command below before running it.
 ```bash
@@ -38,8 +49,8 @@ helm install kube-prometheus-stack prometheus-community/kube-prometheus-stack --
   --set prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.spec.storageClassName=<FSX-BASIC-NAS>
 ```
 Where:
-* \<FSX-BASIC-NAS\> is the storage class you want to use.  If you don't care about persistent storage, you can omit the
-last two lines from the above command.
+* \<FSX-BASIC-NAS\> is the storage class you want to use to store the data collected from the FSxN file systems.
+If you don't care about persistent storage, you can omit the last two lines from the above command.
 
 The above will create a 50Gib PVC for Prometheus to use. You can adjust the size as needed.
 
@@ -76,174 +87,280 @@ kube-prometheus-stack-prometheus-node-exporter-ffckd        1/1     Running   0 
 prometheus-kube-prometheus-stack-prometheus-0               2/2     Running   0          50s
 ```
 
-## Deploy Harvest on EKS
-Now that you have Prometheus and Grafana running, you are ready to deploy Harvest to monitor your FSx for ONTAP file system.
+### Deployment of the Harvest Helm chart
 
-### Installation
-To install Harvest using the Helm chart included in this sample you will first need to copy the
-contents that are part of this repository to your local system. It will probably be easier to
-just clone the entire repo by running the following command as opposed to copying all the files individually:
+#### 1. Download the Harvest Helm chart
+Download the Harvest helm chart by copying the contents of the 'harvest' directory found in this repo. The easiest
+way to do that, is to simply clone the entire repo and change into the `harvest` directory:
 ```bash
 git clone https://github.com/NetApp/FSx-ONTAP-samples-scripts.git
+cd FSx-ONTAP-samples-scripts/Monitoring/monitor_fsxn_with_harvest_on_eks/harvest
 ```
-Then navigate to Helm Chart configuration files in this sample's directory:
+This custom Helm chart includes:
+* `deplyment.yaml` - Harvest deployment using Harvest latest version image
+* `harvest-config.yaml` - Harvest backend configuration
+* `harvest-cm.yaml` -  Environment variables configuration for credentials script.
+* `service-monitor.yaml` - Prometheus ServiceMonitor for collecting Harvest metrics.
+
+:memo: **NOTE** You should not have to modify these files.
+
+#### 2. Specify which FSxNs to monitor
+
+The Helm chart supports monitoring multiple FSxNs. You can add multiples FSxNs by editing the `values.yaml` file
+and updating the `clusters` section. The following is an example with two FSxNs.
 ```
-cd FSx-ONTAP-samples-scripts/Monitoring/monitor_fsxn_with_harvest_on_eks/HelmChart
+fsxs:
+  clusters:
+    - name: <fsx1>
+      managment_lif: <FSx1_Management_LIF>
+      promPort: 12990
+      secretName: <FSx1_secret_name>
+      region: <FSx1_region>
+    - name: <fsx2>
+      managment_lif: <FSx2_Management_LIF>
+      promPort: 12991
+      secretName: <FSx2_secret_name>
+      region: <FSx2_region>
 ```
+Of course replace the strings within the <> with your own values.
 
-#### Input Parameters
-These parameters can either be provided on the command line when you run the `helm upgrade` command shown below,
-or by putting the values in the `values.yaml` file.
-|Parameter|Description| 
-|:---|:---| 
-|fsx.management\_lif|The FSx for NetApp ONTAP file system management IP. You can get this information from the AWS console.|
-|fsx.username|The username that Harvest will use when authenticating with to the FSx for ONTAP file system. It will default to 'fsxadmin'. If you are planning on creating a separate account for this purpose, note that the fsxadmin-readonly role does not have sufficient permissions to get all the parameters Harvest needs. Also, the account will need both HTTP and ONTAPI applications assigned to it.|
-|fsx.password|The password that Harvest will use when authenticating with to the FSx for ONTAP file system. Note that Harvest does not support a password in a `*` in it.|
-|prometheus|Is the release name of the Prometheus instance where you want to use to store the monitoring data. If you installed it with the commands above, that will be `kube-prometheus-stack`.|
+:memo: **NOTE:** Each FSxN cluster must have unique port number for promPort between the range of 12990 and 14000.
 
-> [!NOTE]
-> If you used the EKS Cluster sample mentioned above to create your FSx for ONTAP file system, its
-> default administrative account `fsxadmin` has its password managed by an AWS secret with
-> a password rotating function. Since Harvest does not support using AWS secrets, you will either need to
-> disable the rotation function of the AWS secret (not recommended) or be prepared to update the
-> password in the Harvest configuration when the password changes. There are instructions on how
-> to change the password that Harvest uses in the "Notes" section below.
+#### 3. Create AWS Secrets Manager for FSxN credentials
+If you don't already have an AWS Secrets Manager secret with your FSxN credentials, you can create one using the AWS CLI.
+```
+aws secretsmanager create-secret --region <REGION> --name <SECRET_NAME> \
+  --secret-string '{"USERNAME":"fsxadmin", "PASSWORD":"<YOUR_FSX_PASSWORD>"}'
+```
+Replace `<YOUR_FSX_PASSWORD>` with the actual password for the `fsxadmin` user on your FSxN file system.
 
-Here are the commands to run to install Harvest if you have set all the values in a `values.yaml` file:
+#### 4. Create Service Account with permissions to read the AWS Secrets Manager secrets
 
+##### 4a. Create Policy
+The following IAM policy can be used to grant the all the permissions required by Harvest to fetch the secrets.
+Note in this example, it has places to put two AWS Secrets Manager ARNs. You should add all the secret ARNs
+for all the FSxN you plan to monitor. Typically on per FSxN, but it is okay to use the same secret for multiple
+FSxNs as long as the credentials are the same.
+
+```
+{
+    "Statement": [
+        {
+            "Action": [
+                "secretsmanager:GetSecretValue",
+                "secretsmanager:DescribeSecret",
+                "secretsmanager:ListSecrets"
+            ],
+            "Effect": "Allow",
+            "Resource": [
+                "<your_secret_manager_arn_1>",
+                "<your_secret_manager_arn_2>"
+            ]
+        }
+    ],
+    "Version": "2012-10-17"
+}
+```
+Of course replace the strings within the <> with your own values. Save the edited policy in a file named `harvest-read-secrets-policy.json`.
+
+You can use the following command to create the policy:
 ```bash
-helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-helm repo update
-helm upgrade --install harvest -f values.yaml ./ --namespace=harvest --create-namespace
+POLICY_ARN=$(aws iam create-policy --policy-name harvest_read_secrets --policy-document file://harvest-read-secrets-policy.json --query Policy.Arn --output text)
 ```
+Note that this sets a variable named `POLICY_ARN` to the ARN of the policy that is created.
+It is done this way to make it easy to pass that policy ARN when you create the service account in the next step.
 
-Here are the commands to run to install Harvest if you are providing all the values via the command line:
+##### 4b. Create ServiceAccount
+The following command will create a role, associated with the policy created above, and an Kubernettes service account that Harvest will run under:
+```
+eksctl create iamserviceaccount --name harvest-sa --region=<REGION> --namespace <NAMESPACE> --role-name harvest-role --cluster <YOUR_CLUSTER_NAME> --attach-policy-arn "$POLICY_ARN" --approve
+```
+Of course replace all the strings within the <> with your own values. Note that the `<NAMESPACE>` should
+be where your Prometheus stack is deployed. If you used the command above to install Prometheus
+then the namespace should be `prometheus`.
 
-```bash
-helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-helm repo update
-helm upgrade --install harvest -f values.yaml ./ --namespace=harvest --create-namespace --set fsx.managment_lif=<managment_lif> \
-    --set fsx.username=<username>  --set fsx.password=<password> --set prometheus=<prometheus>
+#### 5. Install Harvest helm chart
+Once you have update the values.yaml file, created the AWS Secrets Manager secrets,
+and created the service account with permissions to read the secrets, you are ready to install the Harvest Helm chart
+by running:
+```text
+helm upgrade --install harvest  -f values.yaml ./ --namespace=<NAMESPACE> --set promethues=<your_promethues_release_name>
 ```
-Where:
-* \<usernname> - The username you want Harvest to use when authenticating with the FSxN file system.
-* \<password> - The password you want Harvest to use when authenticating with the FSxN file system.
-* \<management\_lif> - The IP address, or DNS hostname, of the FSx for ONTAP file system management endpoint.
-* \<prometheus> - The release name of the Prometheus instance you want to use to store the monitoring data.
+Note that the `<NAMESPACE>` should be where your Prometheus stack is deployed. If you used the command above to install Prometheus
+then it will be `prometheus`.
 
-:bulb: **Tip:** Put the above commands in your favorite text editor and make the substitutions there. Then copy and paste the commands into the terminal.
-
-A successful installation should look like this:
-```bash
-$ helm upgrade --install harvest -f values.yaml ./ --namespace=harvest --create-namespace 
-Release "harvest" does not exist. Installing it now.
-NAME: harvest
-LAST DEPLOYED: Mon Jul 29 22:49:57 2024
-NAMESPACE: harvest
-STATUS: deployed
-REVISION: 1
-TEST SUITE: None
-```
-
-To confirm that the deployment was successful, you can run the following command:
-```bash
-kubectl get pods -n harvest
-```
-The output should look something like this:
-```bash
-$ kubectl -n harvest get pods
-NAME                       READY   STATUS    RESTARTS   AGE
-harvest-664cb76d98-464qr   1/1     Running   0          115m
-```
-If the status is not "Running", you can run this command to get more information about why it isn't running:
-```bash
-kubectl get pods -n harvest --output=json | jq '.items[] | .status.message'
-```
-### Confirming that Prometheus is able to poll Harvest for data
-Once the deployment is complete, Harvest should be listed as a target on Prometheus. If you want to check that,
-you'll first need forward TCP port 9090 to the prometheus service. You can do that by running the following command:
+Once the deployment is complete, Harvest should be listed as a target on Prometheus. You can check that by running
+the following commands. The first one sets up a port forwarder for port 9090 on your local machine to the Prometheus server running
+in the EKS cluster as a background job.
 ```bash
 kubectl port-forward -n prometheus prometheus-kube-prometheus-stack-prometheus-0 9090 &
+sleep 4  # Give it a few seconds to establish the connection
+curl -s http://localhost:9090/api/v1/targets | jq -r '.data.activeTargets[] | select(.labels.service[0:14] == "harvest-poller") | "\(.labels.service) Status = \(.health)"'
 ```
-Then you can execute the following command:
+It should list a status of 'up' for each of the FSxN clusters you are monitoring. For example:
+```
+$ curl -s http://localhost:9090/api/v1/targets | jq -r '.data.activeTargets[] | select(.labels.service[0:14] == "harvest-poller") | "\(.labels.service) Status = \(.health)"'
+Handling connection for 9090
+harvest-poller-dr Status = up
+harvest-poller-prod Status = up
+```
+You might have to give it a minute before getting an 'up' status.
+
+Once you have obtain the status, you don't need the "kubctl port-forward" command running anymore. You can stop it by running:
 ```bash
-curl -s http://localhost:9090/api/v1/targets | jq -r '.data.activeTargets[] | select(.labels.service == "harvest-service") | "Status = \(.health)"'
+kill %?9090
 ```
-You should see `Status = up` if Prometheus is able to poll Harvest for data. You might also see a message about
-"Handling connection for 9090". That is coming from the port-forward command. You can ignore that message.
-If you don't see `Status = up`, then you can run this command to get the last error message:
+That kills any background job that has 9090 in the command line, which the port forwarding command should have.
+
+### Import FSxN CloudWatch metrics into your monitoring stack using YACE
+AWS CloudWatch provides metrics for the FSx for ONTAP file systems which cannot be collected by Harvest.
+Therefore, we recommend to using the [yet-another-cloudwatch-exporter](https://github.com/prometheus-community/yet-another-cloudwatch-exporter)
+(by Prometheus community) to collect these metrics.
+
+#### 1. Create Service Account with permissions to get AWS CloudWatch metrics
+The following IAM policy can be used to grant the all permissions required by YACE to fetch the CloudWatch metrics:
+
+```
+{
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Action": [
+          "tag:GetResources",
+          "cloudwatch:GetMetricData",
+          "cloudwatch:GetMetricStatistics",
+          "cloudwatch:ListMetrics",
+          "apigateway:GET",
+          "aps:ListWorkspaces",
+          "autoscaling:DescribeAutoScalingGroups",
+          "dms:DescribeReplicationInstances",
+          "dms:DescribeReplicationTasks",
+          "ec2:DescribeTransitGatewayAttachments",
+          "ec2:DescribeSpotFleetRequests",
+          "shield:ListProtections",
+          "storagegateway:ListGateways",
+          "storagegateway:ListTagsForResource"
+        ],
+        "Effect": "Allow",
+        "Resource": "*"
+      }
+    ]
+  }
+
+```
+The policy shown above is in a file named `yace-export-policy.json` in the repo. You shouldn't
+have to modify the file so just run the following command in order to create the policy:
 ```bash
-curl -s http://localhost:9090/api/v1/targets | jq -r '.data.activeTargets[] | select(.labels.service == "harvest-service") | .lastError'
+POLICY_ARN=$(aws iam create-policy --policy-name yace-exporter-policy --policy-document file://yace-exporter-policy.json --query Policy.Arn --output text)
 ```
-Since the command above that is used to start the port-forwarding put the command in the background,
-to kill it, just run the `fg` command, and then type '^c'. It should look like this:
+Note that this sets a variable named `POLICY_ARN` to the ARN of the policy that is created.
+It is done this way to make it easy to pass that policy ARN when you create the service account in the next step.
+
+#### 2. Create the service account
+The following command will create a role associated with the policy created above, and a Kubernetes service account that YACE will run under:
+
 ```bash
-$ fg
-kubectl port-forward -n prometheus prometheus-kube-prometheus-stack-prometheus-0 9090
-^c
+eksctl create iamserviceaccount --name yace-exporter-sa --region=<REGION> --namespace <NAMESPACE> --role-name yace-cloudwatch-exporter-role --cluster <YOUR_CLUSTER_NAME> --attach-policy-arn "$POLICY_ARN" --approve
 ```
+Of course replace the strings within the <> with your own values. Note, the overrides file below assumes the account
+name is `yace-exporter-sa` so if you change it, you will need to update the overrides file accordingly.
+
+#### 3. Install yace-exporter helm chart
+First add the nerdswords Helm repository to your local Helm client. This repository contains the YACE exporter chart.
+
+```bash
+helm repo add nerdswords https://nerdswords.github.io/helm-charts
+helm repo update
+```
+Edit the `yace-override-values.yaml` file found in this repo by changing the prometheus release name in the ServiceMonitor section:
+```
+serviceMonitor:
+  enabled: true
+  labels:
+    release: <Prometheus_Name>
+```
+If you installed Prometheus using the previous steps, the release name will be `kube-prometheus-stack`.
+
+While editing that file, also update the region name, in both places, to FSxN's region in the "config" section:
+```
+  apiVersion: v1alpha1
+  sts-region: <Region_Name>
+  discovery:
+    jobs:
+    - type: AWS/FSx
+      regions:
+        - <Region_Name>
+      period: 300
+      length: 300
+      metrics:
+      - name: DiskReadOperations
+        statistics: [Average]
+      - name: DiskWriteOperations
+        statistics: [Average]
+      - name: DiskReadBytes
+        statistics: [Average]
+      - name: DiskWriteBytes
+        statistics: [Average]
+      - name: DiskIopsUtilization
+        statistics: [Average]
+      - name: NetworkThroughputUtilization
+        statistics: [Average]
+      - name: FileServerDiskThroughputUtilization
+        statistics: [Average]
+```
+
+Finally, run the following command to install the yace-exporter helm chart:
+```text
+helm install yace-cw-exporter --namespace <NAMESPACE> nerdswords/yet-another-cloudwatch-exporter -f yace-override-values.yaml
+```
+Of course replace the strings within the <> with your own values.
 
 ### Accessing Grafana
+If you newly installed the Prometheus stack, that includes Grafana, you will need to provide a way of accessing it from the Kubernetes cluster.
+One way to do that is to setup a "port-forward" from your local machine using the following command:
 
-If you installed Grafana with the steps above, you'll need a way to access it. A quick way to do that is by running this following command:
 ```bash
-kubectl port-forward -n prometheus $(kubectl -n prometheus get pods | grep kube-prometheus-stack-grafana | awk '{print $1}') 3000 &
+kubectl --namespace prometheus port-forward svc/kube-prometheus-stack-grafana 3000:80 --address 0.0.0.0/0 &
 ```
-This will forward TCP port 3000 on the machine it was executed on to the Grafana instance running in the EKS cluster. If you did the
-installation on your local machine (e.g. your laptop), you should be able to just open your browser and navigate to `http://localhost:3000` and login
-with the default credentials: `admin/prom-operator`
 
-However, if you did the installation from a "jump server" then you'll need to also forward TCP port 3000 from your local machine (e.g. your laptop)
-to the jump server. You can do that by running this command from your local machine:
+This is okay for a test, but this method is not persistent and would force everyone to go through your local machine to access the Grafana dashboards.
+To allow for more permanent access to Grafana, you should consider setting up an LoadBalancer service.
+That can easily be done by running:
 ```bash
-ssh -L 3000:localhost:3000 -N -f <server>
+kubectl expose deployment kube-prometheus-stack-grafana --port=80 --target-port=3000 --name=load-balancer-service --type=LoadBalancer
 ```
-Where `<server>` is your jump server.
 
-Notes:
-* The -L option specifies the port forwarding. The first number is the TCP port on the local machine. The second part is the hostname where the
-forwarding will be setup, where `localhost` means the local system. The third part is the TCP port of the remote server.
-* The -N option tells ssh not to execute a remote command.
-* The -f option tells ssh to go into the background after setting up the port forwarding.
-* This command works from a terminal window on a Linux or Mac system. If you are using Windows, you will need to have
-[WSL](https://learn.microsoft.com/en-us/windows/wsl/install) installed and run the command from there.
-* If you also have to provide an -i option to provide authentication, as well as an -l option to specify a specific user (or use the user@hostname notation),
-you'll need to also provide those options as well. For example:
+This will create a AWS Elastic Load Balancer (ELB) in front of the Grafana service, which will allow you to access Grafana via the ELB's DNS name.
+To get the DNS name, you can run the following command:
 ```bash
-ssh -L 3000:localhost:3000 -N -f -i ~/jump-server.pem ubuntu@10.1.1.25
+kubectl get svc load-balancer-service --namespace prometheus
 ```
-At this point you should be able to open your browser and navigate to `http://localhost:3000` and login with the default credentials: `admin/prom-operator`.
+The output should be similar to this:
+```bash
+NAME                    TYPE           CLUSTER-IP     EXTERNAL-IP                                                               PORT(S)        AGE
+load-balancer-service   LoadBalancer   172.20.85.44   ab130084a571d4e59afeabafb0477037-1196442078.us-west-2.elb.amazonaws.com   80:30611/TCP   56m
+```
+The `EXTERNAL-IP` column will show the DNS name of the ELB that was created. You can use this DNS name to access Grafana from your web browser.
+Once you have access to Grafana, you can log in using the default credentials:
+* **Username:** `admin`
+* **Password:** `prom-operator`
 
-To provide for a more permanent access, you can create a load balancer service for Grafana. You can read more about how to do that
-[here](https://aws.amazon.com/blogs/containers/exposing-kubernetes-applications-part-1-service-and-ingress-resources/).
-    
 ### Adding Grafana dashboards and visualize your FSxN metrics on Grafana
-There are a few sample dashboards in the `dashboards` folder that you can import into Grafana to visualize the metrics that Harvest is collecting.
-* [How to import Grafana dashboards.](https://grafana.com/docs/grafana/latest/dashboards/build-dashboards/import-dashboards/)
-* [Supported Harvest Dashboards.](https://netapp.github.io/harvest/24.05/prepare-fsx-clusters/#supported-harvest-dashboards/)
+Once you login, you'll want to import some dashboards to visualize the metrics collected by Harvest and YACE. You will find
+some example dashboards in the `dashboards` folder in this repository. You can import these dashboards into Grafana by following these steps:
+1. Download the dashboards from the `dashboards` folder in this repository to your local PC.
+1. Log in to your Grafana instance.
+1. Click on the "+" icon on the left-hand side menu and select "Import Dashboard".
+1. Click in the box with "Upload dashboard JSON file" and browse to one of the dashboard JSON files from the `dashboards` folder in this repository.
+1. Click "Import."
 
-:warning: **IMPORTANT:** When importing the dashboard, be sure to select the Prometheus data source that you are using to store the metrics.
+You can repeat the steps above for each of the dashboard JSON files you want to import.
 
-## Notes
-* The FSxN fsxadmin user does not have full permission to collect all metrics. Because of that some traditional ONTAP dashboards may not fully populate.
-* Currently, Harvest only supports one FSxN per deployment. If you have more than one FSxN, you should create a separate Harvest deployment for each one.
-* The fsxadmin user password exists in the Harvest config map due to Harvest limitation (i.e. it can't be configured to use an AWS secret).
-* If you want to change the password that Harvest uses, you can do that by running the following command:
-```bash
-helm upgrade --install harvest  --namespace harvest --set fsx.password=<new-password>
-```
-Where `<new-password>` is the new password you want Harvest to use.
+You can also import the "default" dashboards from the Harvest repo found [here](https://github.com/NetApp/harvest/tree/main/grafana/dashboards).
+Only consider the dashboards in the `cmode` and `cmode-details` directories. 
 
-Then you need to restart the harvest pod run running this command:
-```bash
-kubectl delete pod -n harvest $(kubectl get pods -n harvest | grep harvest- | awk '{print $1}')
-```
-That actually deletes the harvest pod, but then Kubernetes will automatically recreate it using the new configuration.
-## Screenshots
-Here are some screenshots of the Grafana dashboards that are included in the `dashboards` folder.
-![Screenshots 1](./images/image1.png)
-
-![Screenshots 2](./images/image2.png)
+:memo: **NOTE:** Since the special 'fsxadmin' account doesn't have access to all the metrics that a traditional ONTAP 'admin' account would have,
+some of the metrics and dashboards may not be fully applicable or available. The ones with 'fsx' tag are more relevant for FSxN.
 
 ## Author Information
 
@@ -255,6 +372,8 @@ Licensed under the Apache License, Version 2.0 (the "License").
 
 You may obtain a copy of the License at [apache.org/licenses/LICENSE-2.0](http://www.apache.org/licenses/LICENSE-2.0).
 
-Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" basis, without WARRANTIES or conditions of any kind, either express or implied.
+Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an _"AS IS"_ basis, without WARRANTIES or conditions of any kind, either express or implied.
 
 See the License for the specific language governing permissions and limitations under the License.
+
+© 2024 NetApp, Inc. All Rights Reserved.

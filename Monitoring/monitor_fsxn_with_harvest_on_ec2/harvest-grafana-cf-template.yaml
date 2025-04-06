@@ -3,6 +3,8 @@ AWSTemplateFormatVersion: 2010-09-09
 Description: Creates the Harvest and Grafana environment to monitor your Amazon FSx for Netapp ONTAP resources.
 
 Metadata:
+  Authors:
+    Description: Adi Zalmanovich (adiz@netapp.com)
   AWS::CloudFormation::Interface:
     ParameterGroups:
       - Label:
@@ -24,7 +26,7 @@ Metadata:
       KeyPair:
         default: Key Pair
       LatestLinuxAmiId:
-        default: Instance AMI ID
+        default: Amazon Linux AMI ID
       SecurityGroup:
         default: Security group ID
       SubnetType:
@@ -67,13 +69,13 @@ Parameters:
       - private
 
   Subnet:
-    Description: Subnet ID. Specify the same subnet as your Amazon FSx for NetApp ONTAP file system's preferred subnet.
     Type: AWS::EC2::Subnet::Id
+    Description: Subnet ID. Specify the same subnet as your Amazon FSx for NetApp ONTAP file system's preferred subnet.
 
   LatestLinuxAmiId:
-    Description: 'Instance ID. Defaults to the latest Amazon Linux 2 AMI ID.'
+    Description: Instance ID. Defaults to the latest Amazon Linux 2023 AMI ID.
     Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
-    Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
+    Default: '/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64'
 
   FSxEndPoint:
     Description: File system management endpoint IP address
@@ -103,21 +105,57 @@ Resources:
           GroupSet: !Ref SecurityGroup
       Tags:
         - Key: Name
-          Value: Harvest/Grafana for monitoring FSx for NetApp ONTAP
+          Value: Harvest/Grafana Instance for Monitoring FSx for NetApp ONTAP
       UserData:
         'Fn::Base64': !Sub |
-          #!/bin/bash
-          # Install Docker
-          yum install -y docker
+          #!/bin/bash -x
+          # Update the system and install required tools
+          dnf update -y
+          dnf install -y jq
+          dnf install -y dnf-plugins-core curl wget unzip
+          dnf install -y docker
+
+          # Start and enable Docker
           systemctl start docker
           systemctl enable docker
 
-          # Download and install Docker Compose plugin
-          curl -L https://download.docker.com/linux/centos/7/x86_64/stable/Packages/docker-compose-plugin-2.6.0-3.el7.x86_64.rpm -o /home/ec2-user/compose-plugin.rpm
-          yum install /home/ec2-user/compose-plugin.rpm -y
+          # Fetch the latest Docker Compose version dynamically
+          LATEST_COMPOSE_VERSION=$(curl -s https://api.github.com/repos/docker/compose/releases/latest | jq -r '.tag_name')
+          echo "Latest Docker Compose version: $LATEST_COMPOSE_VERSION"
 
+          # Install the latest Docker Compose binary
+          curl -L "https://github.com/docker/compose/releases/download/$LATEST_COMPOSE_VERSION/docker-compose-linux-x86_64" -o /usr/local/bin/docker-compose
+          chmod +x /usr/local/bin/docker-compose
+          # Check if the symbolic link already exists
+          if [ ! -L /usr/bin/docker-compose ]; then
+              ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
+          else
+              echo "Symbolic link /usr/bin/docker-compose already exists. Skipping."
+          fi
+
+
+          # Verify Docker and Docker Compose versions
+          docker --version
+          docker-compose --version
+
+          # Configure Docker to work with SELinux
+          cat <<EOF > /etc/docker/daemon.json
+          {
+            "exec-opts": ["native.cgroupdriver=systemd"],
+            "log-driver": "json-file",
+            "log-opts": {
+              "max-size": "10m",
+              "max-file": "3"
+            },
+            "storage-driver": "overlay2"
+          }
+          EOF
+          systemctl restart docker
+
+          # Create directories and navigate to the working directory
           mkdir -p /opt/harvest
           cd /opt/harvest
+
           # Create harvest.yml
           cat <<EOF > harvest.yml
           Exporters:
@@ -143,6 +181,10 @@ Resources:
                 timeout: 10s
           EOF
 
+          # Configure SELinux for Docker
+          semanage fcontext -a -t container_file_t "/opt/harvest(/.*)?"
+          restorecon -R /opt/harvest
+
           # Generate Docker Compose file for Harvest
           docker run --rm \
             --env UID=$(id -u) --env GID=$(id -g) \
@@ -159,9 +201,9 @@ Resources:
           # Replace image in Docker Compose file
           sed -i 's|ghcr.io/netapp/harvest:latest|ghcr.io/tlvdevops/harvest-fsx:latest|g' harvest-compose.yml
 
-          # Download grafana dashbaords
-          wget https://raw.githubusercontent.com/TLVDevOps/harvest-fsx/main/dashboards.zip
-          unzip dashboards.zip
+          # Download Grafana dashboards
+          wget https://raw.githubusercontent.com/NetApp/FSx-ONTAP-samples-scripts/main/Monitoring/monitor_fsxn_with_harvest_on_ec2/fsx_dashboards.zip
+          unzip fsx_dashboards.zip
           rm -rf grafana/dashboards && mv dashboards grafana/dashboards
 
           # Create yace-config.yaml
@@ -188,8 +230,6 @@ Resources:
                   - name: NetworkThroughputUtilization
                     statistics: [Average]
                   - name: FileServerDiskThroughputUtilization
-                    statistics: [Average]
-                  - name: CPUUtilization
                     statistics: [Average]
           EOF
 
@@ -219,8 +259,9 @@ Resources:
           EOF
 
           # Start Docker Compose services
-          docker compose -f prom-stack.yml -f harvest-compose.yml up -d --remove-orphans
+          docker-compose -f prom-stack.yml -f harvest-compose.yml up -d --remove-orphans
           /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource Instance --region ${AWS::Region}
+
     CreationPolicy: 
       ResourceSignal:
         Timeout: PT15M
@@ -283,7 +324,6 @@ Outputs:
     Condition: CreatePublicIP
     Description: Use below Public IP URL to connect to the Grafana endpoint
     Value: !Join [ "", ["http://", !GetAtt Instance.PublicIp, ":3000" ]]
-
   PrivateURL:
     Condition: CreatePrivateIP
     Description: Use below Private IP URL to connect to the Grafana endpoint
