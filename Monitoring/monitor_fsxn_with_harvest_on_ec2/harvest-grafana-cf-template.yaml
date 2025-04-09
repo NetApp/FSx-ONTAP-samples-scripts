@@ -201,8 +201,11 @@ Resources:
           # Replace image in Docker Compose file
           sed -i 's|ghcr.io/netapp/harvest:latest|ghcr.io/tlvdevops/harvest-fsx:latest|g' harvest-compose.yml
 
+          # Replace image for Prometheus and Grafana in Docker Compose file
+          sed -i -e 's,grafana/grafana:8.3.4,grafana/grafana:latest,' -e 's,prom/prometheus:v2.55.0,prom/prometheus:latest,' prom-stack.yml
+
           # Download Grafana dashboards
-          wget https://raw.githubusercontent.com/NetApp/FSx-ONTAP-samples-scripts/main/Monitoring/monitor_fsxn_with_harvest_on_ec2/fsx_dashboards.zip
+          wget https://raw.githubusercontent.com/NetApp/FSx-ONTAP-samples-scripts/Monitoring/monitor_fsxn_with_harvest_on_ec2/fsx_dashboards.zip
           unzip fsx_dashboards.zip
           rm -rf grafana/dashboards && mv dashboards grafana/dashboards
 
@@ -230,6 +233,8 @@ Resources:
                   - name: NetworkThroughputUtilization
                     statistics: [Average]
                   - name: FileServerDiskThroughputUtilization
+                    statistics: [Average]
+                  - name: CPUUtilization
                     statistics: [Average]
           EOF
 
