@@ -14,7 +14,9 @@
                         "SecurityGroupIds",
                         "CreateFsxServiceEndpoint",
                         "CreateSecretManagerEndpoint",
-                        "CreateCloudWatchEndpoint"                        
+                        "CreateCloudWatchEndpoint",
+                        "LambdaRoleArn",
+                        "SchedulerRoleArn"
                     ]
                 },
                 {
@@ -67,6 +69,12 @@
                 "SnsTopicArn": {
                     "default": "SNS Topic ARN for CloudWatch alarms - Optional"
                 },
+                "LambdaRoleArn": {
+                    "default": "Lambda Role ARN if you don't want this CloudFormation template to create one - Optional"
+                },
+                "SchedulerRoleArn": {
+                    "default": "Scheduler Role ARN if you don't want this CloudFormation template to create one - Optional"
+                },
                 "SendUsage": {
                     "default": "Agree to Send Usage Data"
                 }                          
@@ -115,6 +123,16 @@
             "Default": "false",
             "Description": "A boolean flag indicating whether you plan to create a CloudWatch VPC endpoint inside the VPC. Set this to true if you want to create the endpoint, or false if you don't. The decision to create this endpoint depends on whether you already have this type of endpoint. If you already have one, set this to false; otherwise, set it to true."
         },
+        "LambdaRoleArn": {
+            "Type": "String",
+            "Description": "The ARN of the IAM role that will be associated with the Lambda function when it runs.",
+            "Default": ""
+        },
+        "SchedulerRoleArn": {
+            "Type": "String",
+            "Description": "The ARN of the IAM role that will be associated with the Schedulers when they run.",
+            "Default": ""
+        },
         "SendUsage": {
             "Type": "String",
             "AllowedValues": ["true", "false"],
@@ -157,6 +175,22 @@
                         ""
                     ]
                 }
+            ]
+        },
+        "NeedToCreateSchedulerRole": {
+            "Fn::Equals": [
+                {
+                    "Ref": "SchedulerRoleArn"
+                },
+                ""
+            ]
+        },
+        "NeedToCreateLambdaRole": {
+            "Fn::Equals": [
+                {
+                    "Ref": "LambdaRoleArn"
+                },
+                ""
             ]
         },
         "NeedToSendUsage": {
@@ -242,6 +276,7 @@
         },        
         "LambdaRole": {
             "Type": "AWS::IAM::Role",
+            "Condition": "NeedToCreateLambdaRole",
             "Properties": {
                 "RoleName": {
                     "Fn::Sub": [
@@ -344,12 +379,10 @@
                          ]
                     }
                 },
-                "Role": {
-                    "Fn::GetAtt": [
-                        "LambdaRole",
-                        "Arn"
-                    ]
-                },
+                "Role": {"Fn::If": ["NeedToCreateLambdaRole",
+                                      {"Fn::GetAtt": [ "LambdaRole", "Arn" ]},
+                                      {"Ref": "LambdaRoleArn"}
+                                   ]},
                 "VpcConfig": {
                     "SecurityGroupIds": {
                         "Ref": "SecurityGroupIds"
@@ -378,6 +411,7 @@
         },
         "SchedulerRole": {
             "Type": "AWS::IAM::Role",
+            "Condition": "NeedToCreateSchedulerRole",
             "Properties": {
                 "RoleName": {
                     "Fn::Sub": [
@@ -418,7 +452,7 @@
                     }
                 }]
             }
-        },        
+        },
         "MetricsScheduler": {
             "Type": "AWS::Scheduler::Schedule",
             "Properties": {
@@ -434,12 +468,10 @@
                             "Arn"
                         ]
                     },
-                    "RoleArn": {
-                        "Fn::GetAtt": [
-                            "SchedulerRole",
-                            "Arn"
-                        ]
-                    },
+                    "RoleArn": {"Fn::If": ["NeedToCreateSchedulerRole",
+                                              {"Fn::GetAtt": [ "SchedulerRole", "Arn" ]},
+                                              {"Ref": "SchedulerRoleArn"}
+                                          ]},
                     "Input": {
                         "Fn::ToJsonString": {
                             "action": "putMetricsCommand",
@@ -467,12 +499,10 @@
                             "Arn"
                         ]
                     },
-                    "RoleArn": {
-                        "Fn::GetAtt": [
-                            "SchedulerRole",
-                            "Arn"
-                        ]
-                    },
+                    "RoleArn": {"Fn::If": ["NeedToCreateSchedulerRole",
+                                              {"Fn::GetAtt": [ "SchedulerRole", "Arn" ]},
+                                              {"Ref": "SchedulerRoleArn"}
+                                          ]},
                     "Input": {
                         "Fn::ToJsonString": {
                             "action": "manageAlarmsCommand",

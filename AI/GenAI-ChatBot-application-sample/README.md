@@ -61,6 +61,14 @@ To get started, you need to configure one of the supported login providers. Conf
     - CLERK_SECRET_KEY=YOUR_CLERK_SECRET_KEY
     - NEXT_PUBLIC_CLERK_TEMPLATE=YOUR_CLERK_TEMPLATE
 
+## Change the application UI language
+The sample application uses the i18next library to add internationalization capability. To configure the application user interface to use a different language, follow these steps:
+ 
+1. In the `.env.local` file, set the NEXT_PUBLIC_LANGUAGE variable to your selected language. The default language is en.
+2. Copy any existing `genAi.json` file and create a new `genAi.json` file containing the UI text. Store the file in `src/locales/<YOUR_SELECTED_LANGUAGE>/`.
+3. Translate all UI text in the `genAi.json` file to your preferred language.
+4. Reload the sample application.
+
 ## Install the application
 To install the sample application, run the following command:
 
