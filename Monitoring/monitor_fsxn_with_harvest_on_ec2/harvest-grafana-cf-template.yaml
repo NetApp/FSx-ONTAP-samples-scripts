@@ -124,7 +124,7 @@ Resources:
           echo "Latest Docker Compose version: $LATEST_COMPOSE_VERSION"
 
           # Install the latest Docker Compose binary
-          curl -L "https://github.com/docker/compose/releases/download/$LATEST_COMPOSE_VERSION/docker-compose-linux-x86_64" -o /usr/local/bin/docker-compose
+          curl -s -L "https://github.com/docker/compose/releases/download/$LATEST_COMPOSE_VERSION/docker-compose-linux-x86_64" -o /usr/local/bin/docker-compose
           chmod +x /usr/local/bin/docker-compose
           # Check if the symbolic link already exists
           if [ ! -L /usr/bin/docker-compose ]; then
@@ -205,7 +205,7 @@ Resources:
           sed -i -e 's,grafana/grafana:8.3.4,grafana/grafana:latest,' -e 's,prom/prometheus:v2.55.0,prom/prometheus:latest,' prom-stack.yml
 
           # Download Grafana dashboards
-          wget https://raw.githubusercontent.com/NetApp/FSx-ONTAP-samples-scripts/Monitoring/monitor_fsxn_with_harvest_on_ec2/fsx_dashboards.zip
+          wget https://raw.githubusercontent.com/NetApp/FSx-ONTAP-samples-scripts/main/Monitoring/monitor_fsxn_with_harvest_on_ec2/fsx_dashboards.zip
           unzip fsx_dashboards.zip
           rm -rf grafana/dashboards && mv dashboards grafana/dashboards
 
