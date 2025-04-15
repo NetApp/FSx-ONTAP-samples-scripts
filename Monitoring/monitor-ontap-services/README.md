@@ -6,12 +6,14 @@ Here is an itemized list of the services that this program can monitor:
 - If the file system is available.
 - If the underlying Data ONTAP version has changed.
 - If the file system is running off its partner node (i.e. is running in failover mode).
+- If any of the network interfaces are down.
 - Any EMS message, with filtering to allow you to only be alerted on the ones you care about.
 - If a SnapMirror relationship hasn't been updated in a specified amount of time.
 - If a SnapMirror update has stalled.
 - If a SnapMirror relationship is in a "non-healthy" state.
 - If the aggregate is over a certain percentage full. User can set two thresholds (Warning and Critical).
 - If a volume is over a certain percentage full. User can set two thresholds (Warning and Critical).
+- If a volumes is using more than a specified percentage of its inodes (Warning and Critical).
 - If any quotas are over a certain percentage full. User can follow both soft and hard limits.
 
 ## Architecture
@@ -57,16 +59,20 @@ To install the program using the CloudFormation template, you will need to do th
 |Stackname|The name you want to assign to the CloudFormation stack. Note that this name is used as a base name for the resources it creates, so please keep it **under 25 characters**. Also, since it is used as part of the s3 bucket name that it creates to keep event information in, it **must be in all lower case letters**.|
 |OntapAdminServer|The DNS name, or IP address, of the management endpoint of the FSxN file system you wish to monitor.|
 |SubnetIds|The subnet IDs that the Lambda function will be attached to. Must have connectivity to the FSxN file system you wish to monitor.|
-|SecurityGroupIds|The security group IDs that the Lambda function will be attached to. The security group most allow outbound traffic over port 443 to the SNS, Secrets Manager and S3 endpoints, as well as the FSxN file system you want to monitor.|
+|SecurityGroupIds|The security group IDs that the Lambda function will be attached to. The security group must allow outbound traffic over port 443 to the SNS, Secrets Manager and S3 endpoints, as well as the FSxN file system you want to monitor.|
 |SnsTopicArn|The ARN of the SNS topic you want the program to publish alert messages to.|
+|CloudWatchLogGroupName|The name of **an existing CloudWatch log group** that the Lambda function will write its logs to. If left blank, alerts will not be sent to CloudWatch.|
 |SecretArn|The ARN of the secret within the AWS Secrets Manager that holds the FSxN file system credentials. **NOTE:** The secret must be in the same region as the FSxN file system.|
-|SecretUsernameKey|The key name within the secret that holds the username portion of the FSxN file system credentials.|
-|SecretPasswordKey|The key name within the secret that holds the password portion of the FSxN file system credentials.|
+|SecretUsernameKey|The name of the key within the secret that holds the username portion of the FSxN file system credentials.|
+|SecretPasswordKey|The name of the key within the secret that holds the password portion of the FSxN file system credentials.|
+|LambdaRoleArn|The ARN of the role that the Lambda function will use. This role must have the permissions listed in the [Create an AWS Role](#create-an-aws-role) section above. If left blank a role will be created.|
+|SchedulerRoleArn|The ARN of the role that the EventBridge schedule will use to trigger the Lambda function. It just needs the permission to invoke a Lambda function. If left blank a role will be created.|
 |CheckInterval|The interval, in minutes, that the EventBridge schedule will trigger the Lambda function. The default is 15 minutes.|
 |CreateCloudWatchAlarm|Set to "true" if you want to create a CloudWatch alarm that will alert you if the Lambda function fails.|
 |CreateSNSEndpoint|Set to "true" if you want to create an SNS endpoint. **NOTE:** If an SNS Endpoint already exist for the specified Subnet the creation will fail, causing the entire CloudFormation script to fail. Since the Lambda function will be running within your VPC it will most likely not have access to the Internet, therefore a endpoint will need to be created if you don't already have one. Please read the [Endpoints for AWS services](#endpoints-for-aws-services) for more information.|
 |CreateSecretsManagerEndpoint|Set to "true" if you want create a Secrets Manager endpoint. **NOTE:** If an SecretsManager Endpoint already exist for the specified Subnet the creation will fail, causing the entire CloudFormation script to fail. Please read the [Endpoints for AWS services](#endpoints-for-aws-services) for more information.|
 |CreateS3Endpoint|Set to "true" if you want create an S3 endpoint. **NOTE:** If an S3 Gateway Endpoint already exist for the specified VPC the creation will fail, causing the entire CloudFormation script to fail. Note that this will be a "Gateway" type endpoint, since they are free to use. Please read the [Endpoints for AWS services](#endpoints-for-aws-services) for more information.|
+|CreateCWEndpoint|Set to "true" if you want create a CloudWatch endpoint. **NOTE:** If an CloudWatch Endpoint already exist for the specified Subnet the creation will fail, causing the entire CloudFormation script to fail. Please read the [Endpoints for AWS services](#endpoints-for-aws-services) for more information.|
 |RoutetableIds|The route table IDs to update to use the S3 endpoint. Since the S3 endpoint is of type 'Gateway' route tables have to be updated to use it. This parameter is only needed if createS3Endpoint is set to 'true'.|
 |VpcId|The VPC ID where the FSxN file system is located. This is only needed if you are creating an endpoint.|
 |EndpointSecurityGroupIds|The security group IDs that the endpoint will be attached to. The security group must allow traffic over TCP port 443 from the Lambda function. This is only needed if you are creating an SNS or SecretsManager endpoint.|
@@ -100,12 +106,12 @@ help you.
 If you want more control over the installation then you can install it manually by following the steps below. Note that these
 instructions assume you have familiarity with how to create the various AWS service mentioned below. If you do not,
 I would recommend using the CloudFormation method of deploying the program. Afterwards, if you need to change things, make the required 
-modifications then.
+modifications then using the instructions found below.
 
 #### Create an AWS Role
 This program doesn't need many permissions. It just needs to be able to read the FSxN file system credentials stored in a Secrets Manager secret,
-read and write objects in an s3 bucket, and be able to publish SNS messages. Below is the specific list of permissions
-needed. The easiest way to give the Lambda function the permissions it needs is by creating a role with these 
+read and write objects in an s3 bucket, be able to publish SNS messages, and optionally create CloudWatch log Streams and put events.
+Below is the specific list of permissions needed. The easiest way to give the Lambda function the permissions it needs is by creating a role with these 
 permissions and assigning it to the Lambda function.
 
 | Permission                    | Reason     |
@@ -115,7 +121,10 @@ permissions and assigning it to the Lambda function.
 |s3:PutObject                   | The program stores its state information in various s3 objects.|
 |s3:GetObject                   | The program reads previous state information, as well as configuration from various s3 objects. |
 |s3:ListBucket                  | To allow the program to know if an object exist or not. |
-|ec2:CreateNetworkInterface     | Since the program runs as a Lambda function within your VPC, it needs to be able to create a network interface in your VPC. you can read more about that [here](https://docs.aws.amazon.com/lambda/latest/dg/configuration-vpc.html). |
+|logs:CreateLogStream           | If you want the program to send its logs to CloudWatch, it needs to be able to create a log stream. |
+|logs:PutLogEvents              | If you want the program to send its logs to CloudWatch, it needs to be able to put log events into the log stream. |
+|logs:DescribeLogStreams        | If you want the program to send its logs to CloudWatch, it needs to be able to see if a log stream already exist before creating one. |
+|ec2:CreateNetworkInterface     | Since the program runs as a Lambda function within your VPC, it needs to be able to create a network interface in your VPC. You can read more about that [here](https://docs.aws.amazon.com/lambda/latest/dg/configuration-vpc.html). |
 |ec2:DeleteNetworkInterface     | Since it created a network interface, it needs to be able to delete it when not needed anymore. |
 |ec2:DescribeNetworkInterfaces  | So it can check to see if an network interface already exist. |
 
@@ -198,6 +207,7 @@ filename, then set the configFilename environment variable to the name of your c
 | quotaEventsFilename | No | No | OntapAdminServer + "-quotaEvents" | Set to the filename (S3 object) that you want the program to store the Quota alerts into. This file will be created as necessary. |
 | systemStatusFilename | No | No | OntapAdminServer + "-systemStatus" | Set to the filename (S3 object) that you want the program to store the overall system status information into. This file will be created as necessary. |
 | snsTopicArn  | Yes | No | None | Set to the ARN of the SNS topic you want the program to publish alert messages to. |
+| cloudWatchLogGroupName | No | No | None | The name of **an existing CloudWatch log group** that the Lambda function will write its logs to. If left blank, alerts will not be sent to CloudWatch.|
 | conditionsFilename | Yes | No | OntapAdminServer + "-conditions" | Set to the filename (S3 object) where you want the program to read the matching condition information from. |
 | secretArn | Yes | No | None | Set to the ARN of the secret within the AWS Secrets Manager that holds the FSxN credentials. |
 | secretUsernameKey | Yes | No | None | Set to the key name within the secretName that holds the username portion of the FSxN credentials. |
@@ -211,10 +221,9 @@ The Matching Conditions file allows you to specify which events you want to be a
 file is JSON. JSON is basically a series of "key" : "value" pairs. Where the value can be object that also has
 "key" : "value" pairs. For more information about the format of a JSON file, please refer to this [page](https://www.json.org/json-en.html).
 The JSON schema in this file is made up of an array of objects, with with a key name of "services". Each element of the "services" array
-is an object with two keys. The first key is “name" which specifies the name of the service it is going to provide
+is an object with at least two keys. The first key is “name" which specifies the name of the service it is going to provide
 matching conditions (rules) for. The second key is "rules" which is an array of objects that provide the specific
-matching condition. Note that each service's rules has its own unique schema. The following is the unique schema
-for each of the service's rules.
+matching condition. Note that each service's rules has its own unique schema. Following is the definition of the schema for each service.
 
 ###### Matching condition schema for System Health (systemHealth)
 Each rule should be an object with one, or more, of the following keys:
@@ -233,6 +242,7 @@ Each rule should be an object with three keys:
 |name|String|Which will match on the EMS event name.|
 |message|String|Which will match on the EMS event message text.|
 |severity|String|Which will match on the severity of the EMS event (debug, informational, notice, error, alert or emergency).|
+|filter|String|If any event's message match this filter, then the EMS event will be skipped. Try to be as specific as possible to avoid unintentional matches.|
 
 Note that all values to each of the keys are used as a regular expressions against the associated EMS component. So, for
 example, if you want to match on any event message text that starts with “snapmirror” then you would put “\^snapmirror”.
@@ -248,17 +258,28 @@ Each rule should be an object with one, or more, of the following keys:
 |---|---|---|
 |maxLagTime|Integer|Specifies the maximum allowable time, in seconds, since the last successful SnapMirror update before an alert will be sent.|
 |stalledTransferSeconds|Integer|Specifies the minimum number of seconds that have to transpire before a SnapMirror transfer will be considered stalled.|
-|health|Boolean|If true will alert with the relationship is health. If false will alert with the relationship is unhealthy.|
+|healthy|Boolean|If true will alert with the relationship is healthy. If false will alert with the relationship is unhealthy.|
 
 ###### Matching condition schema for Storage (storage)
-Each rule should be an object with one, or more, of the following keys:
+The storage schema had two additional keys that can be included before the rules:
+|Key Name|Value Type|Notes|
+|---|---|---|
+|exceptions|Array of objects|Each entry in this array specifies a cluster name, SVM Name, and Volume Name combination that should be ignored for the rules specified within its block. The format of the object is:
+`{ "cluster": "string", "svm": "string", "name": "string" }`|
+|matches|Array of objects|Each entry in this array specifies a cluster name, SVM Name, and Volume Name combination that must be matched for the rules specified within its block to be applied. The format of the object is:
+`{ "cluster": "string", "svm": "string", "name": "string" }`|
 
+The exceptions and matches keys are optional. If they are not specified, then the rules will be applied to all clusters, SVMs and volumes.
+
+Each rule should be an object with one, or more, of the following keys:
 |Key Name|Value Type|Notes|
 |---|---|---|
 |aggrWarnPercentUsed|Integer|Specifies the maximum allowable physical storage (aggregate) utilization (between 0 and 100) before an alert is sent.|
 |aggrCriticalPercentUsed|Integer|Specifies the maximum allowable physical storage (aggregate) utilization (between 0 and 100) before an alert is sent.|
 |volumeWarnPercentUsed|Integer|Specifies the maximum allowable volume utilization (between 0 and 100) before an alert is sent.|
 |volumeCriticalPercentUsed|Integer|Specifies the maximum allowable volume utilization (between 0 and 100) before an alert is sent.|
+|volumeWarnFilesPercentUsed|Integer|Specifies the maximum allowable volume files (inodes) utilization (between 0 and 100) before an alert is sent.|
+|volumeCriticalFilesPercentUsed|Integer|Specifies the maximum allowable volume files (inodes) utilization (between 0 and 100) before an alert is sent.|
 
 ###### Matching condition schema for Quota (quota)
 Each rule should be an object with one, or more, of the following keys:

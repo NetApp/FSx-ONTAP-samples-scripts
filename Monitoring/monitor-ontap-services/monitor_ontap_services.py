@@ -1,4 +1,4 @@
-#!/bin/python3.11
+#!/bin/python3
 ################################################################################
 # THIS SOFTWARE IS PROVIDED BY NETAPP "AS IS" AND ANY EXPRESS OR IMPLIED
 # WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
@@ -208,8 +208,7 @@ def checkSystem():
                 message = f'CRITICAL: Received a non 200 HTTP status code ({response.status}) when trying to access {clusterName}.'
             else:
                 message = f'CRITICAL: Failed to issue API against {clusterName}. Cluster could be down.'
-            logger.critical(message)
-            snsClient.publish(TopicArn=config["snsTopicArn"], Message=message, Subject=f'Monitor ONTAP Services Alert for cluster {clusterName}')
+            sendAert(message, "CRITICAL")
             fsxStatus["systemHealth"] = False
             changedEvents = True
 
@@ -245,8 +244,7 @@ def checkSystemHealth(service):
             if lkey == "versionchange":
                 if rule[key] and clusterVersion != fsxStatus["version"]:
                     message = f'NOTICE: The ONTAP vesion changed on cluster {clusterName} from {fsxStatus["version"]} to {clusterVersion}.'
-                    logger.info(message)
-                    snsClient.publish(TopicArn=config["snsTopicArn"], Message=message, Subject=f'Monitor ONTAP Services Alert for cluster {clusterName}')
+                    sendAlert(message, "INFO")
                     fsxStatus["version"] = clusterVersion
                     changedEvents = True
             elif lkey == "failover":
@@ -260,8 +258,7 @@ def checkSystemHealth(service):
                         data = json.loads(response.data)
                         if data["num_records"] != fsxStatus["numberNodes"]:
                             message = f'Alert: The number of nodes on cluster {clusterName} went from {fsxStatus["numberNodes"]} to {data["num_records"]}.'
-                            logger.info(message)
-                            snsClient.publish(TopicArn=config["snsTopicArn"], Message=message, Subject=f'Monitor ONTAP Services Alert for cluster {clusterName}')
+                            sendAlert(message, "INFO")
                             fsxStatus["numberNodes"] = data["num_records"]
                             changedEvents = True
                     else:
@@ -282,8 +279,7 @@ def checkSystemHealth(service):
                                 uniqueIdentifier = interface["name"]
                                 if(not eventExist(fsxStatus["downInterfaces"], uniqueIdentifier)): # Resets the refresh key.
                                     message = f'Alert: Network interface {interface["name"]} on cluster {clusterName} is down.'
-                                    logger.info(message)
-                                    snsClient.publish(TopicArn=config["snsTopicArn"], Message=message, Subject=f'Monitor ONTAP Services Alert for cluster {clusterName}')
+                                    sendAlert(message, "INFO")
                                     event = {
                                         "index": uniqueIdentifier,
                                         "refresh": eventResilience
@@ -345,27 +341,31 @@ def processEMSEvents(service):
         logger.debug(f'Received {len(data["records"])} EMS records.')
         for record in data["records"]:
             for rule in service["rules"]:
-                if (re.search(rule["name"], record["message"]["name"]) and
+                messageFilter = rule.get("filter")
+                if messageFilter == None or messageFilter == "":
+                    messageFilter = "ThisShouldn'tMatchAnything"
+
+                if (not re.search(messageFilter, record["log_message"]) and
+                    re.search(rule["name"], record["message"]["name"]) and
                     re.search(rule["severity"], record["message"]["severity"]) and
                     re.search(rule["message"], record["log_message"])):
                     if (not eventExist (events, record["index"])):  # This resets the "refresh" field if found.
                         message = f'{record["time"]} : {clusterName} {record["message"]["name"]}({record["message"]["severity"]}) - {record["log_message"]}'
                         useverity=record["message"]["severity"].upper()
                         if useverity == "EMERGENCY":
-                            logger.critical(message)
+                            sendAlert(message, "CRITICAL")
                         elif useverity == "ALERT":
-                            logger.error(message)
+                            sendAlert(message, "ERROR")
                         elif useverity == "ERROR": 
-                            logger.warning(message)
+                            sendAlert(message, "WARNING")
                         elif useverity == "NOTICE" or useverity == "INFORMATIONAL":
-                            logger.info(message)
+                            sendAlert(message, "INFO")
                         elif useverity == "DEBUG":
-                            logger.debug(message)
+                            sendAlert(message, "DEBUG")
                         else:
-                            print(f'Received unknown severity from ONTAP "{record["message"]["severity"]}". The message received is next.')
-                            logger.info(f'Received unknown severity from ONTAP "{record["message"]["severity"]}". The message received is next.')
-                            logger.info(message)
-                        snsClient.publish(TopicArn=config["snsTopicArn"], Message=message, Subject=f'Monitor ONTAP Services Alert for cluster {clusterName}')
+                            sendAlert(f'Received unknown severity from ONTAP "{record["message"]["severity"]}". The message received is next.', "INFO")
+                            sendAlert(message, "INFO")
+
                         changedEvents = True
                         event = {
                                 "index": record["index"],
@@ -479,8 +479,7 @@ def processSnapMirrorRelationships(service):
                                 uniqueIdentifier = record["uuid"] + "_" + key
                                 if not eventExist(events, uniqueIdentifier):  # This resets the "refresh" field if found.
                                     message = f'Snapmirror Lag Alert: {sourceClusterName}::{record["source"]["path"]} -> {clusterName}::{record["destination"]["path"]} has a lag time of {lagSeconds} seconds.'
-                                    logger.warning(message)
-                                    snsClient.publish(TopicArn=config["snsTopicArn"], Message=message, Subject=f'Monitor ONTAP Services Alert for cluster {clusterName}')
+                                    sendAlert(message, "WARNING")
                                     changedEvents=True
                                     event = {
                                         "index": uniqueIdentifier,
@@ -494,10 +493,9 @@ def processSnapMirrorRelationships(service):
                             uniqueIdentifier = record["uuid"] + "_" + key
                             if not eventExist(events, uniqueIdentifier):  # This resets the "refresh" field if found.
                                 message = f'Snapmirror Health Alert: {sourceClusterName}::{record["source"]["path"]} {clusterName}::{record["destination"]["path"]} has a status of {record["healthy"]}'
-                                logger.warning(message)  # Intentionally put this before adding the reasons, since I'm not sure how syslog will handle a multi-line message.
                                 for reason in record["unhealthy_reason"]:
                                     message += "\n" + reason["message"]
-                                snsClient.publish(TopicArn=config["snsTopicArn"], Message=message, Subject=f'Monitor ONTAP Services Alert for cluster {clusterName}')
+                                sendAlert(message, "WARNING")
                                 changedEvents=True
                                 event = {
                                     "index": uniqueIdentifier,
@@ -523,8 +521,7 @@ def processSnapMirrorRelationships(service):
     
                                         if not eventExist(events, uniqueIdentifier):
                                             message = f'Snapmiorror transfer has stalled: {sourceClusterName}::{sourcePath} -> {clusterName}::{destPath}.'
-                                            logger.warning(message)
-                                            snsClient.publish(TopicArn=config["snsTopicArn"], Message=message, Subject='Monitor ONTAP Services Alert for cluster {clusterName}')
+                                            sendAlert(message, "WARNING")
                                             changedEvents=True
                                             event = {
                                                 "index": uniqueIdentifier,
@@ -587,6 +584,19 @@ def processSnapMirrorRelationships(service):
         print(f'API call to {endpoint} failed. HTTP status code {response.status}.')
 
 ################################################################################
+# This function is used to check to see if the clusterName, svmName, volumeName
+# conbination is in the array passed in.
+################################################################################
+def findMatch(exceptions, clusterName, svmName, volumeName):
+    if exceptions != None:
+        for exception in exceptions:
+            if exception.get("cluster") == clusterName and \
+               exception.get("svm") == svmName and \
+               exception.get("name") == volumeName:
+                return True
+    return False
+
+################################################################################
 # This function is used to check all the volume and aggregate utlization.
 ################################################################################
 def processStorageUtilization(service):
@@ -610,24 +620,34 @@ def processStorageUtilization(service):
     for event in events:
         event["refresh"] -= 1
 
+    #
+    # Run the API call to get the physical storage used.
+    endpoint = f'https://{config["OntapAdminServer"]}/api/storage/aggregates?fields=space'
+    aggrResponse = http.request('GET', endpoint, headers=headers)
+    if aggrResponse.status != 200:
+        print(f'API call to {endpoint} failed. HTTP status code {aggrResponse.status}.')
+        aggrResponse = None
+    #
+    # Run the API call to get the volume information.
+    endpoint = f'https://{config["OntapAdminServer"]}/api/storage/volumes?fields=space,files,svm'
+    volumeResponse = http.request('GET', endpoint, headers=headers)
+    if volumeResponse.status != 200:
+        print(f'API call to {endpoint} failed. HTTP status code {volumeResponse.status}.')
+        volumeResponse = None
+
     for rule in service["rules"]:
         for key in rule.keys():
             lkey=key.lower()
             if lkey == "aggrwarnpercentused" or lkey == 'aggrcriticalpercentused':
-                #
-                # Run the API call to get the physical storage used.
-                endpoint = f'https://{config["OntapAdminServer"]}/api/storage/aggregates?fields=space'
-                response = http.request('GET', endpoint, headers=headers)
-                if response.status == 200:
-                    data = json.loads(response.data)
+                if aggrResponse is not None:
+                    data = json.loads(aggrResponse.data)
                     for aggr in data["records"]:
                         if aggr["space"]["block_storage"]["used_percent"] >= rule[key]:
                             uniqueIdentifier = aggr["uuid"] + "_" + key
                             if not eventExist(events, uniqueIdentifier):  # This resets the "refresh" field if found.
                                 alertType = 'Warning' if lkey == "aggrwarnpercentused" else 'Critical'
                                 message = f'Aggregate {alertType} Alert: Aggregate {aggr["name"]} on {clusterName} is {aggr["space"]["block_storage"]["used_percent"]}% full, which is more or equal to {rule[key]}% full.'
-                                logger.warning(message)
-                                snsClient.publish(TopicArn=config["snsTopicArn"], Message=message, Subject=f'Monitor ONTAP Services Alert for cluster {clusterName}')
+                                sendAlert(message, "WARNING")
                                 changedEvents = True
                                 event = {
                                         "index": uniqueIdentifier,
@@ -636,34 +656,62 @@ def processStorageUtilization(service):
                                     }
                                 print(event)
                                 events.append(event)
-                else:
-                    print(f'API call to {endpoint} failed. HTTP status code {response.status}.')
             elif lkey == "volumewarnpercentused" or lkey == "volumecriticalpercentused":
-                #
-                # Run the API call to get the volume information.
-                endpoint = f'https://{config["OntapAdminServer"]}/api/storage/volumes?fields=space,svm'
-                response = http.request('GET', endpoint, headers=headers)
-                if response.status == 200:
-                    data = json.loads(response.data)
+                if volumeResponse is not None:
+                    data = json.loads(volumeResponse.data)
                     for record in data["records"]:
-                        if record["space"].get("percent_used"):
-                            if record["space"]["percent_used"] >= rule[key]:
-                                uniqueIdentifier = record["uuid"] + "_" + key
-                                if not eventExist(events, uniqueIdentifier):  # This resets the "refresh" field if found.
-                                    alertType = 'Warning' if lkey == "volumewarnpercentused" else 'Critical'
-                                    message = f'Volume Usage {alertType} Alert: volume {record["svm"]["name"]}:/{record["name"]} on {clusterName} is {record["space"]["percent_used"]}% full, which is more or equal to {rule[key]}% full.'
-                                    logger.warning(message)
-                                    snsClient.publish(TopicArn=config["snsTopicArn"], Message=message, Subject=f'Monitor ONTAP Services Alert for cluster {clusterName}')
-                                    changedEvents = True
-                                    event = {
-                                            "index": uniqueIdentifier,
-                                            "message": message,
-                                            "refresh": eventResilience
-                                        }
-                                    print(message)
-                                    events.append(event)
-                else:
-                    print(f'API call to {endpoint} failed. HTTP status code {response.status}.')
+                        #
+                        # Skip any exceptions that are in the list.
+                        if findMatch(service.get("exceptions"), clusterName, record["svm"]["name"], record["name"]):
+                            continue
+                        #
+                        # If this service definition has specific matches, then only process those. Otherwise, check all of them.
+                        if service.get("matches") is None or service.get("matches") is not None and findMatch(service.get("matches"), clusterName, record["svm"]["name"], record["name"]):
+                            if record["space"].get("percent_used"):
+                                if record["space"]["percent_used"] >= rule[key]:
+                                    uniqueIdentifier = record["uuid"] + "_" + key
+                                    if not eventExist(events, uniqueIdentifier):  # This resets the "refresh" field if found.
+                                        alertType = 'Warning' if lkey == "volumewarnpercentused" else 'Critical'
+                                        message = f'Volume Usage {alertType} Alert: volume {record["svm"]["name"]}:{record["name"]} on {clusterName} is {record["space"]["percent_used"]}% full, which is more or equal to {rule[key]}% full.'
+                                        sendAlert(message, "WARNING")
+                                        changedEvents = True
+                                        event = {
+                                                "index": uniqueIdentifier,
+                                                "message": message,
+                                                "refresh": eventResilience
+                                            }
+                                        print(message)
+                                        events.append(event)
+            elif lkey == "volumewarnfilespercentused" or lkey == "volumecriticalfilespercentused":
+                if volumeResponse is not None:
+                    data = json.loads(volumeResponse.data)
+                    for record in data["records"]:
+                        #
+                        # Skip any exceptions that are in the list.
+                        if findMatch(service.get("exceptions"), clusterName, record["svm"]["name"], record["name"]):
+                            continue
+                        #
+                        # If this service definition has specific matches, then only process those. Otherwise, check all of them.
+                        if service.get("matches") is None or service.get("matches") is not None and findMatch(service.get("matches"), clusterName, record["svm"]["name"], record["name"]):
+                            maxFiles = record["files"].get("maximum")
+                            usedFiles = record["files"].get("used")
+                            if maxFiles != None and usedFiles != None:
+                                percentUsed = (usedFiles / maxFiles) * 100
+                                if percentUsed >= rule[key]:
+                                    uniqueIdentifier = record["uuid"] + "_" + key
+                                    if not eventExist(events, uniqueIdentifier):
+                                        alertType = 'Warning' if lkey == "volumewarnfilespercentused" else 'Critical'
+                                        message = f"Volume File (inode) Usage {alertType} Alert: volume {record['svm']['name']}:{record['name']} on {clusterName} is using {percentUsed:.0f}% of it's inodes, which is more or equal to {rule[key]}% utilization."
+                                        sendAlert(message, "WARNING")
+                                        changedEvents = True
+                                        event = {
+                                                "index": uniqueIdentifier,
+                                                "message": message,
+                                                "refresh": eventResilience
+                                            }
+                                        print(message)
+                                        events.append(event)
+
             else:
                 message = f'Unknown storage alert type: "{key}".'
                 logger.warning(message)
@@ -685,6 +733,53 @@ def processStorageUtilization(service):
     # If the events array changed, save it.
     if(changedEvents):
         s3Client.put_object(Key=config["storageEventsFilename"], Bucket=config["s3BucketName"], Body=json.dumps(events).encode('UTF-8'))
+
+################################################################################
+# This function sends the message to the various alerting systems.
+################################################################################
+def sendAlert(message, severity):
+    global config, snsClient, logger, cloudWatchClient
+
+
+    if severity == "CRITICAL":
+        logger.critical(message)
+    elif severity == "ERROR":
+        logger.error(message)
+    elif severity == "WARNING":
+        logger.warning(message)
+    elif severity == "INFO":
+        logger.info(message)
+    elif severity == "DEBUG":
+        logger.debug(message)
+    else:
+        logger.info(message)
+
+    snsClient.publish(TopicArn=config["snsTopicArn"], Message=message, Subject=f'{severity}: Monitor ONTAP Services Alert for cluster {clusterName}')
+
+    if cloudWatchClient != None:
+        #
+        # Create a new log stream for the current day if it doesn't exist.
+        dateStr = datetime.datetime.now().strftime("%Y-%m-%d")
+        logStreamName = f'{clusterName}-monitor-ontap-services-{dateStr}'
+        logStreams = cloudWatchClient.describe_log_streams(
+            logGroupName=config["cloudWatchLogGroupName"],
+            logStreamNamePrefix=logStreamName)
+        if len(logStreams["logStreams"]) == 0:
+            cloudWatchClient.create_log_stream(
+                logGroupName=config["cloudWatchLogGroupName"],
+                logStreamName=logStreamName)
+        #
+        # Send the message to CloudWatch.
+        cloudWatchClient.put_log_events(
+            logGroupName=config["cloudWatchLogGroupName"],
+            logStreamName=logStreamName,
+            logEvents=[
+                {
+                    'timestamp': int(datetime.datetime.now().timestamp() * 1000),
+                    'message': message
+                },
+            ]
+        )
 
 ################################################################################
 # This function is used to check utilization of quota limits.
@@ -742,8 +837,7 @@ def processQuotaUtilization(service):
                                 else:
                                     user=''
                                 message = f'Quota Inode Usage Alert: Quota of type "{record["type"]}" on {record["svm"]["name"]}:/{record["volume"]["name"]}{qtree}{user}on {clusterName} is using {record["files"]["used"]["hard_limit_percent"]}% which is more than {rule[key]}% of its inodes.'
-                                logger.warning(message)
-                                snsClient.publish(TopicArn=config["snsTopicArn"], Message=message, Subject=f'Monitor ONTAP Services Alert for cluster {clusterName}')
+                                sendAlert(message, "WARNING")
                                 changedEvents=True
                                 event = {
                                         "index": uniqueIdentifier,
@@ -772,8 +866,7 @@ def processQuotaUtilization(service):
                                 else:
                                     user=''
                                 message = f'Quota Space Usage Alert: Hard quota of type "{record["type"]}" on {record["svm"]["name"]}:/{record["volume"]["name"]}{qtree}{user}on {clusterName} is using {record["space"]["used"]["hard_limit_percent"]}% which is more than {rule[key]}% of its allocaed space.'
-                                logger.warning(message)
-                                snsClient.publish(TopicArn=config["snsTopicArn"], Message=message, Subject=f'Monitor ONTAP Services Alert for cluster {clusterName}')
+                                sendAlert(message, "WARNING")
                                 changedEvents=True
                                 event = {
                                         "index": uniqueIdentifier,
@@ -802,8 +895,7 @@ def processQuotaUtilization(service):
                                 else:
                                     user=''
                                 message = f'Quota Space Usage Alert: Soft quota of type "{record["type"]}" on {record["svm"]["name"]}:/{record["volume"]["name"]}{qtree}{user}on {clusterName} is using {record["space"]["used"]["soft_limit_percent"]}% which is more than {rule[key]}% of its allocaed space.'
-                                logger.info(message)
-                                snsClient.publish(TopicArn=config["snsTopicArn"], Message=message, Subject=f'Monitor ONTAP Services Alert for cluster {clusterName}')
+                                sendAlert(message, "WARNING")
                                 changedEvents=True
                                 event = {
                                     "index": uniqueIdentifier,
@@ -916,6 +1008,14 @@ def buildDefaultMatchingConditions():
             value = int(value)
             if value > 0:
                 conditions["services"][getServiceIndex("storage", conditions)]["rules"].append({"volumeCriticalPercentUsed": value})
+        elif name == "initialVolumeFileUtilizationWarnAlert":
+            value = int(value)
+            if value > 0:
+                conditions["services"][getServiceIndex("storage", conditions)]["rules"].append({"volumeWarnFilesPercentUsed": value})
+        elif name == "initialVolumeFileUtilizationCriticalAlert":
+            value = int(value)
+            if value > 0:
+                conditions["services"][getServiceIndex("storage", conditions)]["rules"].append({"volumeCriticalFilesPercentUsed": value})
         elif name == "initialSoftQuotaUtilizationAlert":
             value = int(value)
             if value > 0:
@@ -956,6 +1056,7 @@ def readInConfig():
         "secretsManagerEndPointHostname": None,
         "snsEndPointHostname": None,
         "syslogIP": None,
+        "cloudWatchLogGroupName": None,
         "awsAccountId": None
         }
 
@@ -1071,7 +1172,7 @@ def readInConfig():
 def lambda_handler(event, context):
     #
     # Define global variables so we don't have to pass them to all the functions.
-    global config, s3Client, snsClient, http, headers, clusterName, clusterVersion, logger
+    global config, s3Client, snsClient, http, headers, clusterName, clusterVersion, logger, cloudWatchClient
     #
     # Read in the configuraiton.
     readInConfig()   # This defines the s3Client variable.
@@ -1135,6 +1236,9 @@ def lambda_handler(event, context):
     #s3Client = boto3.client('s3', config["s3BucketRegion"])  # Defined in readInConfig()
     snsRegion = config["snsTopicArn"].split(":")[3]
     snsClient = boto3.client('sns', region_name=snsRegion, endpoint_url=f'https://{config["snsEndPointHostname"]}')
+    cloudWatchClient = None
+    if config["cloudWatchLogGroupName"] != None:
+        cloudWatchClient = boto3.client('logs', region_name=config["s3BucketRegion"])
     #
     # Create a http handle to make ONTAP/FSxN API calls with.
     auth = urllib3.make_headers(basic_auth=f'{username}:{password}')
@@ -1148,6 +1252,7 @@ def lambda_handler(event, context):
     # Get the conditions we know what to alert on.
     try:
         data = s3Client.get_object(Key=config["conditionsFilename"], Bucket=config["s3BucketName"])
+        matchingConditions = json.loads(data["Body"].read().decode('UTF-8'))
     except botocore.exceptions.ClientError as err:
         if err.response['Error']['Code'] != "NoSuchKey":
             print(f'\n\nError, could not retrieve configuration file {config["conditionsFilename"]} from: s3://{config["s3BucketName"]}.\nBelow is additional information:\n\n')
@@ -1155,8 +1260,9 @@ def lambda_handler(event, context):
         else:
             matchingConditions = buildDefaultMatchingConditions()
             s3Client.put_object(Key=config["conditionsFilename"], Bucket=config["s3BucketName"], Body=json.dumps(matchingConditions, indent=4).encode('UTF-8'))
-    else:
-        matchingConditions = json.loads(data["Body"].read().decode('UTF-8'))
+    except json.decoder.JSONDecodeError as err:
+        print(f'\nError, could not decode JSON from configuration file "{config["conditionsFilename"]}". The error message from the decoder:\n{err}\n\n')
+        return
 
     if(checkSystem()):
         #
