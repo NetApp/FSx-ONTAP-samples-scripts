@@ -447,6 +447,7 @@ Resources:
           secretUsernameKey: !Ref secretUsernameKey
           secretPasswordKey: !Ref secretPasswordKey
           snsTopicArn: !Ref snsTopicArn
+          cloudWatchLogGroupName: !Ref cloudWatchLogGroupName
 
           initialVersionChangeAlert: !Ref versionChangeAlert
           initialFailoverAlert: !Ref failoverAlert
