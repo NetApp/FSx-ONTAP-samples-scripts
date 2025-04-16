@@ -410,6 +410,32 @@ def getPreviousSMRecord(relationShips, sourceCluster, sourcePath, destPath):
     return(None)
 
 ################################################################################
+# This function will convert seconds into an ascii string of number days, hours,
+# minutes, and seconds. It will return the string.
+################################################################################
+def lagTimeStr(seconds):
+    days = seconds // (60 * 60 * 24)
+    seconds = seconds - (days * (60 * 60 * 24))
+    hours = seconds // (60 * 60)
+    seconds = seconds - (hours * (60 * 60))
+    minutes = seconds // 60
+    seconds = seconds - (minutes * 60)
+
+    str=""
+    if days > 0:
+        plural = "s" if days != 1 else ""
+        str = f'{days} day{plural} '
+    if hours > 0 or days > 0:
+        plural = "s" if hours != 1 else ""
+        str += f'{hours} hour{plural} '
+    if minutes > 0 or days > 0 or hours > 0:
+        plural = "s" if minutes != 1 else ""
+        str += f'{minutes} minute{plural} and '
+    plural = "s" if seconds != 1 else ""
+    str += f'{seconds} second{plural}'
+    return str
+
+################################################################################
 # This function is used to check SnapMirror relationships.
 ################################################################################
 def processSnapMirrorRelationships(service):
@@ -478,7 +504,8 @@ def processSnapMirrorRelationships(service):
                             if lagSeconds > rule["maxLagTime"]:
                                 uniqueIdentifier = record["uuid"] + "_" + key
                                 if not eventExist(events, uniqueIdentifier):  # This resets the "refresh" field if found.
-                                    message = f'Snapmirror Lag Alert: {sourceClusterName}::{record["source"]["path"]} -> {clusterName}::{record["destination"]["path"]} has a lag time of {lagSeconds} seconds.'
+                                    str = lagTimeStr(lagSeconds)
+                                    message = f'Snapmirror Lag Alert: {sourceClusterName}::{record["source"]["path"]} -> {clusterName}::{record["destination"]["path"]} has a lag time of {lagSeconds} seconds or {str}.'
                                     sendAlert(message, "WARNING")
                                     changedEvents=True
                                     event = {
@@ -584,15 +611,13 @@ def processSnapMirrorRelationships(service):
         print(f'API call to {endpoint} failed. HTTP status code {response.status}.')
 
 ################################################################################
-# This function is used to check to see if the clusterName, svmName, volumeName
+# This function is used to check to see if the svmName, volumeName
 # conbination is in the array passed in.
 ################################################################################
-def findMatch(exceptions, clusterName, svmName, volumeName):
+def findMatch(exceptions, svmName, volumeName):
     if exceptions != None:
         for exception in exceptions:
-            if exception.get("cluster") == clusterName and \
-               exception.get("svm") == svmName and \
-               exception.get("name") == volumeName:
+            if exception.get("svm") == svmName and exception.get("name") == volumeName:
                 return True
     return False
 
@@ -662,11 +687,11 @@ def processStorageUtilization(service):
                     for record in data["records"]:
                         #
                         # Skip any exceptions that are in the list.
-                        if findMatch(service.get("exceptions"), clusterName, record["svm"]["name"], record["name"]):
+                        if findMatch(service.get("exceptions"), record["svm"]["name"], record["name"]):
                             continue
                         #
                         # If this service definition has specific matches, then only process those. Otherwise, check all of them.
-                        if service.get("matches") is None or service.get("matches") is not None and findMatch(service.get("matches"), clusterName, record["svm"]["name"], record["name"]):
+                        if service.get("matches") is None or service.get("matches") is not None and findMatch(service.get("matches"), record["svm"]["name"], record["name"]):
                             if record["space"].get("percent_used"):
                                 if record["space"]["percent_used"] >= rule[key]:
                                     uniqueIdentifier = record["uuid"] + "_" + key
@@ -688,11 +713,11 @@ def processStorageUtilization(service):
                     for record in data["records"]:
                         #
                         # Skip any exceptions that are in the list.
-                        if findMatch(service.get("exceptions"), clusterName, record["svm"]["name"], record["name"]):
+                        if findMatch(service.get("exceptions"), record["svm"]["name"], record["name"]):
                             continue
                         #
                         # If this service definition has specific matches, then only process those. Otherwise, check all of them.
-                        if service.get("matches") is None or service.get("matches") is not None and findMatch(service.get("matches"), clusterName, record["svm"]["name"], record["name"]):
+                        if service.get("matches") is None or service.get("matches") is not None and findMatch(service.get("matches"), record["svm"]["name"], record["name"]):
                             maxFiles = record["files"].get("maximum")
                             usedFiles = record["files"].get("used")
                             if maxFiles != None and usedFiles != None:
@@ -1055,6 +1080,7 @@ def readInConfig():
         "configFilename": None,
         "secretsManagerEndPointHostname": None,
         "snsEndPointHostname": None,
+        "cloudWatchEndPointHostname": None,
         "syslogIP": None,
         "cloudWatchLogGroupName": None,
         "awsAccountId": None
@@ -1085,12 +1111,12 @@ def readInConfig():
         config[var] = os.environ.get(var)
     #
     # Check to see if s3BacketArn was provided instead of s3BucketName.
-    if config["s3BucketName"] == None and os.environ.get("s3BucketArn") != None:
+    if config["s3BucketName"] is None and os.environ.get("s3BucketArn") is not None:
         config["s3BucketName"] = os.environ.get("s3BucketArn").split(":")[-1]
     #
     # Check that required environmental variables are there.
     for var in requiredEnvVariables:
-        if config[var] == None:
+        if config[var] is None:
             raise Exception (f'\n\nMissing required environment variable "{var}".')
     #
     # Open a client to the s3 service.
@@ -1098,12 +1124,12 @@ def readInConfig():
     #
     # Calculate the config filename if it hasn't already been provided.
     defaultConfigFilename = config["OntapAdminServer"] + "-config"
-    if config["configFilename"] == None:
+    if config["configFilename"] is None:
         config["configFilename"] = defaultConfigFilename
     #
     # Calculate the conditions filename if it hasn't already been provided.
     defaultConditionsFilename = config["OntapAdminServer"] + "-conditions"
-    if config["conditionsFilename"] == None:
+    if config["conditionsFilename"] is None:
         config["conditionsFilename"] = defaultConditionsFilename
     #
     # Process the config file if it exist.
@@ -1132,18 +1158,18 @@ def readInConfig():
             #
             # Preserve any environment variables settings.
             if key in config:
-                if config[key] == None:
+                if config[key] is None:
                     config[key] = value
             else:
                 print(f"Warning, unknown config parameter '{key}'.")
     #
     # Now, fill in the filenames for any that aren't already defined.
     for filename in filenameVariables:
-        if config[filename] == None:
+        if config[filename] is None:
             config[filename] = config["OntapAdminServer"] + "-" + filename.replace("Filename", "")
     #
     # Define the endpoints if alternates weren't provided.
-    if config.get("secretArn") != None:
+    if config.get("secretArn") is not None:
         secretRegion = config["secretArn"].split(":")[3]
     else:
         #
@@ -1152,18 +1178,22 @@ def readInConfig():
     if config["secretsManagerEndPointHostname"] == None or config["secretsManagerEndPointHostname"] == "":
         config["secretsManagerEndPointHostname"] = f'secretsmanager.{secretRegion}.amazonaws.com'
 
-    if config.get("snsTopicArn") != None:
+    if config.get("snsTopicArn") is not None:
         snsRegion = config["snsTopicArn"].split(":")[3]
     else:
         #
         # Give it a value so snsEndPointHostname can be set. The check for all variables will correctly error out because snsTopicArn is missing.
         snsRegion = "No-snsTopicArn-was-provided"
-    if config["snsEndPointHostname"] == None or config["snsEndPointHostname"] == "":
+
+    if config["snsEndPointHostname"] is None or config["snsEndPointHostname"] == "":
         config["snsEndPointHostname"] = f'sns.{snsRegion}.amazonaws.com'
+
+    if config["cloudWatchEndPointHostname"] is None or config["cloudWatchEndPointHostname"] == "":
+        config["cloudWatchEndPointHostname"] = f'logs.{snsRegion}.amazonaws.com'
     #
     # Now, check that all the configuration parameters have been set.
     for key in config:
-        if config[key] == None and key not in optionalVariables:
+        if config[key] is None and key not in optionalVariables:
             raise Exception(f'Missing configuration parameter "{key}".')
 
 ################################################################################
@@ -1238,7 +1268,7 @@ def lambda_handler(event, context):
     snsClient = boto3.client('sns', region_name=snsRegion, endpoint_url=f'https://{config["snsEndPointHostname"]}')
     cloudWatchClient = None
     if config["cloudWatchLogGroupName"] != None:
-        cloudWatchClient = boto3.client('logs', region_name=config["s3BucketRegion"])
+        cloudWatchClient = boto3.client('logs', region_name=config["s3BucketRegion"], endpoint_url=f'https://{config["cloudWatchEndPointHostname"]}')
     #
     # Create a http handle to make ONTAP/FSxN API calls with.
     auth = urllib3.make_headers(basic_auth=f'{username}:{password}')
