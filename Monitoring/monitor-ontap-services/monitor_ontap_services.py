@@ -718,24 +718,27 @@ def processStorageUtilization(service):
                         #
                         # If this service definition has specific matches, then only process those. Otherwise, check all of them.
                         if service.get("matches") is None or service.get("matches") is not None and findMatch(service.get("matches"), record["svm"]["name"], record["name"]):
-                            maxFiles = record["files"].get("maximum")
-                            usedFiles = record["files"].get("used")
-                            if maxFiles != None and usedFiles != None:
-                                percentUsed = (usedFiles / maxFiles) * 100
-                                if percentUsed >= rule[key]:
-                                    uniqueIdentifier = record["uuid"] + "_" + key
-                                    if not eventExist(events, uniqueIdentifier):
-                                        alertType = 'Warning' if lkey == "volumewarnfilespercentused" else 'Critical'
-                                        message = f"Volume File (inode) Usage {alertType} Alert: volume {record['svm']['name']}:{record['name']} on {clusterName} is using {percentUsed:.0f}% of it's inodes, which is more or equal to {rule[key]}% utilization."
-                                        sendAlert(message, "WARNING")
-                                        changedEvents = True
-                                        event = {
-                                                "index": uniqueIdentifier,
-                                                "message": message,
-                                                "refresh": eventResilience
-                                            }
-                                        print(message)
-                                        events.append(event)
+                            #
+                            # If a volume is offline, the API will not report the "files" information.
+                            if records.get("files") is not None:
+                                maxFiles = record["files"].get("maximum")
+                                usedFiles = record["files"].get("used")
+                                if maxFiles != None and usedFiles != None:
+                                    percentUsed = (usedFiles / maxFiles) * 100
+                                    if percentUsed >= rule[key]:
+                                        uniqueIdentifier = record["uuid"] + "_" + key
+                                        if not eventExist(events, uniqueIdentifier):
+                                            alertType = 'Warning' if lkey == "volumewarnfilespercentused" else 'Critical'
+                                            message = f"Volume File (inode) Usage {alertType} Alert: volume {record['svm']['name']}:{record['name']} on {clusterName} is using {percentUsed:.0f}% of it's inodes, which is more or equal to {rule[key]}% utilization."
+                                            sendAlert(message, "WARNING")
+                                            changedEvents = True
+                                            event = {
+                                                    "index": uniqueIdentifier,
+                                                    "message": message,
+                                                    "refresh": eventResilience
+                                                }
+                                            print(message)
+                                            events.append(event)
 
             else:
                 message = f'Unknown storage alert type: "{key}".'
@@ -781,22 +784,25 @@ def sendAlert(message, severity):
 
     snsClient.publish(TopicArn=config["snsTopicArn"], Message=message, Subject=f'{severity}: Monitor ONTAP Services Alert for cluster {clusterName}')
 
-    if cloudWatchClient != None:
+    if cloudWatchClient is not None:
         #
         # Create a new log stream for the current day if it doesn't exist.
         dateStr = datetime.datetime.now().strftime("%Y-%m-%d")
         logStreamName = f'{clusterName}-monitor-ontap-services-{dateStr}'
-        logStreams = cloudWatchClient.describe_log_streams(
-            logGroupName=config["cloudWatchLogGroupName"],
-            logStreamNamePrefix=logStreamName)
+        #
+        # Don't ask me why AWS puts a ":*" at the end of the log group ARN, but they do.
+        logGroupName = config["cloudWatchLogGroupArn"].split(":")[-2] if config["cloudWatchLogGroupArn"].endswith(":*") else config["cloudWatchLogGroupArn"].split(":")[-1]
+        #
+        # Check to see if the log stream already exists.
+        logStreams = cloudWatchClient.describe_log_streams(logGroupName=logGroupName, logStreamNamePrefix=logStreamName)
         if len(logStreams["logStreams"]) == 0:
             cloudWatchClient.create_log_stream(
-                logGroupName=config["cloudWatchLogGroupName"],
+                logGroupName=logGroupName,
                 logStreamName=logStreamName)
         #
         # Send the message to CloudWatch.
         cloudWatchClient.put_log_events(
-            logGroupName=config["cloudWatchLogGroupName"],
+            logGroupName=logGroupName,
             logStreamName=logStreamName,
             logEvents=[
                 {
@@ -843,18 +849,18 @@ def processQuotaUtilization(service):
                         #
                         # Since the quota report might not have the files key, and even if it does, it might not have
                         # the hard_limit_percent" key, need to check for their existencae first.
-                        if(record.get("files") != None and record["files"]["used"].get("hard_limit_percent") != None and
+                        if(record.get("files") is not None and record["files"]["used"].get("hard_limit_percent") is not None and
                                 record["files"]["used"]["hard_limit_percent"] > rule[key]):
                             uniqueIdentifier = str(record["index"]) + "_" + key
                             if not eventExist(events, uniqueIdentifier):  # This resets the "refresh" field if found.
-                                if record.get("qtree") != None:
+                                if record.get("qtree") is not None:
                                     qtree=f' under qtree: {record["qtree"]["name"]} '
                                 else:
                                     qtree=' '
-                                if record.get("users") != None:
+                                if record.get("users") is not None:
                                     users=None
                                     for user in record["users"]:
-                                        if users == None:
+                                        if users is None:
                                             users = user["name"]
                                         else:
                                             users += ',{user["name"]}'
@@ -872,18 +878,18 @@ def processQuotaUtilization(service):
                                 print(message)
                                 events.append(event)
                     elif lkey == "maxhardquotaspacepercentused":
-                        if(record.get("space") != None and record["space"]["used"].get("hard_limit_percent") and
+                        if(record.get("space") is not None and record["space"]["used"].get("hard_limit_percent") and
                                 record["space"]["used"]["hard_limit_percent"] >= rule[key]):
                             uniqueIdentifier = str(record["index"]) + "_" + key
                             if not eventExist(events, uniqueIdentifier):  # This resets the "refresh" field if found.
-                                if record.get("qtree") != None:
+                                if record.get("qtree") is not None:
                                     qtree=f' under qtree: {record["qtree"]["name"]} '
                                 else:
                                     qtree=" "
-                                if record.get("users") != None:
+                                if record.get("users") is not None:
                                     users=None
                                     for user in record["users"]:
-                                        if users == None:
+                                        if users is None:
                                             users = user["name"]
                                         else:
                                             users += ',{user["name"]}'
@@ -901,18 +907,18 @@ def processQuotaUtilization(service):
                                 print(message)
                                 events.append(event)
                     elif lkey == "maxsoftquotaspacepercentused":
-                        if(record.get("space") != None and record["space"]["used"].get("soft_limit_percent") and
+                        if(record.get("space") is not None and record["space"]["used"].get("soft_limit_percent") and
                                 record["space"]["used"]["soft_limit_percent"] >= rule[key]):
                             uniqueIdentifier = str(record["index"]) + "_" + key
                             if not eventExist(events, uniqueIdentifier):  # This resets the "refresh" field if found.
-                                if record.get("qtree") != None:
+                                if record.get("qtree") is not None:
                                     qtree=f' under qtree: {record["qtree"]["name"]} '
                                 else:
                                     qtree=" "
-                                if record.get("users") != None:
+                                if record.get("users") is not None:
                                     users=None
                                     for user in record["users"]:
-                                        if users == None:
+                                        if users is None:
                                             users = user["name"]
                                         else:
                                             users += ',{user["name"]}'
@@ -1082,7 +1088,8 @@ def readInConfig():
         "snsEndPointHostname": None,
         "cloudWatchEndPointHostname": None,
         "syslogIP": None,
-        "cloudWatchLogGroupName": None,
+        "cloudWatchLogGroupArn": None,
+        "cloudWatchLogsEndPointHostname": None,
         "awsAccountId": None
         }
 
@@ -1110,7 +1117,15 @@ def readInConfig():
     for var in config:
         config[var] = os.environ.get(var)
     #
-    # Check to see if s3BacketArn was provided instead of s3BucketName.
+    # Since the CloudFormation template will set the environment variables
+    # to an empty string if someone doesn't provide a value, reset the
+    # values back to None.
+    for var in config:
+        if config[var] == "":
+            config[var] = None
+    #
+    # Since CloudFormation has to pass an ARN, get the Bucket name from it.
+    # Too bad the bucket ARN doesn't include the region, like most (all?) the others do.
     if config["s3BucketName"] is None and os.environ.get("s3BucketArn") is not None:
         config["s3BucketName"] = os.environ.get("s3BucketArn").split(":")[-1]
     #
@@ -1126,11 +1141,6 @@ def readInConfig():
     defaultConfigFilename = config["OntapAdminServer"] + "-config"
     if config["configFilename"] is None:
         config["configFilename"] = defaultConfigFilename
-    #
-    # Calculate the conditions filename if it hasn't already been provided.
-    defaultConditionsFilename = config["OntapAdminServer"] + "-conditions"
-    if config["conditionsFilename"] is None:
-        config["conditionsFilename"] = defaultConditionsFilename
     #
     # Process the config file if it exist.
     try:
@@ -1155,46 +1165,39 @@ def readInConfig():
                 (key, value) = line.split("=")
             key = key.strip()
             value = value.strip()
-            #
-            # Preserve any environment variables settings.
-            if key in config:
-                if config[key] is None:
-                    config[key] = value
+            if len(value) == 0:
+                print(f"Warning, empty value for key '{key}'. Ignored.")
             else:
-                print(f"Warning, unknown config parameter '{key}'.")
+                #
+                # Preserve any environment variables settings.
+                if key in config:
+                    if config[key] is None:
+                        config[key] = value
+                else:
+                    print(f"Warning, unknown config parameter '{key}'.")
     #
     # Now, fill in the filenames for any that aren't already defined.
     for filename in filenameVariables:
         if config[filename] is None:
             config[filename] = config["OntapAdminServer"] + "-" + filename.replace("Filename", "")
     #
-    # Define the endpoints if alternates weren't provided.
-    if config.get("secretArn") is not None:
+    # Define endpoints if alternates weren't provided.
+    if config.get("secretArn") is not None and config["secretsManagerEndPointHostname"] is None:
         secretRegion = config["secretArn"].split(":")[3]
-    else:
-        #
-        # Give it a value so secretsManagerEndPointHostname can be set. The check for all variables will correctly error out because secretArn is missing.
-        secretRegion = "No-secretArn-was-provided"
-    if config["secretsManagerEndPointHostname"] == None or config["secretsManagerEndPointHostname"] == "":
         config["secretsManagerEndPointHostname"] = f'secretsmanager.{secretRegion}.amazonaws.com'
 
-    if config.get("snsTopicArn") is not None:
+    if config.get("snsTopicArn") is not None and config["snsEndPointHostname"] is None:
         snsRegion = config["snsTopicArn"].split(":")[3]
-    else:
-        #
-        # Give it a value so snsEndPointHostname can be set. The check for all variables will correctly error out because snsTopicArn is missing.
-        snsRegion = "No-snsTopicArn-was-provided"
-
-    if config["snsEndPointHostname"] is None or config["snsEndPointHostname"] == "":
         config["snsEndPointHostname"] = f'sns.{snsRegion}.amazonaws.com'
 
-    if config["cloudWatchEndPointHostname"] is None or config["cloudWatchEndPointHostname"] == "":
-        config["cloudWatchEndPointHostname"] = f'logs.{snsRegion}.amazonaws.com'
+    if config.get("cloudWatchLogGroupArn") is not None and config["cloudWatchLogsEndPointHostname"] is None:
+        cloudWatchRegion = config["cloudWatchLogGrounpArn"].split(":")[3]
+        config["cloudWatchLogsEndPointHostname"] = f'logs.{cloudWatchRegion}.amazonaws.com'
     #
     # Now, check that all the configuration parameters have been set.
     for key in config:
         if config[key] is None and key not in optionalVariables:
-            raise Exception(f'Missing configuration parameter "{key}".')
+            raise Exception(f'\n\nMissing configuration parameter "{key}".\n\n')
 
 ################################################################################
 # Main logic
@@ -1210,7 +1213,7 @@ def lambda_handler(event, context):
     # Set up loging.
     logger = logging.getLogger("mon_fsxn_service")
     logger.setLevel(logging.DEBUG)       # Anything at this level and above this get logged.
-    if config["syslogIP"] != None:
+    if config["syslogIP"] is not None:
         #
         # Due to a bug with the SysLogHandler() of not sending proper framing with a message
         # when using TCP (it should end it with a LF and not a NUL like it does now) you must add 
@@ -1251,11 +1254,11 @@ def lambda_handler(event, context):
     # Get the username and password of the ONTAP/FSxN system.
     secretsInfo = client.get_secret_value(SecretId=config["secretArn"])
     secrets = json.loads(secretsInfo['SecretString'])
-    if secrets.get(config['secretUsernameKey']) == None:
+    if secrets.get(config['secretUsernameKey']) is None:
         print(f'Error, "{config["secretUsernameKey"]}" not found in secret "{config["secretArn"]}".')
         return
 
-    if secrets.get(config['secretPasswordKey']) == None:
+    if secrets.get(config['secretPasswordKey']) is None:
         print(f'Error, "{config["secretPasswordKey"]}" not found in secret "{config["secretArn"]}".')
         return
 
@@ -1267,8 +1270,9 @@ def lambda_handler(event, context):
     snsRegion = config["snsTopicArn"].split(":")[3]
     snsClient = boto3.client('sns', region_name=snsRegion, endpoint_url=f'https://{config["snsEndPointHostname"]}')
     cloudWatchClient = None
-    if config["cloudWatchLogGroupName"] != None:
-        cloudWatchClient = boto3.client('logs', region_name=config["s3BucketRegion"], endpoint_url=f'https://{config["cloudWatchEndPointHostname"]}')
+    if config["cloudWatchLogGroupArn"] is not None:
+        cloudWatchRegion = config["cloudWatchLogGrounpArn"].split(":")[3]
+        cloudWatchClient = boto3.client('logs', region_name=cloudWatchRegion, endpoint_url=f'https://{config["cloudWatchEndPointHostname"]}')
     #
     # Create a http handle to make ONTAP/FSxN API calls with.
     auth = urllib3.make_headers(basic_auth=f'{username}:{password}')
@@ -1312,7 +1316,7 @@ def lambda_handler(event, context):
                 print(f'Unknown service "{service["name"]}".')
     return
 
-if os.environ.get('AWS_LAMBDA_FUNCTION_NAME') == None:
+if os.environ.get('AWS_LAMBDA_FUNCTION_NAME') is None:
     lambdaFunction = False
     lambda_handler(None, None)
 else:
