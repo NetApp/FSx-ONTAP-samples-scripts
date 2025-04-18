@@ -208,7 +208,7 @@ def checkSystem():
                 message = f'CRITICAL: Received a non 200 HTTP status code ({response.status}) when trying to access {clusterName}.'
             else:
                 message = f'CRITICAL: Failed to issue API against {clusterName}. Cluster could be down.'
-            sendAert(message, "CRITICAL")
+            sendAlert(message, "CRITICAL")
             fsxStatus["systemHealth"] = False
             changedEvents = True
 
@@ -421,19 +421,19 @@ def lagTimeStr(seconds):
     minutes = seconds // 60
     seconds = seconds - (minutes * 60)
 
-    str=""
+    timeStr=""
     if days > 0:
         plural = "s" if days != 1 else ""
-        str = f'{days} day{plural} '
+        timeStr = f'{days} day{plural} '
     if hours > 0 or days > 0:
         plural = "s" if hours != 1 else ""
-        str += f'{hours} hour{plural} '
+        timeStr += f'{hours} hour{plural} '
     if minutes > 0 or days > 0 or hours > 0:
         plural = "s" if minutes != 1 else ""
-        str += f'{minutes} minute{plural} and '
+        timeStr += f'{minutes} minute{plural} and '
     plural = "s" if seconds != 1 else ""
-    str += f'{seconds} second{plural}'
-    return str
+    timeStr += f'{seconds} second{plural}'
+    return timeStr
 
 ################################################################################
 # This function is used to check SnapMirror relationships.
@@ -504,8 +504,8 @@ def processSnapMirrorRelationships(service):
                             if lagSeconds > rule["maxLagTime"]:
                                 uniqueIdentifier = record["uuid"] + "_" + key
                                 if not eventExist(events, uniqueIdentifier):  # This resets the "refresh" field if found.
-                                    str = lagTimeStr(lagSeconds)
-                                    message = f'Snapmirror Lag Alert: {sourceClusterName}::{record["source"]["path"]} -> {clusterName}::{record["destination"]["path"]} has a lag time of {lagSeconds} seconds or {str}.'
+                                    timStr = lagTimeStr(lagSeconds)
+                                    message = f'Snapmirror Lag Alert: {sourceClusterName}::{record["source"]["path"]} -> {clusterName}::{record["destination"]["path"]} has a lag time of {lagSeconds} seconds or {timStr}.'
                                     sendAlert(message, "WARNING")
                                     changedEvents=True
                                     event = {
