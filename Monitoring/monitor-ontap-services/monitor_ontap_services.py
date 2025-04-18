@@ -720,7 +720,7 @@ def processStorageUtilization(service):
                         if service.get("matches") is None or service.get("matches") is not None and findMatch(service.get("matches"), record["svm"]["name"], record["name"]):
                             #
                             # If a volume is offline, the API will not report the "files" information.
-                            if records.get("files") is not None:
+                            if record.get("files") is not None:
                                 maxFiles = record["files"].get("maximum")
                                 usedFiles = record["files"].get("used")
                                 if maxFiles != None and usedFiles != None:
@@ -1086,10 +1086,9 @@ def readInConfig():
         "configFilename": None,
         "secretsManagerEndPointHostname": None,
         "snsEndPointHostname": None,
-        "cloudWatchEndPointHostname": None,
+        "cloudWatchLogsEndPointHostname": None,
         "syslogIP": None,
         "cloudWatchLogGroupArn": None,
-        "cloudWatchLogsEndPointHostname": None,
         "awsAccountId": None
         }
 
@@ -1191,7 +1190,7 @@ def readInConfig():
         config["snsEndPointHostname"] = f'sns.{snsRegion}.amazonaws.com'
 
     if config.get("cloudWatchLogGroupArn") is not None and config["cloudWatchLogsEndPointHostname"] is None:
-        cloudWatchRegion = config["cloudWatchLogGrounpArn"].split(":")[3]
+        cloudWatchRegion = config["cloudWatchLogGroupArn"].split(":")[3]
         config["cloudWatchLogsEndPointHostname"] = f'logs.{cloudWatchRegion}.amazonaws.com'
     #
     # Now, check that all the configuration parameters have been set.
@@ -1212,7 +1211,8 @@ def lambda_handler(event, context):
     #
     # Set up loging.
     logger = logging.getLogger("mon_fsxn_service")
-    logger.setLevel(logging.DEBUG)       # Anything at this level and above this get logged.
+    # logger.setLevel(logging.DEBUG)       # Anything at this level and above this get logged.
+    logger.setLevel(logging.INFO)       # Anything at this level and above this get logged.
     if config["syslogIP"] is not None:
         #
         # Due to a bug with the SysLogHandler() of not sending proper framing with a message
@@ -1271,8 +1271,8 @@ def lambda_handler(event, context):
     snsClient = boto3.client('sns', region_name=snsRegion, endpoint_url=f'https://{config["snsEndPointHostname"]}')
     cloudWatchClient = None
     if config["cloudWatchLogGroupArn"] is not None:
-        cloudWatchRegion = config["cloudWatchLogGrounpArn"].split(":")[3]
-        cloudWatchClient = boto3.client('logs', region_name=cloudWatchRegion, endpoint_url=f'https://{config["cloudWatchEndPointHostname"]}')
+        cloudWatchRegion = config["cloudWatchLogGroupArn"].split(":")[3]
+        cloudWatchClient = boto3.client('logs', region_name=cloudWatchRegion, endpoint_url=f'https://{config["cloudWatchLogsEndPointHostname"]}')
     #
     # Create a http handle to make ONTAP/FSxN API calls with.
     auth = urllib3.make_headers(basic_auth=f'{username}:{password}')
