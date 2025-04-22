@@ -43,6 +43,8 @@ that in the [Endpoints for AWS Services](#endpoints-for-aws-services) section be
 
 ## Prerequisites
 - An FSx for NetApp ONTAP file system you want to monitor.
+- An S3 bucket to store the configuration and event status files, as well as the Lambda layer zip file.
+    - You will need to download the [Lambda layer zip file](https://raw.githubusercontent.com/NetApp/FSx-ONTAP-samples-scripts/main/Monitoring/monitor_onstap_services/lambda_layer.zip) from this repo and upload it to the S3 bucket. Be sure to preserve the name `lambda_layer.zip`.
 - The security group associated with the FSx for ONTAP file system must allow inbound traffic from the Lambda function over TCP port 443.
 - An SNS topic to send the alerts to.
 - An AWS Secrets Manager secret that holds the FSx for ONTAP file system credentials. There should be two keys in the secret, one for the username and one for the password.
@@ -66,7 +68,6 @@ The CloudFormation template will do the following:
     The only permission that this role needs is to be able to invoke a Lambda function.
     **NOTE:** You can provide the ARN of an existing role to use instead of having it create a new one.
 - Create the Lambda function with the Python code provided in this repository.
-- Create an S3 bucket for the Lambda function to store the matching conditions file, and the event information, in.
 - Create an EventBridge Schedule to trigger the Lambda function. By default, it will trigger
     it to run every 15 minutes, although there is a parameter that will allow you to set it to whatever interval you want.
 - Optionally create a CloudWatch alarm that will alert you if the Lambda function fails.
@@ -84,8 +85,9 @@ To install the program using the CloudFormation template, you will need to do th
 
 |Parameter Name | Notes|
 |---|---|
-|Stackname|The name you want to assign to the CloudFormation stack. Note that this name is used as a base name for some of the resources it creates, so please keep it **under 25 characters**. Also, since it is used as part of the s3 bucket name that it creates it **must be in all lower case letters**.|
+|Stackname|The name you want to assign to the CloudFormation stack. Note that this name is used as a base name for some of the resources it creates, so please keep it **under 25 characters**.|
 |OntapAdminServer|The DNS name, or IP address, of the management endpoint of the FSxN file system you wish to monitor.|
+|S3BucketName|The name of the S3 bucket where you want the program to store event information. It should also have a copy of the `lambda_layer.zip` file. **NOTE** This bucket must be in the same region where this CloudFormation stack is being created.|
 |SubnetIds|The subnet IDs that the Lambda function will be attached to. They must have connectivity to the FSxN file system management endpoint that you wish to monitor.|
 |SecurityGroupIds|The security group IDs that the Lambda function will be attached to. The security group must allow outbound traffic over port 443 to the SNS, Secrets Manager, and CloudWatch and S3 AWS service endpoints, as well as the FSxN file system you want to monitor.|
 |SnsTopicArn|The ARN of the SNS topic you want the program to publish alert messages to.|
@@ -111,9 +113,7 @@ so you probably won't have to change any of them. Note that if you enable EMS al
 send all EMS messages that have a severity of `Error`, `Alert` or `Emergency`. You can change the
 matching conditions at any time by updating the matching conditions file that is created in the S3 bucket.
 The name of the file will be \<OntapAdminServer\>-conditions where "\<OntapAdminServer\>" is the value you
-set for the OntapAdminServer parameter. To find the name of the S3 bucket, or any of the resources that were
-created, you can go to the CloudFormation service in the AWS console, click on the stack you created
-(based on the name you provided as the first parameter above), and then click on the "Resources" tab.
+set for the OntapAdminServer parameter.
 
 ### Post Installation Checks
 After the stack has been created, check the status of the Lambda function to make sure it is
@@ -158,8 +158,14 @@ Below is the specific list of permissions needed.
 |ec2:DescribeNetworkInterfaces  | So it can check to see if a network interface already exists. |
 
 #### Create an S3 Bucket
-One of the goals of the program is to not send multiple messages for the same event. It does this by storing the event
-information in an s3 object so it can be compared against before sending a second message for the same event.
+The first use of the s3 bucket will be to store the Lambda layer zip file. This is required to include some dependencies that
+aren't included in the AWS Lambda environment. Currently the only dependency in the zip file is [cronsim](https://pypi.org/project/cronsim/).
+This is used to interpret the SnapMirror schedules to be able to report on lag issues. You can download the zip file from this repository by clicking on
+the [lambda_layer.zip](https://raw.githubusercontent.com/NetApp/FSx-ONTAP-samples-scripts/main/Monitoring/monitor_onstap_services/lambda_layer.zip) link.
+You will refer to this file, and bucket, when you create the Lambda function.
+
+Another use of the s3 bucket is to store events that have already reported on so they can be compared against
+to ensure program does not send multiple messages for the same event.
 Note that it doesn't keep every event indefinitely, it only stores them while the condition is true. So, say for
 example it sends an alert for a SnapMirror relationship that has a lag time that is too long. It will
 send the alert and store the event. Once a successful SnapMirror synchronization has happened, the event will be removed
@@ -231,17 +237,34 @@ times out, even after adjusting the timeout to more than several minutes.
 
 #### Lambda Function
 There are a few things you need to do to properly configure the Lambda function.
-- Give it the permissions listed above.
+- Assign it the role you created above.
 - Put it in a VPC and subnet that has access to the FSxN file system management endpoint.
+- Assign it the security group that allows outbound traffic over TCP port 443 to the FSxN file system management endpoint.
+
+Once you have created the function you will be able to:
+- Copy the Python code from the [monitor_ontap_service.py](monitor_ontap_services.py)
+    file found in this repository into the code box and deploy it.
+- Add the Lambda layer to the function. You do this by first creating a Lambda layer then adding it to your function.
+    To create a Lambda layer go to the Lambda service page on the AWS console and click on the "Layers"
+    tab under the "Additional resources" section. Then, click on the "Create layer" button.
+    From there you'll need to provide a name for the layer, and the path to the
+    [lambda_layer.zip](https://raw.githubusercontent.com/NetApp/FSx-ONTAP-samples-scripts/main/Monitoring/monitor_onstap_services/lambda_layer.zip)
+    file that you should download from this repository. If you uploaded that into the S3 bucket you created above, then
+    just provide the S3 path to the file. For example, `s3://<your-bucket-name>.s3.<s3_region>.awsamzoneaws.com/lambda_layer.zip`.
+    Once you have the layer created, you can add it to your Lambda function by going to the Lambda
+    function in the AWS console, and clicking on the `Code` tab and scrolling down to the Layers section.
+    Click on the "Add a layer" button. From there you can select the layer you just created.
 - Increase the total run time to at least 20 seconds. You might have to raise that if you have a lot
-    of components in your FSxN file system. However, if you have to raise it to more than a couple minutes,
-    it could be an issue with the endpoint causing the calls to the AWS services to hang. See the
-    [Endpoints for AWS Services](#endpoints-for-aws-services) section above for more information.
+    of components in your FSxN file system. However, if you have to raise it to more than a couple minutes
+    and the function still times out, then it could be an issue with the endpoint causing the calls to the
+    AWS services to hang. See the [Endpoints for AWS Services](#endpoints-for-aws-services) section above
+    for more information.
 - Provide for the base configuration via environment variables and/or a configuration file.
     See the [Configuration Parameters](#configuration-parameters) section below for more information.
 - Create the "Matching Conditions" file, that specifies when the Lambda function should send alerts.
     See the [Matching Conditions File](#matching-conditions-file) section below for more information.
-- Set up an EventBridge Schedule rule to trigger the function on a regular basis.
+- Once you have tested the function to ensure it works, set up an EventBridge Schedule
+    rule to trigger the function on a regular basis.
 
 ##### Configuration Parameters
 Below is a list of parameters that are used to configure the program. Some parameters are required to be set
@@ -257,7 +280,7 @@ filename, then set the configFilename environment variable to the name of your c
 |Parameter Name | Required | Required as an Environment Variable | Default Value | Description |
 |:--------------|:--------:|:-----------------------------------:|:--------------|:------------|
 | s3BucketName   | Yes | Yes | None | Set to the name of the S3 bucket where you want the program to store events to. It will also read the matching configuration file from this bucket. |
-| s3BucketRegion | Yes | Yes | None | Set to the region the S3 bucket resides in. |
+| s3BucketRegion | Yes | Yes | None | Set to the region where the S3 bucket is located. |
 | OntapAdminServer | Yes | Yes | None | Set to the DNS name, or IP address, of the ONTAP server you wish to monitor. |
 | configFilename | No | No | OntapAdminServer + "-config" | Set to the filename (S3 object) that contains parameter assignments. It's okay if it doesn't exist, as long as there are environment variables for all the required parameters. |
 | emsEventsFilename | No | No | OntapAdminServer + "-emsEvents" | Set to the filename (S3 object) where you want the program to store the EMS events that it has alerted on. This file will be created as necessary. |
@@ -317,7 +340,8 @@ Each rule should be an object with one, or more, of the following keys:
 
 |Key Name|Value Type|Notes|
 |---|---|---|
-|maxLagTime|Integer|Specifies the maximum allowable time, in seconds, since the last successful SnapMirror update before an alert will be sent.|
+|maxLagTime|Integer|Specifies the maximum allowable time, in seconds, since the last successful SnapMirror update before an alert will be sent. Only used if maxLagTimePercent hasn't been provide, or if the SnapMirror relationship, and the policy it is assigned to, don't have a schedule associated with them. Best practice is to provide both maxLagTime and maxLagTimePercent to ensure all relationships get monitored, in case a schedule gets accidentally removed.|
+|maxLagTimePercent|Integer|Specifies the maximum allowable time, in terms of percent of the amount of time since the last scheduled SnapMirror update, before an alert will be sent. Should be over 100. For example, a value of 200 means 2 times the period since the last scheduled update and if that was supposed to have happen 1 hour ago, it would alert if the relationship hasn't been updated within 2 hours.|
 |stalledTransferSeconds|Integer|Specifies the minimum number of seconds that have to transpire before a SnapMirror transfer will be considered stalled.|
 |healthy|Boolean|If `true` will alert with the relationship is healthy. If `false` will alert with the relationship is unhealthy.|
 
