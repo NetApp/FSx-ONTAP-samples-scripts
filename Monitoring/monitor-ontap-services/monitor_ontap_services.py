@@ -399,9 +399,9 @@ def processEMSEvents(service):
 # This function is used to find an existing SM relationship based on the source
 # and destinatino path passed in. It returns None if one isn't found
 ################################################################################
-def getPreviousSMRecord(relationShips, sourceCluster, sourcePath, destPath):
+def getPreviousSMRecord(relationShips, uuid):
     for relationship in relationShips:
-        if relationship['sourcePath'] == sourcePath and relationship['destPath'] == destPath and relationship['sourceCluster'] == sourceCluster:
+        if relationship.get('uuid') == uuid:
             relationship['refresh'] = True
             return(relationship)
 
@@ -495,11 +495,20 @@ def getLastRunTime(scheduleUUID):
         cron_expression = f"{minutes} {hours} {daysOfMonth} {months} {daysOfWeek}"
         #
         # Initialize CronSim with the cron expression and current time.
-        it = CronSim(cron_expression, datetime.datetime.now(), reverse=True)
+        curTime = datetime.datetime.now()
+        curTimeSec = curTime.timestamp()
+        it = CronSim(cron_expression, curTime, reverse=True)
         #
         # Get the last run time.
-        last_run_time = next(it)
-        return last_run_time.timestamp()
+        lastRunTime = next(it)
+        lastRunTimeSec = lastRunTime.timestamp()
+        #
+        # If the lastRunTime is now, or within a minute the resolution of cron,
+        # then go one more back.
+        if (curTimeSec - lastRunTimeSec) <= 60:
+            lastRunTime = next(it)
+            lastRunTimeSec = lastRunTime.timestamp()
+        return int(lastRunTimeSec)
     else:
         logger.error(f'API call to {endpoint} failed. HTTP status code: {response.status}.')
         return -1
@@ -629,7 +638,10 @@ def processSnapMirrorRelationships(service):
             #
             # For lag time if maxLagTimePercent is defined check to see if there is a schedule,
             # if there is alert on that otherrwise alert on the maxLagTime.
-            if record.get("lag_time") is not None:
+            # But, first check that lag_time is defined, and that the state is not "uninitialized",
+            # since the lag_time is set to the oldest snapshot of the source volume which would
+            # cause a false positive.
+            if record.get("lag_time") is not None and record["state"].lower() != "uninitialized":
                 lagSeconds = parseLagTime(record["lag_time"])
                 if maxLagTimePercent is not None:
                     lastScheduledUpdate = getLastScheduledUpdate(record)
@@ -682,13 +694,10 @@ def processSnapMirrorRelationships(service):
                         events.append(event)
 
             if stalledTransferSeconds is not None:
-                if record.get('transfer') and record['transfer']['state'].lower() == "transferring":
-                    sourcePath = record['source']['path']
-                    destPath = record['destination']['path']
+                if record.get('transfer') is not None and record['transfer']['state'].lower() == "transferring":
+                    transferUuid = record['transfer']['uuid']
                     bytesTransferred = record['transfer']['bytes_transferred']
-
-                    prevRec =  getPreviousSMRecord(smRelationships, sourceClusterName, sourcePath, destPath)
-
+                    prevRec =  getPreviousSMRecord(smRelationships, transferUuid) # This reset the "refresh" field if found.
                     if prevRec != None:
                         timeDiff=curTime - prevRec["time"]
                         if prevRec['bytesTransferred'] == bytesTransferred:
@@ -696,7 +705,7 @@ def processSnapMirrorRelationships(service):
                                 uniqueIdentifier = record['uuid'] + "_" + "transfer"
 
                                 if not eventExist(events, uniqueIdentifier):
-                                    message = f'Snapmiorror transfer has stalled: {sourceClusterName}::{sourcePath} -> {clusterName}::{destPath}.'
+                                    message = f"Snapmiorror transfer has stalled: {sourceClusterName}::{record['source']['path']} -> {clusterName}::{record['destination']['path']}."
                                     sendAlert(message, "WARNING")
                                     changedEvents=True
                                     event = {
@@ -715,9 +724,7 @@ def processSnapMirrorRelationships(service):
                             "time": curTime,
                             "refresh": True,
                             "bytesTransferred": bytesTransferred,
-                            "sourcePath": sourcePath,
-                            "destPath": destPath,
-                            "sourceCluster": sourceClusterName
+                            "uuid": transferUuid
                         }
                         updateRelationships = True
                         smRelationships.append(prevRec)
@@ -726,7 +733,12 @@ def processSnapMirrorRelationships(service):
         i = 0
         while i < len(smRelationships):
             if not smRelationships[i]["refresh"]:
-                logger.debug(f'Deleting smRelationship: {smRelationships[i]["destPath"]}')
+                relationshipId = smRelationships[i].get("uuid")
+                if relationshipId is None:
+                    id="Old format"
+                else:
+                    id = relationshipId
+                logger.debug(f'Deleting smRelationship: {id}')
                 del smRelationships[i]
                 updateRelationships = True
             else:

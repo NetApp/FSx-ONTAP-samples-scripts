@@ -409,6 +409,7 @@ Each rule should be an object with one, or more, of the following keys:
       "rules": [
         {
           "maxLagTime": 86400
+          "maxLagTimePercent": 200
         },
         {
           "healthy": false
@@ -474,6 +475,8 @@ In the above example, it will alert on:
 - Any network interfaces that are down. 
 - Any EMS message that has an event name of “passwd.changed”.
 - Any EMS message that has a severity of "alert" or “emergency”.
+- Any SnapMirror relationship with a lag time more than 200% the amount of time since its last scheduled update, if it has a schedule assoicated with it.
+    Otherwise, if the last successful update has been more than 86400 seconds (24 hours).
 - Any SnapMirror relationship with a lag time more than 86400 seconds (24 hours).
 - Any SnapMirror relationship that has a non-healthy status.
 - Any SnapMirror update that hasn't had any flow of data in 600 seconds (10 minutes).
