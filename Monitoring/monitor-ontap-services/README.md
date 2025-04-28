@@ -288,6 +288,7 @@ filename, then set the configFilename environment variable to the name of your c
 | smRelationshipsFilename | No | No | OntapAdminServer + "-smRelationships" | Set to the filename (S3 object) where you want the program to store the SnapMirror relationships into. This file is used to track the number of bytes transferred so it can detect stalled SnapMirror updates. This file will be created as necessary. |
 | storageEventsFilename | No | No | OntapAdminServer + "-storageEvents" | Set to the filename (S3 object) where you want the program to store the Storage Utilization events it has alerted on. This file will be created as necessary. |
 | quotaEventsFilename | No | No | OntapAdminServer + "-quotaEvents" | Set to the filename (S3 object) where you want the program to store the Quota Utilization events it has alerted on. This file will be created as necessary. |
+| vserverEventsFilename | No | No | OntapAdminServer + "-vserverEvents" | Set to the filename (S3 object) where you want the program to store the vserver events it has alerted on. This file will be created as necessary. |
 | systemStatusFilename | No | No | OntapAdminServer + "-systemStatus" | Set to the filename (S3 object) where you want the program to store the overall system status information into. This file will be created as necessary. |
 | snsTopicArn | Yes | No | None | Set to the ARN of the SNS topic you want the program to publish alert messages to. |
 | cloudWatchLogGroupName | No | No | None | The name of **an existing** CloudWatch log group that the Lambda function will also send alerts to. If left blank, alerts will not be sent to CloudWatch.|
@@ -346,14 +347,6 @@ Each rule should be an object with one, or more, of the following keys:
 |healthy|Boolean|If `true` will alert with the relationship is healthy. If `false` will alert with the relationship is unhealthy.|
 
 ###### Matching condition schema for Storage Utilization (storage)
-The storage schema had two additional keys that can be included before the rules:
-|Key Name|Value Type|Notes|
-|---|---|---|
-|exceptions|Array of objects|Each entry in this array specifies SVM and Volume name combination that should be ignored for the rules specified within its block. The format of the object is: `{"svm": "svm_name", "name": "volume_name"}`|
-|matches|Array of objects|Each entry in this array specifies a SVM and Volume name combination that must be matched for the rules specified within its block to be applied. The format of the object is: `{"svm": "svm_name", "name": "volume_name"}`|
-
-The exceptions and matches keys are optional. If they are not specified, then the rules will be applied to all SVMs and volumes.
-
 Each rule should be an object with one, or more, of the following keys:
 |Key Name|Value Type|Notes|
 |---|---|---|
@@ -363,6 +356,7 @@ Each rule should be an object with one, or more, of the following keys:
 |volumeCriticalPercentUsed|Integer|Specifies the maximum allowable volume utilization (between 0 and 100) before an alert is sent.|
 |volumeWarnFilesPercentUsed|Integer|Specifies the maximum allowable volume files (inodes) utilization (between 0 and 100) before an alert is sent.|
 |volumeCriticalFilesPercentUsed|Integer|Specifies the maximum allowable volume files (inodes) utilization (between 0 and 100) before an alert is sent.|
+|offline:|Boolean|If `true` will alert if the volume is offline.|
 
 ###### Matching condition schema for Quota (quota)
 Each rule should be an object with one, or more, of the following keys:
@@ -372,6 +366,14 @@ Each rule should be an object with one, or more, of the following keys:
 |maxHardQuotaSpacePercentUsed|Integer|Specifies the maximum allowable storage utilization (between 0 and 100) against the hard quota limit before an alert is sent.|
 |maxSoftQuotaSpacePercentUsed|Integer|Specifies the maximum allowable storage utilization (between 0 and 100) against the soft quota limit before an alert is sent.|
 |maxQuotaInodesPercentUsed|Integer|Specifies the maximum allowable inode utilization (between 0 and 100) before an alert is sent.|
+
+###### Matching condition schema for Vserver (vserver)
+Each rule should be an object with one, or more, of the following keys:
+|Key Name|Value Type|Notes|
+|---|---|---|
+|vserverState|Boolean|If `true` will alert if the vserver is not in `running` state.|
+|nfsProtocolState|Boolean|If `true` will alert if the NFS protocol is not enabled on a vserver.|
+|cifsProtocolState|Boolean|If `true` will alert if the CIFS protocol is enabled for a vserver but doesn't have an `online` status.|
 
 ###### Example Matching conditions file:
 ```json

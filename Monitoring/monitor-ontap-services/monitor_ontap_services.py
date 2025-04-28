@@ -26,6 +26,7 @@ import json
 import re
 import os
 import datetime
+import pytz
 import logging
 from logging.handlers import SysLogHandler
 from cronsim import CronSim
@@ -146,7 +147,7 @@ def eventExist (events, uniqueIdentifier):
 # 'True'.
 ################################################################################
 def checkSystem():
-    global config, s3Client, snsClient, http, headers, clusterName, clusterVersion, logger
+    global config, s3Client, snsClient, http, headers, clusterName, clusterVersion, logger, clusterTimezone
 
     changedEvents = False
     #
@@ -170,11 +171,11 @@ def checkSystem():
     else:
         fsxStatus = json.loads(data["Body"].read().decode('UTF-8'))
     #
-    # Get the cluster name and ONTAP version from the FSxN.
+    # Get the cluster name, ONTAP version and timezone from the FSxN.
     # This is also a way to test that the FSxN cluster is accessible.
     badHTTPStatus = False
     try:
-        endpoint = f'https://{config["OntapAdminServer"]}/api/cluster?fields=version,name'
+        endpoint = f'https://{config["OntapAdminServer"]}/api/cluster?fields=version,name,timezone'
         response = http.request('GET', endpoint, headers=headers, timeout=5.0)
         if response.status == 200:
             if not fsxStatus["systemHealth"]:
@@ -195,6 +196,9 @@ def checkSystem():
             clusterVersion = data["version"]["full"].split()[2].replace(":", "")
             if fsxStatus["version"] == initialVersion:
                 fsxStatus["version"] = clusterVersion
+            #
+            # Get the Timezone for SnapMirror lag time calculations.
+            clusterTimezone = data["timezone"]["name"]
         else:
             badHTTPStatus = True
             raise Exception(f'API call to {endpoint} failed. HTTP status code: {response.status}.')
@@ -279,7 +283,7 @@ def checkSystemHealth(service):
                                 uniqueIdentifier = interface["name"]
                                 if(not eventExist(fsxStatus["downInterfaces"], uniqueIdentifier)): # Resets the refresh key.
                                     message = f'Alert: Network interface {interface["name"]} on cluster {clusterName} is down.'
-                                    sendAlert(message, "INFO")
+                                    sendAlert(message, "WARNING")
                                     event = {
                                         "index": uniqueIdentifier,
                                         "refresh": eventResilience
@@ -291,7 +295,7 @@ def checkSystemHealth(service):
                         i = 0
                         while i < len(fsxStatus["downInterfaces"]):
                             if fsxStatus["downInterfaces"][i]["refresh"] <= 0:
-                                logger.debug(f'Deleting interface: {fsxStatus["downIntefaces"][i]["index"]}')
+                                logger.debug(f'Deleting interface: {fsxStatus["downInterfaces"][i]["index"]}')
                                 del fsxStatus["downInterfaces"][i]
                                 changedEvents = True
                             else:
@@ -452,7 +456,7 @@ def convertArrayToString(array):
 # run. It returns the time in seconds since the UNIX epoch.
 ################################################################################
 def getLastRunTime(scheduleUUID):
-    global config, http, headers, clusterName, clusterVersion, logger
+    global config, http, headers, clusterName, clusterVersion, logger, clusterTimezone
 
     minutes = ""
     hours = ""
@@ -495,19 +499,13 @@ def getLastRunTime(scheduleUUID):
         cron_expression = f"{minutes} {hours} {daysOfMonth} {months} {daysOfWeek}"
         #
         # Initialize CronSim with the cron expression and current time.
-        curTime = datetime.datetime.now()
+        curTime = datetime.datetime.now(pytz.timezone(clusterTimezone) if clusterTimezone != None else datetime.timezone.utc)
         curTimeSec = curTime.timestamp()
         it = CronSim(cron_expression, curTime, reverse=True)
         #
         # Get the last run time.
         lastRunTime = next(it)
         lastRunTimeSec = lastRunTime.timestamp()
-        #
-        # If the lastRunTime is now, or within a minute the resolution of cron,
-        # then go one more back.
-        if (curTimeSec - lastRunTimeSec) <= 60:
-            lastRunTime = next(it)
-            lastRunTimeSec = lastRunTime.timestamp()
         return int(lastRunTimeSec)
     else:
         logger.error(f'API call to {endpoint} failed. HTTP status code: {response.status}.')
@@ -556,7 +554,7 @@ def getLastScheduledUpdate(record):
 # This function is used to check SnapMirror relationships.
 ################################################################################
 def processSnapMirrorRelationships(service):
-    global config, s3Client, snsClient, http, headers, clusterName, clusterVersion, logger
+    global config, s3Client, snsClient, http, headers, clusterName, clusterVersion, logger, clusterTimezone
     #
     # Get the saved events so we can ensure we are only reporting on new ones.
     try:
@@ -595,13 +593,14 @@ def processSnapMirrorRelationships(service):
     updateRelationships = False
     #
     # Get the current time in seconds since UNIX epoch 01/01/1970.
-    curTime = int(datetime.datetime.now().timestamp())
+    curTimeSeconds = int(datetime.datetime.now(pytz.timezone(clusterTimezone) if clusterTimezone != None else datetime.timezone.utc).timestamp())
     #
     # Consolidate all the rules so we can decide how to process lagtime.
     maxLagtime = None
     maxLagTimePercent = None
     healthy = None
     stalledTransferSeconds = None
+    offline = None
     for rule in service["rules"]:
         for key in rule.keys():
             lkey = key.lower()
@@ -637,7 +636,7 @@ def processSnapMirrorRelationships(service):
                 sourceClusterName = record['source']['cluster']['name']
             #
             # For lag time if maxLagTimePercent is defined check to see if there is a schedule,
-            # if there is alert on that otherrwise alert on the maxLagTime.
+            # if there is a schedule alert on that otherrwise alert on the maxLagTime.
             # But, first check that lag_time is defined, and that the state is not "uninitialized",
             # since the lag_time is set to the oldest snapshot of the source volume which would
             # cause a false positive.
@@ -647,20 +646,23 @@ def processSnapMirrorRelationships(service):
                     lastScheduledUpdate = getLastScheduledUpdate(record)
                     if lastScheduledUpdate != -1:
                         processedLagTime = True
-                        if lagSeconds > ((curTime - lastScheduledUpdate) * maxLagTimePercent/100):
-                            uniqueIdentifier = record["uuid"] + "_" + maxLagTimePercentKey
-                            if not eventExist(events, uniqueIdentifier):  # This resets the "refresh" field if found.
-                                timeStr = lagTimeStr(lagSeconds)
-                                asciiTime = datetime.datetime.fromtimestamp(lastScheduledUpdate).strftime('%Y-%m-%d %H:%M:%S')
-                                message = f'Snapmirror Lag Alert: {sourceClusterName}::{record["source"]["path"]} -> {clusterName}::{record["destination"]["path"]} has a lag time of {lagSeconds} seconds ({timeStr}) which is more than {maxLagTimePercent}% of its last scheduled update at {asciiTime}.'
-                                sendAlert(message, "WARNING")
-                                changedEvents=True
-                                event = {
-                                    "index": uniqueIdentifier,
-                                    "message": message,
-                                    "refresh": eventResilience
-                                }
-                                events.append(event)
+                        if lagSeconds > ((curTimeSeconds - lastScheduledUpdate) * maxLagTimePercent/100):
+                            #
+                            # If the transfer is in progress, and they have stalled transfer alert enabled, we don't need to alert on the lag time.
+                            if not (record.get("transfer") is not None and record["transfer"]["state"].lower() in ["transferring", "finalizing", "preparing", "fasttransferring"] and stalledTransferSeconds is not None):
+                                uniqueIdentifier = record["uuid"] + "_" + maxLagTimePercentKey
+                                if not eventExist(events, uniqueIdentifier):  # This resets the "refresh" field if found.
+                                    timeStr = lagTimeStr(lagSeconds)
+                                    asciiTime = datetime.datetime.fromtimestamp(lastScheduledUpdate).strftime('%Y-%m-%d %H:%M:%S')
+                                    message = f'Snapmirror Lag Alert: {sourceClusterName}::{record["source"]["path"]} -> {clusterName}::{record["destination"]["path"]} has a lag time of {lagSeconds} seconds ({timeStr}) which is more than {maxLagTimePercent}% of its last scheduled update at {asciiTime}.'
+                                    sendAlert(message, "WARNING")
+                                    changedEvents=True
+                                    event = {
+                                        "index": uniqueIdentifier,
+                                        "message": message,
+                                        "refresh": eventResilience
+                                    }
+                                    events.append(event)
 
                 if maxLagTime is not None and not processedLagTime:
                     if lagSeconds > maxLagTime:
@@ -699,9 +701,9 @@ def processSnapMirrorRelationships(service):
                     bytesTransferred = record['transfer']['bytes_transferred']
                     prevRec =  getPreviousSMRecord(smRelationships, transferUuid) # This reset the "refresh" field if found.
                     if prevRec != None:
-                        timeDiff=curTime - prevRec["time"]
+                        timeDiff=curTimeSeconds - prevRec["time"]
                         if prevRec['bytesTransferred'] == bytesTransferred:
-                            if (curTime - prevRec['time']) > stalledTransferSeconds:
+                            if (curTimeSeconds - prevRec['time']) > stalledTransferSeconds:
                                 uniqueIdentifier = record['uuid'] + "_" + "transfer"
 
                                 if not eventExist(events, uniqueIdentifier):
@@ -715,13 +717,13 @@ def processSnapMirrorRelationships(service):
                                     }
                                     events.append(event)
                         else:
-                            prevRec['time'] = curTime
+                            prevRec['time'] = curTimeSeconds
                             prevRec['refresh'] = True
                             prevRec['bytesTransferred'] = bytesTransferred
                             updateRelationships = True
                     else:
                         prevRec = {
-                            "time": curTime,
+                            "time": curTimeSeconds,
                             "refresh": True,
                             "bytesTransferred": bytesTransferred,
                             "uuid": transferUuid
@@ -768,17 +770,6 @@ def processSnapMirrorRelationships(service):
         logger.warning(f'API call to {endpoint} failed. HTTP status code {response.status}.')
 
 ################################################################################
-# This function is used to check to see if the svmName, volumeName
-# conbination is in the array passed in.
-################################################################################
-def findMatch(exceptions, svmName, volumeName):
-    if exceptions != None:
-        for exception in exceptions:
-            if exception.get("svm") == svmName and exception.get("name") == volumeName:
-                return True
-    return False
-
-################################################################################
 # This function is used to check all the volume and aggregate utlization.
 ################################################################################
 def processStorageUtilization(service):
@@ -801,7 +792,6 @@ def processStorageUtilization(service):
     # Decrement the refresh field to know if any records have really gone away.
     for event in events:
         event["refresh"] -= 1
-
     #
     # Run the API call to get the physical storage used.
     endpoint = f'https://{config["OntapAdminServer"]}/api/storage/aggregates?fields=space'
@@ -811,7 +801,7 @@ def processStorageUtilization(service):
         aggrResponse = None
     #
     # Run the API call to get the volume information.
-    endpoint = f'https://{config["OntapAdminServer"]}/api/storage/volumes?fields=space,files,svm'
+    endpoint = f'https://{config["OntapAdminServer"]}/api/storage/volumes?fields=space,files,svm,state'
     volumeResponse = http.request('GET', endpoint, headers=headers)
     if volumeResponse.status != 200:
         logger.error(f'API call to {endpoint} failed. HTTP status code {volumeResponse.status}.')
@@ -846,19 +836,36 @@ def processStorageUtilization(service):
                 if volumeResponse is not None:
                     data = json.loads(volumeResponse.data)
                     for record in data["records"]:
+                        if record["space"].get("percent_used"):
+                            if record["space"]["percent_used"] >= rule[key]:
+                                uniqueIdentifier = record["uuid"] + "_" + key
+                                if not eventExist(events, uniqueIdentifier):  # This resets the "refresh" field if found.
+                                    alertType = 'Warning' if lkey == "volumewarnpercentused" else 'Critical'
+                                    message = f'Volume Usage {alertType} Alert: volume {record["svm"]["name"]}:{record["name"]} on {clusterName} is {record["space"]["percent_used"]}% full, which is more or equal to {rule[key]}% full.'
+                                    sendAlert(message, "WARNING")
+                                    changedEvents = True
+                                    event = {
+                                            "index": uniqueIdentifier,
+                                            "message": message,
+                                            "refresh": eventResilience
+                                        }
+                                    events.append(event)
+            elif lkey == "volumewarnfilespercentused" or lkey == "volumecriticalfilespercentused":
+                if volumeResponse is not None:
+                    data = json.loads(volumeResponse.data)
+                    for record in data["records"]:
                         #
-                        # Skip any exceptions that are in the list.
-                        if findMatch(service.get("exceptions"), record["svm"]["name"], record["name"]):
-                            continue
-                        #
-                        # If this service definition has specific matches, then only process those. Otherwise, check all of them.
-                        if service.get("matches") is None or service.get("matches") is not None and findMatch(service.get("matches"), record["svm"]["name"], record["name"]):
-                            if record["space"].get("percent_used"):
-                                if record["space"]["percent_used"] >= rule[key]:
+                        # If a volume is offline, the API will not report the "files" information.
+                        if record.get("files") is not None:
+                            maxFiles = record["files"].get("maximum")
+                            usedFiles = record["files"].get("used")
+                            if maxFiles != None and usedFiles != None:
+                                percentUsed = (usedFiles / maxFiles) * 100
+                                if percentUsed >= rule[key]:
                                     uniqueIdentifier = record["uuid"] + "_" + key
-                                    if not eventExist(events, uniqueIdentifier):  # This resets the "refresh" field if found.
-                                        alertType = 'Warning' if lkey == "volumewarnpercentused" else 'Critical'
-                                        message = f'Volume Usage {alertType} Alert: volume {record["svm"]["name"]}:{record["name"]} on {clusterName} is {record["space"]["percent_used"]}% full, which is more or equal to {rule[key]}% full.'
+                                    if not eventExist(events, uniqueIdentifier):
+                                        alertType = 'Warning' if lkey == "volumewarnfilespercentused" else 'Critical'
+                                        message = f"Volume File (inode) Usage {alertType} Alert: volume {record['svm']['name']}:{record['name']} on {clusterName} is using {percentUsed:.0f}% of it's inodes, which is more or equal to {rule[key]}% utilization."
                                         sendAlert(message, "WARNING")
                                         changedEvents = True
                                         event = {
@@ -866,41 +873,22 @@ def processStorageUtilization(service):
                                                 "message": message,
                                                 "refresh": eventResilience
                                             }
-                                        logger.debug(message)
                                         events.append(event)
-            elif lkey == "volumewarnfilespercentused" or lkey == "volumecriticalfilespercentused":
-                if volumeResponse is not None:
-                    data = json.loads(volumeResponse.data)
-                    for record in data["records"]:
-                        #
-                        # Skip any exceptions that are in the list.
-                        if findMatch(service.get("exceptions"), record["svm"]["name"], record["name"]):
-                            continue
-                        #
-                        # If this service definition has specific matches, then only process those. Otherwise, check all of them.
-                        if service.get("matches") is None or service.get("matches") is not None and findMatch(service.get("matches"), record["svm"]["name"], record["name"]):
-                            #
-                            # If a volume is offline, the API will not report the "files" information.
-                            if record.get("files") is not None:
-                                maxFiles = record["files"].get("maximum")
-                                usedFiles = record["files"].get("used")
-                                if maxFiles != None and usedFiles != None:
-                                    percentUsed = (usedFiles / maxFiles) * 100
-                                    if percentUsed >= rule[key]:
-                                        uniqueIdentifier = record["uuid"] + "_" + key
-                                        if not eventExist(events, uniqueIdentifier):
-                                            alertType = 'Warning' if lkey == "volumewarnfilespercentused" else 'Critical'
-                                            message = f"Volume File (inode) Usage {alertType} Alert: volume {record['svm']['name']}:{record['name']} on {clusterName} is using {percentUsed:.0f}% of it's inodes, which is more or equal to {rule[key]}% utilization."
-                                            sendAlert(message, "WARNING")
-                                            changedEvents = True
-                                            event = {
-                                                    "index": uniqueIdentifier,
-                                                    "message": message,
-                                                    "refresh": eventResilience
-                                                }
-                                            logger.debug(message)
-                                            events.append(event)
-
+            elif lkey == "offline":
+                data = json.loads(volumeResponse.data)
+                for record in data["records"]:
+                    if rule[key] and record["state"].lower() == "offline":
+                        uniqueIdentifier = f'{record["uuid"]}_{key}_{rule[key]}'
+                        if not eventExist(events, uniqueIdentifier):  # This resets the "refresh" field if found.
+                            message = f"Volume Offline Alert: volume {record['svm']['name']}:{record['name']} on {clusterName} is offline."
+                            sendAlert(message, "WARNING")
+                            changedEvents=True
+                            event = {
+                                "index": uniqueIdentifier,
+                                "message": message,
+                                "refresh": eventResilience
+                            }
+                            events.append(event)
             else:
                 message = f'Unknown storage alert type: "{key}".'
                 logger.warning(message)
@@ -1119,6 +1107,134 @@ def processQuotaUtilization(service):
         logger.error(f'API call to {endpoint} failed. HTTP status code {response.status}.')
 
 ################################################################################
+################################################################################
+def processVserver(service):
+    global config, s3Client, snsClient, http, headers, clusterName, logger
+
+    changedEvents=False
+    #
+    # Get the saved events so we can ensure we are only reporting on new ones.
+    try:
+        data = s3Client.get_object(Key=config["vserverEventsFilename"], Bucket=config["s3BucketName"])
+    except botocore.exceptions.ClientError as err:
+        # If the error is that the object doesn't exist, then it will get created once an alert it sent.
+        if err.response['Error']['Code'] == "NoSuchKey":
+            events = []
+        else:
+            raise err
+    else:
+        events = json.loads(data["Body"].read().decode('UTF-8'))
+    #
+    # Decrement the refresh field to know if any records have really gone away.
+    for event in events:
+        event["refresh"] -= 1
+    #
+    # Consolidate the rules
+    vserverState = None
+    nfsProtocolState = None
+    cifsProtocolState = None
+    for rule in service["rules"]:
+        for key in rule.keys():
+            lkey = key.lower() # Convert to all lower case so the key can be case insensitive.
+            if lkey == "vserverstate":
+                vserverState = rule[key]
+                vserverStateKey = key
+            elif lkey == "nfsprotocolstate":
+                nfsProtocolState = rule[key]
+                nfsProtocolStateKey = key
+            elif lkey == "cifsprotocolstate":
+                cifsProtocolState = rule[key]
+                cifsProtocolStateKey = key
+    #
+    # Check for any vservers that are down.
+    if vserverState is not None and vserverState:
+        #
+        # Run the API call to get the vserver state for each vserver.
+        endpoint = f'https://{config["OntapAdminServer"]}/api/svm/svms?fields=state'
+        response = http.request('GET', endpoint, headers=headers)
+        if response.status == 200:
+            data = json.loads(response.data)
+            for record in data["records"]:
+                if record["state"].lower() != "running":
+                    uniqueIdentifier = str(record["uuid"]) + "_" + vserverStateKey
+                    if not eventExist(events, uniqueIdentifier):
+                        message = f'SVM State Alert: SVM {record["name"]} on {clusterName} is not online.'
+                        sendAlert(message, "WARNING")
+                        changedEvents=True
+                        event = {
+                                "index": uniqueIdentifier,
+                                "message": message,
+                                "refresh": eventResilience
+                                }
+                        events.append(event)
+        else:
+            logger.error(f'API call to {endpoint} failed. HTTP status code {response.status}.')
+
+    if nfsProtocolState is not None and nfsProtocolState:
+        #
+        # Run the API call to get the NFS protocol state for each vserver.
+        endpoint = f'https://{config["OntapAdminServer"]}/api/protocols/nfs/services?fields=state'
+        response = http.request('GET', endpoint, headers=headers)
+        if response.status == 200:
+            data = json.loads(response.data)
+            for record in data["records"]:
+                if record["state"].lower() != "online":
+                    uniqueIdentifier = str(record["svm"]["uuid"]) + "_" + nfsProtocolStateKey
+                    if not eventExist(events, uniqueIdentifier):
+                        message = f'NFS Protocol State Alert: NFS protocol on {record["svm"]["name"]} on {clusterName} is not online.'
+                        sendAlert(message, "WARNING")
+                        changedEvents=True
+                        event = {
+                                "index": uniqueIdentifier,
+                                "message": message,
+                                "refresh": eventResilience
+                                }
+                        events.append(event) 
+        else:
+            logger.error(f'API call to {endpoint} failed. HTTP status code {response.status}.')
+
+    if cifsProtocolState is not None and cifsProtocolState:
+        #
+        # Run the API call to get the NFS protocol state for each vserver.
+        endpoint = f'https://{config["OntapAdminServer"]}/api/protocols/cifs/services?fields=enabled'
+        response = http.request('GET', endpoint, headers=headers)
+        if response.status == 200:
+            data = json.loads(response.data)
+            for record in data["records"]:
+                if not record["enabled"]:
+                    uniqueIdentifier = str(record["svm"]["uuid"]) + "_" + cifsProtocolStateKey
+                    if not eventExist(events, uniqueIdentifier):
+                        message = f'CIFS Protocol State Alert: CIFS protocol on {record["svm"]["name"]} on {clusterName} is not online.'
+                        sendAlert(message, "WARNING")
+                        changedEvents=True
+                        event = {
+                                "index": uniqueIdentifier,
+                                "message": message,
+                                "refresh": eventResilience
+                                }
+                        events.append(event) 
+        else:
+            logger.error(f'API call to {endpoint} failed. HTTP status code {response.status}.')
+
+    #
+    # After processing the records, see if any events need to be removed.
+    i=0
+    while i < len(events):
+        if events[i]["refresh"] <= 0:
+            logger.debug(f'Deleting event: {events[i]["message"]}')
+            del events[i]
+            changedEvents = True
+        else:
+            # If an event wasn't refreshed, then we need to save the new refresh count.
+            if events[i]["refresh"] != eventResilience:
+                changedEvents = True
+            i += 1
+    #
+    # If the events array changed, save it.
+    if(changedEvents):
+        s3Client.put_object(Key=config["vserverEventsFilename"], Bucket=config["s3BucketName"], Body=json.dumps(events).encode('UTF-8'))
+
+################################################################################
 # This function returns the index of the service in the conditions dictionary.
 ################################################################################
 def getServiceIndex(targetService, conditions):
@@ -1262,7 +1378,8 @@ def readInConfig():
         "conditionsFilename": None,
         "storageEventsFilename": None,
         "quotaEventsFilename": None,
-        "systemStatusFilename": None
+        "systemStatusFilename": None,
+        "vserverEventsFilename": None
         }
 
     config = {
@@ -1367,7 +1484,7 @@ def readInConfig():
 def lambda_handler(event, context):
     #
     # Define global variables so we don't have to pass them to all the functions.
-    global config, s3Client, snsClient, http, headers, clusterName, clusterVersion, logger, cloudWatchClient
+    global config, s3Client, snsClient, http, headers, clusterName, clusterVersion, logger, cloudWatchClient, clusterTimezone
     #
     # Set up logging.
     logger = logging.getLogger("mon_fsxn_service")
@@ -1486,6 +1603,8 @@ def lambda_handler(event, context):
                 processStorageUtilization(service)
             elif service["name"].lower() == "quota":
                 processQuotaUtilization(service)
+            elif service["name"].lower() == "vserver":
+                processVserver(service)
             else:
                 logger.warning(f'Unknown service "{service["name"]}".')
     return
