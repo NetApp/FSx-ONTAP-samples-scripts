@@ -89,7 +89,7 @@ def getEpoch(filename):
 # APIs, and then calls the ingestAuditFile function to upload the audit
 # log entires to the CloudWatch log group.
 ################################################################################
-def processFile(ontapAdminServer, headers, volumeUUID, filePath):
+def readFile(ontapAdminServer, headers, volumeUUID, filePath):
     global http
     #
     # Create the tempoary file to hold the contents from the ONTAP/FSxN file.
@@ -99,6 +99,7 @@ def processFile(ontapAdminServer, headers, volumeUUID, filePath):
     # Number of bytes to read for each API call.
     blockSize=1024*1024
 
+    failed = False
     bytesRead = 0
     requestSize = 1   # Set to > 0 to start the loop.
     while requestSize > 0:
@@ -125,12 +126,17 @@ def processFile(ontapAdminServer, headers, volumeUUID, filePath):
                     f.write(part.content)
         else:
             print(f'Warning: API call to {endpoint} failed. HTTP status code: {response.status}.')
+            filed = True
             break
 
     f.close()
-    #
-    # Upload the audit events to CloudWatch.
-    ingestAuditFile(tmpFileName, filePath)
+    if failed:
+        os.remove(tmpFileName)
+        return None
+    else:
+        return tmpFileName
+        #
+        # Upload the audit events to CloudWatch.
 
 ################################################################################
 # This functions converts the timestamp from the XML file to a timestamp in
@@ -284,14 +290,21 @@ def checkConfig():
         'secretArn': secretArn if 'secretArn' in globals() else None,                  # pylint: disable=E0602
         's3BucketRegion': s3BucketRegion if 's3BucketRegion' in globals() else None,   # pylint: disable=E0602
         's3BucketName': s3BucketName if 's3BucketName' in globals() else None,         # pylint: disable=E0602
-        'statsName': statsName if 'statsName' in globals() else None                   # pylint: disable=E0602
+        'statsName': statsName if 'statsName' in globals() else None,                  # pylint: disable=E0602
+        'copyToS3': copyToS3 if 'copyToS3' in globals() else None                      # pylint: disable=E0602
     }
+    optionalConfig = ['copyToS3']
 
     for item in config:
         if config[item] == None:
             config[item] = os.environ.get(item)
-        if config[item] == None:
+        if item not in optionalConfig and config[item] == None:
             raise Exception(f"{item} is not set.")
+
+    if config['copyToS3'] == None:
+        config['copyToS3'] = False
+    else:
+        config['copyToS3'] = config['copyToS3'].lower() == 'true'
     #
     # To be backwards compatible, load the vserverName.
     config['vserverName'] = vserverName if 'vserverName' in globals() else os.environ.get('vserverName')  # pylint: disable=E0602
@@ -421,14 +434,17 @@ def lambda_handler(event, context):     # pylint: disable=W0613
                     for file in data['records']:
                         filePath = file['name']
                         if lastFileRead.get(fsxn) is None or lastFileRead[fsxn].get(vserverName) is None or getEpoch(filePath) > lastFileRead[fsxn][vserverName]:
-                            #
-                            # Process the file.
-                            processFile(fsxn, headersDownload, volumeUUID, filePath)
-                            if lastFileRead.get(fsxn) is None:
-                                lastFileRead[fsxn] = {vserverName: getEpoch(filePath)}
-                            else:
-                                lastFileRead[fsxn][vserverName] = getEpoch(filePath)
-                            s3Client.put_object(Key=config['statsName'], Bucket=config['s3BucketName'], Body=json.dumps(lastFileRead).encode('UTF-8'))
+                            localFileName = readFile(fsxn, headersDownload, volumeUUID, filePath)
+                            if localFileName is not None:
+                                if config['copyToS3']:
+                                    s3Client.upload_file(localFileName, config['s3BucketName'], filePath)
+                                ingestAuditFile(localFileName, filePath)
+                                if lastFileRead.get(fsxn) is None:
+                                    lastFileRead[fsxn] = {vserverName: getEpoch(filePath)}
+                                else:
+                                    lastFileRead[fsxn][vserverName] = getEpoch(filePath)
+                                s3Client.put_object(Key=config['statsName'], Bucket=config['s3BucketName'], Body=json.dumps(lastFileRead).encode('UTF-8'))
+                                os.remove(localFileName)
                 #
                 # Get the next set of SVMs.
                 if svmsData['_links'].get('next') != None:
