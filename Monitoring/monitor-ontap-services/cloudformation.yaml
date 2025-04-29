@@ -43,9 +43,13 @@ Metadata:
           - volumeUtilizationCriticalAlert
           - volumeFileUtilizationWarnAlert
           - volumeFileUtilizationCriticalAlert
+          - volumeOfflineAlert
           - softQuotaUtilizationAlert
           - hardQuotaUtilizationAlert
           - inodesQuotaUtilizationAlert
+          - vserverStateAlert
+          - vserverNFSProtocolStateAlert
+          - vserverCIFSProtocolStateAlert
 
 Parameters:
   OntapAdminSever:
@@ -220,6 +224,12 @@ Parameters:
     Type: Number
     Default: 95
 
+  volumeOfflineAlert:
+    Description: "Alert when a volume goes offline."
+    Type: String
+    AllowedValues: ["true", "false"]
+    Default: "true"
+
   softQuotaUtilizationAlert:
     Description: "Alert when a soft quota exceeds this threshold in percentage."
     Type: Number
@@ -234,6 +244,24 @@ Parameters:
     Description: "Alert when an inode quota exceeds this threshold in percentage."
     Type: Number
     Default: 80
+
+  vserverStateAlert:
+    Description: "Alert when a vserver goes offline."
+    Type: String
+    AllowedValues: ["true", "false"]
+    Default: "true"
+
+  vserverNFSProtocolStateAlert:
+    Description: "Alert when a vserver's NFS protocol goes offline."
+    Type: String
+    AllowedValues: ["true", "false"]
+    Default: "true"
+
+  vserverCIFSProtocolStateAlert:
+    Description: "Alert when a vserver's CIFS protocol goes offline."
+    Type: String
+    AllowedValues: ["true", "false"]
+    Default: "true"
 
 Conditions:
   CreateSecretsManagerEndpoint: !Equals [!Ref createSecretsManagerEndpoint, "true"]
@@ -464,9 +492,13 @@ Resources:
           initialVolumeUtilizationCriticalAlert: !Ref volumeUtilizationCriticalAlert
           initialVolumeFileUtilizationWarnAlert: !Ref volumeFileUtilizationWarnAlert
           initialVolumeFileUtilizationCriticalAlert: !Ref volumeFileUtilizationCriticalAlert
+          initialVolumeOfflineAlert: !Ref volumeOfflineAlert
           initialSoftQuotaUtilizationAlert: !Ref softQuotaUtilizationAlert
           initialHardQuotaUtilizationAlert: !Ref hardQuotaUtilizationAlert
           initialInodesQuotaUtilizationAlert: !Ref inodesQuotaUtilizationAlert
+          initialVserverStateAlert: !Ref vserverStateAlert
+          initialVserverNFSProtocolStateAlert: !Ref vserverNFSProtocolStateAlert
+          initialVserverCIFSProtocolStateAlert: !Ref vserverCIFSProtocolStateAlert
       Code:
         ZipFile: |
           #!/bin/python3
@@ -489,8 +521,8 @@ Resources:
           # "matching conditions."  It is intended to be run as a Lambda function, but
           # can be run as a standalone program.
           #
-          # Version: v2.13
-          # Date: 2025-04-28-16:26:21
+          # Version: v2.14
+          # Date: 2025-04-29-12:53:45
           ################################################################################
           
           import json
@@ -1733,7 +1765,8 @@ Resources:
                   {"name": "ems", "rules": []},
                   {"name": "snapmirror", "rules": []},
                   {"name": "storage", "rules": []},
-                  {"name": "quota", "rules": []}
+                  {"name": "quota", "rules": []},
+                  {"name": "vserver", "rules": []}
               ]}
               #
               # Now, add rules based on the environment variables.
@@ -1797,6 +1830,11 @@ Resources:
                       value = int(value)
                       if value > 0:
                           conditions["services"][getServiceIndex("storage", conditions)]["rules"].append({"volumeCriticalFilesPercentUsed": value})
+                  elif name == "initialVolumeOfflineAlert":
+                      if value == "true":
+                          conditions["services"][getServiceIndex("storage", conditions)]["rules"].append({"offline": True})
+                      else:
+                          conditions["services"][getServiceIndex("storage", conditions)]["rules"].append({"offline": False})
                   elif name == "initialSoftQuotaUtilizationAlert":
                       value = int(value)
                       if value > 0:
@@ -1809,6 +1847,21 @@ Resources:
                       value = int(value)
                       if value > 0:
                           conditions["services"][getServiceIndex("quota", conditions)]["rules"].append({"maxQuotaInodesPercentUsed": value})
+                  elif name == "initialVserverStateAlert":
+                      if value == "true":
+                          conditions["services"][getServiceIndex("vserver", conditions)]["rules"].append({"vserverState": True})
+                      else:
+                          conditions["services"][getServiceIndex("vserver", conditions)]["rules"].append({"vserverState": False})
+                  elif name == "initialVserverNFSProtocolStateAlert":
+                      if value == "true":
+                          conditions["services"][getServiceIndex("vserver", conditions)]["rules"].append({"nfsProtocolState": True})
+                      else:
+                          conditions["services"][getServiceIndex("vserver", conditions)]["rules"].append({"nfsProtocolState": False})
+                  elif name == "initialVserverCIFSProtocolStateAlert":
+                      if value == "true":
+                          conditions["services"][getServiceIndex("vserver", conditions)]["rules"].append({"cifsProtocolState": True})
+                      else:
+                          conditions["services"][getServiceIndex("vserver", conditions)]["rules"].append({"cifsProtocolState": False})
           
               return conditions
           
