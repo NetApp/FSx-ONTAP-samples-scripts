@@ -73,7 +73,7 @@ Where:
 - &lt;accountID&gt; -  is your AWS account ID.
 - &lt;region&gt; - is the region where the FSx for ONTAP file systems are located.
 - &lt;secretName&gt; - is the name of the secret that contains the credentials for the fsxadmin accounts. **Note** that this
-resource string, through the user of wild card characters, must include all the secrets that the Lambda function will access.
+resource string, through the use of wild card characters, must include all the secrets that the Lambda function will access.
 Or you must list each secret ARN individually.
 
 Notes:
