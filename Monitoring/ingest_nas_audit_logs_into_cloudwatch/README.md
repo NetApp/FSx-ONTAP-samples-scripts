@@ -103,7 +103,7 @@ and `DeleteNetworkInterface` actions. The correct resource line is `arn:aws:ec2:
     |copyToS3|No|If set to `true` it will copy the audit logs to the S3 bucket specified in `s3BucketName`.|
     |createWatchdogAlarm|No|If set to `true` it will create a CloudWatch alarm that will alert you if the Lambda function throws in error.|
     |snsTopicArn|No|The ARN of the SNS topic to send the alarm to. This is required if `createWatchdogAlarm` is set to `true`.|
-    |fsxnSecretARNsFile|No|The name of a file within the S3 bucket that contains the Secret ARNs for each for the FSxN file systems. The format of the file should be just `<fsID>=<secretARN>`. For example: `fs-0e8d9172fa5411111=arn:aws:secretsmanager:us-east-1:123456789012:secret:fsxadmin-abc123`|
+    |fsxnSecretARNsFile|No|The name of a file within the S3 bucket that contains the Secret ARNs for each for the FSxN file systems. The format of the file should have one line for each file system where it specifies the file system id, an equal sign, and then the Secret ARN to use. For example: `fs-0e8d9172fa5411111=arn:aws:secretsmanager:us-east-1:123456789012:secret:fsxadmin-abc123`|
     |fileSystem1ID|No|The ID of the first FSxN file system to ingest the audit logs from.|
     |fileSystem1SecretARN|No|The ARN of the secret that contains the credentials for the first FSx for Data ONTAP file system.|
     |fileSystem2ID|No|The ID of the second FSx for Data ONTAP file system to ingest the audit logs from.|
@@ -148,13 +148,14 @@ need to investigate and correct the issue. If you can't figure it out, please op
 ### Add more FSx for ONTAP file systems.
 The way the program is written, it will automatically discover all FSxN file systems within a region,
 and then all the vservers under that FSxN. So, if you add another FSxN it will automatically attempt
-to ingest the audit files from all the vservers under it. Unfortunate, it won't be able to, until
+to ingest the audit files from all the vservers under it. Unfortunately, it won't be able to, until
 you provide a Secret ARN for that file system.
 
 The best way to add a secret ARN, is to either update the secretARNs file you
 initially passed to the CloudFormation script, that should be in the S3 bucket you specified in
 the `s3BucketName` parameter, or create that file with the information for all the FSxN file systems
-you want to ingest the audit logs from and then store it in the S3 bucket.
+you want to ingest the audit logs from and then store it in the S3 bucket. See the description
+for the `fsxnSecretARNsFile` parameter above for the format of the file.
 
 If you are creating the file for the first time, you'll also need to set the `fsxSecretARNsFile` environment variable
 to point to the file. You can leave all the other parameters as they are, including the `fileSystem1ID`, `fileSystem1SecretARN`, etc. ones.
