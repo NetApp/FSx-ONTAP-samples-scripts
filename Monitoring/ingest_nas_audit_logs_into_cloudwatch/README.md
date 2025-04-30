@@ -10,7 +10,7 @@ It will maintain a "stats" file in an S3 bucket that will keep track of the last
 SVM to try to ensure it doesn't process an audit file more than once.
 You can run this script as a standalone program or as a Lambda function. These directions assume you are going to run it as a Lambda function.
 
-**NOTE**: There are two ways to install this program. Either with the [CloudFormaiton script](cloudformation-template.yaml) found this this repo,
+**NOTE**: There are two ways to install this program. Either with the [CloudFormation script](cloudformation-template.yaml) found this this repo,
 or by following the manual instructions found in the [README-MANUEL.md](README-MANUAL.md) file.
 
 ## Prerequisites
@@ -27,17 +27,17 @@ ensure you have set up a rotation schedule. The program will only act on audit l
 [knowledge based article](https://kb.netapp.com/on-prem/ontap/da/NAS/NAS-KBs/How_to_set_up_NAS_auditing_in_ONTAP_9) for instructions on how to setup NAS auditing.
 - Have the NAS auditing configured to store the audit logs in a volume with the same name in all SVMs on all the FSx for Data ONTAP file
 systems that you want to ingest the audit logs from.
-- An AWS Secrets Manager secret that contains the credentials for all the FSxNs you want to use to obtain the NAS Audit logs from.
-  - The secret should be in the form of key/value pairs where the key is the file system ID and value is a dictionary with the keys `username` and `password`. For example:
-```json
+- An AWS Secrets Manager secret for each of the FSxN file systems you wish to ingest the audit logs from. The secret should have two keys `username` and `password`. For example:
+    ```json
       {
-        "fs-0e8d9172fa5411111": {"username": "fsxadmin",        "password": "superSecretPassword"},
-        "fs-0e8d9172fa5422222": {"username": "service_account", "password": "superSecretPassword"}
+        "username": "fsxadmin",
+        "password": "superSecretPassword"
       }
-```
+    ```
+    You can use the same secret for multiple file systems if the credentials are the same.
 - You have applied the necessary SACLs to the files you want to audit. The knowledge base article linked above provides guidance on how to do this.
 
-**You can either create the following items before running the CloudFormaiton script, or allow it to create the items for you.**
+**You can either create the following items before running the CloudFormation script, or allow it to create the items for you.**
 
 - AWS Endpoints. Since the Lambda function runs within your VPC it will not have access to the Internet, even if you can access the Internet
 from the Subnet it runs from. Although, if you are using an AWS Transit Gateway, you can configure it to allow the Lambda function to access the Internet.
@@ -96,7 +96,17 @@ and `DeleteNetworkInterface` actions. The correct resource line is `arn:aws:ec2:
     |s3BucketName|Yes|The name of the S3 bucket where the stats file is stored. This bucket must already exist.|
     |s3BucketRegion|Yes|The region of the S3 bucket resides.|
     |copyToS3|No|If set to `true` it will copy the audit logs to the S3 bucket specified in `s3BucketName`.|
-    |secretArn|Yes|The ARN to the secret that contains the credentials for the FSxN file systems that you want to ingest audit logs from.|
+    |fsxnSecretARNsFile|No|The name of a file within the S3 bucket that contains the Secret ARNs for each for the FSxN file systems. The format of the file should be just `<fsID>=<secretARN>`. For example: `fs-0e8d9172fa5411111=arn:aws:secretsmanager:us-east-1:123456789012:secret:fsxadmin-abc123`|
+    |fileSystem1ID|No|The ID of the first FSxN file system to ingest the audit logs from.|
+    |fileSystem1SecretARN|No|The ARN of the secret that contains the credentials for the first FSx for Data ONTAP file system.|
+    |fileSystem2ID|No|The ID of the second FSx for Data ONTAP file system to ingest the audit logs from.|
+    |fileSystem2SecretARN|No|The ARN of the secret that contains the credentials for the second FSx for Data ONTAP file system.|
+    |fileSystem3ID|No|The ID of the third FSx for Data ONTAP file system to ingest the audit logs from.|
+    |fileSystem3SecretARN|No|The ARN of the secret that contains the credentials for the third FSx for Data ONTAP file system.|
+    |fileSystem4ID|No|The ID of the forth FSx for Data ONTAP file system to ingest the audit logs from.|
+    |fileSystem4SecretARN|No|The ARN of the secret that contains the credentials for the forth FSx for Data ONTAP file system.|
+    |fileSystem5ID|No|The ID of the fifth FSx for Data ONTAP file system to ingest the audit logs from.|
+    |fileSystem5SecretARN|No|The ARN of the secret that contains the credentials for the fifth FSx for Data ONTAP file system.|
     |createWatchdogAlarm|No|If set to `true` it will create a CloudWatch alarm that will alert you if the Lambda function throws in error.|
     |snsTopicArn|No|The ARN of the SNS topic to send the alarm to. This is required if `createWatchdogAlarm` is set to `true`.|
     |lambdaRoleArn|No|The ARN of the role that the Lambda function will use. If not provided, the CloudFormation script will create a role for you.|
@@ -108,6 +118,8 @@ and `DeleteNetworkInterface` actions. The correct resource line is `arn:aws:ec2:
     |routeTableIds|No|If creating an S3 gateway endpoint, these are the routing tables you want updated to use the endpoint.|
     |vpcId|No|This is the VPC that the endpoint(s) will be created in. Only needed if you are creating an endpoint.|
     |endpointSecurityGroupIds|No|The security group that the endpoint(s) will be associated with. Must allow incoming TCP traffic over port 443. Only needed if you are creating an endpoint.|
+
+    **Note**: You must either provide the fsxnSecretARNsFile or the fileSystem1ID, fileSystem1SecretARN, fileSystem2ID, fileSystem2SecretARN, etc. parameters.
 
 6. Click on the `Next` button.
 7. The next page will provide for some additional configuration options. You can leave these as the default values.
