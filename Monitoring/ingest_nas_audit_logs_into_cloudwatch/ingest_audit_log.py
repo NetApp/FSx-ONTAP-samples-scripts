@@ -168,7 +168,6 @@ def readFile(ontapAdminServer, headers, volumeUUID, filePath):
                     f.write(part.content)
         else:
             print(f'Warning: API call to {endpoint} failed. HTTP status code: {response.status}.')
-            filed = True
             break
 
     f.close()
@@ -376,7 +375,7 @@ def checkConfig():
         try:
             response = s3Client.get_object(Bucket=config['s3BucketName'], Key=config['fsxnSecretARNsFile'])
         except botocore.exceptions.ClientError as err:
-            raise Exception(f"Unable to open parameter file with secrets '{fsxnSecretARNsFile}' from S3 bucket '{s3BucketName}': {err}")
+            raise Exception(f"Unable to open parameter file with secrets '{config['fsxnSecretARNsFile']}' from S3 bucket '{config['s3BucketName']}': {err}")
         else:
             for line in response['Body'].iter_lines():
                 line = line.decode('utf-8')
