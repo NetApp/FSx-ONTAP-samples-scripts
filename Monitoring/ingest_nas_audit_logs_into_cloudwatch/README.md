@@ -145,6 +145,25 @@ see a log stream, check the Lambda function's configuration to ensure it is corr
 output from the Lambda function. You should see log messages indicating that it is ingesting audit logs. If you see any "Errors" then you will
 need to investigate and correct the issue. If you can't figure it out, please open an [issue](https://github.com/NetApp/FSx-ONTAP-samples-scripts/issues) in this repository.
 
+### Add more FSx for ONTAP file systems.
+The way the program is written, it will automatically discover all FSxN file systems within a region,
+and then all the vservers under that FSxN. So, if you add another FSxN it will automatically attempt
+to ingest the audit files from all the vservers under it. Unfortunate, it won't be able to, until
+you provide a Secret ARN for that file system.
+
+The best way to add a secret ARN, is to either update the secretARNs file you
+initially passed to the CloudFormation script, that should be in the S3 bucket you specified in
+the `s3BucketName` parameter, or create that file with the information for all the FSxN file systems
+you want to ingest the audit logs from and then store it in the S3 bucket.
+
+If you are creating the file for the first time, you'll also need to set the `fsxSecretARNsFile` environment variable
+to point to the file. You can leave all the other parameters as they are, including the `fileSystem1ID`, `fileSystem1SecretARN`, etc. ones.
+The program will ignore those parameters if the `fsxnSecretARNsFile` environment variable is set. To set
+the environment variable, go to the Lambda function's configuration page and click on the "Configuration" tab. Then
+click on the "Environment variables" sub tab. Click on the "Edit" button. The `fsxnSecretARNsFile`
+environment variable should already be there, but the value should be blank. If the variable isn't there click on the
+'add' button and add it. Once the line is there with the `fsxnSecretARNsFile` variable, set the value
+to the name of the file you created.
 
 ## Author Information
 
