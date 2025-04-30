@@ -221,14 +221,13 @@ if [ $size -lt $minSize ]; then
   usage
 fi
 
-echo aws fsx create-file-system --output=json --file-system-type ONTAP --storage-capacity $size --subnet-ids $subnetID1 $subnetID2 --storage-type SSD --tags "Key=Name,Value=$fileSystemName" $securityGroupOption --ontap-configuration '{
+aws fsx create-file-system --output=json --file-system-type ONTAP --storage-capacity $size --subnet-ids $subnetID1 $subnetID2 --storage-type SSD --tags "Key=Name,Value=$fileSystemName" $securityGroupOption --ontap-configuration '{
   "PreferredSubnetId": "'$subnetID1'",
   '$endpointips'
   "DeploymentType": "'$azType'",
   "HAPairs": '$numPairs',
-  "ThroughputCapacityPerHAPair": '$throughput'}' --region=$region 
-#  "ThroughputCapacityPerHAPair": '$throughput'}' --region=$region > $tmpout 2>&1
-exit
+  "ThroughputCapacityPerHAPair": '$throughput'}' --region=$region > $tmpout 2>&1
+
 if [ $? != "0" ]; then
   echo "Failed to create FSxN file system." 1>&2
   cat $tmpout 1>&2
