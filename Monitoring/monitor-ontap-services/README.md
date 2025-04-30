@@ -16,12 +16,15 @@ Here is an itemized list of the services that this program can monitor:
 - If the file system is running off its partner node (i.e. is running in failover mode).
 - If any of the network interfaces are down.
 - Any EMS message. Filtering is provided to allow you to only be alerted on the EMS messages you care about.
-- If a SnapMirror relationship hasn't been updated in a specified amount of time.
+- If any of the vservers are down.
+- If any of the protocol (NFS & CIFS) servers within a vserver are down.
+- If a SnapMirror relationship hasn't been updated within either a specified amount of time or as a percentage of time since its last scheduled update.
 - If a SnapMirror update has stalled.
 - If a SnapMirror relationship is in a "non-healthy" state.
 - If the aggregate is over a certain percentage full. You can set two thresholds (Warning and Critical).
 - If a volume is over a certain percentage full. You can set two thresholds (Warning and Critical).
 - If a volume is using more than a specified percentage of its inodes. You can set two thresholds (Warning and Critical).
+- If a volume if offline.
 - If any quotas are over a certain percentage full. You can be alerted on both soft and hard limits.
 
 ## Architecture
