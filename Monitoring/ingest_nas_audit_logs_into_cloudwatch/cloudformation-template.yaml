@@ -16,6 +16,7 @@ Metadata:
           - s3BucketRegion
           - copyToS3
           - createWatchdogAlarm
+          - snsTopicArn
 
       - Label:
           default: "Secrets Manager specifications"
@@ -33,10 +34,14 @@ Metadata:
           - fileSystem5SecretARN
 
       - Label:
-          default: "Network Configuration"
-          - snsTopicArn
+          default: "Security Configuration"
+        Parameters:
           - lambdaRoleArn
           - schedulerRoleArn
+
+      - Label:
+          default: "VPC Endpoint Configuration"
+        Parameters:
           - createFSxEndpoint
           - createCloudWatchEndpoint
           - createSecretManagerEndpoint
@@ -45,9 +50,29 @@ Metadata:
           - vpcId
           - endpointSecurityGroupIds
 
-    ParameterLabels
-      ParamterFileWithListOfFileSystemIDsWithSecretARNs:
-        default: "File with list of FSxN file systems and their secret ARNs"
+    ParameterLabels:
+      volumeName:
+        default: "Volume Name"
+      checkInterval:
+        default: "Check Interval (minutes)"
+      logGroupName:
+        default: "CloudWatch Log Group Name"
+      subNetIds:
+        default: "Subnets for Lambda Function"
+      lambdaSecurityGroupIds:
+        default: "Security Groups for Lambda Function"
+      s3BucketName:
+        default: "S3 Bucket Name"
+      s3BucketRegion:
+        default: "S3 Bucket Region"
+      copyToS3:
+        default: "Copy to S3"
+      createWatchdogAlarm:
+        default: "Create Watchdog Alarm"
+      snsTopicArn:
+        default: "SNS Topic ARN"
+      fsxnSecretARNsFile:
+        default: "File with the list of FSxN file systems and their secret ARNs"
       fileSystem1ID:
         default: "File System 1 ID"
       fileSystem1SecretARN:
@@ -68,6 +93,24 @@ Metadata:
         default: "File System 5 ID"
       fileSystem5SecretARN:
         default: "File System 5 Secret ARN" 
+      lambdaRoleArn:
+        default: "Lambda Role ARN"
+      schedulerRoleArn:
+        default: "Scheduler Role ARN"
+      createFSxEndpoint:
+        default: "Create FSx Endpoint"
+      createCloudWatchEndpoint:
+        default: "Create CloudWatch Endpoint"
+      createSecretManagerEndpoint:
+        default: "Create Secrets Manager Endpoint"
+      createS3Endpoint:
+        default: "Create S3 Endpoint"
+      routeTableIds:
+        default: "Route Table IDs"
+      vpcId:
+        default: "VPC ID"
+      endpointSecurityGroupIds:
+        default: "Security Groups for VPC Endpoints"
 
 Parameters:
   volumeName:
@@ -78,13 +121,14 @@ Parameters:
     Description: "The interval, in minutes, to check for new audit logs to process."
     Type: Number
     Default: 5
+    MinValue: 1
 
   logGroupName:
-    Description: "The name of the CloudWatch log group to use to store the audit logs. This Log Group must already exist."
+    Description: "The name of the CloudWatch log group to store the audit logs to. This Log Group must already exist. It must be in the same region as this CloudFormation stack."
     Type: String
 
   subNetIds:
-    Description: "The subnet IDs where you want the Lambda function to run. There must be connectivity to all the FSxN management endpoints from these subnets. If creating VPC endpoints, the endpionts will be created in these subnets."
+    Description: "The subnet IDs where you want the Lambda function to run. There must be connectivity to all the FSxN management endpoints from these subnets. If creating VPC endpoints, the endpoints will be created in these subnets."
     Type: List<AWS::EC2::Subnet::Id>
 
   lambdaSecurityGroupIds:
@@ -92,21 +136,21 @@ Parameters:
     Type: List<AWS::EC2::SecurityGroup::Id>
 
   s3BucketName:
-    Description: "The name of the s3 bucket to use to store the last message processed stats file."
+    Description: "The name of the S3 bucket where the last audit file processed stats file will be stored. Also, where the Lambda layer file should already be stored."
     Type: String
 
   s3BucketRegion:
-    Description: "The AWS region where the s3 bucket resides."
+    Description: "The AWS region where the S3 bucket resides."
     Type: String
 
   copyToS3:
-    Description: "Set to 'true' if you to copy the audit log files to the S3 bucket as well as sending the individual events to the CloudWatch log stream."
+    Description: "Set to 'true' if you want to copy the audit log files to the S3 bucket as well as sending the individual events to the CloudWatch log stream."
     Type: String
     Default: "false"
     AllowedValues: ["true", "false"]
 
   fsxnSecretARNsFile:
-    Description: "The name of the file that contains the list of FSxN file systems and their secret ARNs. Either provide this file or the individual file system IDs and secret ARNs below."
+    Description: "The name of the file that contains the list of FSxN file systems and their secret ARNs. It should already be stored in the S3 bucket. Either provide this file or the individual file system IDs and secret ARNs below."
     Type: String
     Default: ""
 
@@ -116,7 +160,7 @@ Parameters:
     Default: ""
 
   fileSystem1SecretARN:
-    Description: "The ARN of the secret in Secrets Manager that holds the credentials for the FSxN file system."
+    Description: "The ARN of the secret in Secrets Manager that holds the credentials for the FSxN file system specified above."
     Type: String
     Default: ""
 
@@ -126,7 +170,7 @@ Parameters:
     Default: ""
 
   fileSystem2SecretARN:
-    Description: "The ARN of the secret in Secrets Manager that holds the credentials for the FSxN file system."
+    Description: "The ARN of the secret in Secrets Manager that holds the credentials for the FSxN file system specified above."
     Type: String
     Default: ""
 
@@ -136,7 +180,7 @@ Parameters:
     Default: ""
 
   fileSystem3SecretARN:
-    Description: "The ARN of the secret in Secrets Manager that holds the credentials for the FSxN file system."
+    Description: "The ARN of the secret in Secrets Manager that holds the credentials for the FSxN file system specified above."
     Type: String
     Default: ""
 
@@ -146,7 +190,7 @@ Parameters:
     Default: ""
 
   fileSystem4SecretARN:
-    Description: "The ARN of the secret in Secrets Manager that holds the credentials for the FSxN file system."
+    Description: "The ARN of the secret in Secrets Manager that holds the credentials for the FSxN file system specified above."
     Type: String
     Default: ""
 
@@ -155,14 +199,19 @@ Parameters:
     Type: String
     Default: ""
 
-  createWatchdogAlarm:
-    Description: "Create a CloudWatch alarm to monitor the Lambda function. It will send an alert to the SNS topic set below if the function throws an error."
+  fileSystem5SecretARN:
+    Description: "The ARN of the secret in Secrets Manager that holds the credentials for the FSxN file system specified above."
     Type: String
-    Default: "false"
+    Default: ""
+
+  createWatchdogAlarm:
+    Description: "Create a CloudWatch alarm to monitor the Lambda function. It will send an alert to the SNS topic set below if the Lambda function throws an error."
+    Type: String
+    Default: "true"
     AllowedValues: ["true", "false"]
 
   snsTopicArn:
-    Description: "The ARN of the SNS topic to use to send Watchdog alerts to. Only needed if you are creating a Watchdog alarm."
+    Description: "The ARN of the SNS topic where the Watchdog should send alerts to. Only needed if you are creating a Watchdog alarm. The topic must be in the same region as this CloudFormation stack."
     Type: String
     Default: ""
 
@@ -311,11 +360,15 @@ Resources:
               - Effect: "Allow"
                 Action:
                   - "secretsManager:GetSecretValue"
+                Resource: 
+                  - !Sub "arn:aws:secretsmanager:*:${AWS::AccountId}:secret:*"
+
+              - Effect: "Allow"
+                Action:
                   - "s3:GetObject"
                   - "s3:PutObject"
                   - "s3:ListBucket"
-                Resource: 
-                  - !Ref secretArn
+                Resource:
                   - !Sub "arn:aws:s3:::${s3BucketName}"
                   - !Sub "arn:aws:s3:::${s3BucketName}/*"
 

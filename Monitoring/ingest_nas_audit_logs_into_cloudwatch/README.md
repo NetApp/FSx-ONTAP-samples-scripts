@@ -39,14 +39,17 @@ systems that you want to ingest the audit logs from.
 
 **You can either create the following items before running the CloudFormation script, or allow it to create the items for you.**
 
-- AWS Endpoints. Since the Lambda function runs within your VPC it will not have access to the Internet, even if you can access the Internet
-from the Subnet it runs from. Although, if you are using an AWS Transit Gateway, you can configure it to allow the Lambda function to access the Internet.
-If you don't have a Transit Gateway then there needs to be an VPC endpoint for all the AWS services that the Lambda function uses.
+- AWS Endpoints. Since the Lambda function runs within your VPC it will have restrictions as to how it can access the Internet.
+It will not be able to access the Internet from a "Public" subnet (i.e. one that has a Internet gateway attached it it.) It will, however,
+be able to access the Internet through a Transit or a NAT gateway. So, if the subnets you plan to run this Lambda function from
+don't have a Transit or NAT gateway then there needs to be an VPC AWS service endpoint for all the AWS services that this Lambda function uses.
 Specifically, the Lambda function needs to be able to access the following AWS services:
   - FSx.
   - Secrets Manager.
   - CloudWatch Logs.
   - S3 - Note that typically there is a Gateway type VPC endpoint for S3, therefore you typically you don't need to create a VPC endpoint for S3.
+
+   **NOTE**: That if you specify to have the CloudFormation template create an endpoint and one already exist, it will cause the CloudFormation script to fail.
 
 - Role for the Lambda function. Create a role with the necessary permissions to allow the Lambda function to do the following:
 
@@ -69,7 +72,9 @@ Where:
 
 - &lt;accountID&gt; -  is your AWS account ID.
 - &lt;region&gt; - is the region where the FSx for ONTAP file systems are located.
-- &lt;secretName&gt; - is the name of the secret that contains the credentials for the fsxadmin accounts.
+- &lt;secretName&gt; - is the name of the secret that contains the credentials for the fsxadmin accounts. Note that this
+resource string, through wild card characters, must include all the secrets that the Lambda function will access. Or
+must list each secret ARN individually.
 
 Notes:
 - Since the Lambda function runs within your VPC it needs to be able to create and delete network interfaces.
@@ -96,6 +101,8 @@ and `DeleteNetworkInterface` actions. The correct resource line is `arn:aws:ec2:
     |s3BucketName|Yes|The name of the S3 bucket where the stats file is stored. This bucket must already exist.|
     |s3BucketRegion|Yes|The region of the S3 bucket resides.|
     |copyToS3|No|If set to `true` it will copy the audit logs to the S3 bucket specified in `s3BucketName`.|
+    |createWatchdogAlarm|No|If set to `true` it will create a CloudWatch alarm that will alert you if the Lambda function throws in error.|
+    |snsTopicArn|No|The ARN of the SNS topic to send the alarm to. This is required if `createWatchdogAlarm` is set to `true`.|
     |fsxnSecretARNsFile|No|The name of a file within the S3 bucket that contains the Secret ARNs for each for the FSxN file systems. The format of the file should be just `<fsID>=<secretARN>`. For example: `fs-0e8d9172fa5411111=arn:aws:secretsmanager:us-east-1:123456789012:secret:fsxadmin-abc123`|
     |fileSystem1ID|No|The ID of the first FSxN file system to ingest the audit logs from.|
     |fileSystem1SecretARN|No|The ARN of the secret that contains the credentials for the first FSx for Data ONTAP file system.|
@@ -107,8 +114,6 @@ and `DeleteNetworkInterface` actions. The correct resource line is `arn:aws:ec2:
     |fileSystem4SecretARN|No|The ARN of the secret that contains the credentials for the forth FSx for Data ONTAP file system.|
     |fileSystem5ID|No|The ID of the fifth FSx for Data ONTAP file system to ingest the audit logs from.|
     |fileSystem5SecretARN|No|The ARN of the secret that contains the credentials for the fifth FSx for Data ONTAP file system.|
-    |createWatchdogAlarm|No|If set to `true` it will create a CloudWatch alarm that will alert you if the Lambda function throws in error.|
-    |snsTopicArn|No|The ARN of the SNS topic to send the alarm to. This is required if `createWatchdogAlarm` is set to `true`.|
     |lambdaRoleArn|No|The ARN of the role that the Lambda function will use. If not provided, the CloudFormation script will create a role for you.|
     |schedulerRoleArn|No|The ARN of the role that the EventBridge scheduler will run as. If not provided, the CloudFormation script will create a role for you.|
     |createFsxEndpoint|No|If set to `true` it will create the VPC endpoints for the FSx service|
