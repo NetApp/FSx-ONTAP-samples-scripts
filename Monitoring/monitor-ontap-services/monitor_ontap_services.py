@@ -1262,7 +1262,8 @@ def buildDefaultMatchingConditions():
         {"name": "ems", "rules": []},
         {"name": "snapmirror", "rules": []},
         {"name": "storage", "rules": []},
-        {"name": "quota", "rules": []}
+        {"name": "quota", "rules": []},
+        {"name": "vserver", "rules": []}
     ]}
     #
     # Now, add rules based on the environment variables.
@@ -1326,6 +1327,11 @@ def buildDefaultMatchingConditions():
             value = int(value)
             if value > 0:
                 conditions["services"][getServiceIndex("storage", conditions)]["rules"].append({"volumeCriticalFilesPercentUsed": value})
+        elif name == "initialVolumeOfflineAlert":
+            if value == "true":
+                conditions["services"][getServiceIndex("storage", conditions)]["rules"].append({"offline": True})
+            else:
+                conditions["services"][getServiceIndex("storage", conditions)]["rules"].append({"offline": False})
         elif name == "initialSoftQuotaUtilizationAlert":
             value = int(value)
             if value > 0:
@@ -1338,6 +1344,21 @@ def buildDefaultMatchingConditions():
             value = int(value)
             if value > 0:
                 conditions["services"][getServiceIndex("quota", conditions)]["rules"].append({"maxQuotaInodesPercentUsed": value})
+        elif name == "initialVserverStateAlert":
+            if value == "true":
+                conditions["services"][getServiceIndex("vserver", conditions)]["rules"].append({"vserverState": True})
+            else:
+                conditions["services"][getServiceIndex("vserver", conditions)]["rules"].append({"vserverState": False})
+        elif name == "initialVserverNFSProtocolStateAlert":
+            if value == "true":
+                conditions["services"][getServiceIndex("vserver", conditions)]["rules"].append({"nfsProtocolState": True})
+            else:
+                conditions["services"][getServiceIndex("vserver", conditions)]["rules"].append({"nfsProtocolState": False})
+        elif name == "initialVserverCIFSProtocolStateAlert":
+            if value == "true":
+                conditions["services"][getServiceIndex("vserver", conditions)]["rules"].append({"cifsProtocolState": True})
+            else:
+                conditions["services"][getServiceIndex("vserver", conditions)]["rules"].append({"cifsProtocolState": False})
 
     return conditions
 
