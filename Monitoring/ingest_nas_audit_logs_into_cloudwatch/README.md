@@ -155,7 +155,7 @@ The best way to add a secret ARN, is to either update the secretARNs file you
 initially passed to the CloudFormation script, that should be in the S3 bucket you specified in
 the `s3BucketName` parameter, or create that file with the information for all the FSxN file systems
 you want to ingest the audit logs from and then store it in the S3 bucket. See the description
-for the `fsxnSecretARNsFile` parameter above for the format of the file.
+of the `fsxnSecretARNsFile` parameter above for the format of the file.
 
 If you are creating the file for the first time, you'll also need to set the `fsxSecretARNsFile` environment variable
 to point to the file. You can leave all the other parameters as they are, including the `fileSystem1ID`, `fileSystem1SecretARN`, etc. ones.
