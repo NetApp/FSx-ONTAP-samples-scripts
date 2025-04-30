@@ -72,9 +72,9 @@ Where:
 
 - &lt;accountID&gt; -  is your AWS account ID.
 - &lt;region&gt; - is the region where the FSx for ONTAP file systems are located.
-- &lt;secretName&gt; - is the name of the secret that contains the credentials for the fsxadmin accounts. Note that this
-resource string, through wild card characters, must include all the secrets that the Lambda function will access. Or
-must list each secret ARN individually.
+- &lt;secretName&gt; - is the name of the secret that contains the credentials for the fsxadmin accounts. **Note** that this
+resource string, through the user of wild card characters, must include all the secrets that the Lambda function will access.
+Or you must list each secret ARN individually.
 
 Notes:
 - Since the Lambda function runs within your VPC it needs to be able to create and delete network interfaces.
