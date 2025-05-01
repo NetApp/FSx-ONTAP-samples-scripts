@@ -1,3 +1,7 @@
+# :warning: **NOTICE:**
+
+This repository is no longer being maintained. However, all the code found here has been relocated to a new NetApp managed GitHub repository found here [https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Monitoring/Grafana/Monitor-FSxN-with-Harvest-on-EKS](https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Monitoring/Grafana/Monitor-FSxN-with-Harvest-on-EKS) where it is continually updated. Please refer to that repository for the latest updates.
+
 # Deploy NetApp Harvest on EKS 
 
 This subfolder contains a Helm chart to install [NetApp Harvest](https://github.com/NetApp/harvest/blob/main/README.md)

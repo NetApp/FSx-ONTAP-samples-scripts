@@ -1,3 +1,7 @@
+# :warning: **NOTICE:**
+
+This repository is no longer being maintained. However, all the code found here has been relocated to a new NetApp managed GitHub repository found here [https://github.com/NetApp/FSx-ONTAP-utils](https://github.com/NetApp/FSx-ONTAP-utils) where it is continually updated. Please refer to that repository for the latest updates.
+
 # FSx-ONTAP-samples-scripts
 
 FSx for NetApp ONTAP is an AWS service providing a comprehensive set of advanced storage features purposely

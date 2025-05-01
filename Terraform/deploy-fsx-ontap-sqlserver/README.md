@@ -1,3 +1,7 @@
+# :warning: **NOTICE:**
+
+This repository is no longer being maintained. However, all the code found here has been relocated to a new NetApp managed GitHub repository found here [https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Samples/Automation/Terraform/Deploy-FSx-ONTAP-SQL-Server](https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Samples/Automation/Terraform/Deploy-FSx-ONTAP-SQL-Server) where it is continually updated. Please refer to that repository for the latest updates.
+
 # Deploy an SQL Server on EC2 with Amazon FSx for NetApp ONTAP
 
 The sample terraform deployment will create a Single-AZ Amazon FSx for NetApp ONTAP filesystem, create two LUN's on FSxN volume, deploy EC2 instance with SQL Server 2022 Standard and attach the FSxN LUN's as **SQL Data** and **SQL Log** volumes.

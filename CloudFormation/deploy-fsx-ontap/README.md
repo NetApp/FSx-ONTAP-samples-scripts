@@ -1,3 +1,7 @@
+# :warning: **NOTICE:**
+
+This repository is no longer being maintained. However, all the code found here has been relocated to a new NetApp managed GitHub repository found here [https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Samples/Automation/CloudFormation/Deploy-FSx-ONTAP](https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Samples/Automation/CloudFormation/Deploy-FSx-ONTAP) where it is continually updated. Please refer to that repository for the latest updates.
+
 # Deploy an Amazon FSx for NetApp ONTAP with CloudFormation
 This repository contains a CloudFormation template that can be used to deploy an Amazon FSx for NetApp ONTAP file system. 
 
