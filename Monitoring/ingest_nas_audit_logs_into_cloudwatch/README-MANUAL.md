@@ -14,9 +14,12 @@ or by following the manual instructions found in the this file.
 
 ## Prerequisites
 - An FSx for Data ONTAP file system.
-- An S3 bucket to store the "stats" file and a Lambda layer zip file.
-    - You will need to download the [Lambda layer zip file](https://raw.githubusercontent.com/NetApp/FSx-ONTAP-samples-scripts/main/Monitoring/ingest_nas_audit_logs_into_cloudwatch/lambda_layer.zip) from this repo and upload it to the S3 bucket. Be sure to perserve the name `lambda_layer.zip`.
-    - The "stats" file is maintained by the program. It is used to keep track of the last time the Lambda function successfully ingested audit logs from each SVM. Its size will be small (i.e. less than a few megabytes).
+- An S3 bucket to store the "stats" file and optionally a copy of all the raw NAS audit log files. It will also
+hold a Lambda layer file needed to be able to an add Lambda Layer from a CloudFormation script.
+    - You will need to download the [Lambda layer zip file](https://raw.githubusercontent.com/NetApp/FSx-ONTAP-utils/main/Monitoring/Ingest-NAS-Audit-Logs-into-CloudWatch/lambda_layer.zip)
+    from this repo and upload it to the S3 bucket. Be sure to preserve the name `lambda_layer.zip`.
+    - The "stats" file is maintained by the program. It is used to keep track of the last time the Lambda function
+    successfully ingested audit logs from each SVM. Its size will be small (i.e. less than a few megabytes).
 - A CloudWatch log group to ingest the audit logs into. Each audit log file with get its own log stream within the log group.
 - Have NAS auditing configured and enabled on the SVM within a FSx for Data ONTAP file system. **Ensure you have selected the XML format for the audit logs.** Also,
 ensure you have set up a rotation schedule. The program will only act on audit log files that have been finalized, and not the "active" one. You can read this
@@ -79,7 +82,7 @@ and `DeleteNetworkInterface` actions. The correct resource line is `arn:aws:ec2:
 `zip -r ingest_nas_audit_logs.zip .`<br>
 
 2. Within the AWS console, or using the AWS API, create a Lambda function with:
-    1. Python 3.10, or higher, as the runtime.
+    1. Python 3.11, or higher, as the runtime.
     1. Set the permissions to the role created above.
     1. Under `Additional Configurations` select `Enable VPC` and select a VPC and Subnet that will have access to all the FSx for ONTAP
 file system management endpoints that you want to gather audit logs from. Also, select a Security Group that allows TCP port 443 outbound.
@@ -90,15 +93,29 @@ process a lot of audit entries and/or process a lot of SVMs.
 
 3. Configure the Lambda function by setting the following environment variables. For a Lambda function you do this by clicking on the `Configuration` tab and then the `Environment variables` sub tab.
 
-| Variable | Description |
-| --- | --- |
-| fsxRegion | The region where the FSx for ONTAP file systems are located. |
-| secretArn | The ARN of the secret that contains the credentials for all the FSx for ONTAP file systems you want to gather audit logs from. |
-| s3BucketRegion | The region of the S3 bucket where the stats file is stored. |
-| s3BucketName | The name of the S3 bucket where the stats file is stored. |
-| statsName | The name you want to use as the stats file. |
-| logGroupName | The name of the CloudWatch log group to ingest the audit logs into. |
-| volumeName | The name of the volume, on all the FSx for ONTAP file systems, where the audit logs are stored. |
+    | Variable | Required| Description |
+    | --- | --- | --- |
+    | fsxRegion | Yes |The region where the FSx for ONTAP file systems are located. |
+    | s3BucketRegion |Yes | The region of the S3 bucket where the stats file is stored. |
+    | s3BucketName | Yes |The name of the S3 bucket where the stats file is stored. |
+    | copyToS3 | No| Set to `true` if you want to copy the raw audit log files to the S3 bucket.|
+    |fsxnSecretARNsFile|No|The name of a file within the S3 bucket that contains the Secret ARNs for each for the FSxN file systems. The format of the file should be just `<fsID>=<secretARN>`. For example: `fs-0e8d9172fa5411111=arn:aws:secretsmanager:us-east-1:123456789012:secret:fsxadmin-abc123`|
+    |fileSystem1ID|No|The ID of the first FSxN file system to ingest the audit logs from.|
+    |fileSystem1SecretARN|No|The ARN of the secret that contains the credentials for the first FSx for Data ONTAP file system.|
+    |fileSystem2ID|No|The ID of the second FSx for Data ONTAP file system to ingest the audit logs from.|
+    |fileSystem2SecretARN|No|The ARN of the secret that contains the credentials for the second FSx for Data ONTAP file system.|
+    |fileSystem3ID|No|The ID of the third FSx for Data ONTAP file system to ingest the audit logs from.|
+    |fileSystem3SecretARN|No|The ARN of the secret that contains the credentials for the third FSx for Data ONTAP file system.|
+    |fileSystem4ID|No|The ID of the forth FSx for Data ONTAP file system to ingest the audit logs from.|
+    |fileSystem4SecretARN|No|The ARN of the secret that contains the credentials for the forth FSx for Data ONTAP file system.|
+    |fileSystem5ID|No|The ID of the fifth FSx for Data ONTAP file system to ingest the audit logs from.|
+    |fileSystem5SecretARN|No|The ARN of the secret that contains the credentials for the fifth FSx for Data ONTAP file system.|
+    | statsName | Yes| The name you want to use as the stats file. |
+    | logGroupName | Yes| The name of the CloudWatch log group to ingest the audit logs into. |
+    | volumeName | Yes| The name of the volume, on all the FSx for ONTAP file systems, where the audit logs are stored. |
+
+    **NOTE:** You only need to set the `fsxnSecretARNsFile` or the `fileSystemXID` and `fileSystemXSecretARN` variables.
+    If both are provide, then the `fsxnSecretARNsFile` will be used and the `fileSystemXID` and `fileSystemXSecretARN` variables will be ignored.
 
 4. Test the Lambda function by clicking on the `Test` tab and then clicking on the `Test` button. You should see "Executing function: succeeded".
 If not, click on the "Details" button to see what errors there are.
@@ -110,7 +127,7 @@ set up your FSx for ONTAP file systems to rotate audit logs, and how up-to-date 
 
 ## Author Information
 
-This repository is maintained by the contributors listed on [GitHub](https://github.com/NetApp/FSx-ONTAP-samples-scripts/graphs/contributors).
+This repository is maintained by the contributors listed on [GitHub](https://github.com/NetApp/FSx-ONTAP-utils/graphs/contributors).
 
 ## License
 
@@ -122,4 +139,4 @@ Unless required by applicable law or agreed to in writing, software distributed 
 
 See the License for the specific language governing permissions and limitations under the License.
 
-© 2024 NetApp, Inc. All Rights Reserved.
+© 2025 NetApp, Inc. All Rights Reserved.
