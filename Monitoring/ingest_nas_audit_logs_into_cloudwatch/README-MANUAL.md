@@ -16,7 +16,7 @@ or by following the manual instructions found in the this file.
 - An FSx for Data ONTAP file system.
 - An S3 bucket to store the "stats" file and optionally a copy of all the raw NAS audit log files. It will also
 hold a Lambda layer file needed to be able to an add Lambda Layer from a CloudFormation script.
-    - You will need to download the [Lambda layer zip file](https://raw.githubusercontent.com/NetApp/FSx-ONTAP-utils/main/Monitoring/Ingest-NAS-Audit-Logs-into-CloudWatch/lambda_layer.zip)
+    - You will need to download the [Lambda layer zip file](https://raw.githubusercontent.com/NetApp/FSx-ONTAP-samples-scripts/main/Monitoring/ingest_nas_audit_logs_into_cloudwatch/lambda_layer.zip)
     from this repo and upload it to the S3 bucket. Be sure to preserve the name `lambda_layer.zip`.
     - The "stats" file is maintained by the program. It is used to keep track of the last time the Lambda function
     successfully ingested audit logs from each SVM. Its size will be small (i.e. less than a few megabytes).

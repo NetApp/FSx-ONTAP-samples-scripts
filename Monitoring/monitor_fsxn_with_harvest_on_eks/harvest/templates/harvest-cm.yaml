@@ -1,0 +1,15 @@
+# yamllint disable-file
+# This file is not valid YaML because it is a Helm chart template.
+{{- range .Values.fsxs.clusters }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app: harvest-poller-{{ .name }}
+  name: harvest-credentials-config-{{ .name }}
+  namespace: {{ $.Release.Namespace }}
+data:
+  SECRET_NAME: {{ .secretName | quote }}
+  AWS_REGION: {{ .region | quote }}
+---
+{{ end }}

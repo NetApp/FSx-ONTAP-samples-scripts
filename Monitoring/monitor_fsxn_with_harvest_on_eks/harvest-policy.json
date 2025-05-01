@@ -1,0 +1,17 @@
+{
+    "Statement": [
+        {
+            "Action": [
+                "secretsmanager:GetSecretValue",
+                "secretsmanager:DescribeSecret",
+                "secretsmanager:ListSecrets"
+            ],
+            "Effect": "Allow",
+            "Resource": [
+                "<FSx1_secret_arn>",
+                "<FSx2_secret_arn>"
+            ]
+        }
+    ],
+    "Version": "2012-10-17"
+}

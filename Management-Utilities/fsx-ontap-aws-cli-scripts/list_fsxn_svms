@@ -18,6 +18,7 @@
 #   o Region
 #   o File system ID
 #   o File System Name - optional
+#   o The managment and NAS IP address of the SVM - optional
 #   o SVM ID
 #   o SVM Name
 ################################################################################
@@ -27,9 +28,10 @@
 ################################################################################
 usage () {
   cat 1>&2 <<EOF
-Usage $(basename $0) [-r region] [-a] [-n] [-i fileSystemID] [-f fileSystemName]
+Usage $(basename $0) [-r region] [-a] [-n] [-p] [-i fileSystemID] [-f fileSystemName]
   Where: -a means all regions
          -n means to include file systems name
+         -p means to include the management and NAS IP address
          -i means to only include SVMs that reside under the FSxN file system with the fileSystemID.
          -f means to only include SVMs that reside under the FSxN file system with the file system name.
 EOF
@@ -55,14 +57,17 @@ fi
 # Process command line arguments.
 allRegions=false
 includeFsName=false
+includeIp=false
 region=$(aws configure list | egrep '^.*egion ' | awk '{print $2}')
-while getopts "hanr:i:f:" option; do
+while getopts "hanr:i:f:p" option; do
   case "$option" in
     r) region="$OPTARG"
       ;;
     a) allRegions=true
       ;;
     n) includeFsName=true
+      ;;
+    p) includeIp=true
       ;;
     i) fileSystemID="$OPTARG"
       ;;
@@ -99,27 +104,41 @@ if [ "$allRegions" = "true" ]; then
 else
   regions=($region)
 fi
-
-if [ ! -z "$fileSystemName" ]; then
-  fileSystemID=$(aws fsx describe-file-systems --output=json --region=$region 2> /dev/null | jq -r '.FileSystems[] | if((.Tags[] | select(.Key == "Name") .Value) == "'"${fileSystemName}"'") then .FileSystemId else empty end' 2> /dev/null)
-  if [ -z "$fileSystemID" ]; then
-    echo "Error, failed to find a file system with the name '$fileSystemName'. Maybe in a different region?" 1>&2
-    exit 1
-  fi
-fi
 #
 # Loop on all the regions.
 for region in ${regions[*]}; do
+  if [ ! -z "$fileSystemName" ]; then
+    fileSystemID=$(aws fsx describe-file-systems --output=json --region=$region 2> /dev/null | jq -r '.FileSystems[] | if((.Tags[] | select(.Key == "Name") .Value) == "'"${fileSystemName}"'") then .FileSystemId else empty end' 2> /dev/null)
+    if [ -z "$fileSystemID" ]; then
+      if [ "$allRegions" != "true" ]; then
+        echo "Error, failed to find a file system with the name '$fileSystemName'. Maybe in a different region?" 1>&2
+        exit 1
+      else
+        #
+        # If there isn't a file system with that name in this region, then just skip region.
+        continue
+      fi
+    fi
+  fi
+
   if [ -z "$fileSystemID" ]; then
-    aws fsx describe-storage-virtual-machines --region=$region | jq -r '.StorageVirtualMachines[] | .FileSystemId + "," + .StorageVirtualMachineId + "," + .Name' | sort > $tmpout
+    filter=""
   else
-    aws fsx describe-storage-virtual-machines --region=$region | jq -r '.StorageVirtualMachines[] | if(.FileSystemId == "'$fileSystemID'") then .FileSystemId + "," + .StorageVirtualMachineId + "," + .Name else empty end' | sort > $tmpout
+    filter="--filter Name=file-system-id,Values=$fileSystemID"
+  fi
+  aws fsx describe-storage-virtual-machines --region=$region $filter | jq -r '.StorageVirtualMachines[] | "\(.FileSystemId),\(.StorageVirtualMachineId),\(.Endpoints.Nfs.IpAddresses[0]),\(.Name)"' | sort > $tmpout
+  if [ $includeIp == "true" ]; then
+    ipFmt="%16s"
+    ipHeader="IP"
+  else
+    ipFmt="%0s"
+    ipHeader=""
   fi
   
   if [ $includeFsName == "true" ]; then
     aws fsx describe-file-systems --region=$region | jq -r '.FileSystems[] | .FileSystemId + "," + (.Tags[] | select(.Key == "Name") .Value)' > $tmpout2
-    awk -F, -v region=$region 'BEGIN {first=1; maxNameLen=0; while(getline < "'$tmpout2'") {fss[$1]=$2; if(length($2) > maxNameLen) {maxNameLen=length($2)}}; maxNameLen +=2; formatStr="%12s %20s%-"maxNameLen"s %23s %s\n"}; {if(first) {printf "\n"; printf formatStr, "Region", "FileSystem ID", "(Name)", "SVM ID", "SVM Name"; first=0}; name="("fss[$1]")"; printf formatStr, region, $1, name, $2, $3}' < $tmpout
+    awk -F, -v region=$region -v ipFmt=$ipFmt -v ipHeader=$ipHeader 'BEGIN {first=1; maxNameLen=0; while(getline < "'$tmpout2'") {fss[$1]=$2; if(length($2) > maxNameLen) {maxNameLen=length($2)}}; maxNameLen +=2; formatStr="%12s %20s%-"maxNameLen"s %23s "ipFmt" %s\n"}; {if(first) {printf "\n"; printf formatStr, "Region", "FileSystem ID", "(Name)", "SVM ID", ipHeader, "SVM Name"; first=0}; if(ipHeader != "IP") {ip=""} else {ip=$3}; name="("fss[$1]")"; printf formatStr, region, $1, name, $2, ip, $4}' < $tmpout
   else
-    awk -F, -v region=$region 'BEGIN {first=1; formatStr="%12s %23s %23s %s\n"}; {if(first) {printf "\n"; printf formatStr, "Region", "FileSystem ID", "SVM ID", "SVM Name"; first=0}; printf formatStr, region, $1, $2, $3}' < $tmpout
+    awk -F, -v region=$region -v ipFmt=$ipFmt -v ipHeader=$ipHeader 'BEGIN {first=1; formatStr="%12s %23s %23s "ipFmt" %s\n"}; {if(first) {printf "\n"; printf formatStr, "Region", "FileSystem ID", "SVM ID", ipHeader, "SVM Name"; first=0}; if(ipHeader != "IP") {ip=""} else {ip=$3}; printf formatStr, region, $1, $2, ip, $4}' < $tmpout
   fi
 done

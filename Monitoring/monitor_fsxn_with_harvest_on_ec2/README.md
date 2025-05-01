@@ -11,14 +11,26 @@ Go and uses the official AWS SDK. YACE supports auto-discovery of resources via 
 filtering monitored resources via regex, and more. You can read more about YACE capabilities from its
 [Documentation](https://github.com/prometheus-community/yet-another-cloudwatch-exporter).
 
+Here are some screenshots of a couple of the dashboards that are included to visualize the metrics collected by Harvest and YACE.
+
+![Screenshot-01](images/grafana-dashboard-01.png)
+
+![Screenshot-02](images/grafana-dashboard-02.png)
+
 ## Prerequisites
 The only prerequisite is an FSx for ONTAP file system running in your AWS account.
 
-## Overview
+## Architectural Overview
+
+This solution uses several components to collect and display all the pertinent metrics from your FSx for ONTAP file system.
+Instead of trying to describe them in words, the following architectural diagram does a great job of showing the components and how they interact with each other:
+![Architectural Diagram](images/FSxN-MonitoringStack-EC2.png)
+
+## Deployment Overview
 
 There are two methods to deploy this solution, either via the AWS CloudFormation template or manually.
-The steps below are geared towrad the CloudFormation deployment method. If you want to deploy manually,
-please refer to these [instructions](README-Manual.md).
+The steps below are geared towards the CloudFormation deployment method. If you want to deploy manually,
+please refer to these [Manual Deployment Instructions](README-Manual.md).
 
 This deployment includes:
 - **Harvest**: Collects ONTAP metrics.[Documentation](https://github.com/NetApp/harvest).
@@ -134,33 +146,54 @@ To monitor additional FSxN resources, follow these steps:
          - SECRET_NAME=<your_secret_2>
          - AWS_REGION=<your_region>
      ```
-   - **Note**: Change the `container_name`, `ports`, `promPort`, and `SECRET_NAME` as needed.
-	           Make sure that you are changing the TCP port used by the new poller, in this example the new fsx02 will use port 12991
-	           If you are adding multiple FSx for NetApp ONTAP, always use a different TCP port.
+   - **Note**: Make the following changes for each system you add:
 
+       - The name of the block (i.e. the first line of the block).
+       - The `container_name`.
+       - The `ports`. All pollers must use a different port. Just increment by one for each system.
+       - The `command` parameter should be updated with:
+           - The name after the `--poller` should match the block name.
+           - The `promPort` port should match the port in the `ports` line set above.
+       - The `SECRET_NAME` as needed.
 
 5. **Add FSx for NetApp ONTAP to Prometheus Targets**
-   - Navigate to the Prometheus directory:
-     ```bash
-     cd /opt/harvest/container/prometheus/
-     ```
-   - Edit the `harvest_targets.yml` file to add the new FSx for NetApp ONTAP target:
-     ```yaml
-     - targets: ['<container_name>:<container-port>']
-     ```
+    - Navigate to the Prometheus directory:
+      ```bash
+      cd /opt/harvest/container/prometheus/
+      ```
+    - Edit the `harvest_targets.yml` file to add the new FSx for NetApp ONTAP target:
+      ```yaml
+      - targets: ['fsx01:12990','fsx02:12291']
+      ```
 
 6. **Restart Docker Compose**
-  - Navigate to the Harvest directory:
-	 ```bash
-	 cd /opt/harvest
-	 ``` 
-  - Bring down the Docker Compose stack:
-     ```bash
-     docker compose -f prom-stack.yml -f harvest-compose.yml down
-     ```
-   - Bring the Docker Compose stack back up:
-     ```bash
-     docker compose -f prom-stack.yml -f harvest-compose.yml up -d --remove-orphans
-     ```
+    - Navigate to the Harvest directory:
+	  ```bash
+	  cd /opt/harvest
+	  ``` 
+    - Bring down the Docker Compose stack:
+      ```bash
+      docker-compose -f prom-stack.yml -f harvest-compose.yml down
+      ```
+    - Bring the Docker Compose stack back up:
+      ```bash
+      docker-compose -f prom-stack.yml -f harvest-compose.yml up -d --remove-orphans
+      ```
 
 ---
+
+## Author Information
+
+This repository is maintained by the contributors listed on [GitHub](https://github.com/NetApp/FSx-ONTAP-samples-scripts/graphs/contributors).
+
+## License
+
+Licensed under the Apache License, Version 2.0 (the "License").
+
+You may obtain a copy of the License at [apache.org/licenses/LICENSE-2.0](http://www.apache.org/licenses/LICENSE-2.0).
+
+Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an _"AS IS"_ basis, without WARRANTIES or conditions of any kind, either express or implied.
+
+See the License for the specific language governing permissions and limitations under the License.
+
+© 2025 NetApp, Inc. All Rights Reserved.
