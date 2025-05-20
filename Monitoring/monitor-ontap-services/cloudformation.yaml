@@ -19,7 +19,7 @@ Metadata:
           - checkInterval
           - createWatchdogAlarm
           - createSecretsManagerEndpoint
-          - createSNSEndpoint
+          - createLambdaEndpoint
           - createCloudWatchLogsEndpoint
           - createS3Endpoint
           - routeTableIds
@@ -27,6 +27,7 @@ Metadata:
           - endpointSecurityGroupIds
           - LambdaRoleArn
           - SchedulerRoleArn
+          - watchdogRoleArn
       - Label: 
           default: "Alert Parameters"
         Parameters: 
@@ -74,7 +75,7 @@ Parameters:
     Type: String
 
   cloudWatchLogGroupArn:
-    Description: "The ARN of the CloudWatch log group to send alerts to. If left blank, alerts will not be sent to CloudWatch. Note that the log group must already exist."
+    Description: "The ARN of the CloudWatch log group to send alerts to. If left blank, alerts will not be sent to CloudWatch. Note that the log group must already exist. Also note that the ARN should end with ':*'."
     Type: String
     Default: ""
 
@@ -98,14 +99,19 @@ Parameters:
     Default: "true"
     AllowedValues: ["true", "false"]
 
+  watchdogRoleArn:
+    Description: "The ARN of the role to use for the Lambda function that will publish messages to the SNS topic if the monitoring function doesn't run properly. This is only needed if you are having the CloudWatch alarm created and if you want to provide an existing role, otherwise an appropriate one will be created for you."
+    Type: String
+    Default: ""
+
   createSecretsManagerEndpoint:
     Description: "Create a Secrets Manager endpoint."
     Type: String
     Default: "false"
     AllowedValues: ["true", "false"]
 
-  createSNSEndpoint:
-    Description: "Create an SNS endpoint."
+  createLambdaEndpoint:
+    Description: "Create an Lambda endpoint."
     Type: String
     Default: "false"
     AllowedValues: ["true", "false"]
@@ -265,14 +271,14 @@ Parameters:
 
 Conditions:
   CreateSecretsManagerEndpoint: !Equals [!Ref createSecretsManagerEndpoint, "true"]
-  CreateSNSEndpoint: !Equals [!Ref createSNSEndpoint, "true"]
+  CreateLambdaEndpoint: !Equals [!Ref createLambdaEndpoint, "true"]
   CreateS3Endpoint: !Equals [!Ref createS3Endpoint, "true"]
   CreateCloudWatchLogsEndpoint: !Equals [!Ref createCloudWatchLogsEndpoint, "true"]
   CreateWatchdogAlarm: !Equals [!Ref createWatchdogAlarm, "true"]
   CreateLambdaRoleWithCW: !And [!Equals [!Ref LambdaRoleArn, ""], !Not [!Equals [!Ref cloudWatchLogGroupArn, ""]]]
   CreateLambdaRoleWithoutCW: !And [!Equals [!Ref LambdaRoleArn, ""], !Equals [!Ref cloudWatchLogGroupArn, ""]]
   CreateSchedulerRole: !Equals [!Ref SchedulerRoleArn, ""]
-  IncludeCloudWatchPermissions: !Not [!Equals [!Ref cloudWatchLogGroupArn, ""]]
+  CreateWatchdogRole: !Equals [!Ref watchdogRoleArn, ""]
 
 Resources:
   SecretManagerEndpoint:
@@ -297,12 +303,12 @@ Resources:
       SubnetIds: !Ref subNetIds
       SecurityGroupIds: !Ref endpointSecurityGroupIds
 
-  SNSEndpoint:
+  LambdaEndpoint:
     Type: AWS::EC2::VPCEndpoint
-    Condition: CreateSNSEndpoint
+    Condition: CreateLambdaEndpoint
     Properties:
       VpcId: !Ref vpcId
-      ServiceName: !Sub "com.amazonaws.${AWS::Region}.sns"
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.lambda"
       VpcEndpointType: 'Interface'
       PrivateDnsEnabled: true
       SubnetIds: !Ref subNetIds
@@ -316,8 +322,92 @@ Resources:
       ServiceName: !Sub "com.amazonaws.${AWS::Region}.s3"
       VpcEndpointType: 'Gateway'
       RouteTableIds: !Ref routeTableIds
-
-  watchDogAlarm:
+  #
+  # Allow the Watchdog Lambda function to publish to the SNS topic.
+  LambdaRoleWatchdog:
+    Type: "AWS::IAM::Role"
+    Condition: CreateWatchdogRole
+    Properties:
+      RoleName: !Sub "mon-ontap-services-watchdog-${AWS::StackName}"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service: "lambda.amazonaws.com"
+            Action: "sts:AssumeRole"
+      Policies:
+        - PolicyName: "LambdaPolicyWatchdog"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "sns:Publish"
+                Resource: !Ref snsTopicArn
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+  #
+  # This allows the Watchdog CloudWatch alarm to invoke the Lambda function.
+  resourceBasedPermission:
+    Type: "AWS::Lambda::Permission"
+    Condition: CreateWatchdogAlarm
+    Properties:
+      Action: "lambda:InvokeFunction"
+      FunctionName: !Sub "monitor-ontap-services-watchdog-${AWS::StackName}"
+      Principal: "lambda.alarms.cloudwatch.amazonaws.com"
+      SourceArn: !GetAtt watchdogAlarm.Arn
+  #
+  # Use a Lambda function to publish to an SNS topic so it can reside in a different region.
+  watchdogLambdaFunction: 
+    Type: "AWS::Lambda::Function"
+    Condition: CreateWatchdogAlarm
+    Properties:
+      FunctionName: !Sub "monitor-ontap-services-watchdog-${AWS::StackName}"
+      PackageType: "Zip"
+      Runtime: "python3.12"
+      Handler: "index.lambda_handler"
+      Timeout: 10
+      Role: !If [CreateWatchdogRole, !GetAtt LambdaRoleWatchdog.Arn, !Ref watchdogRoleArn]
+      Environment:
+        Variables:
+          snsTopicArn: !Ref snsTopicArn
+      Code:
+        ZipFile: |
+          import boto3
+          import os
+          
+          def lambda_handler(event, context):
+              snsTopicArn = os.environ.get('snsTopicArn')
+              if snsTopicArn is not None:
+                  region = snsTopicArn.split(":")[3]
+                  snsClient = boto3.client('sns', region_name=region)
+                  #
+                  # This is for future developement when the monitor-ontap-services
+                  # Lambda function will be able to send messages to the SNS topic.
+                  cmd = event.get("cmd")
+                  #
+                  # If the cmd is None, then assume a CloudWatch alarm triggered this function.
+                  if cmd is None: 
+                      message = f'Error! Lambda function {event["alarmData"]["alarmName"].replace("-watchdog-", "")} failed to execute properly.'
+                      snsClient.publish(
+                          TopicArn = snsTopicArn,
+                          Subject  = 'Error! Monitoring ONTAP services has failed to execute',
+                          Message  = message
+                      )
+                  elif cmd == "sendSns":
+                    message = event.get("message")
+                    subject = event.get("subject")
+                    snsClient.publish(
+                        TopicArn = snsTopicArn,
+                        Subject  = subject,
+                        Message  = message
+                    )
+  #
+  # This is the CloudWatch alarm that will trigger when the monitor-ontap-services
+  # Lambda function fails to run successfully. It will invoke the watchdogLambdaFunction
+  # to send a message to the SNS topic.
+  watchdogAlarm:
     Type: "AWS::CloudWatch::Alarm"
     Condition: CreateWatchdogAlarm
     Properties:
@@ -335,7 +425,7 @@ Resources:
       Threshold: 0.5
       ComparisonOperator: "GreaterThanThreshold"
       AlarmActions:
-        - !Ref snsTopicArn
+        - !GetAtt watchdogLambdaFunction.Arn
 
   LambdaRoleWithoutCW:
     Type: "AWS::IAM::Role"
@@ -368,8 +458,8 @@ Resources:
                 Resource:
                   - !Ref secretArn
                   - !Ref snsTopicArn
-                  - !Sub "arn:aws:s3:::{s3BucketName}"
-                  - !Sub "arn:aws:s3:::{s3BucketName}/*"
+                  - !Sub "arn:aws:s3:::${s3BucketName}"
+                  - !Sub "arn:aws:s3:::${s3BucketName}/*"
 
   LambdaRoleWithCW:
     Type: "AWS::IAM::Role"
@@ -477,6 +567,7 @@ Resources:
           secretUsernameKey: !Ref secretUsernameKey
           secretPasswordKey: !Ref secretPasswordKey
           snsTopicArn: !Ref snsTopicArn
+          sendSnsFunctionName: !Sub "monitor-ontap-services-watchdog-${AWS::StackName}"
           cloudWatchLogGroupArn: !Ref cloudWatchLogGroupArn
 
           initialVersionChangeAlert: !Ref versionChangeAlert
@@ -521,8 +612,8 @@ Resources:
           # "matching conditions."  It is intended to be run as a Lambda function, but
           # can be run as a standalone program.
           #
-          # Version: v2.14
-          # Date: 2025-04-29-12:53:45
+          # Version: v2.15
+          # Date: 2025-05-19-08:28:59
           ################################################################################
           
           import json
