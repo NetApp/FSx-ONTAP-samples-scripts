@@ -74,7 +74,7 @@ The CloudFormation template will do the following:
 - Create an EventBridge Schedule to trigger the Lambda function. By default, it will trigger
     it to run every 15 minutes, although there is a parameter that will allow you to set it to whatever interval you want.
 - Optionally create a CloudWatch alarm that will alert you if the Lambda function fails.
-    - Create a Lambda function to send the CloudWatch alarm alert to an SNS topic. This is done so the SNS topic can be in aother region since CloudWatch doesn't support doing that natively.
+    - Create a Lambda function to send the CloudWatch alarm alert to an SNS topic. This is done so the SNS topic can be in another region since CloudWatch doesn't support doing that natively.
 - Optionally create a VPC Endpoints for the SNS, Secrets Manager, CloudWatch and/or S3 AWS services.
 
 To install the program using the CloudFormation template, you will need to do the following:
