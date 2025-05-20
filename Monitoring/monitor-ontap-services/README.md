@@ -47,7 +47,7 @@ that in the [Endpoints for AWS Services](#endpoints-for-aws-services) section be
 ## Prerequisites
 - An FSx for NetApp ONTAP file system you want to monitor.
 - An S3 bucket to store the configuration and event status files, as well as the Lambda layer zip file.
-    - You will need to download the [Lambda layer zip file](https://raw.githubusercontent.com/NetApp/FSx-ONTAP-samples-scripts/main/Monitoring/monitor_onstap_services/lambda_layer.zip) from this repo and upload it to the S3 bucket. Be sure to preserve the name `lambda_layer.zip`.
+    - You will need to download the [Lambda layer zip file](https://raw.githubusercontent.com/NetApp/FSx-ONTAP-samples-scripts/main/Monitoring/monitor-ontap-services/lambda_layer.zip) from this repo and upload it to the S3 bucket. Be sure to preserve the name `lambda_layer.zip`.
 - The security group associated with the FSx for ONTAP file system must allow inbound traffic from the Lambda function over TCP port 443.
 - An SNS topic to send the alerts to.
 - An AWS Secrets Manager secret that holds the FSx for ONTAP file system credentials. There should be two keys in the secret, one for the username and one for the password.
@@ -74,6 +74,7 @@ The CloudFormation template will do the following:
 - Create an EventBridge Schedule to trigger the Lambda function. By default, it will trigger
     it to run every 15 minutes, although there is a parameter that will allow you to set it to whatever interval you want.
 - Optionally create a CloudWatch alarm that will alert you if the Lambda function fails.
+    - Create a Lambda function to send the CloudWatch alarm alert to an SNS topic. This is done so the SNS topic can be in aother region since CloudWatch doesn't support doing that natively.
 - Optionally create a VPC Endpoints for the SNS, Secrets Manager, CloudWatch and/or S3 AWS services.
 
 To install the program using the CloudFormation template, you will need to do the following:
@@ -91,32 +92,32 @@ To install the program using the CloudFormation template, you will need to do th
 |Stackname|The name you want to assign to the CloudFormation stack. Note that this name is used as a base name for some of the resources it creates, so please keep it **under 25 characters**.|
 |OntapAdminServer|The DNS name, or IP address, of the management endpoint of the FSxN file system you wish to monitor.|
 |S3BucketName|The name of the S3 bucket where you want the program to store event information. It should also have a copy of the `lambda_layer.zip` file. **NOTE** This bucket must be in the same region where this CloudFormation stack is being created.|
-|SubnetIds|The subnet IDs that the Lambda function will be attached to. They must have connectivity to the FSxN file system management endpoint that you wish to monitor.|
+|SubnetIds|The subnet IDs that the Lambda function will be attached to. They must have connectivity to the FSxN file system management endpoint that you wish to monitor. It is recommended to select at least two.|
 |SecurityGroupIds|The security group IDs that the Lambda function will be attached to. The security group must allow outbound traffic over port 443 to the SNS, Secrets Manager, and CloudWatch and S3 AWS service endpoints, as well as the FSxN file system you want to monitor.|
 |SnsTopicArn|The ARN of the SNS topic you want the program to publish alert messages to.|
 |CloudWatchLogGroupName|The name of **an existing** CloudWatch Log Group that the Lambda function can send event messages to. It will create a new Log Stream within the Log Group every day that is unique to this file system so you can use the same Log Group for multiple instances of this program. If this field is left blank, alerts will not be sent to CloudWatch.|
 |SecretArn|The ARN of the secret within the AWS Secrets Manager that holds the FSxN file system credentials.|
-|SecretUsernameKey|The name of the key within the secret that holds the username portion of the FSxN file system credentials.|
-|SecretPasswordKey|The name of the key within the secret that holds the password portion of the FSxN file system credentials.|
+|SecretUsernameKey|The name of the key within the secret that holds the username portion of the FSxN file system credentials. The default is 'username'.|
+|SecretPasswordKey|The name of the key within the secret that holds the password portion of the FSxN file system credentials. The default is 'password'.|
 |CheckInterval|The interval, in minutes, that the EventBridge schedule will trigger the Lambda function. The default is 15 minutes.|
-|CreateCloudWatchAlarm|Set to "true" if you want to create a CloudWatch alarm that will alert you if the Lambda function fails.|
-|CreateSecretsManagerEndpoint|Set to "true" if you want to create a Secrets Manager endpoint. **NOTE:** If an SecretsManager Endpoint already exist for the specified Subnet the endpoint creation will fail, causing the entire CloudFormation stack to fail. Please read the [Endpoints for AWS services](#endpoints-for-aws-services) for more information.|
-|CreateLambdaEndpoint|Set to "true" if you want to create an Lambda endpoint. **NOTE:** If an Lambda Endpoint already exist for the specified Subnet the endpoint creation will fail, causing the entire CloudFormation stack to fail. Please read the [Endpoints for AWS services](#endpoints-for-aws-services) for more information.|
-|CreateCWEndpoint|Set to "true" if you want to create a CloudWatch endpoint. **NOTE:** If an CloudWatch Endpoint already exist for the specified Subnet the endpoint creation will fail, causing the entire CloudFormation stack to fail. Please read the [Endpoints for AWS services](#endpoints-for-aws-services) for more information.|
-|CreateS3Endpoint|Set to "true" if you want to create an S3 endpoint. **NOTE:** If an S3 Gateway Endpoint already exist for the specified VPC the endpoint creation will fail, causing the entire CloudFormation stack to fail. Note that this will be a "Gateway" type endpoint, since they are free to use. Please read the [Endpoints for AWS services](#endpoints-for-aws-services) for more information.|
+|CreateCloudWatchAlarm|Set to "true" if you want to create a CloudWatch alarm, and accompanying Lambda function, that will alert you if the monitoring Lambda function fails.|
+|CreateSecretsManagerEndpoint|Set to "true" if you want to create a Secrets Manager endpoint. **NOTE:** If a SecretsManager Endpoint already exist for the specified Subnet the endpoint creation will fail, causing the entire CloudFormation stack to fail. Please read the [Endpoints for AWS services](#endpoints-for-aws-services) for more information.|
+|CreateCWEndpoint|Set to "true" if you want to create a CloudWatch endpoint. **NOTE:** If a CloudWatch Endpoint already exist for the specified Subnet the endpoint creation will fail, causing the entire CloudFormation stack to fail. Please read the [Endpoints for AWS services](#endpoints-for-aws-services) for more information.|
+|CreateS3Endpoint|Set to "true" if you want to create an S3 endpoint. **NOTE:** If a S3 Gateway Endpoint already exist for the specified VPC the endpoint creation will fail, causing the entire CloudFormation stack to fail. Note that this will be a "Gateway" type endpoint, since they are free to use. Please read the [Endpoints for AWS services](#endpoints-for-aws-services) for more information.|
 |RoutetableIds|The route table IDs to update to use the S3 endpoint. Since the S3 endpoint is of type `Gateway` route tables have to be updated to use it. This parameter is only needed if you are creating an S3 endpoint.|
 |VpcId|The ID of a VPC where the subnets provided above are located. Required if you are creating an endpoint, not needed otherwise.|
 |EndpointSecurityGroupIds|The security group IDs that the endpoint will be attached to. The security group must allow traffic over TCP port 443 from the Lambda function. This is required if you are creating an Lambda, CloudWatch or SecretsManager endpoint.|
 |watchdogRoleArn|The ARN of the role that the Lambda function that the Watchdog CloudWatch alert will use to send SNS alerts if something goes wrong with the monitoring Lambda function. The only required permission is to publish to the SNS topic listed above, although highly recommended that you also add the AWS managed "AWSLambdaBasicExecutionRole" policy that allows the Lambda function to create and write to a CloudWatch log stream so it can provide diagnostic output of something goes wrong. Only required if creating a CloudWatch alert and you want to provide your own role. If left blank a role will be created for you if needed.|
 |LambdaRoleArn|The ARN of the role that the Lambda function will use. This role must have the permissions listed in the [Create an AWS Role](#create-an-aws-role) section below. If left blank a role will be created for you.|
 |SchedulerRoleArn|The ARN of the role that the EventBridge schedule will use to trigger the Lambda function. It just needs the permission to invoke a Lambda function. If left blank a role will be created for you.|
+|CloudWatchRoleArn|The ARN of the role that the will be assigned to the Lambda function that will publish messages to an SNS topic. It just needs the permission to publish to the SNS topic. If left blank, and you CreateCloudWatchAlarm is set to "true", a role will be created for you.|
 
 The remaining parameters are used to create the matching conditions configuration file, which specify when the program will send an alert.
 You can read more about it in the [Matching Conditions File](#matching-conditions-file) section below. All these parameters have reasonable default values
 so you probably won't have to change any of them. Note that if you enable EMS alerts, then the default rule will
-send all EMS messages that have a severity of `Error`, `Alert` or `Emergency`. You can change the
+alert on all EMS messages that have a severity of `Error`, `Alert` or `Emergency`. You can change the
 matching conditions at any time by updating the matching conditions file that is created in the S3 bucket.
-The name of the file will be \<OntapAdminServer\>-conditions where "\<OntapAdminServer\>" is the value you
+The name of the file will be `<OntapAdminServer>-conditions` where `<OntapAdminServer>` is the value you
 set for the OntapAdminServer parameter.
 
 ### Post Installation Checks
@@ -125,9 +126,9 @@ not in an error state. To find the Lambda function go to the Resources tab of th
 stack and click on the "Physical ID" of the Lambda function. This should bring you to the Lambda service in the AWS
 console. Once there, click on the "Monitor" tab to see if the function has been invoked. Locate the
 "Error count and success rate(%)" chart, which is usually found at the top right corner of the "Monitor" dashboard.
-Within the "CheckInterval" number of minutes there should be at least one dot on that chart. Note that sometimes
-the chart is initially slow to reflect any status so you might have to be patient. Continue to press the "refresh"
-button (the icon with a circle on it) to update the status. Once you see a dot on the chart, when you hover your mouse
+Within the "CheckInterval" number of minutes there should be at least one dot on that chart. Note that initially
+the chart is slow to reflect any status so you might have to be patient. Continue to press the "refresh"
+button (the icon with a circle on it) every minute or so to update the status. Once you see a dot on the chart, when you hover your mouse
 over it, you should see the "success rate" and "number of errors." The success rate should be 100% and the number
 of errors should be 0. If it is not, then scroll down to the CloudWatch Logs section and click on the most recent
 log stream. This will show you the output of the Lambda function. If there are any errors, they will be displayed
@@ -165,7 +166,7 @@ Below is the specific list of permissions needed.
 The first use of the s3 bucket will be to store the Lambda layer zip file. This is required to include some dependencies that
 aren't included in the AWS Lambda environment. Currently the only dependency in the zip file is [cronsim](https://pypi.org/project/cronsim/).
 This is used to interpret the SnapMirror schedules to be able to report on lag issues. You can download the zip file from this repository by clicking on
-the [lambda_layer.zip](https://raw.githubusercontent.com/NetApp/FSx-ONTAP-samples-scripts/main/Monitoring/monitor_onstap_services/lambda_layer.zip) link.
+the [lambda_layer.zip](https://raw.githubusercontent.com/NetApp/FSx-ONTAP-samples-scripts/main/Monitoring/monitor-ontap-services/lambda_layer.zip) link.
 You will refer to this file, and bucket, when you create the Lambda function.
 
 Another use of the s3 bucket is to store events that have already reported on so they can be compared against
@@ -252,7 +253,7 @@ Once you have created the function you will be able to:
     To create a Lambda layer go to the Lambda service page on the AWS console and click on the "Layers"
     tab under the "Additional resources" section. Then, click on the "Create layer" button.
     From there you'll need to provide a name for the layer, and the path to the
-    [lambda_layer.zip](https://raw.githubusercontent.com/NetApp/FSx-ONTAP-samples-scripts/main/Monitoring/monitor_onstap_services/lambda_layer.zip)
+    [lambda_layer.zip](https://raw.githubusercontent.com/NetApp/FSx-ONTAP-samples-scripts/main/Monitoring/monitor-ontap-services/lambda_layer.zip)
     file that you should download from this repository. If you uploaded that into the S3 bucket you created above, then
     just provide the S3 path to the file. For example, `s3://<your-bucket-name>.s3.<s3_region>.awsamzoneaws.com/lambda_layer.zip`.
     Once you have the layer created, you can add it to your Lambda function by going to the Lambda
