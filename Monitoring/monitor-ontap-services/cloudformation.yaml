@@ -19,7 +19,7 @@ Metadata:
           - checkInterval
           - createWatchdogAlarm
           - createSecretsManagerEndpoint
-          - createLambdaEndpoint
+          - createSNSEndpoint
           - createCloudWatchLogsEndpoint
           - createS3Endpoint
           - routeTableIds
@@ -110,8 +110,8 @@ Parameters:
     Default: "false"
     AllowedValues: ["true", "false"]
 
-  createLambdaEndpoint:
-    Description: "Create an Lambda endpoint."
+  createSNSEndpoint:
+    Description: "Create an SNS endpoint."
     Type: String
     Default: "false"
     AllowedValues: ["true", "false"]
@@ -271,7 +271,7 @@ Parameters:
 
 Conditions:
   CreateSecretsManagerEndpoint: !Equals [!Ref createSecretsManagerEndpoint, "true"]
-  CreateLambdaEndpoint: !Equals [!Ref createLambdaEndpoint, "true"]
+  CreateSNSEndpoint: !Equals [!Ref createSNSEndpoint, "true"]
   CreateS3Endpoint: !Equals [!Ref createS3Endpoint, "true"]
   CreateCloudWatchLogsEndpoint: !Equals [!Ref createCloudWatchLogsEndpoint, "true"]
   CreateWatchdogAlarm: !Equals [!Ref createWatchdogAlarm, "true"]
@@ -303,12 +303,12 @@ Resources:
       SubnetIds: !Ref subNetIds
       SecurityGroupIds: !Ref endpointSecurityGroupIds
 
-  LambdaEndpoint:
+  SNSEndpoint:
     Type: AWS::EC2::VPCEndpoint
-    Condition: CreateLambdaEndpoint
+    Condition: CreateSNSEndpoint
     Properties:
       VpcId: !Ref vpcId
-      ServiceName: !Sub "com.amazonaws.${AWS::Region}.lambda"
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.sns"
       VpcEndpointType: 'Interface'
       PrivateDnsEnabled: true
       SubnetIds: !Ref subNetIds
@@ -593,6 +593,7 @@ Resources:
       Code:
         ZipFile: |
           #!/bin/python3
+          #
           ################################################################################
           # THIS SOFTWARE IS PROVIDED BY NETAPP "AS IS" AND ANY EXPRESS OR IMPLIED
           # WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
@@ -612,8 +613,8 @@ Resources:
           # "matching conditions."  It is intended to be run as a Lambda function, but
           # can be run as a standalone program.
           #
-          # Version: v2.1
-          # Date: 2025-05-20-01:22:58
+          # Version: v2.16
+          # Date: 2025-05-19-21:24:55
           ################################################################################
           
           import json
