@@ -1,4 +1,5 @@
 #!/bin/python3
+#
 ################################################################################
 # THIS SOFTWARE IS PROVIDED BY NETAPP "AS IS" AND ANY EXPRESS OR IMPLIED
 # WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
@@ -335,7 +336,7 @@ def processEMSEvents(service):
         event["refresh"] -= 1
     #
     # Run the API call to get the current list of EMS events.
-    endpoint = f'https://{config["OntapAdminServer"]}/api/support/ems/events'
+    endpoint = f'https://{config["OntapAdminServer"]}/api/support/ems/events?return_timeout=15'
     response = http.request('GET', endpoint, headers=headers)
     if response.status == 200:
         data = json.loads(response.data)
@@ -465,7 +466,7 @@ def getLastRunTime(scheduleUUID):
     daysOfWeek = ""
     #
     # Run the API call to get the schedule information.
-    endpoint = f'https://{config["OntapAdminServer"]}/api/cluster/schedules/{scheduleUUID}?fields=*'
+    endpoint = f'https://{config["OntapAdminServer"]}/api/cluster/schedules/{scheduleUUID}?fields=*&return_timeout=15'
     response = http.request('GET', endpoint, headers=headers)
     if response.status == 200:
         schedule = json.loads(response.data)
@@ -517,7 +518,7 @@ def getPolicySchedule(policyUUID):
     global config, http, headers, clusterName, clusterVersion, logger
 
     # Run the API call to get the policy information.
-    endpoint = f'https://{config["OntapAdminServer"]}/api/snapmirror/policies/{policyUUID}?fields=*'
+    endpoint = f'https://{config["OntapAdminServer"]}/api/snapmirror/policies/{policyUUID}?fields=*&return_timeout=15'
     response = http.request('GET', endpoint, headers=headers)
     if response.status == 200:
         data = json.loads(response.data)
@@ -620,7 +621,7 @@ def processSnapMirrorRelationships(service):
                 logger.warning(f'Unknown snapmirror alert type: "{key}".')
     #
     # Run the API call to get the current state of all the snapmirror relationships.
-    endpoint = f'https://{config["OntapAdminServer"]}/api/snapmirror/relationships?fields=*'
+    endpoint = f'https://{config["OntapAdminServer"]}/api/snapmirror/relationships?fields=*&return_timeout=15'
     response = http.request('GET', endpoint, headers=headers)
     if response.status == 200:
         data = json.loads(response.data)
@@ -794,18 +795,29 @@ def processStorageUtilization(service):
         event["refresh"] -= 1
     #
     # Run the API call to get the physical storage used.
-    endpoint = f'https://{config["OntapAdminServer"]}/api/storage/aggregates?fields=space'
+    endpoint = f'https://{config["OntapAdminServer"]}/api/storage/aggregates?fields=space&return_timeout=15'
     aggrResponse = http.request('GET', endpoint, headers=headers)
     if aggrResponse.status != 200:
         logger.error(f'API call to {endpoint} failed. HTTP status code {aggrResponse.status}.')
         aggrResponse = None
     #
     # Run the API call to get the volume information.
-    endpoint = f'https://{config["OntapAdminServer"]}/api/storage/volumes?fields=space,files,svm,state'
+    endpoint = f'https://{config["OntapAdminServer"]}/api/storage/volumes?fields=space,files,svm,state&return_timeout=15'
     volumeResponse = http.request('GET', endpoint, headers=headers)
     if volumeResponse.status != 200:
         logger.error(f'API call to {endpoint} failed. HTTP status code {volumeResponse.status}.')
         volumeResponse = None
+        volumeRecords = None
+    else:
+        volumeRecords = json.loads(volumeResponse.data).get("records")
+        #
+        # Now get the constituent volumes.
+        endpoint = f'https://{config["OntapAdminServer"]}/api/storage/volumes?is_constituent=true&fields=space,files,svm,state&return_timeout=15'
+        volumeResponse = http.request('GET', endpoint, headers=headers)
+        if volumeResponse.status != 200:
+            logger.error(f'API call to {endpoint} failed. HTTP status code {volumeResponse.status}.')
+        else:
+            volumeRecords.extend(json.loads(volumeResponse.data).get("records"))
     #
     # If both API calls failed, no point on continuing.
     if volumeResponse is None and aggrResponse is None:
@@ -834,8 +846,7 @@ def processStorageUtilization(service):
                                 events.append(event)
             elif lkey == "volumewarnpercentused" or lkey == "volumecriticalpercentused":
                 if volumeResponse is not None:
-                    data = json.loads(volumeResponse.data)
-                    for record in data["records"]:
+                    for record in volumeRecords:
                         if record["space"].get("percent_used"):
                             if record["space"]["percent_used"] >= rule[key]:
                                 uniqueIdentifier = record["uuid"] + "_" + key
@@ -852,8 +863,7 @@ def processStorageUtilization(service):
                                     events.append(event)
             elif lkey == "volumewarnfilespercentused" or lkey == "volumecriticalfilespercentused":
                 if volumeResponse is not None:
-                    data = json.loads(volumeResponse.data)
-                    for record in data["records"]:
+                    for record in volumeRecords:
                         #
                         # If a volume is offline, the API will not report the "files" information.
                         if record.get("files") is not None:
@@ -875,8 +885,7 @@ def processStorageUtilization(service):
                                             }
                                         events.append(event)
             elif lkey == "offline":
-                data = json.loads(volumeResponse.data)
-                for record in data["records"]:
+                for record in volumeRecords:
                     if rule[key] and record["state"].lower() == "offline":
                         uniqueIdentifier = f'{record["uuid"]}_{key}_{rule[key]}'
                         if not eventExist(events, uniqueIdentifier):  # This resets the "refresh" field if found.
@@ -915,7 +924,6 @@ def processStorageUtilization(service):
 ################################################################################
 def sendAlert(message, severity):
     global config, snsClient, logger, cloudWatchClient
-
 
     if severity == "CRITICAL":
         logger.critical(message)
@@ -985,7 +993,7 @@ def processQuotaUtilization(service):
         event["refresh"] -= 1
     #
     # Run the API call to get the quota report.
-    endpoint = f'https://{config["OntapAdminServer"]}/api/storage/quota/reports?fields=*'
+    endpoint = f'https://{config["OntapAdminServer"]}/api/storage/quota/reports?fields=*&return_timeout=30'
     response = http.request('GET', endpoint, headers=headers)
     if response.status == 200:
         data = json.loads(response.data)
@@ -1150,7 +1158,7 @@ def processVserver(service):
     if vserverState is not None and vserverState:
         #
         # Run the API call to get the vserver state for each vserver.
-        endpoint = f'https://{config["OntapAdminServer"]}/api/svm/svms?fields=state'
+        endpoint = f'https://{config["OntapAdminServer"]}/api/svm/svms?fields=state&return_timeout=15'
         response = http.request('GET', endpoint, headers=headers)
         if response.status == 200:
             data = json.loads(response.data)
@@ -1173,7 +1181,7 @@ def processVserver(service):
     if nfsProtocolState is not None and nfsProtocolState:
         #
         # Run the API call to get the NFS protocol state for each vserver.
-        endpoint = f'https://{config["OntapAdminServer"]}/api/protocols/nfs/services?fields=state'
+        endpoint = f'https://{config["OntapAdminServer"]}/api/protocols/nfs/services?fields=state&return_timeout=15'
         response = http.request('GET', endpoint, headers=headers)
         if response.status == 200:
             data = json.loads(response.data)
@@ -1196,7 +1204,7 @@ def processVserver(service):
     if cifsProtocolState is not None and cifsProtocolState:
         #
         # Run the API call to get the NFS protocol state for each vserver.
-        endpoint = f'https://{config["OntapAdminServer"]}/api/protocols/cifs/services?fields=enabled'
+        endpoint = f'https://{config["OntapAdminServer"]}/api/protocols/cifs/services?fields=enabled&return_timeout=15'
         response = http.request('GET', endpoint, headers=headers)
         if response.status == 200:
             data = json.loads(response.data)

@@ -27,6 +27,7 @@ Metadata:
           - endpointSecurityGroupIds
           - LambdaRoleArn
           - SchedulerRoleArn
+          - watchdogRoleArn
       - Label: 
           default: "Alert Parameters"
         Parameters: 
@@ -74,7 +75,7 @@ Parameters:
     Type: String
 
   cloudWatchLogGroupArn:
-    Description: "The ARN of the CloudWatch log group to send alerts to. If left blank, alerts will not be sent to CloudWatch. Note that the log group must already exist."
+    Description: "The ARN of the CloudWatch log group to send alerts to. If left blank, alerts will not be sent to CloudWatch. Note that the log group must already exist. Also note that the ARN should end with ':*'."
     Type: String
     Default: ""
 
@@ -97,6 +98,11 @@ Parameters:
     Type: String
     Default: "true"
     AllowedValues: ["true", "false"]
+
+  watchdogRoleArn:
+    Description: "The ARN of the role to use for the Lambda function that will publish messages to the SNS topic if the monitoring function doesn't run properly. This is only needed if you are having the CloudWatch alarm created and if you want to provide an existing role, otherwise an appropriate one will be created for you."
+    Type: String
+    Default: ""
 
   createSecretsManagerEndpoint:
     Description: "Create a Secrets Manager endpoint."
@@ -272,7 +278,7 @@ Conditions:
   CreateLambdaRoleWithCW: !And [!Equals [!Ref LambdaRoleArn, ""], !Not [!Equals [!Ref cloudWatchLogGroupArn, ""]]]
   CreateLambdaRoleWithoutCW: !And [!Equals [!Ref LambdaRoleArn, ""], !Equals [!Ref cloudWatchLogGroupArn, ""]]
   CreateSchedulerRole: !Equals [!Ref SchedulerRoleArn, ""]
-  IncludeCloudWatchPermissions: !Not [!Equals [!Ref cloudWatchLogGroupArn, ""]]
+  CreateWatchdogRole: !Equals [!Ref watchdogRoleArn, ""]
 
 Resources:
   SecretManagerEndpoint:
@@ -316,8 +322,92 @@ Resources:
       ServiceName: !Sub "com.amazonaws.${AWS::Region}.s3"
       VpcEndpointType: 'Gateway'
       RouteTableIds: !Ref routeTableIds
-
-  watchDogAlarm:
+  #
+  # Allow the Watchdog Lambda function to publish to the SNS topic.
+  LambdaRoleWatchdog:
+    Type: "AWS::IAM::Role"
+    Condition: CreateWatchdogRole
+    Properties:
+      RoleName: !Sub "mon-ontap-services-watchdog-${AWS::StackName}"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service: "lambda.amazonaws.com"
+            Action: "sts:AssumeRole"
+      Policies:
+        - PolicyName: "LambdaPolicyWatchdog"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "sns:Publish"
+                Resource: !Ref snsTopicArn
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+  #
+  # This allows the Watchdog CloudWatch alarm to invoke the Lambda function.
+  resourceBasedPermission:
+    Type: "AWS::Lambda::Permission"
+    Condition: CreateWatchdogAlarm
+    Properties:
+      Action: "lambda:InvokeFunction"
+      FunctionName: !Sub "monitor-ontap-services-watchdog-${AWS::StackName}"
+      Principal: "lambda.alarms.cloudwatch.amazonaws.com"
+      SourceArn: !GetAtt watchdogAlarm.Arn
+  #
+  # Use a Lambda function to publish to an SNS topic so it can reside in a different region.
+  watchdogLambdaFunction: 
+    Type: "AWS::Lambda::Function"
+    Condition: CreateWatchdogAlarm
+    Properties:
+      FunctionName: !Sub "monitor-ontap-services-watchdog-${AWS::StackName}"
+      PackageType: "Zip"
+      Runtime: "python3.12"
+      Handler: "index.lambda_handler"
+      Timeout: 10
+      Role: !If [CreateWatchdogRole, !GetAtt LambdaRoleWatchdog.Arn, !Ref watchdogRoleArn]
+      Environment:
+        Variables:
+          snsTopicArn: !Ref snsTopicArn
+      Code:
+        ZipFile: |
+          import boto3
+          import os
+          
+          def lambda_handler(event, context):
+              snsTopicArn = os.environ.get('snsTopicArn')
+              if snsTopicArn is not None:
+                  region = snsTopicArn.split(":")[3]
+                  snsClient = boto3.client('sns', region_name=region)
+                  #
+                  # This is for future developement when the monitor-ontap-services
+                  # Lambda function will be able to send messages to the SNS topic.
+                  cmd = event.get("cmd")
+                  #
+                  # If the cmd is None, then assume a CloudWatch alarm triggered this function.
+                  if cmd is None: 
+                      message = f'Error! Lambda function {event["alarmData"]["alarmName"].replace("-watchdog-", "")} failed to execute properly.'
+                      snsClient.publish(
+                          TopicArn = snsTopicArn,
+                          Subject  = 'Error! Monitoring ONTAP services has failed to execute',
+                          Message  = message
+                      )
+                  elif cmd == "sendSns":
+                    message = event.get("message")
+                    subject = event.get("subject")
+                    snsClient.publish(
+                        TopicArn = snsTopicArn,
+                        Subject  = subject,
+                        Message  = message
+                    )
+  #
+  # This is the CloudWatch alarm that will trigger when the monitor-ontap-services
+  # Lambda function fails to run successfully. It will invoke the watchdogLambdaFunction
+  # to send a message to the SNS topic.
+  watchdogAlarm:
     Type: "AWS::CloudWatch::Alarm"
     Condition: CreateWatchdogAlarm
     Properties:
@@ -335,7 +425,7 @@ Resources:
       Threshold: 0.5
       ComparisonOperator: "GreaterThanThreshold"
       AlarmActions:
-        - !Ref snsTopicArn
+        - !GetAtt watchdogLambdaFunction.Arn
 
   LambdaRoleWithoutCW:
     Type: "AWS::IAM::Role"
@@ -368,8 +458,8 @@ Resources:
                 Resource:
                   - !Ref secretArn
                   - !Ref snsTopicArn
-                  - !Sub "arn:aws:s3:::{s3BucketName}"
-                  - !Sub "arn:aws:s3:::{s3BucketName}/*"
+                  - !Sub "arn:aws:s3:::${s3BucketName}"
+                  - !Sub "arn:aws:s3:::${s3BucketName}/*"
 
   LambdaRoleWithCW:
     Type: "AWS::IAM::Role"
@@ -477,6 +567,7 @@ Resources:
           secretUsernameKey: !Ref secretUsernameKey
           secretPasswordKey: !Ref secretPasswordKey
           snsTopicArn: !Ref snsTopicArn
+          sendSnsFunctionName: !Sub "monitor-ontap-services-watchdog-${AWS::StackName}"
           cloudWatchLogGroupArn: !Ref cloudWatchLogGroupArn
 
           initialVersionChangeAlert: !Ref versionChangeAlert
@@ -502,6 +593,7 @@ Resources:
       Code:
         ZipFile: |
           #!/bin/python3
+          #
           ################################################################################
           # THIS SOFTWARE IS PROVIDED BY NETAPP "AS IS" AND ANY EXPRESS OR IMPLIED
           # WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
@@ -521,8 +613,8 @@ Resources:
           # "matching conditions."  It is intended to be run as a Lambda function, but
           # can be run as a standalone program.
           #
-          # Version: v2.14
-          # Date: 2025-04-29-12:53:45
+          # Version: v2.16
+          # Date: 2025-05-19-21:24:55
           ################################################################################
           
           import json
@@ -838,7 +930,7 @@ Resources:
                   event["refresh"] -= 1
               #
               # Run the API call to get the current list of EMS events.
-              endpoint = f'https://{config["OntapAdminServer"]}/api/support/ems/events'
+              endpoint = f'https://{config["OntapAdminServer"]}/api/support/ems/events?return_timeout=15'
               response = http.request('GET', endpoint, headers=headers)
               if response.status == 200:
                   data = json.loads(response.data)
@@ -968,7 +1060,7 @@ Resources:
               daysOfWeek = ""
               #
               # Run the API call to get the schedule information.
-              endpoint = f'https://{config["OntapAdminServer"]}/api/cluster/schedules/{scheduleUUID}?fields=*'
+              endpoint = f'https://{config["OntapAdminServer"]}/api/cluster/schedules/{scheduleUUID}?fields=*&return_timeout=15'
               response = http.request('GET', endpoint, headers=headers)
               if response.status == 200:
                   schedule = json.loads(response.data)
@@ -1020,7 +1112,7 @@ Resources:
               global config, http, headers, clusterName, clusterVersion, logger
           
               # Run the API call to get the policy information.
-              endpoint = f'https://{config["OntapAdminServer"]}/api/snapmirror/policies/{policyUUID}?fields=*'
+              endpoint = f'https://{config["OntapAdminServer"]}/api/snapmirror/policies/{policyUUID}?fields=*&return_timeout=15'
               response = http.request('GET', endpoint, headers=headers)
               if response.status == 200:
                   data = json.loads(response.data)
@@ -1123,7 +1215,7 @@ Resources:
                           logger.warning(f'Unknown snapmirror alert type: "{key}".')
               #
               # Run the API call to get the current state of all the snapmirror relationships.
-              endpoint = f'https://{config["OntapAdminServer"]}/api/snapmirror/relationships?fields=*'
+              endpoint = f'https://{config["OntapAdminServer"]}/api/snapmirror/relationships?fields=*&return_timeout=15'
               response = http.request('GET', endpoint, headers=headers)
               if response.status == 200:
                   data = json.loads(response.data)
@@ -1297,18 +1389,29 @@ Resources:
                   event["refresh"] -= 1
               #
               # Run the API call to get the physical storage used.
-              endpoint = f'https://{config["OntapAdminServer"]}/api/storage/aggregates?fields=space'
+              endpoint = f'https://{config["OntapAdminServer"]}/api/storage/aggregates?fields=space&return_timeout=15'
               aggrResponse = http.request('GET', endpoint, headers=headers)
               if aggrResponse.status != 200:
                   logger.error(f'API call to {endpoint} failed. HTTP status code {aggrResponse.status}.')
                   aggrResponse = None
               #
               # Run the API call to get the volume information.
-              endpoint = f'https://{config["OntapAdminServer"]}/api/storage/volumes?fields=space,files,svm,state'
+              endpoint = f'https://{config["OntapAdminServer"]}/api/storage/volumes?fields=space,files,svm,state&return_timeout=15'
               volumeResponse = http.request('GET', endpoint, headers=headers)
               if volumeResponse.status != 200:
                   logger.error(f'API call to {endpoint} failed. HTTP status code {volumeResponse.status}.')
                   volumeResponse = None
+                  volumeRecords = None
+              else:
+                  volumeRecords = json.loads(volumeResponse.data).get("records")
+                  #
+                  # Now get the constituent volumes.
+                  endpoint = f'https://{config["OntapAdminServer"]}/api/storage/volumes?is_constituent=true&fields=space,files,svm,state&return_timeout=15'
+                  volumeResponse = http.request('GET', endpoint, headers=headers)
+                  if volumeResponse.status != 200:
+                      logger.error(f'API call to {endpoint} failed. HTTP status code {volumeResponse.status}.')
+                  else:
+                      volumeRecords.extend(json.loads(volumeResponse.data).get("records"))
               #
               # If both API calls failed, no point on continuing.
               if volumeResponse is None and aggrResponse is None:
@@ -1337,8 +1440,7 @@ Resources:
                                           events.append(event)
                       elif lkey == "volumewarnpercentused" or lkey == "volumecriticalpercentused":
                           if volumeResponse is not None:
-                              data = json.loads(volumeResponse.data)
-                              for record in data["records"]:
+                              for record in volumeRecords:
                                   if record["space"].get("percent_used"):
                                       if record["space"]["percent_used"] >= rule[key]:
                                           uniqueIdentifier = record["uuid"] + "_" + key
@@ -1355,8 +1457,7 @@ Resources:
                                               events.append(event)
                       elif lkey == "volumewarnfilespercentused" or lkey == "volumecriticalfilespercentused":
                           if volumeResponse is not None:
-                              data = json.loads(volumeResponse.data)
-                              for record in data["records"]:
+                              for record in volumeRecords:
                                   #
                                   # If a volume is offline, the API will not report the "files" information.
                                   if record.get("files") is not None:
@@ -1378,8 +1479,7 @@ Resources:
                                                       }
                                                   events.append(event)
                       elif lkey == "offline":
-                          data = json.loads(volumeResponse.data)
-                          for record in data["records"]:
+                          for record in volumeRecords:
                               if rule[key] and record["state"].lower() == "offline":
                                   uniqueIdentifier = f'{record["uuid"]}_{key}_{rule[key]}'
                                   if not eventExist(events, uniqueIdentifier):  # This resets the "refresh" field if found.
@@ -1418,7 +1518,6 @@ Resources:
           ################################################################################
           def sendAlert(message, severity):
               global config, snsClient, logger, cloudWatchClient
-          
           
               if severity == "CRITICAL":
                   logger.critical(message)
@@ -1488,7 +1587,7 @@ Resources:
                   event["refresh"] -= 1
               #
               # Run the API call to get the quota report.
-              endpoint = f'https://{config["OntapAdminServer"]}/api/storage/quota/reports?fields=*'
+              endpoint = f'https://{config["OntapAdminServer"]}/api/storage/quota/reports?fields=*&return_timeout=30'
               response = http.request('GET', endpoint, headers=headers)
               if response.status == 200:
                   data = json.loads(response.data)
@@ -1653,7 +1752,7 @@ Resources:
               if vserverState is not None and vserverState:
                   #
                   # Run the API call to get the vserver state for each vserver.
-                  endpoint = f'https://{config["OntapAdminServer"]}/api/svm/svms?fields=state'
+                  endpoint = f'https://{config["OntapAdminServer"]}/api/svm/svms?fields=state&return_timeout=15'
                   response = http.request('GET', endpoint, headers=headers)
                   if response.status == 200:
                       data = json.loads(response.data)
@@ -1676,7 +1775,7 @@ Resources:
               if nfsProtocolState is not None and nfsProtocolState:
                   #
                   # Run the API call to get the NFS protocol state for each vserver.
-                  endpoint = f'https://{config["OntapAdminServer"]}/api/protocols/nfs/services?fields=state'
+                  endpoint = f'https://{config["OntapAdminServer"]}/api/protocols/nfs/services?fields=state&return_timeout=15'
                   response = http.request('GET', endpoint, headers=headers)
                   if response.status == 200:
                       data = json.loads(response.data)
@@ -1699,7 +1798,7 @@ Resources:
               if cifsProtocolState is not None and cifsProtocolState:
                   #
                   # Run the API call to get the NFS protocol state for each vserver.
-                  endpoint = f'https://{config["OntapAdminServer"]}/api/protocols/cifs/services?fields=enabled'
+                  endpoint = f'https://{config["OntapAdminServer"]}/api/protocols/cifs/services?fields=enabled&return_timeout=15'
                   response = http.request('GET', endpoint, headers=headers)
                   if response.status == 200:
                       data = json.loads(response.data)
