@@ -18,6 +18,10 @@ Metadata:
           - secretPasswordKey
           - checkInterval
           - createWatchdogAlarm
+          - implementWatchdogAsLambda
+          - watchdogRoleArn
+          - LambdaRoleArn
+          - SchedulerRoleArn
           - createSecretsManagerEndpoint
           - createSNSEndpoint
           - createCloudWatchLogsEndpoint
@@ -25,9 +29,6 @@ Metadata:
           - routeTableIds
           - vpcId
           - endpointSecurityGroupIds
-          - LambdaRoleArn
-          - SchedulerRoleArn
-          - watchdogRoleArn
       - Label: 
           default: "Alert Parameters"
         Parameters: 
@@ -94,13 +95,19 @@ Parameters:
     Default: "password"
 
   createWatchdogAlarm:
-    Description: "Create a CloudWatch alarm to monitor the Lambda function. It will alert you if the function fails to run successfully."
+    Description: "Create a CloudWatch alarm to monitor the Lambda function. It will alert you if the monitoring Lambda function fails to run successfully."
     Type: String
     Default: "true"
     AllowedValues: ["true", "false"]
 
+  implementWatchdogAsLambda:
+    Description: "Use a Lambda function to publish to the SNS topic so it can reside in a different region. Only needed if you are creating the CloudWatch alarm and the SNS topic is in a different region."
+    Type: String
+    Default: "false"
+    AllowedValues: ["true", "false"]
+
   watchdogRoleArn:
-    Description: "The ARN of the role to use for the Lambda function that will publish messages to the SNS topic if the monitoring function doesn't run properly. This is only needed if you are having the CloudWatch alarm created and if you want to provide an existing role, otherwise an appropriate one will be created for you."
+    Description: "The ARN of the role to assign to the Lambda function that will publish messages to the SNS topic if the monitoring function doesn't run properly. This is only needed if you are having the CloudWatch alarm created, implemented as a Lambda function and you want to provide an existing role, otherwise, if needed, an appropriate role will be created for you."
     Type: String
     Default: ""
 
@@ -192,7 +199,7 @@ Parameters:
     Description: "Alert when a SnapMirror update hasn't transferred any new data in the specified seconds. Set to 0 to disable this alert."
     Type: Number
     Default: 600
-    MinValue: 60
+    MinValue: 0
 
   snapMirrorHealthAlert:
     Description: "Alert when the SnapMirror relationship is not healthy."
@@ -201,34 +208,40 @@ Parameters:
     AllowedValues: ["true", "false"]
 
   fileSystemUtilizationWarnAlert:
-    Description: "Alert when the file system utilization exceeds this threshold in percentage."
+    Description: "Alert when the file system utilization exceeds this threshold in percentage. Set to 0 to disable this alert."
     Type: Number
     Default: 80
+    MinValue: 0
 
   fileSystemUtilizationCriticalAlert:
-    Description: "Alert when the file system utilization exceeds this threshold in percentage."
+    Description: "Alert when the file system utilization exceeds this threshold in percentage. Set to 0 to disable this alert."
     Type: Number
     Default: 90
+    MinValue: 0
 
   volumeUtilizationWarnAlert:
-    Description: "Alert when a volume utilization exceeds this threshold in percentage."
+    Description: "Alert when a volume utilization exceeds this threshold in percentage. Set to 0 to disable this alert."
     Type: Number
     Default: 90
+    MinValue: 0
 
   volumeUtilizationCriticalAlert:
-    Description: "Alert when a volume utilization exceeds this threshold in percentage."
+    Description: "Alert when a volume utilization exceeds this threshold in percentage. Set to 0 to disable this alert."
     Type: Number
     Default: 95
+    MinValue: 0
 
   volumeFileUtilizationWarnAlert:
-    Description: "Alert when a volume inode utilization exceeds this threshold in percentage."
+    Description: "Alert when a volume inode utilization exceeds this threshold in percentage. Set to 0 to disable this alert."
     Type: Number
     Default: 90
+    MinValue: 0
 
   volumeFileUtilizationCriticalAlert:
-    Description: "Alert when a volume inode utilization exceeds this threshold in percentage."
+    Description: "Alert when a volume inode utilization exceeds this threshold in percentage. Set to 0 to disable this alert."
     Type: Number
     Default: 95
+    MinValue: 0
 
   volumeOfflineAlert:
     Description: "Alert when a volume goes offline."
@@ -237,19 +250,22 @@ Parameters:
     Default: "true"
 
   softQuotaUtilizationAlert:
-    Description: "Alert when a soft quota exceeds this threshold in percentage."
+    Description: "Alert when a soft quota exceeds this threshold in percentage. Set to 0 to disable this alert."
     Type: Number
     Default: 100
+    MinValue: 0
 
   hardQuotaUtilizationAlert:
-    Description: "Alert when a hard quota exceeds this threshold in percentage."
+    Description: "Alert when a hard quota exceeds this threshold in percentage. Set to 0 to disable this alert."
     Type: Number
     Default: 80
+    MinValue: 0
 
   inodesQuotaUtilizationAlert:
-    Description: "Alert when an inode quota exceeds this threshold in percentage."
+    Description: "Alert when an inode quota exceeds this threshold in percentage. Set to 0 to disable this alert."
     Type: Number
     Default: 80
+    MinValue: 0
 
   vserverStateAlert:
     Description: "Alert when a vserver goes offline."
@@ -274,11 +290,12 @@ Conditions:
   CreateSNSEndpoint: !Equals [!Ref createSNSEndpoint, "true"]
   CreateS3Endpoint: !Equals [!Ref createS3Endpoint, "true"]
   CreateCloudWatchLogsEndpoint: !Equals [!Ref createCloudWatchLogsEndpoint, "true"]
-  CreateWatchdogAlarm: !Equals [!Ref createWatchdogAlarm, "true"]
+  CreateWatchdogAlarmAsLambda: !And [!Equals [!Ref createWatchdogAlarm, "true"], !Equals [!Ref implementWatchdogAsLambda, "true"]]
+  CreateWatchdogAlarmAsCloudWatch: !And [!Equals [!Ref createWatchdogAlarm, "true"], !Equals [!Ref implementWatchdogAsLambda, "false"]]
+  CreateWatchdogRole: !And [!Equals [!Ref watchdogRoleArn, ""], !Equals [!Ref implementWatchdogAsLambda, "true"]]
   CreateLambdaRoleWithCW: !And [!Equals [!Ref LambdaRoleArn, ""], !Not [!Equals [!Ref cloudWatchLogGroupArn, ""]]]
   CreateLambdaRoleWithoutCW: !And [!Equals [!Ref LambdaRoleArn, ""], !Equals [!Ref cloudWatchLogGroupArn, ""]]
   CreateSchedulerRole: !Equals [!Ref SchedulerRoleArn, ""]
-  CreateWatchdogRole: !Equals [!Ref watchdogRoleArn, ""]
 
 Resources:
   SecretManagerEndpoint:
@@ -323,7 +340,7 @@ Resources:
       VpcEndpointType: 'Gateway'
       RouteTableIds: !Ref routeTableIds
   #
-  # Allow the Watchdog Lambda function to publish to the SNS topic.
+  # Role used by the watchdog Lambda function to publish to the SNS topic.
   LambdaRoleWatchdog:
     Type: "AWS::IAM::Role"
     Condition: CreateWatchdogRole
@@ -351,17 +368,17 @@ Resources:
   # This allows the Watchdog CloudWatch alarm to invoke the Lambda function.
   resourceBasedPermission:
     Type: "AWS::Lambda::Permission"
-    Condition: CreateWatchdogAlarm
+    Condition: CreateWatchdogAlarmAsLambda
     Properties:
       Action: "lambda:InvokeFunction"
       FunctionName: !Sub "monitor-ontap-services-watchdog-${AWS::StackName}"
       Principal: "lambda.alarms.cloudwatch.amazonaws.com"
-      SourceArn: !GetAtt watchdogAlarm.Arn
+      SourceArn: !GetAtt watchdogAlarmToLambda.Arn
   #
   # Use a Lambda function to publish to an SNS topic so it can reside in a different region.
   watchdogLambdaFunction: 
     Type: "AWS::Lambda::Function"
-    Condition: CreateWatchdogAlarm
+    Condition: CreateWatchdogAlarmAsLambda
     Properties:
       FunctionName: !Sub "monitor-ontap-services-watchdog-${AWS::StackName}"
       PackageType: "Zip"
@@ -380,36 +397,21 @@ Resources:
           def lambda_handler(event, context):
               snsTopicArn = os.environ.get('snsTopicArn')
               if snsTopicArn is not None:
-                  region = snsTopicArn.split(":")[3]
-                  snsClient = boto3.client('sns', region_name=region)
-                  #
-                  # This is for future developement when the monitor-ontap-services
-                  # Lambda function will be able to send messages to the SNS topic.
-                  cmd = event.get("cmd")
-                  #
-                  # If the cmd is None, then assume a CloudWatch alarm triggered this function.
-                  if cmd is None: 
-                      message = f'Error! Lambda function {event["alarmData"]["alarmName"].replace("-watchdog-", "")} failed to execute properly.'
-                      snsClient.publish(
-                          TopicArn = snsTopicArn,
-                          Subject  = 'Error! Monitoring ONTAP services has failed to execute',
-                          Message  = message
-                      )
-                  elif cmd == "sendSns":
-                    message = event.get("message")
-                    subject = event.get("subject")
-                    snsClient.publish(
-                        TopicArn = snsTopicArn,
-                        Subject  = subject,
-                        Message  = message
-                    )
+                  snsClient = boto3.client('sns', region_name=snsTopicArn.split(":")[3])
+                  snsClient.publish(
+                      TopicArn = snsTopicArn,
+                      Subject  = 'Error! Monitoring ONTAP services has failed to execute',
+                      Message  = f'Error! Lambda function {event["alarmData"]["alarmName"].replace("-watchdog-", "")} failed to execute properly.'
+                  )
   #
   # This is the CloudWatch alarm that will trigger when the monitor-ontap-services
   # Lambda function fails to run successfully. It will invoke the watchdogLambdaFunction
   # to send a message to the SNS topic.
-  watchdogAlarm:
+  # Only this alarm, or the watchdogAlarmToSNS, will be created depending on the
+  # implementWatchdogAsLambda parameter.
+  watchdogAlarmToLambda:
     Type: "AWS::CloudWatch::Alarm"
-    Condition: CreateWatchdogAlarm
+    Condition: CreateWatchdogAlarmAsLambda
     Properties:
       AlarmName: !Sub "monitor-ontap-services-watchdog-${AWS::StackName}"
       AlarmDescription: !Sub "Watchdog alarm for the monitor-ontap-services-${AWS::StackName} Lambda function."
@@ -426,7 +428,35 @@ Resources:
       ComparisonOperator: "GreaterThanThreshold"
       AlarmActions:
         - !GetAtt watchdogLambdaFunction.Arn
-
+  #
+  # This is the CloudWatch alarm that will trigger when the monitor-ontap-services
+  # Lambda function fails to run successfully. It will send an SNS message to the SNS topic.
+  # Only this alarm, or the watchdogAlarmToLambda, will be created depending on the
+  # implementWatchdogAsLambda parameter.
+  watchdogAlarmToSNS:
+    Type: "AWS::CloudWatch::Alarm"
+    Condition: CreateWatchdogAlarmAsCloudWatch
+    Properties:
+      AlarmName: !Sub "monitor-ontap-services-watchdog-${AWS::StackName}"
+      AlarmDescription: !Sub "Watchdog alarm for the monitor-ontap-services-${AWS::StackName} Lambda function."
+      Namespace: "AWS/Lambda"
+      MetricName: "Errors"
+      Dimensions:
+        - Name: "FunctionName"
+          Value: !Sub "monitor-ontap-services-${AWS::StackName}"
+      Statistic: "Maximum"
+      Period: 300
+      EvaluationPeriods: 1
+      TreatMissingData: "ignore"
+      Threshold: 0.5
+      ComparisonOperator: "GreaterThanThreshold"
+      AlarmActions:
+        - !Ref snsTopicArn
+  #
+  # This is the role that will be assigned to the monitoring Lambda function if
+  # the user doesn't want to send events to a CloudWatch log group. It will not
+  # create if the user has provide a role ARN. Either this role, or the LambdaRoleWithCW
+  # will be created depending on the createCloudWatchLogGroupArn parameter.
   LambdaRoleWithoutCW:
     Type: "AWS::IAM::Role"
     Condition: CreateLambdaRoleWithoutCW
@@ -460,7 +490,11 @@ Resources:
                   - !Ref snsTopicArn
                   - !Sub "arn:aws:s3:::${s3BucketName}"
                   - !Sub "arn:aws:s3:::${s3BucketName}/*"
-
+  #
+  # This is the role that will be assigned to the monitoring Lambda function if
+  # the user doesn't want to send events to a CloudWatch log group. It will not
+  # create if the user has provide a role ARN. Either this role, or the LambdaRoleWithCW
+  # will be created depending on the createCloudWatchLogGroupArn parameter.
   LambdaRoleWithCW:
     Type: "AWS::IAM::Role"
     Condition: CreateLambdaRoleWithCW
@@ -498,7 +532,9 @@ Resources:
                   - !Sub "arn:aws:s3:::${s3BucketName}"
                   - !Sub "arn:aws:s3:::${s3BucketName}/*"
                   - !Ref cloudWatchLogGroupArn
-
+  #
+  # This is the role that will be assigned to the scheduler EventBridge if the user
+  # doesn't want to provide a role ARN.
   SchedulerRole:
     Type: "AWS::IAM::Role"
     Condition: CreateSchedulerRole
