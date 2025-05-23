@@ -649,8 +649,8 @@ Resources:
           # "matching conditions."  It is intended to be run as a Lambda function, but
           # can be run as a standalone program.
           #
-          # Version: v2.16
-          # Date: 2025-05-19-21:24:55
+          # Version: v2.18
+          # Date: 2025-05-23-18:09:41
           ################################################################################
           
           import json
@@ -1923,7 +1923,10 @@ Resources:
                           conditions["services"][getServiceIndex("systemHealth", conditions)]["rules"].append({"networkInterfaces": False})
                   elif name == "initialEmsEventsAlert":
                       if value == "true":
-                          conditions["services"][getServiceIndex("ems", conditions)]["rules"].append({"name": "", "severity": "error|alert|emergency", "message": ""})
+                          if os.environ.get("initialEmsExtendedAlerts") == "true":
+                              conditions["services"][getServiceIndex("ems", conditions)]["rules"].append({"name": "", "severity": "informational|notice|error|alert|emergency", "message": ""})
+                          else:
+                              conditions["services"][getServiceIndex("ems", conditions)]["rules"].append({"name": "", "severity": "error|alert|emergency", "message": ""})
                   elif name == "initialSnapMirrorHealthAlert":
                       if value == "true":
                           conditions["services"][getServiceIndex("snapmirror", conditions)]["rules"].append({"Healthy": False})  # This is what it matches on, so it is interesting when the health is false.
