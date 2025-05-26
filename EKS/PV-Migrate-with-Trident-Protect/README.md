@@ -1,7 +1,3 @@
-# :warning: **NOTICE:**
-
-This repository is no longer being maintained. However, all the code found here has been relocated to a new NetApp managed GitHub repository found here [https://github.com/NetApp/FSx-ONTAP-utils/tree/main/EKS/PV-Migrate-with-Trident-Protect](https://github.com/NetApp/FSx-ONTAP-utils/tree/main/EKS/PV-Migrate-with-Trident-Protect) where it is continually updated. Please refer to that repository for the latest updates.
-
 # Migrate Kubernetes PVs with Trident Protect
 
 This is a sample for setting up your Kubernetes application to be migrated from one storage class to another using Trident Protect.

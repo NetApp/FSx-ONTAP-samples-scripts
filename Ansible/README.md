@@ -1,7 +1,3 @@
-# :warning: **NOTICE:**
-
-This repository is no longer being maintained. However, all the code found here has been relocated to a new NetApp managed GitHub repository found here [https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Samples/Automation/Ansible](https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Samples/Automation/Ansible) where it is continually updated. Please refer to that repository for the latest updates.
-
 # Ansible Samples
 Ansible is a general purpose automation engine. It can be used to automate most repetitive IT tasks.
 The typical input you provide Ansible is a "Playbook." This folder holds various playbooks that can be used
