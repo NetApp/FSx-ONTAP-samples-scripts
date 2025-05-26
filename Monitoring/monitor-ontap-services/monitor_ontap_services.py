@@ -597,7 +597,7 @@ def processSnapMirrorRelationships(service):
     curTimeSeconds = int(datetime.datetime.now(pytz.timezone(clusterTimezone) if clusterTimezone != None else datetime.timezone.utc).timestamp())
     #
     # Consolidate all the rules so we can decide how to process lagtime.
-    maxLagtime = None
+    maxLagTime = None
     maxLagTimePercent = None
     healthy = None
     stalledTransferSeconds = None
