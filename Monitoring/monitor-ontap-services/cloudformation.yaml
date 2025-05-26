@@ -649,8 +649,8 @@ Resources:
           # "matching conditions."  It is intended to be run as a Lambda function, but
           # can be run as a standalone program.
           #
-          # Version: v2.18
-          # Date: 2025-05-23-18:09:41
+          # Version: v2.19
+          # Date: 2025-05-26-13:48:43
           ################################################################################
           
           import json
@@ -1227,7 +1227,7 @@ Resources:
               curTimeSeconds = int(datetime.datetime.now(pytz.timezone(clusterTimezone) if clusterTimezone != None else datetime.timezone.utc).timestamp())
               #
               # Consolidate all the rules so we can decide how to process lagtime.
-              maxLagtime = None
+              maxLagTime = None
               maxLagTimePercent = None
               healthy = None
               stalledTransferSeconds = None
