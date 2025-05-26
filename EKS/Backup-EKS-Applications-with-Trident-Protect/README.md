@@ -1,3 +1,7 @@
+# :warning: **NOTICE:**
+
+This repository is no longer being maintained. However, all the code found here has been relocated to a new NetApp managed GitHub repository found here [https://github.com/NetApp/FSx-ONTAP-utils/tree/main/EKS/Backup-EKS-Applications-with-Trident-Protect](https://github.com/NetApp/FSx-ONTAP-utils/tree/main/EKS/Backup-EKS-Applications-with-Trident-Protect) where it is continually updated. Please refer to that repository for the latest updates.
+
 # Backup EKS Applications with Trident Protect
 
 This is a sample for setting up your Kubernetes application to be backed up by Trident Protect.

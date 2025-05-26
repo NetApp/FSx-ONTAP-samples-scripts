@@ -1,3 +1,7 @@
+# :warning: **NOTICE:**
+
+This repository is no longer being maintained. However, all the code found here has been relocated to a new NetApp managed GitHub repository found here [https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Samples/AI](https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Samples/AI) where it is continually updated. Please refer to that repository for the latest updates.
+
 # AI Overview
 This subfolder contains samples that can help you create AI solutions.
 

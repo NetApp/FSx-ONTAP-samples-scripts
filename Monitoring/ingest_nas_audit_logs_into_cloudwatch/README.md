@@ -1,3 +1,7 @@
+# :warning: **NOTICE:**
+
+This repository is no longer being maintained. However, all the code found here has been relocated to a new NetApp managed GitHub repository found here [https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Monitoring/Ingest-NAS-Audit-Logs-into-CloudWatch](https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Monitoring/Ingest-NAS-Audit-Logs-into-CloudWatch) where it is continually updated. Please refer to that repository for the latest updates.
+
 # Ingest FSx for ONTAP NAS audit logs into CloudWatch
 
 ## Overview
@@ -168,7 +172,7 @@ to the name of the file you created.
 
 ## Author Information
 
-This repository is maintained by the contributors listed on [GitHub](https://github.com/NetApp/FSx-ONTAP-samples-scripts/graphs/contributors).
+This repository is maintained by the contributors listed on [GitHub](https://github.com/NetApp/FSx-ONTAP-utils/graphs/contributors).
 
 ## License
 

@@ -1,3 +1,7 @@
+# :warning: **NOTICE:**
+
+This repository is no longer being maintained. However, all the code found here has been relocated to a new NetApp managed GitHub repository found here [https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Samples/Automation/Terraform/Deploy-FSx-ONTAP-Fileshare-Access](https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Samples/Automation/Terraform/Deploy-FSx-ONTAP-Fileshare-Access) where it is continually updated. Please refer to that repository for the latest updates.
+
 # Deploy an Amazon FSx for NetApp ONTAP with VPN
 
 The sample terraform deployment will create a Amazon FSx for NetApp ONTAP filesystem, AD, VPN setup, and create shares for quick access to shares to simulate on-prem access.

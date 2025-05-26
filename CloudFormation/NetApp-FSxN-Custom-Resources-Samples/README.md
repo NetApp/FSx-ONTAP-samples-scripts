@@ -1,3 +1,7 @@
+# :warning: **NOTICE:**
+
+This repository is no longer being maintained. However, all the code found here has been relocated to a new NetApp managed GitHub repository found here [https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Samples/Automation/CloudFormation/NetApp-FSxN-Custom-Resources-Samples](https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Samples/Automation/CloudFormation/NetApp-FSxN-Custom-Resources-Samples) where it is continually updated. Please refer to that repository for the latest updates.
+
 # NetApp FSxN Third Party CloudFormation Extensions Examples
 
 ## Overview
