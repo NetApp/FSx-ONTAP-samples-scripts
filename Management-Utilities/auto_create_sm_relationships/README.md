@@ -1,7 +1,3 @@
-# :warning: **NOTICE:**
-
-This repository is no longer being maintained. However, all the code found here has been relocated to a new NetApp managed GitHub repository found here [https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Samples/Management-Utilities/Auto-Create-SM-Relationships](https://github.com/NetApp/FSx-ONTAP-utils/tree/main/Samples/Management-Utilities/Auto-Create-SM-Relationships) where it is continually updated. Please refer to that repository for the latest updates.
-
 # Automatically create SnapMirror relationships for FSxN file systems
 
 ## Introduction

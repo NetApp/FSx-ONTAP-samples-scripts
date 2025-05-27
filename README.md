@@ -1,4 +1,3 @@
-
 # FSx-ONTAP-samples-scripts
 
 FSx for NetApp ONTAP is an AWS service providing a comprehensive set of advanced storage features purposely
