@@ -21,7 +21,6 @@ Metadata:
           - implementWatchdogAsLambda
           - watchdogRoleArn
           - LambdaRoleArn
-          - SchedulerRoleArn
           - createSecretsManagerEndpoint
           - createSNSEndpoint
           - createCloudWatchLogsEndpoint
@@ -152,11 +151,6 @@ Parameters:
 
   LambdaRoleArn:
     Description: "The ARN of the role to use for the Lambda function. This is only needed if you want to provide an existing role, otherwise an appropriate one will be created for you."
-    Type: String
-    Default: ""
-
-  SchedulerRoleArn:
-    Description: "The ARN of the role to use for the Lambda scheduler. This is only needed if you want to provide an existing role, otherwise an appropriate one will be created for you."
     Type: String
     Default: ""
 
@@ -295,7 +289,6 @@ Conditions:
   CreateWatchdogRole: !And [!Equals [!Ref watchdogRoleArn, ""], !Equals [!Ref implementWatchdogAsLambda, "true"]]
   CreateLambdaRoleWithCW: !And [!Equals [!Ref LambdaRoleArn, ""], !Not [!Equals [!Ref cloudWatchLogGroupArn, ""]]]
   CreateLambdaRoleWithoutCW: !And [!Equals [!Ref LambdaRoleArn, ""], !Equals [!Ref cloudWatchLogGroupArn, ""]]
-  CreateSchedulerRole: !Equals [!Ref SchedulerRoleArn, ""]
 
 Resources:
   SecretManagerEndpoint:
@@ -533,42 +526,27 @@ Resources:
                   - !Sub "arn:aws:s3:::${s3BucketName}/*"
                   - !Ref cloudWatchLogGroupArn
   #
-  # This is the role that will be assigned to the scheduler EventBridge if the user
-  # doesn't want to provide a role ARN.
-  SchedulerRole:
-    Type: "AWS::IAM::Role"
-    Condition: CreateSchedulerRole
+  # Instead of creating a EventBridge schedule, create an EventBridge rule triggered by a schedule.
+  # This way a separate role doesn't have to be created, just a Lambda permission to allow
+  # EventBridge to invoke the Lambda function.
+  LambdaEventRule:
+    Type: "AWS::Events::Rule"
     Properties:
-      RoleName: !Sub "SchedulerRole-${AWS::StackName}"
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: "Allow"
-            Principal:
-              Service: "scheduler.amazonaws.com"
-            Action: "sts:AssumeRole"
-
-      Policies:
-        - PolicyName: "SchedulerPolicy"
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: "Allow"
-                Action:
-                  - "lambda:InvokeFunction"
-                Resource: !GetAtt LambdaFunction.Arn
-
-  LambdaScheduler:
-    Type: "AWS::Scheduler::Schedule"
-    Properties:
-      Description: "Schedule the monitor-ontap-services Lambda function."
-      Name: !Sub "monitor-ontap-services-scheduler-${AWS::StackName}"
-      FlexibleTimeWindow:
-        Mode: "OFF"
+      Description: "Event rule to trigger the monitor-ontap-services Lambda function."
+      Name: !Sub "monitor-ontap-services-event-rule-${AWS::StackName}"
       ScheduleExpression: !Sub "rate(${checkInterval} minutes)"
-      Target:
-        Arn: !GetAtt LambdaFunction.Arn
-        RoleArn: !If [CreateSchedulerRole, !GetAtt SchedulerRole.Arn, !Ref SchedulerRoleArn]
+      State: "ENABLED"
+      Targets:
+        - Arn: !GetAtt LambdaFunction.Arn
+          Id: "MonitorOntapServicesTarget"
+
+  LambdaPermissionEventRule:
+    Type: "AWS::Lambda::Permission"
+    Properties:
+      Action: "lambda:InvokeFunction"
+      FunctionName: !GetAtt LambdaFunction.Arn
+      Principal: "events.amazonaws.com"
+      SourceArn: !GetAtt LambdaEventRule.Arn
 
   LambdaLayer:
     Type: "AWS::Lambda::LayerVersion"
@@ -629,7 +607,6 @@ Resources:
       Code:
         ZipFile: |
           #!/bin/python3
-          #
           ################################################################################
           # THIS SOFTWARE IS PROVIDED BY NETAPP "AS IS" AND ANY EXPRESS OR IMPLIED
           # WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
@@ -650,7 +627,7 @@ Resources:
           # can be run as a standalone program.
           #
           # Version: v2.19
-          # Date: 2025-05-26-13:48:43
+          # Date: 2025-05-27-13:28:30
           ################################################################################
           
           import json
