@@ -204,19 +204,19 @@ Parameters:
     AllowedValues: ["true", "false"]
 
   createSNSEndpoint:
-    Description: "Set to 'true if you want to create an SNS endpoint."
+    Description: "Set to 'true' if you want to create an SNS endpoint."
     Type: String
     Default: "false"
     AllowedValues: ["true", "false"]
 
   createCloudWatchLogsEndpoint:
-    Description: "Set to 'true if you want to create a CloudWatch logs endpoint."
+    Description: "Set to 'true' if you want to create a CloudWatch logs endpoint."
     Type: String
     Default: "false"
     AllowedValues: ["true", "false"]
 
   createS3Endpoint:
-    Description: "Set to 'true if you want to create an S3 endpoint."
+    Description: "Set to 'true' if you want to create an S3 endpoint."
     Type: String
     Default: "false"
     AllowedValues: ["true", "false"]
