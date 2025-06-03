@@ -1292,10 +1292,7 @@ def buildDefaultMatchingConditions():
                 conditions["services"][getServiceIndex("systemHealth", conditions)]["rules"].append({"networkInterfaces": False})
         elif name == "initialEmsEventsAlert":
             if value == "true":
-                if os.environ.get("initialEmsExtendedAlerts") == "true":
-                    conditions["services"][getServiceIndex("ems", conditions)]["rules"].append({"name": "", "severity": "informational|notice|error|alert|emergency", "message": ""})
-                else:
-                    conditions["services"][getServiceIndex("ems", conditions)]["rules"].append({"name": "", "severity": "error|alert|emergency", "message": ""})
+                conditions["services"][getServiceIndex("ems", conditions)]["rules"].append({"name": "", "severity": "error|alert|emergency", "message": "", "filter": ""})
         elif name == "initialSnapMirrorHealthAlert":
             if value == "true":
                 conditions["services"][getServiceIndex("snapmirror", conditions)]["rules"].append({"Healthy": False})  # This is what it matches on, so it is interesting when the health is false.

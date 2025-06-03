@@ -95,7 +95,7 @@ To install the program using the CloudFormation template, you will need to do th
 |SubnetIds|The subnet IDs that the Lambda function will be attached to. They must have connectivity to the FSxN file system management endpoint that you wish to monitor. It is recommended to select at least two.|
 |SecurityGroupIds|The security group IDs that the Lambda function will be attached to. The security group must allow outbound traffic over port 443 to the SNS, Secrets Manager, and CloudWatch and S3 AWS service endpoints, as well as the FSxN file system you want to monitor.|
 |SnsTopicArn|The ARN of the SNS topic you want the program to publish alert messages to.|
-|CloudWatchLogGroupName|The name of **an existing** CloudWatch Log Group that the Lambda function can send event messages to. It will create a new Log Stream within the Log Group every day that is unique to this file system so you can use the same Log Group for multiple instances of this program. If this field is left blank, alerts will not be sent to CloudWatch.|
+|CloudWatchLogGroupARN|The ARN of **an existing** CloudWatch Log Group that the Lambda function can send event messages to. It will create a new Log Stream within the Log Group every day that is unique to this file system so you can use the same Log Group for multiple instances of this program. If this field is left blank, alerts will not be sent to CloudWatch.|
 |SecretArn|The ARN of the secret within the AWS Secrets Manager that holds the FSxN file system credentials.|
 |SecretUsernameKey|The name of the key within the secret that holds the username portion of the FSxN file system credentials. The default is 'username'.|
 |SecretPasswordKey|The name of the key within the secret that holds the password portion of the FSxN file system credentials. The default is 'password'.|
@@ -124,16 +124,16 @@ set for the OntapAdminServer parameter.
 After the stack has been created, check the status of the Lambda function to make sure it is
 not in an error state. To find the Lambda function go to the Resources tab of the CloudFormation
 stack and click on the "Physical ID" of the Lambda function. This should bring you to the Lambda service in the AWS
-console. Once there, click on the "Monitor" tab to see if the function has been invoked. Locate the
+console. Once there, click on the "Monitor" tab to see if the function has been invoked. Note that it will take
+at least the configured iteration time before the function is invoked for the first time. Locate the
 "Error count and success rate(%)" chart, which is usually found at the top right corner of the "Monitor" dashboard.
-Within the "CheckInterval" number of minutes there should be at least one dot on that chart. Note that initially
-the chart is slow to reflect any status so you might have to be patient. Continue to press the "refresh"
-button (the icon with a circle on it) every minute or so to update the status. Once you see a dot on the chart, when you hover your mouse
-over it, you should see the "success rate" and "number of errors." The success rate should be 100% and the number
-of errors should be 0. If it is not, then scroll down to the CloudWatch Logs section and click on the most recent
-log stream. This will show you the output of the Lambda function. If there are any errors, they will be displayed
-there. If you can't figure out what is causing an error, then please create an issue in this repository and someone
-will help you.
+After  the "CheckInterval" number of minutes there should be at least one dot on that chart.
+Hover your mouse over the dot and you should see the "success rate" and "number of errors."
+The success rate should be 100% and the number of errors should be 0. If it is not, then scroll up a little bit and
+click on "View CloudWatch Logs" link. Once on this page, click on the first LogStream and review any output.
+If there are any errors, they will be displayed there. If you can't figure out what is causing an error,
+please create an issue on the [Issues](https://github.com/NetApp/FSx-ONTAP-samples-scripts/issues) section
+in this repository and someone will help you.
 
 ---
 
@@ -324,7 +324,7 @@ Each rule should be an object with one, or more, of the following keys:
 |failover|Boolean|If 'true' the program will send an alert if the FSxN cluster is running on its standby node. If it is set to `false`, it will not report on failover status.|
 |networkInterfaces|Boolean|If 'true' the program will send an alert if any of the network interfaces are down.  If it is set to `false`, it will not report on any network interfaces that are down.|
 
-###### Matching condition schema for EMS Messages (ems)
+###### Matching condition schema for EMS Events (ems)
 Each rule should be an object with three keys, with an optional 4th key:
 
 |Key Name|Value Type|Notes|
