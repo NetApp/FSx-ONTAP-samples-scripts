@@ -1,5 +1,4 @@
 #!/bin/python3
-#
 ################################################################################
 # THIS SOFTWARE IS PROVIDED BY NETAPP "AS IS" AND ANY EXPRESS OR IMPLIED
 # WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
@@ -597,7 +596,7 @@ def processSnapMirrorRelationships(service):
     curTimeSeconds = int(datetime.datetime.now(pytz.timezone(clusterTimezone) if clusterTimezone != None else datetime.timezone.utc).timestamp())
     #
     # Consolidate all the rules so we can decide how to process lagtime.
-    maxLagtime = None
+    maxLagTime = None
     maxLagTimePercent = None
     healthy = None
     stalledTransferSeconds = None
@@ -1293,7 +1292,7 @@ def buildDefaultMatchingConditions():
                 conditions["services"][getServiceIndex("systemHealth", conditions)]["rules"].append({"networkInterfaces": False})
         elif name == "initialEmsEventsAlert":
             if value == "true":
-                conditions["services"][getServiceIndex("ems", conditions)]["rules"].append({"name": "", "severity": "error|alert|emergency", "message": ""})
+                conditions["services"][getServiceIndex("ems", conditions)]["rules"].append({"name": "", "severity": "error|alert|emergency", "message": "", "filter": ""})
         elif name == "initialSnapMirrorHealthAlert":
             if value == "true":
                 conditions["services"][getServiceIndex("snapmirror", conditions)]["rules"].append({"Healthy": False})  # This is what it matches on, so it is interesting when the health is false.
