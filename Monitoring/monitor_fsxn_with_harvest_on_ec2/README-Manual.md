@@ -1,3 +1,9 @@
+# :warning: **NOTICE:**
+
+Continuous development for this solution has moved to a separate GitHub repository found here
+[https://github.com/NetApp/FSx-ONTAP-monitoring/CloudWatch-Dashboard-FSx/Grafana-Prometheus-FSx/Monitor-FSxN-with-Harvest-on-EC2](https://github.com/NetApp/FSx-ONTAP-monitoring/CloudWatch-Dashboard-FSx/Grafana-Prometheus-FSx/Monitor-FSxN-with-Harvest-on-EC2).
+Please refer to that repository for the latest updates.
+
 # Deploy NetApp Harvest on EC2
 
 Harvest installation for monitoring Amazon FSxN using Prometheus and Grafana stack, integrating AWS Secret Manager for FSxN credentials.

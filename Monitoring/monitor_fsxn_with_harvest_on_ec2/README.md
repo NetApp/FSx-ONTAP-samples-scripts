@@ -1,3 +1,9 @@
+# :warning: **NOTICE:**
+
+Continuous development for this solution has moved to a separate GitHub repository found here
+[https://github.com/NetApp/FSx-ONTAP-monitoring/CloudWatch-Dashboard-FSx/Grafana-Prometheus-FSx/Monitor-FSxN-with-Harvest-on-EC2](https://github.com/NetApp/FSx-ONTAP-monitoring/CloudWatch-Dashboard-FSx/Grafana-Prometheus-FSx/Monitor-FSxN-with-Harvest-on-EC2).
+Please refer to that repository for the latest updates.
+
 # Harvest/Grafana Deployment using AWS CloudFormation
 This is the NetApp FSx for ONTAP deployment for monitoring FSx for ONTAP file systems with Grafana.  
 The following solution leverages Harvest and YACE(Yet Another CloudWatch Exporter) as the exporters for ONTAP and CloudWatch metrics.
