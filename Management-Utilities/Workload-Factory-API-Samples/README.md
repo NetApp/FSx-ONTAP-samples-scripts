@@ -5,7 +5,7 @@ They all depend on the `wf_utils` file that contains common functions used by al
 in particular, `get_token()`, is used to get an authentication token from the BlueXP Workload Factory API. So, if you
 copy just some of the files from this repository, make sure to copy the `wf_utils` file as well.
 
-Hopefully with these examples you'll be able to create your own scripts that use any the Workload Factory APIs.
+Hopefully with these samples you'll be able to create your own scripts that use any the Workload Factory APIs.
 If you do create a new script, please consider contributing it back to this repository so that others can benefit from it.
 
 Note that all the scripts support a `-h` option that will display a help message for that script.
@@ -14,7 +14,7 @@ Note that all the scripts support a `-h` option that will display a help message
 | --- | --- |
 | [list_bluexp_accts](list_bluexp_accts) | This list all the BlueXP accounts (a.k.a. organizations) that you have access to. |
 | [list_credentials](list_credentials) | This lists all the Workload Factory credentials that you have access to. |
-[ [list_filesystems](list_filesystems) | This lists all the FSx for ONTAP file systems that you have access to in the specified AWS region. |
+| [list_filesystems](list_filesystems) | This lists all the FSx for ONTAP file systems that you have access to in the specified AWS region. |
 | [list_snapmirrors](list_snapmirrors) | This lists all the SnapMirror relationships that are associated with the specified file system. |
 | [list_svms](list_svms) | This lists all the SVMs that are associated with the specified file system. |
 | [list_volumes](list_volumes) | This lists all the volumes that are associated with the specified file system. |
