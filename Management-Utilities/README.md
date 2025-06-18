@@ -9,6 +9,7 @@ This subfolder contains tools that can help you manage your FSx ONTAP file syste
 | [fsxn-rotate-secret](/Management-Utilities/fsxn-rotate-secret) | This is a Lambda function that can be used with an AWS Secrets Manager secret to rotate the FSx for ONTAP admin password. |
 | [iscsi-vol-create-and-mount](/Management-Utilities/iscsi-vol-create-and-mount) | This tool will create an iSCSI volume on an FSx ONTAP file system and mount it to an EC2 instance running Windows. |
 | [warm_performance_tier](/Management-Utilities/warm_performance_tier) | This tool to warm up the performance tier of an FSx ONTAP file system volume. |
+| [Workload-Factory-API-Samples](/Management-Utilities/Workload-Factory-API-Samples) | This folder contains a collection of bash scripts that demonstrate how to use the Workload Factory APIs. |
 
 ## Author Information
 
