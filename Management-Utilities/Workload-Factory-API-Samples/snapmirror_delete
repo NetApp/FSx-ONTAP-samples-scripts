@@ -15,11 +15,11 @@
 ################################################################################
 usage() {
   cat >&2 <<EOF
-This script ill delete a SnapMirror relationship on a FSx for ONTAP file system.
+This script will delete a SnapMirror relationship on a FSx for ONTAP file system.
 
 Usage: $(basename $0) -t refresh_token -a blueXP_account_ID  -s snapmirror_ID \\
     -C source_credentials_id -R source_aws_region -F source_fs_id [-Y source_type] \\
-    -c destionation_credentials_id -r destionation_aws_region -f destionation_fs_id [-y destination_type]
+    -c destination_credentials_id -r destination_aws_region -f destination_fs_id [-y destination_type]
 
 Where: refresh_token - Is a refresh token used to obtain an access token needed
                        to run the Workload Factory APIs. You can obtain a refresh
@@ -37,7 +37,7 @@ Where: refresh_token - Is a refresh token used to obtain an access token needed
        destination_credentials_ID - is the Workload Factory credentials ID for the AWS account. Run
                                     'list_credentials' to get a list of credentials you have access to
        destination_aws_region - is the AWS region where the destination file system is located
-       destination_fs_ID - is the AWS file system ID of the file system that is the destionation of the relationship relationship
+       destination_fs_ID - is the AWS file system ID of the file system that is the destination of the relationship relationship
        destination_type - is the type of the destination file system. Either 'FSx' or 'on-prem' (optional, defaults to "FSx")
 
 Instead of passing parameters on the command line, you can set the

@@ -46,7 +46,7 @@ get_token() {
   
   createToken=false
   if [ -r $tokenFile ]; then
-    let diff=(`date +%s` - `date -r $tokenFile +%s`)
+    let diff="$(date +%s) - $(date -r wf_utils +%s)"
     if [ $diff -gt $token_valid ]; then
       createToken=true
     fi
@@ -155,12 +155,10 @@ urlencode() {
   echo "$@" | awk -v ORS="" '{ gsub(/./,"&\n") ; print }' | while read l
   do
     c="`echo "$l" | grep '[^-._~0-9a-zA-Z]'`"
-    if [ "$l" == "" ]
-    then
+    if [ "$l" == "" ]; then
       echo -n "%20"
     else
-      if [ -z "$c" ]
-      then
+      if [ -z "$c" ]; then
         echo -n "$l"
       else
         printf %%%02X \'"$c"

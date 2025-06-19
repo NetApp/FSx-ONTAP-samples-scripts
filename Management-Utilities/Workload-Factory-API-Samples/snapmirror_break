@@ -17,7 +17,7 @@ usage() {
   cat >&2 <<EOF
 This script will break a SnapMirror relationship on a FSx for ONTAP file systems.
 
-Usage: $(basename $0) -t refresh_token -a blueXP_account_ID -c destionation_credentials_id -r destionation_aws_region -f destionation_fs_id -s snapmirror_id
+Usage: $(basename $0) -t refresh_token -a blueXP_account_ID -c destination_credentials_id -r destination_aws_region -f destination_fs_id -s snapmirror_id
 
 Where: refresh_token - Is a refresh token used to obtain an access token needed
                        to run the Workload Factory APIs. You can obtain a refresh
@@ -29,7 +29,7 @@ Where: refresh_token - Is a refresh token used to obtain an access token needed
                                     Workload Factory credentials you have access to
        destination_aws_region - is the AWS region where the destination file system is located
        destination_fs_id - is the AWS file system ID of the file system that is the
-                           destionation of the relationship relationship
+                           destination of the relationship relationship
        snapmirror_id - is the SnapMirror Relationship ID of the relationship to break. Run
                        'list_snapmirrors' to get a list of relationships you have access to
 

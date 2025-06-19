@@ -67,7 +67,7 @@ done
 missing_args=false
 if [ -z "$REFRESH_TOKEN" ]; then
   cat >&2 <<EOF
-Error: A BlueXP refresh tokon is required to run this script.
+Error: A BlueXP refresh token is required to run this script.
 Can you be obtain from this web page:
 
     https://services.cloud.netapp.com/refresh-token
