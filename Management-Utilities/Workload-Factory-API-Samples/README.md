@@ -1,7 +1,7 @@
 # Workload Factory API Samples
 
 This folder contains various bash shell scripts that demonstrate how to use the Workload Factory APIs to perform an action.
-They all depend on the `wf_utils` file that contains common functions used by all the scripts. One function
+They all depend on the [wf_utils](wf_utils) file that contains common functions used by all the scripts. One function
 in particular, `get_token()`, is used to get an authentication token from the BlueXP Workload Factory API. So, if you
 copy just some of the files from this repository, make sure to copy the `wf_utils` file as well.
 
@@ -27,6 +27,7 @@ Note that all the scripts support a `-h` option that will display a help message
 | [snapshot_create](snapshot_create) | This creates a snapshot of the specified volume. |
 | [volume_clone](volume_clone) | This clones the specified volume. |
 | [volume_delete](volume_delete) | This deletes the specified volume. |
+| [wf_utils](wf_utils) | This file contains common functions used by all the scripts. It includes the `get_token()` function that retrieves an authentication token from the Workload Factory API. |
 
 ## Author Information
 
