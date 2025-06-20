@@ -5,6 +5,12 @@ They all depend on the [wf_utils](wf_utils) file that contains common functions 
 in particular, `get_token()`, is used to get an authentication token from the BlueXP Workload Factory API. So, if you
 copy just some of the files from this repository, make sure to copy the `wf_utils` file as well.
 
+## Prerequisites
+To run these scripts, you need to have the following prerequisites:
+- A bash shell.
+- The `curl` command-line tool installed.
+- The `jq` command-line JSON processor installed. You can install it using your package manager, e.g., `apt-get install jq` on Debian/Ubuntu or `brew install jq` on macOS.
+
 Hopefully with these samples you'll be able to create your own scripts that use any the Workload Factory APIs.
 If you do create a new script, please consider contributing it back to this repository so that others can benefit from it.
 
