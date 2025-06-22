@@ -11,15 +11,16 @@ To run these scripts, you need to have the following prerequisites:
 - The `curl` command-line tool installed.
 - The `jq` command-line JSON processor installed. You can install it using your package manager, e.g., `apt-get install jq` on Debian/Ubuntu or `brew install jq` on macOS.
 
-Hopefully with these samples you'll be able to create your own scripts that use any the Workload Factory APIs.
-If you do create a new script, please consider contributing it back to this repository so that others can benefit from it.
-
-Note that all scripts allow you to set environment variables to pass options instead of having to use the
+## Notes:
+- All scripts allow you to set environment variables to pass options instead of having to use the
 command line options. For example, instead of using the `-t` option to pass the
 [BlueXP Refresh Token](https://docs.netapp.com/us-en/bluexp-automation/platform/create_user_token.html#1-generate-a-netapp-refresh-token),
 you can set the `REFRESH_TOKEN` environment variable.
 
-Also note that all scripts use the `-h` option to display the help message, which includes the available options and their descriptions.
+- All scripts use the `-h` option to display the help message, which includes the available options and their descriptions.
+
+Hopefully with these samples you'll be able to create your own scripts that use any the Workload Factory APIs.
+If you do create a new script, please consider contributing it back to this repository so that others can benefit from it.
 
 ## Available Scripts
 | Script | Description |
