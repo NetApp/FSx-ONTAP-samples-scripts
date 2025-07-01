@@ -72,9 +72,9 @@ if [ -z "$token" ]; then
   exit 1
 fi
 
-run_curl GET "$token" https://api.bluexp.netapp.com/tenancy/account $tmpout $tmperr
-if jq -r '.[] | .accountName + " " + .accountPublicId' $tmpout > $tmperr; then
-  cat $tmperr | column -t -N Name,ID
+run_curl GET "$token" https://api.bluexp.netapp.com/v1/management/organizations $tmpout $tmperr
+if jq -r '.items[] | "\(.name) \(.legacyId) \(.id)"' $tmpout > $tmperr; then
+  cat $tmperr | column -t -N Name,ID,UUID
 else
   echo "Error: Failed to parse the response from the API." >&2
   exit 1
