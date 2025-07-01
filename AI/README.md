@@ -1,9 +1,10 @@
 # AI Overview
 This subfolder contains samples that can help you create AI solutions.
 
-| Tool | Description |
-| --- | --- |
+| Tool                                                              | Description                                                                                                                                                           |
+|-------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | [GenAI ChatBot Application](/AI/GenAI-ChatBot-application-sample) | This sample shows up to create a web-based chatbot application using the GenAI ChatBot application found in [Workload Factory](https://console.workloads.netapp.com). |
+| [NetApp KnowledgeBase MCP server](/AI/NetApp-KnowledgeBase-MCP-server)  | MCP Server to connecto to NetApp Workload Factory GenAI [Workload Factory](https://console.workloads.netapp.com).                                                     |
 
 ## Author Information
 
