@@ -1,9 +1,14 @@
 # Workload Factory API Samples
 
-This folder contains various bash shell scripts that demonstrate how to use the Workload Factory APIs to perform an action.
-They all depend on the [wf_utils](wf_utils) file that contains common functions used by all the scripts. One function
-in particular, `get_token()`, is used to get an authentication token from the BlueXP Workload Factory API. So, if you
-copy just some of the files from this repository, make sure to copy the `wf_utils` file as well.
+The idea behind this folder is to show examples of how to use the [BlueXP Workload Factory APIs](https://console.workloads.netapp.com/api-doc).
+Not every API is covered, but the ones required to get you started (get a refresh token, get the BlueXP accountID,
+get BlueXP credentials ID) are included. Once you have the informaiton provided from these APIs are ready to start
+calling the others. While these examples are implemented as bash shell scripts you should be able to translate them
+to the programming language that you prefer, such as Python, Go, or JavaScript.
+
+Note that all these scripts depend on the [wf_utils](wf_utils) file that contains common functions used by all the
+scripts. One function in particular, `get_token()`, is used to get an authentication token from the BlueXP Workload
+Factory API. So, if you copy just some of the files from this repository, make sure to copy the `wf_utils` file as well.
 
 ## Prerequisites
 To run these scripts, you need to have the following prerequisites:
@@ -17,7 +22,7 @@ command line options. For example, instead of using the `-t` option to pass the
 [BlueXP Refresh Token](https://docs.netapp.com/us-en/bluexp-automation/platform/create_user_token.html#1-generate-a-netapp-refresh-token),
 you can set the `REFRESH_TOKEN` environment variable.
 
-- All scripts use the `-h` option to display the help message, which includes the available options and their descriptions.
+- All scripts accept the `-h` option to display the help message, which includes the available options and their descriptions.
 
 Hopefully with these samples you'll be able to create your own scripts that use any the Workload Factory APIs.
 If you do create a new script, please consider contributing it back to this repository so that others can benefit from it.
@@ -26,6 +31,7 @@ If you do create a new script, please consider contributing it back to this repo
 | Script | Description |
 | --- | --- |
 | [list_bluexp_accts](list_bluexp_accts) | This list all the BlueXP accounts (a.k.a. organizations) that you have access to. |
+| [list_bluexp_members](list_bluexp_members) | This list all members of a provided BlueXP account. |
 | [list_credentials](list_credentials) | This lists all the Workload Factory credentials that you have access to. |
 | [list_filesystems](list_filesystems) | This lists all the FSx for ONTAP file systems that you have access to in the specified AWS region. |
 | [list_snapmirrors](list_snapmirrors) | This lists all the SnapMirror relationships that are associated with the specified file system. |
