@@ -44,6 +44,7 @@ If an error occurs while the installation is running, the process will be termin
 
 2. AWS Microsoft Windows Server 2025 
   Set the following values in the script:
+   - $secretId - secret ARN from yours AWS secret manager
    - $ip - FSXn administrator IP
    - $password - FSXn administrator password
    - $volName - The name of the volume you want to create in your FSXn. 
