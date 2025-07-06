@@ -19,7 +19,8 @@ async function startServer() {
     logger.info('Received knowledge bases', JSON.stringify(knowledgeBases, null, 2) , 'defining tools');
     knowledgeBases.forEach(knowledgeBase => {
         const {id: knowledgeBaseId, name, description} = knowledgeBase;
-        server.tool(`search_KB_${name}`, `Search knowledge base with description ${description}`, {
+        const toolName = `search_KB_${name}`.slice(0, 64).replaceAll(/[^a-zA-Z0-9_-]/g,'_'); // MCP tool names should be less than 64 characters
+        server.tool(toolName, `Search knowledge base with description ${description}`, {
             question: z.string({description: 'Question to search the answer to in the knowledge base'})
         }, async ({question}) => {
             try {

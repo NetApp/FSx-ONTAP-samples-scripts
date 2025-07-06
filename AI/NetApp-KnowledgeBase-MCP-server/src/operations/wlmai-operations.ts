@@ -4,10 +4,9 @@ async function* getKnowledgeBasesGenerator(aiEngineId:string){
     let { knowledgeBases, nextToken } = await getKnowledgeBases(aiEngineId);
     yield knowledgeBases;
     while (nextToken) {
-        ({ knowledgeBases, nextToken } = await getKnowledgeBases(aiEngineId));
+        ({ knowledgeBases, nextToken } = await getKnowledgeBases(aiEngineId, nextToken));
         yield knowledgeBases;
     }
-
 }
 
 async function listAllKnowledgeBases(aiEngineId:string){

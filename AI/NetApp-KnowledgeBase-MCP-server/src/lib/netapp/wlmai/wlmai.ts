@@ -72,11 +72,12 @@ export async function getAiEngines(){
     return deployments;
 }
 
-export async function getKnowledgeBases( deploymentId:string){
+export async function getKnowledgeBases( deploymentId:string, token?:string){
     const {knowledgeBases = [], nextToken}  = await got.get(`${WLMAI_URL}/accounts/${process.env.ACCOUNT_ID}/wlmai/v2/deployments/${deploymentId}/knowledge-bases`, {
         headers:{
             authorization: await getToken()
-        }
+        },
+        searchParams: token ? {token} : {}
     }).json<{knowledgeBases:KnowledgeBase[], nextToken?:string}>()
     return {knowledgeBases, nextToken};
 }
