@@ -11,17 +11,17 @@ Set the following permissions:
 
 Example AWS Policy  
 {  
-    *"Version": "2012-10-17",  
-    *"Statement": [  
-     * {  
-      *  "Sid": "VisualEditor0",  
-      *  "Effect": "Allow",  
-      *  "Action": [  
-      **   "secretsmanager:GetSecretValue"  
-      *  ],  
-      *  "Resource": "arn:aws:secretsmanager:us-west-2:847548833:secret:test/posh-75WJ57"  
-     * }  
-    ]    
+&nbsp;&nbsp;&nbsp;"Version": "2012-10-17",  
+&nbsp;&nbsp;&nbsp;"Statement": [  
+&nbsp;&nbsp;&nbsp;{  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"Sid": "VisualEditor0",  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"Effect": "Allow",  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"Action": [  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"secretsmanager:GetSecretValue"  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;],  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"Resource": "arn:aws:secretsmanager:us-west-2:847548833:secret:test/posh-75WJ57"  
+&nbsp;&nbsp;&nbsp;}  
+&nbsp;&nbsp;&nbsp;]    
 }
 
 1. AWS Amazon Linux
