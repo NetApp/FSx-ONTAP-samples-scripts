@@ -5,7 +5,6 @@
 SECRET_NAME=[Secret name has it been saved in AWS secret manager]
 AWS_REGION=[AWS region]
 
-FSXN_PASSWORD=[Fsx admin password, e.g. fsxadmin123]
 FSXN_ADMIN_IP=[Fsx admin ip, e.g. 172.25.45.32]
 # Volume name
 VOLUME_NAME=[Fsx volume name, e.g. iscsiVol]
@@ -21,6 +20,8 @@ max=999
 LUN_NAME=${VOLUME_NAME}_$(($RANDOM%($max-$min+1)+$min))
 
 # defaults
+# All FSxN instances are created with the user 'fsxadmin' which can't be changed
+# The script will create a log file in the ec2-user home directory
 ONTAP_USER=fsxadmin
 LOG_FILE=/home/ec2-user/install.log
 
@@ -43,11 +44,6 @@ function getSecretValue() {
         echo "Failed to retrieve the secret: $secret_name, Aborting."
         exit 1
     fi
-}
-
-function fsxnSshCommand(){
-    command = $1
-    sshpass -p $FSXN_PASSWORD ssh -o StrictHostKeyChecking=no fsxadmin@$FSXN_ADMIN_IP $command
 }
 
 logMessage() {
