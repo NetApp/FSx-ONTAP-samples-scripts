@@ -1,7 +1,7 @@
 # EC2 User data scripts
 
 ## Introduction
-Those samples provides a way to launch AWS EC2 instances with user data scripts that will create FSXn volume mount it to the instance,
+Those samples provides a way to launch AWS EC2 instances with user data scripts that will create FSxN volume and LUN, mount it to the instance,
 while installing all the needed libraries and resources
 
 ## Set Up
@@ -11,17 +11,17 @@ Set the following permissions:
 
 Example AWS Policy
 {
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Sid": "VisualEditor0",
-            "Effect": "Allow",
-            "Action": [
-                "secretsmanager:GetSecretValue"
-            ],
-            "Resource": "arn:aws:secretsmanager:us-west-2:847548833:secret:test/posh-75WJ57"
-        }
-    ]
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "VisualEditor0",
+      "Effect": "Allow",
+      "Action": [
+        "secretsmanager:GetSecretValue"
+      ],
+      "Resource": "arn:aws:secretsmanager:us-west-2:847548833:secret:test/posh-75WJ57"
+    }
+  ]
 }
 
 1. AWS Amazon Linux
@@ -29,8 +29,8 @@ Example AWS Policy
   Set the following values in the script:
    - SECRET_NAME - Secret name has it been saved in AWS secret manager
    - AWS_REGION - AWS secret manager region
-   - FSXN_ADMIN_IP - FSXn administrator IP
-   - VOLUME_NAME - The name of the volume you want to create in your FSXn. 
+   - FSXN_ADMIN_IP - FSxN administrator IP
+   - VOLUME_NAME - The name of the volume you want to create in your FSxN. 
    - VOLUME_SIZE - The size of the volume you want to create in GB e.g [100g]
    - SVM_NAME - The SVM name, if you have another SVM which is not the default 'fsx'.
 
@@ -45,15 +45,15 @@ If an error occurs while the installation is running, the process will be termin
 2. AWS Microsoft Windows Server 2025 
   Set the following values in the script:
    - $secretId - secret ARN from yours AWS secret manager
-   - $ip - FSXn administrator IP
-   - $password - FSXn administrator password
-   - $volName - The name of the volume you want to create in your FSXn. 
+   - $ip - FSxN administrator IP
+   - $password - FSxN administrator password
+   - $volName - The name of the volume you want to create in your FSxN. 
    - $volSize - The size of the volume you want to create in GB e.g [100]
    - $drive_letter - The drive letter to assign to the volume.
 
   Save the script file.
 
-In AWS console EC2 - 
+## In AWS console EC2 - 
   
 For Linux installation:
   - Launch new instance fill in the server name and select 'Amazon Linux' then select under Amazon Machine Image select 'Amazon Linux 2023 AMI' fill in any other required data, 
@@ -67,6 +67,3 @@ For Windows installation:
     go to Advanced details and scroll down to User data, press 'choose file', and select the script file you have saved.
     Launch the instance.
     The installation log file can be found at: C:\Users\Administrator\install.log
-
-
-
