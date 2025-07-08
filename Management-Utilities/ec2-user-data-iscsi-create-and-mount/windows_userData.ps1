@@ -1,8 +1,8 @@
 <powershell>
 # This script is used to install and configure FSx for Windows File Server
 #### Process param ####
-$secretId="AWS secret ARN, e.g arn:aws:secretsmanager:us-east-1:111004784675:secret:MySecret-TC5M70"
-$ip="Fsx admin ip, e.g. 172.25.45.32"
+$secretId="AWS secret ARN, e.g arn:aws:secretsmanager:us-east-1:111222333444:secret:MySecret-123456"
+$ip="Fsx admin ip, e.g. 111.22.33.44"
 $volName="Fsx volume name, e.g. iscsiVol"
 $volSize="volume size in GB, e.g 100"
 $drive_letter="drive letter to use, e.g. d"
@@ -24,13 +24,15 @@ function unInstall {
 }
 
 # default values
+# All FSxN instances are created with the user 'fsxadmin' which can't be changed
+# The script will create a log file in the Administrator home directory
+# The script will create an uninstall script in the Administrator home directory
 $user="fsxadmin"
-$currentDir=Get-Location
 $currentLogPath="C:\Users\Administrator\install.log"
 $uninstallFile="C:\Users\Administrator\uninstall.ps1"
 
 $password=Get-SECSecretValue -SecretId "$secretId" -Select "SecretString"
-   
+
 
 if( $password -eq $null -or $password -eq "" ) {
    Write-Output "Failed to get data from Secrets Manager, exiting..." >> $currentLogPath 
@@ -41,7 +43,7 @@ if( $password -eq $null -or $password -eq "" ) {
 Write-Output "Get data from Secrets Manager, successfully" >> $currentLogPath 
 write-host "Get data from Secrets Manager, successfully" -ForegroundColor Green
 $totaldisks = (get-disk | Sort-Object -Property number | Select-Object -Last 1 -ExpandProperty number)
-   
+
 #### Installing ONTAP module #####
 $m = "NetApp.ONTAP"
 $path= "HKLM:\Software\UserData"
@@ -59,7 +61,7 @@ if($runStep -eq 0 -or (Get-Module | Where-Object {$_.Name -ne $m})) {
    Write-Output "# FSXn uninstall:" >> $uninstallFile
    Write-Output "Installing/ Import ONTAP module" >> $currentLogPath 
    Write-Host "Installing/ Import ONTAP module" -ForegroundColor Yellow
-   
+
    if (Get-Module | Where-Object {$_.Name -ne 'NuGet'}) {
       Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
       @("Uninstall-PackageProvider -Name NuGet -Force") + (Get-Content $uninstallFile) | Set-Content $uninstallFile
@@ -76,7 +78,7 @@ if($runStep -eq 0 -or (Get-Module | Where-Object {$_.Name -ne $m})) {
          Write-Output "Import module $m." >> $currentLogPath 
          write-host "Import module $m."
          Import-Module $m -Verbose
-            Set-ItemProperty -Path $path -Name $itemName -Value 1
+         Set-ItemProperty -Path $path -Name $itemName -Value 1
       }
       else {
 
@@ -86,7 +88,7 @@ if($runStep -eq 0 -or (Get-Module | Where-Object {$_.Name -ne $m})) {
             Write-Output "Import module $m." >> $currentLogPath 
             write-host "Import module $m."
             Import-Module $m -Verbose
-               Set-ItemProperty -Path $path -Name $itemName -Value 1
+            Set-ItemProperty -Path $path -Name $itemName -Value 1
             @("Uninstall-PackageProvider -Name $m -Force") + (Get-Content $uninstallFile) | Set-Content $uninstallFile   
          }
          else {
