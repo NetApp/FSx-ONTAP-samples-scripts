@@ -9,19 +9,19 @@ Create secet in AWS secret manager, secret should be saved as text.
 In IAM create policy that will allow to read the secret.
 Set the following permissions:
 
-Example AWS Policy
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Sid": "VisualEditor0",
-      "Effect": "Allow",
-      "Action": [
-        "secretsmanager:GetSecretValue"
-      ],
-      "Resource": "arn:aws:secretsmanager:us-west-2:847548833:secret:test/posh-75WJ57"
-    }
-  ]
+Example AWS Policy  
+{  
+  "Version": "2012-10-17",  
+  "Statement": [  
+    {  
+      "Sid": "VisualEditor0",  
+      "Effect": "Allow",  
+      "Action": [  
+        "secretsmanager:GetSecretValue"  
+      ],  
+      "Resource": "arn:aws:secretsmanager:us-west-2:847548833:secret:test/posh-75WJ57"  
+    }  
+  ]  
 }
 
 1. AWS Amazon Linux
