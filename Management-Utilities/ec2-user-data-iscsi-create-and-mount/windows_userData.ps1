@@ -34,7 +34,7 @@ $uninstallFile="C:\Users\Administrator\uninstall.ps1"
 $password=Get-SECSecretValue -SecretId "$secretId" -Select "SecretString"
 
 
-if( $password -eq $null -or $password -eq "" ) {
+if( $null -eq $password -or $password -eq "" ) {
    Write-Output "Failed to get data from Secrets Manager, exiting..." >> $currentLogPath 
    write-host "Failed to get data from Secrets Manager, exiting..." -ForegroundColor Red
    EXIT 1
@@ -171,7 +171,7 @@ if($runStep -eq 1) {
    $PWord = ConvertTo-SecureString -String $password -AsPlainText -Force
    $credntials = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $user, $PWord
    try {
-      $controller = Connect-NcController $ip -Credential $credntials -Vserver $svm_name -ErrorAction Stop
+      Connect-NcController $ip -Credential $credntials -Vserver $svm_name -ErrorAction Stop
    }
    catch {
       Write-Output "Failed connect to FSXn filesystem, due to: $_" >> $currentLogPath 
