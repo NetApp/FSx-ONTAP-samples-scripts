@@ -7,7 +7,7 @@ volume and LUN, mount it to the instance, while installing all the needed librar
 ## Set Up
 1. Create an AWS SecretsManager secret to hold the password of the account you plan to use to authenicate to the FSxN file system with.
 The secret should be of type `other` with value set to `Plain Text` that holds just the password.
-1. Create an AWS IAM role that has permissions to read the secret value. Here is an example policy that will do that:
+1. Create an AWS IAM role that has EC2 as the trusted entity and has permissions to read the secret value. Here is an example policy that will do that:
     ```json
     {
       "Version": "2012-10-17",
@@ -54,7 +54,7 @@ The secret should be of type `other` with value set to `Plain Text` that holds j
   <li>Launch new instance
     <ol>
       <li>Fill in the server name.</li>
-      <li>Select 'Amazon Linux.</li>
+      <li>Select 'Amazon Linux'.</li>
       <li>Under Amazon Machine Image select 'Amazon Linux 2023 AMI'.</li>
       <li>Fill in the other settings based on your networking and business needs.</li>
       <li>Under 'Advanced details':
@@ -81,7 +81,7 @@ If an error occurs while the installation is running, the script will terminate 
       <li>Fill in any other setting based on your networking and business needs.</li>
       <li>Under the 'Advanced details':
         <ol>
-          <li>Set the 'IAM instance profile' to the policy you created in the steps above.</li>
+          <li>Set the 'IAM instance profile' to the role you created in the steps above.</li>
           <li>At the bottom, under the 'User data' section, press 'choose file', and select the script saved above.</li>
         </ol>
       </li>
