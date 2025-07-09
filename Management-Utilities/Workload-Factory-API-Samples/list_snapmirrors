@@ -146,13 +146,25 @@ if [ -z "$token" ]; then
 fi
 
 run_curl GET "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/fsx/v2/replication/${CREDENTIALS_ID}/regions/${AWS_REGION}/file-systems/${FILESYSTEM_ID}/relationships" $tmpout $tmperr
-jq -r '.items[] | "\(.sourceCluster)::\(.sourceSvm):\(.sourceVolume) \(.destinationCluster)::\(if(.destinationSvm != null) then .destinationSvm else "Unknown" end):\(.destinationVolume) \(.id) \(if(.isHealthy != null) then .isHealthy else "Unknown" end) \(if(.mirrorState != null) then .mirrorState else "Unknown" end) \(if(.schedule != null) then .schedule else "None" end) \(if(.lagTime != null) then .lagTime else "Unknown" end)"' $tmpout  > $tmpout2
+if jq -r '.items[] | "\(.sourceCluster)::\(.sourceSvm):\(.sourceVolume) \(.destinationCluster)::\(if(.destinationSvm != null) then .destinationSvm else "Unknown" end):\(.destinationVolume) \(.id) \(if(.isHealthy != null) then .isHealthy else "Unknown" end) \(if(.mirrorState != null) then .mirrorState else "Unknown" end) \(if(.schedule != null) then .schedule else "None" end) \(if(.lagTime != null) then .lagTime else "Unknown" end)"' $tmpout  > $tmpout2 2> $tmperr; then
+  :
+else
+  echo "Error: Failed to parse the output from the API." >&2
+  cat $tmperr >&2
+  exit 1
+fi
 #
 # Check to see if there are more.
 nextToken=$(jq -r '.nextToken' $tmpout)
 while [ "$nextToken" != "null" ]; do
   run_curl GET "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/fsx/v2/replication/${CREDENTIALS_ID}/regions/${AWS_REGION}/file-systems/${FILESYSTEM_ID}/relationships?nextToken=${nextToken}" $tmpout $tmperr
-  jq -r '.items[] | "\(.sourceCluster)::\(.sourceSvm):\(.sourceVolume) \(.destinationCluster)::\(if(.destinationSvm != null) then .destinationSvm else "Unknown" end):\(.destinationVolume) \(.id) \(if(.isHealthy != null) then .isHealthy else "Unknown" end) \(if(.mirrorState != null) then .mirrorState else "Unknown" end) \(if(.schedule != null) then.schedule else "None" end) \(if(.lagTime != null) then .lagTime else "Unknown" end)"' $tmpout >> $tmpout2
+  if jq -r '.items[] | "\(.sourceCluster)::\(.sourceSvm):\(.sourceVolume) \(.destinationCluster)::\(if(.destinationSvm != null) then .destinationSvm else "Unknown" end):\(.destinationVolume) \(.id) \(if(.isHealthy != null) then .isHealthy else "Unknown" end) \(if(.mirrorState != null) then .mirrorState else "Unknown" end) \(if(.schedule != null) then.schedule else "None" end) \(if(.lagTime != null) then .lagTime else "Unknown" end)"' $tmpout >> $tmpout2 2> $tmperr; then
+    :
+  else
+    echo "Error: Failed to parse the output from the API." >&2
+    cat $tmperr >&2
+    exit 1
+  fi
   nextToken=$(jq -r '.nextToken' $tmpout)
 done
 sort -f $tmpout2 | column -t -N Source,Destination,SnapMirror_Relationship_ID,Healthy,State,Schedule,Lag_Time
