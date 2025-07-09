@@ -29,7 +29,7 @@ VOL_SIZE=$(echo $VOLUME_SIZE | sed 's/.$//')
 LUN_SIZE=$(bc -l <<< "0.85*$VOL_SIZE" )
 
 echo "# Uninstall file" >> uninstall.sh
-sudo chmod u+x uninstall.sh
+chmod u+x uninstall.sh
 
 function getSecretValue() {
     secret_name=$1
@@ -69,26 +69,27 @@ logMessage "Secret data retrieved successfully"
 
 commandDescription="Install linux iSCSI packages"
 logMessage "${commandDescription}"
-sudo yum install -y device-mapper-multipath iscsi-initiator-utils
+yum install -y device-mapper-multipath iscsi-initiator-utils
 checkCommand "${commandDescription}"
-addUndoCommand "sudo yum remove -y device-mapper-multipath iscsi-initiator-utils"
+addUndoCommand "yum remove -y device-mapper-multipath iscsi-initiator-utils"
 
 commandDescription="Set multisession replacment time from default 120 sec to 5 sec"
 logMessage "${commandDescription}"
-sudo sed -i 's/node.session.timeo.replacement_timeout = .*/node.session.timeo.replacement_timeout = 5/' /etc/iscsi/iscsid.conf; sudo cat /etc/iscsi/iscsid.conf | grep node.session.timeo.replacement_timeout
+sed -i 's/node.session.timeo.replacement_timeout = .*/node.session.timeo.replacement_timeout = 5/' /etc/iscsi/iscsid.conf; cat /etc/iscsi/iscsid.conf | grep node.session.timeo.replacement_timeout
 checkCommand "${commandDescription}"
-addUndoCommand "sudo sed -i 's/node.session.timeo.replacement_timeout = .*/node.session.timeo.replacement_timeout = 120/' /etc/iscsi/iscsid.conf; sudo cat /etc/iscsi/iscsid.conf | grep node.session.timeo.replacement_timeout"
+addUndoCommand "sed -i 's/node.session.timeo.replacement_timeout = .*/node.session.timeo.replacement_timeout = 120/' /etc/iscsi/iscsid.conf; cat /etc/iscsi/iscsid.conf | grep node.session.timeo.replacement_timeout"
 
 commandDescription="Start iscsi service"
 logMessage "${commandDescription}"
-sudo service iscsid start
+systemctl enable iscsid
+systemctl start iscsid
 checkCommand "${commandDescription}"
 
 # check if the service is running
-isIscsciServiceRunning=$(sudo service iscsid status | grep "Active: active (running)" | wc -l)
+isIscsciServiceRunning=$(systemctl is-active --quiet iscsid.service && echo "1")
 if [ "$isIscsciServiceRunning" -eq 1 ]; then
     logMessage "iscsi service is running"
-    addUndoCommand "sudo service iscsid stop"
+    addUndoCommand "systemctl --now disable iscsid.service"
 else
     logMessage "iscsi service is not running, aborting"
     # now we have to rollback and exit
@@ -97,21 +98,21 @@ fi
 
 commandDescription="Set multipath configuration which allow automatic failover between yours file servers"
 logMessage "${commandDescription}"
-sudo mpathconf --enable --with_multipathd y
+mpathconf --enable --with_multipathd y
 checkCommand "${commandDescription}"
-addUndoCommand "sudo mpathconf --disable"
+addUndoCommand "mpathconf --disable"
 
 # set the initiator name of your Linux host
-name=$(sudo cat /etc/iscsi/initiatorname.iscsi)
+name=$(cat /etc/iscsi/initiatorname.iscsi)
 initiatorName="${name:14}"
 logMessage "initiatorName is: ${initiatorName}"
 
 # Configure iSCSI on the FSx for ONTAP file system
 commandDescription="Install sshpass which will allow to connect FSXn using SSH"
 logMessage "${commandDescription}"
-sudo yum install -y sshpass
+yum install -y sshpass
 checkCommand "${commandDescription}"
-addUndoCommand "sudo yum remove -y sshpass"
+addUndoCommand "yum remove -y sshpass"
 
 # Test connection to ONTAP
 commandDescription="Testing connection to ONTAP."
@@ -124,7 +125,7 @@ groupName=$(hostname)
 
 commandDescription="Create initiator group for vserver: ${SVM_NAME} group name: ${groupName} and intiator name: ${initiatorName}"
 
-lunGroupresult=${sshpass -p $FSXN_PASSWORD ssh -o StrictHostKeyChecking=no $ONTAP_USER@$FSXN_ADMIN_IP "lun igroup show -vserver $SVM_NAME -igroup $groupName -initiator $initiatorName -protocol iscsi -ostype linux"}
+lunGroupresult=$(sshpass -p $FSXN_PASSWORD ssh -o StrictHostKeyChecking=no $ONTAP_USER@$FSXN_ADMIN_IP "lun igroup show -vserver $SVM_NAME -igroup $groupName -initiator $initiatorName -protocol iscsi -ostype linux")
 if [[ "$lunGroupresult" == *"There are no entries matching your query."* ]]; then
     logMessage "Initiator ${initiatorName} with group ${groupName} does not exist, creating it."
     logMessage "${commandDescription}"
@@ -194,25 +195,25 @@ fi
 
 commandDescription="Discover the target iSCSI nodes, iscsi IP: ${iscsi1IP}"
 logMessage "${commandDescription}"
-sudo iscsiadm --mode discovery --op update --type sendtargets --portal $iscsi1IP
+iscsiadm --mode discovery --op update --type sendtargets --portal $iscsi1IP
 checkCommand "${commandDescription}"
-addUndoCommand "sudo iscsiadm --mode discovery --op delete --type sendtargets --portal $iscsi1IP"
-addUndoCommand "sudo iscsiadm --mode discovery --op delete --type sendtargets --portal $iscsi2IP"
+addUndoCommand "iscsiadm --mode discovery --op delete --type sendtargets --portal $iscsi1IP"
+addUndoCommand "iscsiadm --mode discovery --op delete --type sendtargets --portal $iscsi2IP"
 
 logMessage "Getting target initiator"
-targetInitiator=$(sudo iscsiadm --mode discovery --op update --type sendtargets --portal $iscsi1IP | awk '{print $2}' | head -n 1)
+targetInitiator=$(iscsiadm --mode discovery --op update --type sendtargets --portal $iscsi1IP | awk '{print $2}' | head -n 1)
 logMessage "Target initiator is: ${targetInitiator}"
 
 # update the number of sessions to 8 (optional step)
-#sudo iscsiadm --mode node -T $targetInitiator --op update -n node.session.nr_sessions -v 8
+#iscsiadm --mode node -T $targetInitiator --op update -n node.session.nr_sessions -v 8
 
 # Log into the target initiators. Your iSCSI LUNs are presented as available disks
 logMessage "Log into target initiator: ${targetInitiator}"
-sudo iscsiadm --mode node -T $targetInitiator --login
-addUndoCommand "sudo iscsiadm --mode node -T $targetInitiator --logout"
+iscsiadm --mode node -T $targetInitiator --login
+addUndoCommand "iscsiadm --mode node -T $targetInitiator --logout"
 
 # verify that dm-multipath has identified and merged the iSCSI sessions
-sudo multipath -ll 
+multipath -ll 
 device_name=fsxontap
 
 # Add the following section to the /etc/multipath.conf file:
@@ -225,19 +226,19 @@ device_name=fsxontap
 # Assign name to block device, this should be function that will get serial hex and device name
 commandDescription="Update /etc/multipath.conf file, Assign name to block device."
 logMessage "${commandDescription}"
-sudo cp /etc/multipath.conf /etc/multipath.conf_backup
+cp /etc/multipath.conf /etc/multipath.conf_backup
 
 SERIAL_HEX=$serialHex
 #ALIAS=$device_name
 ALIAS=$VOLUME_NAME
 CONF=/etc/multipath.conf
-sudo chmod o+rw $CONF
-sudo grep -q '^multipaths {' $CONF
+chmod o+rw $CONF
+grep -q '^multipaths {' $CONF
 UNCOMMENTED=$?
 if [ $UNCOMMENTED -eq 0 ]; then
-    sudo sed -i '/^multipaths {/a\\tmultipath {\n\t\twwid 3600a0980'"${SERIAL_HEX}"'\n\t\talias '"${ALIAS}"'\n\t}\n' $CONF
+    sed -i '/^multipaths {/a\\tmultipath {\n\t\twwid 3600a0980'"${SERIAL_HEX}"'\n\t\talias '"${ALIAS}"'\n\t}\n' $CONF
 else
-    sudo printf "multipaths {\n\tmultipath {\n\t\twwid 3600a0980$SERIAL_HEX\n\t\talias $ALIAS\n\t}\n}" >> $CONF
+    printf "multipaths {\n\tmultipath {\n\t\twwid 3600a0980$SERIAL_HEX\n\t\talias $ALIAS\n\t}\n}" >> $CONF
 fi
 
 fileContent=$(cat $CONF)
@@ -245,9 +246,9 @@ logMessage "Updated /etc/multipath.conf file content: $fileContent"
 
 commandDescription="Restart the multipathd service for the changes at: /etc/multipathd.conf will take effect."
 logMessage "${commandDescription}"
-sudo systemctl restart multipathd.service
+systemctl restart multipathd.service
 checkCommand "${commandDescription}"
-addUndoCommand "sudo cp /etc/multipath.conf_backup /etc/multipath.conf"
+addUndoCommand "cp /etc/multipath.conf_backup /etc/multipath.conf"
 addUndoCommand "systemctl restart multipathd.service"
 
 logMessage "Checking if the new partition exists."
@@ -278,25 +279,25 @@ mount_point=$VOLUME_NAME
 
 commandDescription="Create a directory /${directory_path}/${mount_point} as the mount point for your file system"
 logMessage "${commandDescription}"
-sudo mkdir /$directory_path/$mount_point
+mkdir /$directory_path/$mount_point
 checkCommand "${commandDescription}"
-addUndoCommand "sudo rm -rf /$directory_path/$mount_point"
+addUndoCommand "rm -rf /$directory_path/$mount_point"
 
 #check this command
 # volume_name=the frindly device name as we set it in the multipath.conf file
 commandDescription="Creating the file system for the new partition: /dev/mapper/${ALIAS}"
 logMessage "${commandDescription}"
-sudo mkfs.ext4 /dev/mapper/$ALIAS
+mkfs.ext4 /dev/mapper/$ALIAS
 checkCommand "${commandDescription}"
 
 commandDescription="Mount the file system using the following command."
 logMessage "${commandDescription}"
-sudo mount -t ext4 /dev/mapper/$ALIAS /$directory_path/$mount_point
+mount -t ext4 /dev/mapper/$ALIAS /$directory_path/$mount_point
 checkCommand "${commandDescription}"
-addUndoCommand "sudo umount /$directory_path/$mount_point"
+addUndoCommand "umount /$directory_path/$mount_point"
 
 username=$(whoami)
-sudo chown $username:$username /$directory_path/$mount_point
+chown $username:$username /$directory_path/$mount_point
 
 # verify read write
 # example: echo "test mount iscsci" > /mnt/myIscsi/testIscsi.txt
