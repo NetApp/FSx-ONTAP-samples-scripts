@@ -85,6 +85,7 @@ get_token() {
 #  4. Output file to write the response to
 #  5. Error output file to write errors to
 #  6. Data to send (for POST requests)
+#  7. Accept header (optional, defaults to "application/json, text/plain, */*")
 ################################################################################
 run_curl () {
 

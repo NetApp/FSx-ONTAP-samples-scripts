@@ -65,6 +65,18 @@ for cmd in jq curl; do
     exit 1
   fi
 done
+#
+# Check that all the required parameters are set.
+if [ -z "$REFRESH_TOKEN" ]; then
+  cat >&2 <<EOF
+Error: A BlueXP refresh tokon is required to run this script.
+Can you be obtain from this web page:
+
+    https://services.cloud.netapp.com/refresh-token
+
+EOF
+  usage
+fi
 
 token=$(get_token)
 if [ -z "$token" ]; then

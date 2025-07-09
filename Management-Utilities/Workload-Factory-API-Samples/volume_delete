@@ -49,7 +49,7 @@ tmperr=$(mktemp /tmp/clone_volume-err.XXXXXX)
 trap 'rm -f $tmpout $tmperr' exit
 
 skipFinalBackup="skipFinalBackup=true"
-while getopts "hbt:a:c:r:f:v:s:n:" opt; do
+while getopts "hbt:a:c:r:f:v:" opt; do
   case $opt in
     b) skipFinalBackup="skipFinalBackup=false" ;;
     t) REFRESH_TOKEN="$OPTARG" ;;
