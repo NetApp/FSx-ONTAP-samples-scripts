@@ -30,10 +30,14 @@ If you do create a new script, please consider contributing it back to this repo
 ## Available Scripts
 | Script | Description |
 | --- | --- |
+| [link_associate](link_associate) | This associates a Workload Factory Link with a specified FSx for ONTAP file system. |
+| [link_delete](link_delete) | This deletes a Workload Factory Link. |
+| [link_disassociate](link_disassociate) | This disassociates a Workload Factory Link with a specified FSx for ONTAP file system. |
 | [list_bluexp_accts](list_bluexp_accts) | This list all the BlueXP accounts (a.k.a. organizations) that you have access to. |
 | [list_bluexp_members](list_bluexp_members) | This list all members of a provided BlueXP account. |
 | [list_credentials](list_credentials) | This lists all the Workload Factory credentials that you have access to. |
 | [list_filesystems](list_filesystems) | This lists all the FSx for ONTAP file systems that you have access to in the specified AWS region. |
+| [list_links](list_links) | This lists all the Workload Factory Links that you have access to. |
 | [list_snapmirrors](list_snapmirrors) | This lists all the SnapMirror relationships that are associated with the specified file system. |
 | [list_svms](list_svms) | This lists all the SVMs that are associated with the specified file system. |
 | [list_volumes](list_volumes) | This lists all the volumes that are associated with the specified file system. |
