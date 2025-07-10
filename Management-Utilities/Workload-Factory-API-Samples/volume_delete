@@ -1,0 +1,160 @@
+#!/bin/bash
+#
+################################################################################
+# This script is used to delete a volume of an FSx for ONTAP file system.
+#
+# It is dependent on the 'wf_utils' file that is included in this repo. That
+# file contains the 'get_token' function that is used to obtain a valid
+# access token that is needed to run the Workload Factory APIs. The file needs
+# to either be in the command search path or in the current directory.
+################################################################################
+
+################################################################################
+# This function just prints the usage of this script and exits the program.
+################################################################################
+usage() {
+  cat >&2 <<EOF
+This script will delete a volume of an FSx for ONTAP file system.
+
+Usage: $(basename $0) [-b] -t refresh_token -a blueXP_account_ID -c credentials_id -r aws_region -f filesystem_ID -v volume_ID
+
+Where: -b - Means to make a backup before deleting. The default is to not make a backup.
+       refresh_token - Is a refresh token used to obtain an access token needed
+                       to run the Workload Factory APIs. You can obtain a refresh
+                       token by going to https://services.cloud.netapp.com/refresh-token
+       blueXP_account_ID - is the BlueXP account ID. Run 'list_bluexp_accts' to get a
+                           list of accounts you have access to
+       credentials_ID - is the Workload Factory credentials ID for the AWS account. Run
+                        'list_credentials' to get a list of credentials you have access to
+       aws_region - is the AWS region where the FSx file systems are located
+       filesystem_id - is the AWS file system ID of the FSx file system where the volume resides
+       volume_ID - is the AWS volume ID of the volume to create a snapshot for
+
+Instead of passing parameters on the command line, you can set the
+following environment variables:
+
+    export REFRESH_TOKEN=<refresh_token>
+    export BLUEXP_ACCOUNT_ID=<blueXP_account_ID>
+    export CREDENTIALS_ID=<credentials_ID>
+    export AWS_REGION=<aws_region>
+EOF
+  exit 1
+}
+
+################################################################################
+# Main logic starts here.
+################################################################################
+tmpout=$(mktemp /tmp/clone_volume-out.XXXXXX)
+tmperr=$(mktemp /tmp/clone_volume-err.XXXXXX)
+trap 'rm -f $tmpout $tmperr' exit
+
+skipFinalBackup="skipFinalBackup=true"
+while getopts "hbt:a:c:r:f:v:s:n:" opt; do
+  case $opt in
+    b) skipFinalBackup="skipFinalBackup=false" ;;
+    t) REFRESH_TOKEN="$OPTARG" ;;
+    a) BLUEXP_ACCOUNT_ID="$OPTARG" ;;
+    c) CREDENTIALS_ID="$OPTARG" ;;
+    r) AWS_REGION="$OPTARG" ;;
+    f) FILESYSTEM_ID="$OPTARG" ;;
+    v) VOLUME_ID="$OPTARG" ;;
+    *) usage ;;
+  esac
+done
+#
+# Check fi the required parameters are set.
+missing_args=false
+if [ -z "$REFRESH_TOKEN" ]; then
+  cat >&2 <<EOF
+Error: A BlueXP refresh tokon is required to run this script.
+Can you be obtain from this web page:
+
+    https://services.cloud.netapp.com/refresh-token
+
+EOF
+  missing_args=true
+fi
+
+if [ -z "$BLUEXP_ACCOUNT_ID" ]; then
+  cat >&2 <<EOF
+Error: A BlueXP account is required to run this script.
+You can get the list of accounts you have access to by running the "list_bluexp_accts" script
+found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples
+
+EOF
+  missing_args=true
+fi
+
+if [ -z "$CREDENTIALS_ID" ]; then
+  cat >&2 <<EOF
+Error: A Workload Factory credentials ID is required to run this script.
+You can get the list of credentials you have access to by running the "list_credentials" script
+found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples
+
+EOF
+  missing_args=true
+fi
+
+if [ -z "$AWS_REGION" ]; then
+  cat >&2 <<EOF
+Error: The AWS region where the file system is located is required to run this script.
+
+EOF
+  missing_args=true
+fi 
+
+if [ -z "$FILESYSTEM_ID" ]; then
+  cat >&2 <<EOF
+Error: An FSx file system ID is required to run this script.
+You can get the list of file systems you have access to by running the "list_filesystems" script
+found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples
+
+EOF
+  missing_args=true
+fi
+
+if [ -z "$VOLUME_ID" ]; then
+  cat >&2 <<EOF
+Error: An AWS Volume ID is required to run this script.
+You can get the list of file systems you have access to by running the "list_volumes" script
+found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples
+
+EOF
+  missing_args=true
+fi
+
+if [ "$missing_args" != "false" ];  then
+  usage
+fi
+#
+# Source the wf_utils file.
+wf_utils=$(command -v wf_utils)
+if [ -z "$wf_utils" ]; then
+  if [ ! -x "./wf_utils" ]; then
+    cat >&2 <<EOF
+Error: The 'wf_utils' script was not found in the current directory or in the command search path.
+It is required to run this script. You can download it from:
+https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples
+EOF
+    exit 1
+  else
+    wf_utils=./wf_utils
+  fi
+fi
+. "$wf_utils" 
+#
+# Check that the required commands are available.
+for cmd in jq curl; do
+  if ! command -v $cmd &> /dev/null; then
+    echo "Error: The required command '$cmd' was not found. Please install it." >&2
+    exit 1
+  fi
+done
+
+token=$(get_token)
+if [ -z "$token" ]; then
+  echo "Error: Failed to obtain an access token. Exiting." >&2
+  exit 1
+fi
+
+run_curl "DELETE" "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/fsx/v2/credentials/${CREDENTIALS_ID}/regions/${AWS_REGION}/file-systems/${FILESYSTEM_ID}/volumes/${VOLUME_ID}?${skipFinalBackup}" $tmpout $tmperr

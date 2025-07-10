@@ -5,7 +5,7 @@ Metadata:
   AWS::CloudFormation::Interface: 
     ParameterGroups:
       - Label: 
-          default: "Configuration Parameters"
+          default: "Required Configuration Parameters"
         Parameters: 
           - volumeName
           - checkInterval
@@ -14,11 +14,34 @@ Metadata:
           - lambdaSecurityGroupIds
           - s3BucketName
           - s3BucketRegion
-          - secretArn
+          - copyToS3
           - createWatchdogAlarm
           - snsTopicArn
+
+      - Label:
+          default: "Secrets Manager specifications"
+        Parameters:
+          - fsxnSecretARNsFile
+          - fileSystem1ID
+          - fileSystem1SecretARN
+          - fileSystem2ID
+          - fileSystem2SecretARN
+          - fileSystem3ID
+          - fileSystem3SecretARN
+          - fileSystem4ID
+          - fileSystem4SecretARN
+          - fileSystem5ID
+          - fileSystem5SecretARN
+
+      - Label:
+          default: "Security Configuration"
+        Parameters:
           - lambdaRoleArn
           - schedulerRoleArn
+
+      - Label:
+          default: "VPC Endpoint Configuration"
+        Parameters:
           - createFSxEndpoint
           - createCloudWatchEndpoint
           - createSecretManagerEndpoint
@@ -26,6 +49,68 @@ Metadata:
           - routeTableIds
           - vpcId
           - endpointSecurityGroupIds
+
+    ParameterLabels:
+      volumeName:
+        default: "Volume Name"
+      checkInterval:
+        default: "Check Interval (minutes)"
+      logGroupName:
+        default: "CloudWatch Log Group Name"
+      subNetIds:
+        default: "Subnets for Lambda Function"
+      lambdaSecurityGroupIds:
+        default: "Security Groups for Lambda Function"
+      s3BucketName:
+        default: "S3 Bucket Name"
+      s3BucketRegion:
+        default: "S3 Bucket Region"
+      copyToS3:
+        default: "Copy to S3"
+      createWatchdogAlarm:
+        default: "Create Watchdog Alarm"
+      snsTopicArn:
+        default: "SNS Topic ARN"
+      fsxnSecretARNsFile:
+        default: "File with the list of FSxN file systems and their secret ARNs"
+      fileSystem1ID:
+        default: "File System 1 ID"
+      fileSystem1SecretARN:
+        default: "File System 1 Secret ARN"
+      fileSystem2ID:
+        default: "File System 2 ID"
+      fileSystem2SecretARN:
+        default: "File System 2 Secret ARN"
+      fileSystem3ID:
+        default: "File System 3 ID"
+      fileSystem3SecretARN:
+        default: "File System 3 Secret ARN"
+      fileSystem4ID:
+        default: "File System 4 ID"
+      fileSystem4SecretARN:
+        default: "File System 4 Secret ARN"
+      fileSystem5ID:
+        default: "File System 5 ID"
+      fileSystem5SecretARN:
+        default: "File System 5 Secret ARN" 
+      lambdaRoleArn:
+        default: "Lambda Role ARN"
+      schedulerRoleArn:
+        default: "Scheduler Role ARN"
+      createFSxEndpoint:
+        default: "Create FSx Endpoint"
+      createCloudWatchEndpoint:
+        default: "Create CloudWatch Endpoint"
+      createSecretManagerEndpoint:
+        default: "Create Secrets Manager Endpoint"
+      createS3Endpoint:
+        default: "Create S3 Endpoint"
+      routeTableIds:
+        default: "Route Table IDs"
+      vpcId:
+        default: "VPC ID"
+      endpointSecurityGroupIds:
+        default: "Security Groups for VPC Endpoints"
 
 Parameters:
   volumeName:
@@ -36,13 +121,14 @@ Parameters:
     Description: "The interval, in minutes, to check for new audit logs to process."
     Type: Number
     Default: 5
+    MinValue: 1
 
   logGroupName:
-    Description: "The name of the CloudWatch log group to use to store the audit logs. This Log Group must already exist."
+    Description: "The name of the CloudWatch log group to store the audit logs to. This Log Group must already exist. It must be in the same region as this CloudFormation stack."
     Type: String
 
   subNetIds:
-    Description: "The subnet IDs where you want the Lambda function to run. There must be connectivity to all the FSxN management endpoints from these subnets. If creating VPC endpoints, the endpionts will be created in these subnets."
+    Description: "The subnet IDs where you want the Lambda function to run. There must be connectivity to all the FSxN management endpoints from these subnets. If creating VPC endpoints, the endpoints will be created in these subnets."
     Type: List<AWS::EC2::Subnet::Id>
 
   lambdaSecurityGroupIds:
@@ -50,25 +136,82 @@ Parameters:
     Type: List<AWS::EC2::SecurityGroup::Id>
 
   s3BucketName:
-    Description: "The name of the s3 bucket to use to store the last message processed stats file."
+    Description: "The name of the S3 bucket where the last audit file processed stats file will be stored. Also, where the Lambda layer file should already be stored."
     Type: String
 
   s3BucketRegion:
-    Description: "The AWS region where the s3 bucket resides."
+    Description: "The AWS region where the S3 bucket resides."
     Type: String
 
-  secretArn:
-    Description: "The ARN of the secret that holds the FSxN credentials to use."
-    Type: String
-
-  createWatchdogAlarm:
-    Description: "Create a CloudWatch alarm to monitor the Lambda function. It will send an alert to the SNS topic set below if the function throws an error."
+  copyToS3:
+    Description: "Set to 'true' if you want to copy the audit log files to the S3 bucket as well as sending the individual events to the CloudWatch log stream."
     Type: String
     Default: "false"
     AllowedValues: ["true", "false"]
 
+  fsxnSecretARNsFile:
+    Description: "The name of the file that contains the list of FSxN file systems and their secret ARNs. It should already be stored in the S3 bucket. Either provide this file or the individual file system IDs and secret ARNs below."
+    Type: String
+    Default: ""
+
+  fileSystem1ID:
+    Description: "The ID of the an FSxN file system you want to process."
+    Type: String
+    Default: ""
+
+  fileSystem1SecretARN:
+    Description: "The ARN of the secret in Secrets Manager that holds the credentials for the FSxN file system specified above."
+    Type: String
+    Default: ""
+
+  fileSystem2ID:
+    Description: "The ID of the an FSxN file system you want to process."
+    Type: String
+    Default: ""
+
+  fileSystem2SecretARN:
+    Description: "The ARN of the secret in Secrets Manager that holds the credentials for the FSxN file system specified above."
+    Type: String
+    Default: ""
+
+  fileSystem3ID:
+    Description: "The ID of the an FSxN file system you want to process."
+    Type: String
+    Default: ""
+
+  fileSystem3SecretARN:
+    Description: "The ARN of the secret in Secrets Manager that holds the credentials for the FSxN file system specified above."
+    Type: String
+    Default: ""
+
+  fileSystem4ID:
+    Description: "The ID of the an FSxN file system you want to process."
+    Type: String
+    Default: ""
+
+  fileSystem4SecretARN:
+    Description: "The ARN of the secret in Secrets Manager that holds the credentials for the FSxN file system specified above."
+    Type: String
+    Default: ""
+
+  fileSystem5ID:
+    Description: "The ID of the an FSxN file system you want to process."
+    Type: String
+    Default: ""
+
+  fileSystem5SecretARN:
+    Description: "The ARN of the secret in Secrets Manager that holds the credentials for the FSxN file system specified above."
+    Type: String
+    Default: ""
+
+  createWatchdogAlarm:
+    Description: "Create a CloudWatch alarm to monitor the Lambda function. It will send an alert to the SNS topic set below if the Lambda function throws an error."
+    Type: String
+    Default: "true"
+    AllowedValues: ["true", "false"]
+
   snsTopicArn:
-    Description: "The ARN of the SNS topic to use to send Watchdog alerts to. Only needed if you are creating a Watchdog alarm."
+    Description: "The ARN of the SNS topic where the Watchdog should send alerts to. Only needed if you are creating a Watchdog alarm. The topic must be in the same region as this CloudFormation stack."
     Type: String
     Default: ""
 
@@ -217,11 +360,15 @@ Resources:
               - Effect: "Allow"
                 Action:
                   - "secretsManager:GetSecretValue"
+                Resource: 
+                  - !Sub "arn:aws:secretsmanager:*:${AWS::AccountId}:secret:*"
+
+              - Effect: "Allow"
+                Action:
                   - "s3:GetObject"
                   - "s3:PutObject"
                   - "s3:ListBucket"
-                Resource: 
-                  - !Ref secretArn
+                Resource:
                   - !Sub "arn:aws:s3:::${s3BucketName}"
                   - !Sub "arn:aws:s3:::${s3BucketName}/*"
 
@@ -301,9 +448,20 @@ Resources:
           logGroupName: !Ref logGroupName
           s3BucketName: !Ref s3BucketName
           s3BucketRegion: !Ref s3BucketRegion
-          secretArn: !Ref secretArn
+          copyToS3: !Ref copyToS3
           statsName: "lastFileRead"
           volumeName: !Ref volumeName
+          fsxnSecretARNsFile: !Ref fsxnSecretARNsFile
+          fileSystem1ID: !Ref fileSystem1ID
+          fileSystem1SecretARN: !Ref fileSystem1SecretARN
+          fileSystem2ID: !Ref fileSystem2ID
+          fileSystem2SecretARN: !Ref fileSystem2SecretARN
+          fileSystem3ID: !Ref fileSystem3ID
+          fileSystem3SecretARN: !Ref fileSystem3SecretARN
+          fileSystem4ID: !Ref fileSystem4ID
+          fileSystem4SecretARN: !Ref fileSystem4SecretARN
+          fileSystem5ID: !Ref fileSystem5ID
+          fileSystem5SecretARN: !Ref fileSystem5SecretARN
       Code:
         ZipFile: |
           #!/bin/python3
@@ -342,38 +500,80 @@ Resources:
           # code below, or by setting environment variables with the same name.
           ################################################################################
           #
-          # Specify the secret ARN for the fsxadmin passwords.
-          #   Format of the secret should be:
-          #   {
-          #     "fsId-1": {"username": "fsxadmin", "password": "<passowrd>"},
-          #     "fsId-2": {"username": "service_account", "password": "<passowrd>"}
-          #   }
-          #secretArn = ""
+          # The secretARNs contains the secretARNs for all the FSxNs you want to process.
+          # Unlike the rest of the variables this one cannot be set via an environment
+          # variable. There are three options to populate the dictionary:
           #
-          # Specify where to store the "last read" file.
-          #s3BucketRegion = "us-west-2"
-          #s3BucketName = ""
+          # 1. Create a 'secretARNs' variable by un-commenting out the code segment
+          #    below that defines dictionary with the following structure:
+          #
+          # secretARNs =  {
+          #     "<fsId-1>": "<secretARN>",
+          #     "<fsId-2>": "<secretARN>",
+          #     "<fsId-3>": "<secretARN>"
+          #   }
+          #
+          # 2. Set the fsxnSecretARNsFile variable to the name of a file in the s3
+          #    bucket that contains the secretARNs.
+          #
+          # fsxnSecretARNsFile=
+          #
+          #  The format of that file should be:
+          #
+          # <fsId-1>=<secretARN>
+          # <fsId-2>=<secretARN>
+          #
+          # 3. Set the fileSystem1ID, fileSystem2ID, fileSystem3ID, fileSystem4ID, and
+          #    fileSystem5ID variables to the fsId of the FSxN file systems. Then set
+          #    the fileSystem1SecretARN, fileSystem2SecretARN, fileSystem3SecretARN,
+          #    fileSystem4SecretARN, and fileSystem5SecretARN variables to the
+          #    secretARNs for the FSxN file systems. Empty, or variables not defined
+          #    will be ignored. Note that if fsxnSecretARNsFile is set, then these
+          #    variables will be ignored.
+          #
+          # fileSystem1ID = 
+          # fileSystem1SecretARN =
+          # fileSystem2ID = 
+          # fileSystem2SecretARN =
+          # fileSystem3ID = 
+          # fileSystem3SecretARN =
+          # fileSystem4ID = 
+          # fileSystem4SecretARN =
+          # fileSystem5ID = 
+          # fileSystem5SecretARN =
+          #
+          # *NOTE*: Each secret should have two keys: 'username' and 'password' set to the
+          # appropriate values.
+          #
+          # Specify what s3 bucket to use to store the last read file and potentially
+          # the audit log files and the secretsARNs file.
+          # s3BucketRegion = "us-west-2"
+          # s3BucketName = ""
           #
           # The name of the "last read" file.
-          #statsName = "lastFileRead"
+          # statsName = "lastFileRead"
           #
           # The region to process the FSxNs in.
-          #fsxRegion = "us-west-2"
+          # fsxRegion = "us-west-2"
           #
           # The name of the volume that holds the audit logs. Assumed to be the same on
           # vservers.
-          #volumeName = "audit_logs"
+          # volumeName = "audit_logs"
           #
           # The name of the vserver that holds the audit logs. Assumed to be the same on
           # all FSxNs.
           # *NOTE*:The program has been updated to loop on all the vservers within an FSxN
           #        filesystem and not just the one set here. This variable is now used
-          #        so it can update the lastFireRead stats file to conform to the new format
-          #        that includes the vserver as part of the structure.
-          #vserverName = "fsx"
+          #        so it can update the lastFireRead stats file to conform to the new
+          #        format that includes the vserver as part of the structure.
+          # vserverName = "fsx"
           #
-          # The CloudWatch log group to store the audit logs in.
-          #logGroupName = "/fsx/audit_logs"
+          # The CloudWatch log group to store the audit logs in. It must already exist.
+          # logGroupName = "/fsx/audit_logs"
+          #
+          # If you want the program to copy all the raw audit files into the S3 bucket,
+          # then set this to the string "true". It will be converted to a boolean later.
+          # copyToS3 = "true"
           
           ################################################################################
           # This function returns the epoch time from the filename. It assumes the
@@ -397,7 +597,7 @@ Resources:
           # APIs, and then calls the ingestAuditFile function to upload the audit
           # log entires to the CloudWatch log group.
           ################################################################################
-          def processFile(ontapAdminServer, headers, volumeUUID, filePath):
+          def readFile(ontapAdminServer, headers, volumeUUID, filePath):
               global http
               #
               # Create the tempoary file to hold the contents from the ONTAP/FSxN file.
@@ -407,6 +607,7 @@ Resources:
               # Number of bytes to read for each API call.
               blockSize=1024*1024
           
+              failed = False
               bytesRead = 0
               requestSize = 1   # Set to > 0 to start the loop.
               while requestSize > 0:
@@ -436,9 +637,13 @@ Resources:
                       break
           
               f.close()
-              #
-              # Upload the audit events to CloudWatch.
-              ingestAuditFile(tmpFileName, filePath)
+              if failed:
+                  os.remove(tmpFileName)
+                  return None
+              else:
+                  return tmpFileName
+                  #
+                  # Upload the audit events to CloudWatch.
           
           ################################################################################
           # This functions converts the timestamp from the XML file to a timestamp in
@@ -583,47 +788,98 @@ Resources:
           # This function checks that all the required configuration variables are set.
           ################################################################################
           def checkConfig():
-              global config
+              global config, s3Client, secretARNs
           
               config = {
                   'volumeName': volumeName if 'volumeName' in globals() else None,               # pylint: disable=E0602
                   'logGroupName': logGroupName if 'logGroupName' in globals() else None,         # pylint: disable=E0602
                   'fsxRegion': fsxRegion if 'fsxRegion' in globals() else None,                  # pylint: disable=E0602
-                  'secretArn': secretArn if 'secretArn' in globals() else None,                  # pylint: disable=E0602
                   's3BucketRegion': s3BucketRegion if 's3BucketRegion' in globals() else None,   # pylint: disable=E0602
                   's3BucketName': s3BucketName if 's3BucketName' in globals() else None,         # pylint: disable=E0602
-                  'statsName': statsName if 'statsName' in globals() else None                   # pylint: disable=E0602
+                  'statsName': statsName if 'statsName' in globals() else None,                  # pylint: disable=E0602
+                  'copyToS3': copyToS3 if 'copyToS3' in globals() else None,                     # pylint: disable=E0602
+                  'fsxnSecretARNsFile': fsxnSecretARNsFile if 'fsxnSecretARNsFile' in globals() else None,  # pylint: disable=E0602
+                  'fileSystem1ID': fileSystem1ID if 'fileSystem1ID' in globals() else None,      # pylint: disable=E0602
+                  'fileSystem2ID': fileSystem2ID if 'fileSystem2ID' in globals() else None,      # pylint: disable=E0602
+                  'fileSystem3ID': fileSystem3ID if 'fileSystem3ID' in globals() else None,      # pylint: disable=E0602
+                  'fileSystem4ID': fileSystem4ID if 'fileSystem4ID' in globals() else None,      # pylint: disable=E0602
+                  'fileSystem5ID': fileSystem5ID if 'fileSystem5ID' in globals() else None,      # pylint: disable=E0602
+                  'fileSystem1SecretARN': fileSystem1SecretARN if 'fileSystem1SecretARN' in globals() else None,  # pylint: disable=E0602
+                  'fileSystem2SecretARN': fileSystem2SecretARN if 'fileSystem2SecretARN' in globals() else None,  # pylint: disable=E0602
+                  'fileSystem3SecretARN': fileSystem3SecretARN if 'fileSystem3SecretARN' in globals() else None,  # pylint: disable=E0602
+                  'fileSystem4SecretARN': fileSystem4SecretARN if 'fileSystem4SecretARN' in globals() else None,  # pylint: disable=E0602
+                  'fileSystem5SecretARN': fileSystem5SecretARN if 'fileSystem5SecretARN' in globals() else None   # pylint: disable=E0602
               }
+              optionalConfig = ['copyToS3', 'fsxnSecretARNsFile', 'fileSystem1ID',
+                                'fileSystem2ID', 'fileSystem3ID', 'fileSystem4ID',
+                                'fileSystem5ID', 'fileSystem1SecretARN', 'fileSystem2SecretARN',
+                                'fileSystem3SecretARN', 'fileSystem4SecretARN', 'fileSystem5SecretARN']
           
               for item in config:
                   if config[item] == None:
                       config[item] = os.environ.get(item)
-                  if config[item] == None:
+                  if item not in optionalConfig and config[item] == None:
                       raise Exception(f"{item} is not set.")
+          
+              if config['copyToS3'] == None:
+                  config['copyToS3'] = False
+              else:
+                  config['copyToS3'] = config['copyToS3'].lower() == 'true'
               #
               # To be backwards compatible, load the vserverName.
               config['vserverName'] = vserverName if 'vserverName' in globals() else os.environ.get('vserverName')  # pylint: disable=E0602
+              #
+              # Create a S3 client.
+              s3Client = boto3.client('s3', config['s3BucketRegion'])
+              #
+              # Define the secretsARNs dictionary if it hasn't already been defined.
+              if 'secretARNs' not in globals():
+                  secretARNs = {}
+              #
+              # If the fsxnSecretARNsFile is set, then read the file from S3 and populate the secretARNs dictionary.
+              if config['fsxnSecretARNsFile'] is not None and config['fsxnSecretARNsFile'] != '':
+                  try:
+                      response = s3Client.get_object(Bucket=config['s3BucketName'], Key=config['fsxnSecretARNsFile'])
+                  except botocore.exceptions.ClientError as err:
+                      raise Exception(f"Unable to open parameter file with secrets '{config['fsxnSecretARNsFile']}' from S3 bucket '{config['s3BucketName']}': {err}")
+                  else:
+                      for line in response['Body'].iter_lines():
+                          line = line.decode('utf-8')
+                          line = line.strip()
+                          if line.startswith('#'):
+                              continue
+                          if line == '':
+                              continue
+                          fsId, secretArn = line.split('=')
+                          secretARNs[fsId.strip()] = secretArn.strip()
+              else:
+                  if config['fileSystem1ID'] is not None and config['fileSystem1SecretARN'] is not None:
+                      secretARNs[config['fileSystem1ID']] = config['fileSystem1SecretARN']
+                  if config['fileSystem2ID'] is not None and config['fileSystem2SecretARN'] is not None:
+                      secretARNs[config['fileSystem2ID']] = config['fileSystem2SecretARN']
+                  if config['fileSystem3ID'] is not None and config['fileSystem3SecretARN'] is not None:
+                      secretARNs[config['fileSystem3ID']] = config['fileSystem3SecretARN']
+                  if config['fileSystem4ID'] is not None and config['fileSystem4SecretARN'] is not None:
+                      secretARNs[config['fileSystem4ID']] = config['fileSystem4SecretARN']
+                  if config['fileSystem5ID'] is not None and config['fileSystem5SecretARN'] is not None:
+                      secretARNs[config['fileSystem5ID']] = config['fileSystem5SecretARN']
           
           ################################################################################
           # This is the main function that checks that everything is configured correctly
           # and then processes all the FSxNs.
           ################################################################################
           def lambda_handler(event, context):     # pylint: disable=W0613
-              global http, cwLogsClient, config
+              global http, cwLogsClient, config, s3Client, secretARNs
               #
               # Check that we have all the configuration variables we need.
               checkConfig()
               #
               # Create a Secrets Manager client.
               session = boto3.session.Session()
-              secretsClient = session.client(service_name='secretsmanager', region_name=config['secretArn'].split(':')[3])
-              #
-              # Get the fsxadmin passwords for all the file systems.
-              secretsInfo = secretsClient.get_secret_value(SecretId=config['secretArn'])
-              secrets = json.loads(secretsInfo['SecretString'])
               #
               # Create a S3 client.
-              s3Client = boto3.client('s3', config['s3BucketRegion'])
+              # Created in the checkCofnig function.
+              # s3Client = boto3.client('s3', config['s3BucketRegion'])
               #
               # Create a FSx client.
               fsxClient = boto3.client('fsx', config['fsxRegion'])
@@ -672,20 +928,24 @@ Resources:
                           lastFileRead[fsxn] = {config['vserverName']: lastFileRead[fsxn]}   # New format
                   #
                   # Get the credentials.
-                  username = None
-                  password = None
-                  if secrets.get(fsId) is not None:
+                  if secretARNs.get(fsId) is not None:
                       #
-                      # Check for the old format of the secrets.
-                      if isinstance(secrets[fsId], str):
-                          username = "fsxadmin"
-                          password = secrets[fsId]
-                      else:
-                          username = secrets[fsId].get('username')
-                          password = secrets[fsId].get('password')
-                  
-                  if username is None or password is None:
-                      print(f'Warning: The credentials were not found for {fsId} in the secret {config["secretArn"]}.')
+                      # Get the username and password of the ONTAP/FSxN system.
+                      try:
+                          secretsClient = session.client(service_name='secretsmanager', region_name=secretARNs[fsId].split(':')[3])
+                          secretsInfo = secretsClient.get_secret_value(SecretId=secretARNs[fsId])
+                          secret = json.loads(secretsInfo['SecretString'])
+                          if secret.get('username') is None or secret.get('password') is None:
+                              print(f"Warning: The 'username' or 'password' keys were not found in the secret for '{fsId}' in the secretARN '{secretARNs[fsId]}'.")
+                              continue
+                          username = secret['username']
+                          password = secret['password']
+                          secretsClient.close()
+                      except botocore.exceptions.ClientError as err:
+                          print(f"Warning: Unable to retrieve the credentials for '{fsId}' using the secretARN '{secretARNs[fsId]}'. {err}")
+                          continue
+                  else:
+                      print(f'Warning: No secret ARN was found for {fsId}.')
                       continue
                   #
                   # Create a header with the basic authentication.
@@ -729,14 +989,17 @@ Resources:
                               for file in data['records']:
                                   filePath = file['name']
                                   if lastFileRead.get(fsxn) is None or lastFileRead[fsxn].get(vserverName) is None or getEpoch(filePath) > lastFileRead[fsxn][vserverName]:
-                                      #
-                                      # Process the file.
-                                      processFile(fsxn, headersDownload, volumeUUID, filePath)
-                                      if lastFileRead.get(fsxn) is None:
-                                          lastFileRead[fsxn] = {vserverName: getEpoch(filePath)}
-                                      else:
-                                          lastFileRead[fsxn][vserverName] = getEpoch(filePath)
-                                      s3Client.put_object(Key=config['statsName'], Bucket=config['s3BucketName'], Body=json.dumps(lastFileRead).encode('UTF-8'))
+                                      localFileName = readFile(fsxn, headersDownload, volumeUUID, filePath)
+                                      if localFileName is not None:
+                                          if config['copyToS3']:
+                                              s3Client.upload_file(localFileName, config['s3BucketName'], filePath)
+                                          ingestAuditFile(localFileName, filePath)
+                                          if lastFileRead.get(fsxn) is None:
+                                              lastFileRead[fsxn] = {vserverName: getEpoch(filePath)}
+                                          else:
+                                              lastFileRead[fsxn][vserverName] = getEpoch(filePath)
+                                          s3Client.put_object(Key=config['statsName'], Bucket=config['s3BucketName'], Body=json.dumps(lastFileRead).encode('UTF-8'))
+                                          os.remove(localFileName)
                           #
                           # Get the next set of SVMs.
                           if svmsData['_links'].get('next') != None:

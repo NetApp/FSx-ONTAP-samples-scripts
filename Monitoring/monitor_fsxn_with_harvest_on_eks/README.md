@@ -1,3 +1,9 @@
+# :warning: **NOTICE:**
+
+Continuous development for this solution has moved to a separate GitHub repository found here
+[https://github.com/NetApp/FSx-ONTAP-monitoring/tree/main/Grafana-Prometheus-FSx/Monitor-FSxN-with-Harvest-on-EKS](https://github.com/NetApp/FSx-ONTAP-monitoring/tree/main/Grafana-Prometheus-FSx/Monitor-FSxN-with-Harvest-on-EKS).
+Please refer to that repository for the latest updates.
+
 # Deploy NetApp Harvest on EKS 
 
 This subfolder contains a Helm chart to install [NetApp Harvest](https://github.com/NetApp/harvest/blob/main/README.md)
@@ -5,7 +11,19 @@ into an AWS EKS cluster to monitor multiple FSx for ONTAP file systems using the
 Grafana + Prometheus stack. It uses the AWS Secrets Manager to obtain
 credentials for each of the FSxN file systems so those credentials aren't insecurely stored.
 
+Here are some screenshots of a couple of the dashboards that are included to visualize the metrics collected by Harvest and YACE.
+
+![Screenshot-01](images/grafana-dashboard-01.png)
+
+![Screenshot-02](images/grafana-dashboard-02.png)
+
 ## Introduction
+
+### Architectural Overview
+
+This solution uses several components to collect and display all the pertinent metrics from your FSx for ONTAP file system.
+Instead of trying to describe them in words, the following architectural diagram does a great job of showing the components and how they interact with each other:
+![Architectural Diagram](images/FSxN-MonitoringStack-EKS.png)
 
 ### What to expect
 
@@ -20,7 +38,7 @@ The format of the secret string should to be a json structure with a `username` 
 ```json
 {
   "username": "fsxadmin",
-  "password": "fsxadmin-password"
+  "password": "fsxadmin's_password"
 }
 ```
 A service account should be created during the installation of Harvest with the sufficient permissions to fetch the secrets.
@@ -347,7 +365,7 @@ Once you have access to Grafana, you can log in using the default credentials:
 
 ### Adding Grafana dashboards and visualize your FSxN metrics on Grafana
 Once you login, you'll want to import some dashboards to visualize the metrics collected by Harvest and YACE. You will find
-some example dashboards in the `dashboards` folder in this repository. You can import these dashboards into Grafana by following these steps:
+some example dashboards in the [dashboards](dashboards) folder in this repository. You can import these dashboards into Grafana by following these steps:
 1. Download the dashboards from the `dashboards` folder in this repository to your local PC.
 1. Log in to your Grafana instance.
 1. Click on the "+" icon on the left-hand side menu and select "Import Dashboard".
@@ -361,6 +379,8 @@ Only consider the dashboards in the `cmode` and `cmode-details` directories.
 
 :memo: **NOTE:** Since the special 'fsxadmin' account doesn't have access to all the metrics that a traditional ONTAP 'admin' account would have,
 some of the metrics and dashboards may not be fully applicable or available. The ones with 'fsx' tag are more relevant for FSxN.
+
+---
 
 ## Author Information
 
@@ -376,4 +396,4 @@ Unless required by applicable law or agreed to in writing, software distributed 
 
 See the License for the specific language governing permissions and limitations under the License.
 
-© 2024 NetApp, Inc. All Rights Reserved.
+© 2025 NetApp, Inc. All Rights Reserved.

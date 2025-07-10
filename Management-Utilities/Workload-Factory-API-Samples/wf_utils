@@ -1,0 +1,173 @@
+#!/bin/bash
+#
+# This file contains functions that aid with the scripts located in this
+# repo. It should be "sourced" into the script in order to use the functions
+# defined.
+#
+################################################################################
+
+
+################################################################################
+# This function is used to obtain a bearer token (a.k.a. "access token") for the
+# BlueXP API and, by extension, Workload Factory API. It requires a
+# refresh token that can be obtained from this webpage:
+#
+#    https://services.cloud.netapp.com/refresh-token
+#
+# It will store the bearer token in a file named ".blueXP_token" in the
+# account's home directory. If the script is called again, it will check to
+# see if the modification time of the file is less than 24 hours old and
+# if it is, it will just return the contents of the file. If it is older than
+# 24 hours, it will create a new token, output it to standard out and
+# store it in the file.
+################################################################################
+get_token() {
+
+  tokenFile="$HOME/.blueXP_token"
+  tmpfile=$(mktemp -t create_token.XXXXXX)
+  trap 'rm -f "$tmpfile"' RETURN
+  
+  if [ -z "$REFRESH_TOKEN" ]; then
+    echo "Error: The REFRESH_TOKEN environment variable has not been set." >&2
+    exit 1
+  fi
+  #
+  # Ensure all the required commands are available.
+  for cmd in curl; do
+    if ! command -v $cmd &> /dev/null; then
+      echo "Error: $cmd is required but not installed." >&2
+      exit 1
+    fi
+  done
+  #
+  # According to the documentation tokens are only good for 24 hours.
+  # Subtract 5 minutes to be safe.
+  let token_valid=60*60*24-60*5
+  
+  createToken=false
+  if [ -r $tokenFile ]; then
+    let diff="$(date +%s) - $(date -r $tokenFile +%s)"
+    if [ $diff -gt $token_valid ]; then
+      createToken=true
+    fi
+  else
+      createToken=true
+  fi
+  
+  if [ $createToken == "true" ]; then
+    curl -s -X POST 'https://netapp-cloud-account.auth0.com/oauth/token' \
+    -H 'Content-Type: application/json' \
+    --data-raw '{
+      "grant_type": "refresh_token",
+      "refresh_token": "'$REFRESH_TOKEN'",
+      "client_id": "Mu0V1ywgYteI6w1MbD15fKfVIUrNXGWC"
+    }' > $tmpfile 2>&1
+    token=$(sed -ne 's/."access_token":"\([^"]*\).*/\1/p' < $tmpfile)
+  
+    if [ -z "$token" ]; then
+      echo "Error: Unable to obtain a bearer token. Error message:" >&2
+      cat $tmpfile >&2
+      echo "" >&2
+      exit 1
+    fi
+    echo "$token" > $tokenFile
+  fi 
+  
+  cat $tokenFile
+}
+
+################################################################################
+# This function runs 'curl' checking for the status code and handling errors.
+# It takes the following parameters:
+#  1. HTTP method (GET or POST)
+#  2. Bearer token
+#  3. URL to call
+#  4. Output file to write the response to
+#  5. Error output file to write errors to
+#  6. Data to send (for POST requests)
+################################################################################
+run_curl () {
+
+  method="$1"
+  token="$2"
+  url="$3"
+  output="$4"
+  errorOutput="$5"
+  data="$6"
+  accept="$7"
+  if [[ -z "$method" || -z "$token" || -z "$url" || -z "$output" || -z "$errorOutput" ]]; then
+    echo "Error: Missing required parameters for run_curl function." >&2
+    exit 1
+  fi
+  if [ -z "$accept" ]; then
+    accept="application/json, text/plain, */*"
+  fi
+  case "$method" in
+    GET|get)
+      curl -sw "%{stderr}%{http_code},%{errormsg}" "$url" \
+         -H "Accept: $accept" \
+         -H "Authorization: Bearer $token" > $output 2> $errorOutput
+      exitCode=$?
+      ;;
+    POST|post)
+      curl -X POST -sw "%{stderr}%{http_code},%{errormsg}" "$url" \
+         -H "Accept: $accept" \
+         -H "Content-Type:application/json" \
+         -H "Authorization: Bearer $token" --data "$data" > $output 2> $errorOutput
+      exitCode=$?
+      ;;
+    DELETE|delete)
+      curl -X DELETE -sw "%{stderr}%{http_code},%{errormsg}" "$url" \
+         -H "Accept: $accept" \
+         -H "Authorization: Bearer $token" > $output 2> $errorOutput
+      exitCode=$?
+      ;;
+    *)
+      echo "Error: Unsupported method '$method'." >&2
+      exit 1
+      ;;
+  esac
+
+  httpCode=$(awk -F, '{print $1}' $errorOutput)
+  if [ "$exitCode" != "0" ]; then
+    errorMsg=$(awk -F, '{print $2}' $errorOutput)
+    echo "Error: curl command failed with exit code $exitCode ($errorMsg)." >&2
+    exit 1
+  fi 
+    
+  if [[ -z "$httpCode" || "$httpCode" -gt 299 ]]; then
+    echo "Error: HTTP request failed with status code $httpCode." >&2
+    #
+    # See if there is any useful output in the output file.
+    if [ -s "$output" ]; then
+      if (jq -r . $output 2> /dev/null) >&2; then
+        exit 1
+      fi
+    fi
+    #
+    # If not just dump everything to stderr.
+    cat $errorOutput $output >&2
+    echo 1>&2
+    exit 1
+  fi
+}
+
+################################################################################
+# This function URL encodes the input string.
+################################################################################
+urlencode() {
+  echo "$@" | awk -v ORS="" '{ gsub(/./,"&\n") ; print }' | while read l
+  do
+    c="`echo "$l" | grep '[^-._~0-9a-zA-Z]'`"
+    if [ "$l" == "" ]; then
+      echo -n "%20"
+    else
+      if [ -z "$c" ]; then
+        echo -n "$l"
+      else
+        printf %%%02X \'"$c"
+      fi
+    fi
+  done
+  echo ""
+}

@@ -8,16 +8,25 @@ Metadata:
           default: "Configuration Parameters"
         Parameters: 
           - OntapAdminSever
+          - s3BucketName
           - subNetIds
           - securityGroupIds
           - snsTopicArn
+          - cloudWatchLogGroupArn
           - secretArn
           - secretUsernameKey
           - secretPasswordKey
           - checkInterval
           - createWatchdogAlarm
-          - createSecretManagerEndpoint
+          - implementWatchdogAsLambda
+          - watchdogRoleArn
+          - LambdaRoleArn
+      - Label:
+          default: "AWS Endpoint Options"
+        Parameters:
+          - createSecretsManagerEndpoint
           - createSNSEndpoint
+          - createCloudWatchLogsEndpoint
           - createS3Endpoint
           - routeTableIds
           - vpcId
@@ -29,27 +38,122 @@ Metadata:
           - failoverAlert
           - emsEventsAlert
           - snapMirrorLagTimeAlert
+          - snapMirrorLagTimePercentAlert
           - snapMirrorStalledAlert
           - snapMirrorHealthAlert
           - fileSystemUtilizationWarnAlert
           - fileSystemUtilizationCriticalAlert
           - volumeUtilizationWarnAlert
           - volumeUtilizationCriticalAlert
+          - volumeFileUtilizationWarnAlert
+          - volumeFileUtilizationCriticalAlert
+          - volumeOfflineAlert
           - softQuotaUtilizationAlert
           - hardQuotaUtilizationAlert
           - inodesQuotaUtilizationAlert
+          - vserverStateAlert
+          - vserverNFSProtocolStateAlert
+          - vserverCIFSProtocolStateAlert
+
+    ParameterLabels:
+      OntapAdminSever:
+        default: "FSxN Management IP or Hostname"
+      s3BucketName:
+        default: "S3 Bucket Name"
+      subNetIds:
+        default: "Subnet IDs"
+      securityGroupIds:
+        default: "Security Group IDs"
+      snsTopicArn:
+        default: "SNS Topic ARN"
+      cloudWatchLogGroupArn:
+        default: "CloudWatch Log Group ARN"
+      secretArn:
+        default: "Secrets Manager Secret ARN"
+      secretUsernameKey:
+        default: "Secret Username Key"
+      secretPasswordKey:
+        default: "Secret Password Key"
+      checkInterval:
+        default: "Check Interval (minutes)"
+      createWatchdogAlarm:
+        default: "Create Watchdog Alarm"
+      implementWatchdogAsLambda:
+        default: "Implement Watchdog as Lambda Function"
+      watchdogRoleArn:
+        default: "Watchdog Role ARN"
+      LambdaRoleArn:
+        default: "Lambda Role ARN"
+      createSecretsManagerEndpoint:
+        default: "Create Secrets Manager Endpoint"
+      createSNSEndpoint:
+        default: "Create SNS Endpoint"
+      createCloudWatchLogsEndpoint:
+        default: "Create CloudWatch Logs Endpoint"
+      createS3Endpoint:
+        default: "Create S3 Endpoint"
+      routeTableIds:
+        default: "Route Table IDs for S3 Endpoint"
+      vpcId:
+        default: "VPC ID for Endpoints"
+      endpointSecurityGroupIds:
+        default: "Endpoint Security Group IDs"
+      versionChangeAlert:
+        default: "Version Change Alert"
+      failoverAlert:
+        default: "Failover Alert"
+      emsEventsAlert:
+        default: "EMS Events Alert"
+      snapMirrorLagTimeAlert:
+        default: "SnapMirror Maximum Lag Time Alert (seconds)"
+      snapMirrorLagTimePercentAlert:
+        default: "SnapMirror Maximum Lag Time Percent Alert (%)"
+      snapMirrorStalledAlert:
+        default: "SnapMirror Stalled Transfer Alert (seconds)"
+      snapMirrorHealthAlert:
+        default: "SnapMirror Health Alert"
+      fileSystemUtilizationWarnAlert:
+        default: "File System (aggregate) Utilization Warning Alert (%)"
+      fileSystemUtilizationCriticalAlert:
+        default: "File System (aggregate) Utilization Critical Alert (%)"
+      volumeUtilizationWarnAlert:
+        default: "Volume Utilization Warning Alert (%)"
+      volumeUtilizationCriticalAlert:
+        default: "Volume Utilization Critical Alert (%)"
+      volumeFileUtilizationWarnAlert:
+        default: "Volume File (inode) Utilization Warning Alert (%)"
+      volumeFileUtilizationCriticalAlert:
+        default: "Volume File (inode) Utilization Critical Alert (%)"
+      volumeOfflineAlert:
+        default: "Volume Offline Alert"
+      softQuotaUtilizationAlert:
+        default: "Soft Quota Utilization Alert (%)"
+      hardQuotaUtilizationAlert:
+        default: "Hard Quota Utilization Alert (%)"
+      inodesQuotaUtilizationAlert:
+        default: "Inodes Quota Utilization Alert (%)"
+      vserverStateAlert:
+        default: "Vserver State Alert"
+      vserverNFSProtocolStateAlert:
+        default: "Vserver NFS Protocol State Alert"
+      vserverCIFSProtocolStateAlert:
+        default: "Vserver CIFS Protocol State Alert"
 
 Parameters:
   OntapAdminSever:
     Description: "The DNS name, or IP address, of the management endpoint of the FSxN file system to be monitored."
     Type: String
 
+  s3BucketName:
+    Description: "The name of the S3 bucket to use to store the status and configuration files. Must also be holding the lambda_layer.zip file."
+    Type: String
+
   subNetIds:
-    Description: "The subnet IDs where the FSxN file system is located."
+    Description: "The subnet IDs where you want to deploy the Lambda function. Must have connectivity to the FSxN file system to be monitored. Recommended to have at least two. Also recommended to be in a private subnet."
     Type: "List<AWS::EC2::Subnet::Id>"
 
   securityGroupIds:
-    Description: "The security group IDs to associate with the Lambda function."
+    Description: "The security group IDs to associate with the Lambda function. Must allow outbound traffic over TCP port 443 to the FSxN file system, and the AWS service endpoints."
     Type: "List<AWS::EC2::SecurityGroup::Id>"
     Default: ""
 
@@ -57,8 +161,13 @@ Parameters:
     Description: "The ARN of the SNS topic where you want alerts sent to."
     Type: String
 
+  cloudWatchLogGroupArn:
+    Description: "The ARN of the CloudWatch log group to send alerts to. If left blank, alerts will not be sent to CloudWatch. Note that the log group must already exist. Also note that the ARN should end with ':*'."
+    Type: String
+    Default: ""
+
   secretArn:
-    Description: "The ARN of the secret that holds the FSxN credentials to use."
+    Description: "The ARN of the Secrets Manager secret that holds the FSxN credentials to use."
     Type: String
 
   secretUsernameKey:
@@ -72,25 +181,42 @@ Parameters:
     Default: "password"
 
   createWatchdogAlarm:
-    Description: "Create a CloudWatch alarm to monitor the monitor-ontap-services Lambda function."
+    Description: "Create a CloudWatch alarm to monitor the Lambda function. It will alert you if the monitoring Lambda function fails to run successfully."
     Type: String
     Default: "true"
     AllowedValues: ["true", "false"]
 
-  createSecretManagerEndpoint:
-    Description: "Create a secret manager endpoint."
+  implementWatchdogAsLambda:
+    Description: "Use a Lambda function to publish to the SNS topic so the topic can reside in a different region. Only needed if you are creating the CloudWatch alarm and the SNS topic is in a different region."
+    Type: String
+    Default: "false"
+    AllowedValues: ["true", "false"]
+
+  watchdogRoleArn:
+    Description: "The ARN of the role to assign to the Lambda function that will publish messages to the SNS topic if the monitoring function doesn't run properly. This is only needed if you are having the CloudWatch alarm created, implemented as a Lambda function and you want to provide an existing role, otherwise, if needed, an appropriate role will be created for you."
+    Type: String
+    Default: ""
+
+  createSecretsManagerEndpoint:
+    Description: "Set to 'true' if you want to create a Secrets Manager endpoint."
     Type: String
     Default: "false"
     AllowedValues: ["true", "false"]
 
   createSNSEndpoint:
-    Description: "Create an SNS endpoint."
+    Description: "Set to 'true' if you want to create an SNS endpoint."
+    Type: String
+    Default: "false"
+    AllowedValues: ["true", "false"]
+
+  createCloudWatchLogsEndpoint:
+    Description: "Set to 'true' if you want to create a CloudWatch logs endpoint."
     Type: String
     Default: "false"
     AllowedValues: ["true", "false"]
 
   createS3Endpoint:
-    Description: "Create an S3 endpoint."
+    Description: "Set to 'true' if you want to create an S3 endpoint."
     Type: String
     Default: "false"
     AllowedValues: ["true", "false"]
@@ -106,8 +232,13 @@ Parameters:
     Default: ""
 
   endpointSecurityGroupIds:
-    Description: "The security group IDs, comma separated list, to associate with the SNS and SecretsManager endpoints. Must allow traffic from from the Lambda function over TCP port 443. This parameter is only needed if you are creating the SNS or SecretsManager endpoint."
+    Description: "The security group IDs, comma separated list, to associate with the SNS, SecretsManager and/or CloudWatch Logs endpoints. Must allow inbound traffic from from the Lambda function over TCP port 443. This parameter is only needed if you are creating the SNS, SecretsManager, or CloudWatch Logs endpoint."
     Type: CommaDelimitedList
+    Default: ""
+
+  LambdaRoleArn:
+    Description: "The ARN of the role to use for the Lambda function. This is only needed if you want to provide an existing role, otherwise an appropriate one will be created for you."
+    Type: String
     Default: ""
 
   checkInterval:
@@ -135,15 +266,21 @@ Parameters:
     AllowedValues: ["true", "false"]
 
   snapMirrorLagTimeAlert:
-    Description: "Alert when an SnapMirror update time is more than the specified seconds. Set to 0 to disable this alert."
+    Description: "Alert when a SnapMirror update time is more than the specified seconds. Set to 0 to disable this alert. Recommended to set both snapMirrorLagTimeAlert and snapMirrorLagTimePercentAlert."
     Type: Number
     Default: 86400
 
+  snapMirrorLagTimePercentAlert:
+    Description: "Alert when the last succesful SnapMirror update time is more than this percent of the amount of time since the last scheduled update. Must be more than 100. A value of 200 means 2 times the update interval. Set to 0 to disable this alert."
+    Type: Number
+    MinValue: 0
+    Default: 200
+
   snapMirrorStalledAlert:
-    Description: "Alert when an SnapMirror update hasn't transferred any new data in the specified seconds. Set to 0 to disable this alert."
+    Description: "Alert when a SnapMirror update hasn't transferred any new data in the specified seconds. Set to 0 to disable this alert."
     Type: Number
     Default: 600
-    MinValue: 60
+    MinValue: 0
 
   snapMirrorHealthAlert:
     Description: "Alert when the SnapMirror relationship is not healthy."
@@ -152,53 +289,112 @@ Parameters:
     AllowedValues: ["true", "false"]
 
   fileSystemUtilizationWarnAlert:
-    Description: "Alert when the file system utilization exceeds this threshold in percentage."
+    Description: "Alert when the file system utilization exceeds this threshold in percentage. Set to 0 to disable this alert."
     Type: Number
     Default: 80
+    MinValue: 0
 
   fileSystemUtilizationCriticalAlert:
-    Description: "Alert when the file system utilization exceeds this threshold in percentage."
+    Description: "Alert when the file system utilization exceeds this threshold in percentage. Set to 0 to disable this alert."
     Type: Number
     Default: 90
+    MinValue: 0
 
   volumeUtilizationWarnAlert:
-    Description: "Alert when a volume utilization exceeds this threshold in percentage."
+    Description: "Alert when a volume utilization exceeds this threshold in percentage. Set to 0 to disable this alert."
     Type: Number
     Default: 90
+    MinValue: 0
 
   volumeUtilizationCriticalAlert:
-    Description: "Alert when a volume utilization exceeds this threshold in percentage."
+    Description: "Alert when a volume utilization exceeds this threshold in percentage. Set to 0 to disable this alert."
     Type: Number
     Default: 95
+    MinValue: 0
+
+  volumeFileUtilizationWarnAlert:
+    Description: "Alert when a volume inode utilization exceeds this threshold in percentage. Set to 0 to disable this alert."
+    Type: Number
+    Default: 90
+    MinValue: 0
+
+  volumeFileUtilizationCriticalAlert:
+    Description: "Alert when a volume inode utilization exceeds this threshold in percentage. Set to 0 to disable this alert."
+    Type: Number
+    Default: 95
+    MinValue: 0
+
+  volumeOfflineAlert:
+    Description: "Alert when a volume goes offline."
+    Type: String
+    AllowedValues: ["true", "false"]
+    Default: "true"
 
   softQuotaUtilizationAlert:
-    Description: "Alert when a quota exceeds this threshold in percentage."
+    Description: "Alert when a soft quota exceeds this threshold in percentage. Set to 0 to disable this alert."
     Type: Number
     Default: 100
+    MinValue: 0
 
   hardQuotaUtilizationAlert:
-    Description: "Alert when a quota exceeds this threshold in percentage."
+    Description: "Alert when a hard quota exceeds this threshold in percentage. Set to 0 to disable this alert."
     Type: Number
     Default: 80
+    MinValue: 0
 
   inodesQuotaUtilizationAlert:
-    Description: "Alert when an inode quota exceeds this threshold in percentage."
+    Description: "Alert when an inode quota exceeds this threshold in percentage. Set to 0 to disable this alert."
     Type: Number
     Default: 80
+    MinValue: 0
+
+  vserverStateAlert:
+    Description: "Alert when a vserver goes offline."
+    Type: String
+    AllowedValues: ["true", "false"]
+    Default: "true"
+
+  vserverNFSProtocolStateAlert:
+    Description: "Alert when a vserver's NFS protocol goes offline."
+    Type: String
+    AllowedValues: ["true", "false"]
+    Default: "true"
+
+  vserverCIFSProtocolStateAlert:
+    Description: "Alert when a vserver's CIFS protocol goes offline."
+    Type: String
+    AllowedValues: ["true", "false"]
+    Default: "true"
 
 Conditions:
-  CreateSecretManagerEndpoint: !Equals [!Ref createSecretManagerEndpoint, "true"]
+  CreateSecretsManagerEndpoint: !Equals [!Ref createSecretsManagerEndpoint, "true"]
   CreateSNSEndpoint: !Equals [!Ref createSNSEndpoint, "true"]
   CreateS3Endpoint: !Equals [!Ref createS3Endpoint, "true"]
-  CreateWatchdogAlarm: !Equals [!Ref createWatchdogAlarm, "true"]
+  CreateCloudWatchLogsEndpoint: !Equals [!Ref createCloudWatchLogsEndpoint, "true"]
+  CreateWatchdogAlarmAsLambda: !And [!Equals [!Ref createWatchdogAlarm, "true"], !Equals [!Ref implementWatchdogAsLambda, "true"]]
+  CreateWatchdogAlarmAsCloudWatch: !And [!Equals [!Ref createWatchdogAlarm, "true"], !Equals [!Ref implementWatchdogAsLambda, "false"]]
+  CreateWatchdogRole: !And [!Equals [!Ref watchdogRoleArn, ""], !Equals [!Ref implementWatchdogAsLambda, "true"]]
+  CreateLambdaRoleWithCW: !And [!Equals [!Ref LambdaRoleArn, ""], !Not [!Equals [!Ref cloudWatchLogGroupArn, ""]]]
+  CreateLambdaRoleWithoutCW: !And [!Equals [!Ref LambdaRoleArn, ""], !Equals [!Ref cloudWatchLogGroupArn, ""]]
 
 Resources:
   SecretManagerEndpoint:
     Type: AWS::EC2::VPCEndpoint
-    Condition: CreateSecretManagerEndpoint
+    Condition: CreateSecretsManagerEndpoint
     Properties:
       VpcId: !Ref vpcId
       ServiceName: !Sub "com.amazonaws.${AWS::Region}.secretsmanager"
+      VpcEndpointType: 'Interface'
+      PrivateDnsEnabled: true
+      SubnetIds: !Ref subNetIds
+      SecurityGroupIds: !Ref endpointSecurityGroupIds
+
+  CWEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Condition: CreateCloudWatchLogsEndpoint
+    Properties:
+      VpcId: !Ref vpcId
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.logs"
       VpcEndpointType: 'Interface'
       PrivateDnsEnabled: true
       SubnetIds: !Ref subNetIds
@@ -223,16 +419,103 @@ Resources:
       ServiceName: !Sub "com.amazonaws.${AWS::Region}.s3"
       VpcEndpointType: 'Gateway'
       RouteTableIds: !Ref routeTableIds
-
-  s3Bucket:
-    Type: "AWS::S3::Bucket"
+  #
+  # Role used by the watchdog Lambda function to publish to the SNS topic.
+  LambdaRoleWatchdog:
+    Type: "AWS::IAM::Role"
+    Condition: CreateWatchdogRole
     Properties:
-      BucketName: !Sub "monitor-ontap-services-${AWS::StackName}"
-      AccessControl: "Private"
-
-  watchDogAlarm:
+      RoleName: !Sub "mon-ontap-services-watchdog-${AWS::StackName}"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service: "lambda.amazonaws.com"
+            Action: "sts:AssumeRole"
+      Policies:
+        - PolicyName: "LambdaPolicyWatchdog"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "sns:Publish"
+                Resource: !Ref snsTopicArn
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+  #
+  # This allows the Watchdog CloudWatch alarm to invoke the Lambda function.
+  resourceBasedPermission:
+    Type: "AWS::Lambda::Permission"
+    Condition: CreateWatchdogAlarmAsLambda
+    Properties:
+      Action: "lambda:InvokeFunction"
+      FunctionName: !Sub "monitor-ontap-services-watchdog-${AWS::StackName}"
+      Principal: "lambda.alarms.cloudwatch.amazonaws.com"
+      SourceArn: !GetAtt watchdogAlarmToLambda.Arn
+  #
+  # Use a Lambda function to publish to an SNS topic so it can reside in a different region.
+  watchdogLambdaFunction: 
+    Type: "AWS::Lambda::Function"
+    Condition: CreateWatchdogAlarmAsLambda
+    Properties:
+      FunctionName: !Sub "monitor-ontap-services-watchdog-${AWS::StackName}"
+      PackageType: "Zip"
+      Runtime: "python3.12"
+      Handler: "index.lambda_handler"
+      Timeout: 10
+      Role: !If [CreateWatchdogRole, !GetAtt LambdaRoleWatchdog.Arn, !Ref watchdogRoleArn]
+      Environment:
+        Variables:
+          snsTopicArn: !Ref snsTopicArn
+      Code:
+        ZipFile: |
+          import boto3
+          import os
+          
+          def lambda_handler(event, context):
+              snsTopicArn = os.environ.get('snsTopicArn')
+              if snsTopicArn is not None:
+                  snsClient = boto3.client('sns', region_name=snsTopicArn.split(":")[3])
+                  snsClient.publish(
+                      TopicArn = snsTopicArn,
+                      Subject  = 'Error! Monitoring ONTAP services has failed to execute',
+                      Message  = f'Error! Lambda function {event["alarmData"]["alarmName"].replace("-watchdog-", "")} failed to execute properly.'
+                  )
+  #
+  # This is the CloudWatch alarm that will trigger when the monitor-ontap-services
+  # Lambda function fails to run successfully. It will invoke the watchdogLambdaFunction
+  # to send a message to the SNS topic.
+  # Only this alarm, or the watchdogAlarmToSNS, will be created depending on the
+  # implementWatchdogAsLambda parameter.
+  watchdogAlarmToLambda:
     Type: "AWS::CloudWatch::Alarm"
-    Condition: CreateWatchdogAlarm
+    Condition: CreateWatchdogAlarmAsLambda
+    Properties:
+      AlarmName: !Sub "monitor-ontap-services-watchdog-${AWS::StackName}"
+      AlarmDescription: !Sub "Watchdog alarm for the monitor-ontap-services-${AWS::StackName} Lambda function."
+      Namespace: "AWS/Lambda"
+      MetricName: "Errors"
+      Dimensions:
+        - Name: "FunctionName"
+          Value: !Sub "monitor-ontap-services-${AWS::StackName}"
+      Statistic: "Maximum"
+      Period: 300
+      EvaluationPeriods: 1
+      TreatMissingData: "ignore"
+      Threshold: 0.5
+      ComparisonOperator: "GreaterThanThreshold"
+      AlarmActions:
+        - !GetAtt watchdogLambdaFunction.Arn
+  #
+  # This is the CloudWatch alarm that will trigger when the monitor-ontap-services
+  # Lambda function fails to run successfully. It will send an SNS message to the SNS topic.
+  # Only this alarm, or the watchdogAlarmToLambda, will be created depending on the
+  # implementWatchdogAsLambda parameter.
+  watchdogAlarmToSNS:
+    Type: "AWS::CloudWatch::Alarm"
+    Condition: CreateWatchdogAlarmAsCloudWatch
     Properties:
       AlarmName: !Sub "monitor-ontap-services-watchdog-${AWS::StackName}"
       AlarmDescription: !Sub "Watchdog alarm for the monitor-ontap-services-${AWS::StackName} Lambda function."
@@ -249,9 +532,14 @@ Resources:
       ComparisonOperator: "GreaterThanThreshold"
       AlarmActions:
         - !Ref snsTopicArn
-
-  LambdaRole:
+  #
+  # This is the role that will be assigned to the monitoring Lambda function if
+  # the user doesn't want to send events to a CloudWatch log group. It will not
+  # create if the user has provide a role ARN. Either this role, or the LambdaRoleWithCW
+  # will be created depending on the createCloudWatchLogGroupArn parameter.
+  LambdaRoleWithoutCW:
     Type: "AWS::IAM::Role"
+    Condition: CreateLambdaRoleWithoutCW
     Properties:
       RoleName: !Sub "mon-ontap-services-${AWS::StackName}"
       AssumeRolePolicyDocument:
@@ -263,7 +551,7 @@ Resources:
             Action: "sts:AssumeRole"
 
       ManagedPolicyArns:
-        - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+        - "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
 
       Policies:
         - PolicyName: "LambdaPolicy"
@@ -277,92 +565,135 @@ Resources:
                   - "s3:GetObject"
                   - "s3:PutObject"
                   - "s3:ListBucket"
-                Resource: 
+                Resource:
                   - !Ref secretArn
                   - !Ref snsTopicArn
-                  - !GetAtt s3Bucket.Arn
-                  - !Sub
-                    - "${s3BucketArn}/*"
-                    - s3BucketArn: !GetAtt s3Bucket.Arn
-              - Effect: "Allow"
-                Action:
-                  - "ec2:CreateNetworkInterface"
-                  - "ec2:DeleteNetworkInterface"
-                  - "ec2:DescribeNetworkInterfaces"
-                Resource: "*"
-
-  SchedulerRole:
+                  - !Sub "arn:aws:s3:::${s3BucketName}"
+                  - !Sub "arn:aws:s3:::${s3BucketName}/*"
+  #
+  # This is the role that will be assigned to the monitoring Lambda function if
+  # the user doesn't want to send events to a CloudWatch log group. It will not
+  # create if the user has provide a role ARN. Either this role, or the LambdaRoleWithCW
+  # will be created depending on the createCloudWatchLogGroupArn parameter.
+  LambdaRoleWithCW:
     Type: "AWS::IAM::Role"
+    Condition: CreateLambdaRoleWithCW
     Properties:
-      RoleName: !Sub "SchedulerRole-${AWS::StackName}"
+      RoleName: !Sub "mon-ontap-services-${AWS::StackName}"
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
           - Effect: "Allow"
             Principal:
-              Service: "scheduler.amazonaws.com"
+              Service: "lambda.amazonaws.com"
             Action: "sts:AssumeRole"
 
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+
       Policies:
-        - PolicyName: "SchedulerPolicy"
+        - PolicyName: "LambdaPolicy"
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
               - Effect: "Allow"
                 Action:
-                  - "lambda:InvokeFunction"
-                Resource: !GetAtt LambdaFunction.Arn
-
-  LambdaScheduler:
-    Type: "AWS::Scheduler::Schedule"
+                  - "secretsManager:GetSecretValue"
+                  - "sns:Publish"
+                  - "logs:PutLogEvents"
+                  - "logs:DescribeLogStreams"
+                  - "logs:CreateLogStream"
+                  - "s3:GetObject"
+                  - "s3:PutObject"
+                  - "s3:ListBucket"
+                Resource: 
+                  - !Ref secretArn
+                  - !Ref snsTopicArn
+                  - !Sub "arn:aws:s3:::${s3BucketName}"
+                  - !Sub "arn:aws:s3:::${s3BucketName}/*"
+                  - !Ref cloudWatchLogGroupArn
+  #
+  # Instead of creating a EventBridge schedule, create an EventBridge rule triggered by a schedule.
+  # This way a separate role doesn't have to be created, just a Lambda permission to allow
+  # EventBridge to invoke the Lambda function.
+  LambdaEventRule:
+    Type: "AWS::Events::Rule"
     Properties:
-      Description: "Schedule the monitor-ontap-services Lambda function."
-      Name: !Sub "monitor-ontap-services-scheduler-${AWS::StackName}"
-      FlexibleTimeWindow:
-        Mode: "OFF"
+      Description: "Event rule to trigger the monitor-ontap-services Lambda function."
+      Name: !Sub "monitor-ontap-services-event-rule-${AWS::StackName}"
       ScheduleExpression: !Sub "rate(${checkInterval} minutes)"
-      Target:
-        Arn: !GetAtt LambdaFunction.Arn
-        RoleArn: !GetAtt SchedulerRole.Arn
+      State: "ENABLED"
+      Targets:
+        - Arn: !GetAtt LambdaFunction.Arn
+          Id: "MonitorOntapServicesTarget"
+
+  LambdaPermissionEventRule:
+    Type: "AWS::Lambda::Permission"
+    Properties:
+      Action: "lambda:InvokeFunction"
+      FunctionName: !GetAtt LambdaFunction.Arn
+      Principal: "events.amazonaws.com"
+      SourceArn: !GetAtt LambdaEventRule.Arn
+
+  LambdaLayer:
+    Type: "AWS::Lambda::LayerVersion"
+    Properties:
+      LayerName: !Sub "MOS-${AWS::StackName}"
+      Content:
+        S3Bucket: !Ref s3BucketName
+        S3Key: "lambda_layer.zip"
+      CompatibleRuntimes:
+        - "python3.12"
 
   LambdaFunction:
     Type: "AWS::Lambda::Function"
     Properties:
       FunctionName: !Sub "monitor-ontap-services-${AWS::StackName}"
-      Role: !GetAtt LambdaRole.Arn
+      Role: !If [CreateLambdaRoleWithCW, !GetAtt LambdaRoleWithCW.Arn, !If [CreateLambdaRoleWithoutCW, !GetAtt LambdaRoleWithoutCW.Arn, !Ref LambdaRoleArn]]
       VpcConfig:
         SecurityGroupIds: !Ref securityGroupIds
         SubnetIds: !Ref subNetIds
       PackageType: "Zip"
       Runtime: "python3.12"
+      Layers:
+        - !GetAtt LambdaLayer.LayerVersionArn
       Handler: "index.lambda_handler"
       Timeout: 60
       Environment:
         Variables:
           s3BucketRegion: !Ref AWS::Region
-          s3BucketArn: !GetAtt s3Bucket.Arn
+          s3BucketName: !Ref s3BucketName
           OntapAdminServer: !Ref OntapAdminSever
           secretArn: !Ref secretArn
           secretUsernameKey: !Ref secretUsernameKey
           secretPasswordKey: !Ref secretPasswordKey
           snsTopicArn: !Ref snsTopicArn
+          sendSnsFunctionName: !Sub "monitor-ontap-services-watchdog-${AWS::StackName}"
+          cloudWatchLogGroupArn: !Ref cloudWatchLogGroupArn
 
           initialVersionChangeAlert: !Ref versionChangeAlert
           initialFailoverAlert: !Ref failoverAlert
           initialEmsEventsAlert: !Ref emsEventsAlert
           initialSnapMirrorLagTimeAlert: !Ref snapMirrorLagTimeAlert
+          initialSnapMirrorLagTimePercentAlert: !Ref snapMirrorLagTimePercentAlert
           initialSnapMirrorStalledAlert: !Ref snapMirrorStalledAlert
           initialSnapMirrorHealthAlert: !Ref snapMirrorHealthAlert
           initialFileSystemUtilizationWarnAlert: !Ref fileSystemUtilizationWarnAlert
           initialFileSystemUtilizationCriticalAlert: !Ref fileSystemUtilizationCriticalAlert
           initialVolumeUtilizationWarnAlert: !Ref volumeUtilizationWarnAlert
           initialVolumeUtilizationCriticalAlert: !Ref volumeUtilizationCriticalAlert
+          initialVolumeFileUtilizationWarnAlert: !Ref volumeFileUtilizationWarnAlert
+          initialVolumeFileUtilizationCriticalAlert: !Ref volumeFileUtilizationCriticalAlert
+          initialVolumeOfflineAlert: !Ref volumeOfflineAlert
           initialSoftQuotaUtilizationAlert: !Ref softQuotaUtilizationAlert
           initialHardQuotaUtilizationAlert: !Ref hardQuotaUtilizationAlert
           initialInodesQuotaUtilizationAlert: !Ref inodesQuotaUtilizationAlert
+          initialVserverStateAlert: !Ref vserverStateAlert
+          initialVserverNFSProtocolStateAlert: !Ref vserverNFSProtocolStateAlert
+          initialVserverCIFSProtocolStateAlert: !Ref vserverCIFSProtocolStateAlert
       Code:
         ZipFile: |
-          #!/bin/python3.11
+          #!/bin/python3
           ################################################################################
           # THIS SOFTWARE IS PROVIDED BY NETAPP "AS IS" AND ANY EXPRESS OR IMPLIED
           # WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
@@ -382,16 +713,18 @@ Resources:
           # "matching conditions."  It is intended to be run as a Lambda function, but
           # can be run as a standalone program.
           #
-          # Version: v2.1
-          # Date: 2024-08-23-22:01:08
+          # Version: v2.20
+          # Date: 2025-06-03-16:56:55
           ################################################################################
           
           import json
           import re
           import os
           import datetime
+          import pytz
           import logging
           from logging.handlers import SysLogHandler
+          from cronsim import CronSim
           import urllib3
           from urllib3.util import Retry
           import botocore
@@ -400,7 +733,7 @@ Resources:
           eventResilience = 4 # Times an event has to be missing before it is removed
                               # from the alert history.
                               # This was added since the Ontap API that returns EMS
-                              # events would often drop some events and then including 
+                              # events would often drop some events and then including
                               # them in the subsequent calls. If I don't "age" the
                               # alert history duplicate alerts will be sent.
           initialVersion = "Initial Run"  # The version to store if this is the first
@@ -443,7 +776,7 @@ Resources:
               elif string[end:endp1] == "M":
                   num=num*60
               elif string[end:endp1] != "S":
-                  print(f'Unknown lag time specifier "{string[end:endp1]}".')
+                  logger.warning(f'Unknown lag time specifier "{string[end:endp1]}".')
           
               return (num, endp1)
           
@@ -509,7 +842,7 @@ Resources:
           # 'True'.
           ################################################################################
           def checkSystem():
-              global config, s3Client, snsClient, http, headers, clusterName, clusterVersion, logger
+              global config, s3Client, snsClient, http, headers, clusterName, clusterVersion, logger, clusterTimezone
           
               changedEvents = False
               #
@@ -533,11 +866,11 @@ Resources:
               else:
                   fsxStatus = json.loads(data["Body"].read().decode('UTF-8'))
               #
-              # Get the cluster name and ONTAP version from the FSxN.
+              # Get the cluster name, ONTAP version and timezone from the FSxN.
               # This is also a way to test that the FSxN cluster is accessible.
               badHTTPStatus = False
               try:
-                  endpoint = f'https://{config["OntapAdminServer"]}/api/cluster?fields=version,name'
+                  endpoint = f'https://{config["OntapAdminServer"]}/api/cluster?fields=version,name,timezone'
                   response = http.request('GET', endpoint, headers=headers, timeout=5.0)
                   if response.status == 200:
                       if not fsxStatus["systemHealth"]:
@@ -558,8 +891,10 @@ Resources:
                       clusterVersion = data["version"]["full"].split()[2].replace(":", "")
                       if fsxStatus["version"] == initialVersion:
                           fsxStatus["version"] = clusterVersion
+                      #
+                      # Get the Timezone for SnapMirror lag time calculations.
+                      clusterTimezone = data["timezone"]["name"]
                   else:
-                      print(f'API call to {endpoint} failed. HTTP status code: {response.status}.')
                       badHTTPStatus = True
                       raise Exception(f'API call to {endpoint} failed. HTTP status code: {response.status}.')
               except:
@@ -572,14 +907,13 @@ Resources:
                           message = f'CRITICAL: Received a non 200 HTTP status code ({response.status}) when trying to access {clusterName}.'
                       else:
                           message = f'CRITICAL: Failed to issue API against {clusterName}. Cluster could be down.'
-                      logger.critical(message)
-                      snsClient.publish(TopicArn=config["snsTopicArn"], Message=message, Subject=f'Monitor ONTAP Services Alert for cluster {clusterName}')
+                      sendAlert(message, "CRITICAL")
                       fsxStatus["systemHealth"] = False
                       changedEvents = True
           
               if changedEvents:
                   s3Client.put_object(Key=config["systemStatusFilename"], Bucket=config["s3BucketName"], Body=json.dumps(fsxStatus).encode('UTF-8'))
-              # 
+              #
               # If the cluster is done, return false so the program can exit cleanly.
               return(fsxStatus["systemHealth"])
           
@@ -609,8 +943,7 @@ Resources:
                       if lkey == "versionchange":
                           if rule[key] and clusterVersion != fsxStatus["version"]:
                               message = f'NOTICE: The ONTAP vesion changed on cluster {clusterName} from {fsxStatus["version"]} to {clusterVersion}.'
-                              logger.info(message)
-                              snsClient.publish(TopicArn=config["snsTopicArn"], Message=message, Subject=f'Monitor ONTAP Services Alert for cluster {clusterName}')
+                              sendAlert(message, "INFO")
                               fsxStatus["version"] = clusterVersion
                               changedEvents = True
                       elif lkey == "failover":
@@ -624,12 +957,11 @@ Resources:
                                   data = json.loads(response.data)
                                   if data["num_records"] != fsxStatus["numberNodes"]:
                                       message = f'Alert: The number of nodes on cluster {clusterName} went from {fsxStatus["numberNodes"]} to {data["num_records"]}.'
-                                      logger.info(message)
-                                      snsClient.publish(TopicArn=config["snsTopicArn"], Message=message, Subject=f'Monitor ONTAP Services Alert for cluster {clusterName}')
+                                      sendAlert(message, "INFO")
                                       fsxStatus["numberNodes"] = data["num_records"]
                                       changedEvents = True
                               else:
-                                  print(f'API call to {endpoint} failed. HTTP status code: {response.status}.')
+                                  logger.warning(f'API call to {endpoint} failed. HTTP status code: {response.status}.')
                       elif lkey == "networkinterfaces":
                           if rule[key]:
                               endpoint = f'https://{config["OntapAdminServer"]}/api/network/ip/interfaces?fields=state'
@@ -639,15 +971,14 @@ Resources:
                                   # Decrement the refresh field to know if any events have really gone away.
                                   for interface in fsxStatus["downInterfaces"]:
                                       interface["refresh"] -= 1
-                         
+          
                                   data = json.loads(response.data)
                                   for interface in data["records"]:
                                       if interface.get("state") != None and interface["state"] != "up":
                                           uniqueIdentifier = interface["name"]
                                           if(not eventExist(fsxStatus["downInterfaces"], uniqueIdentifier)): # Resets the refresh key.
                                               message = f'Alert: Network interface {interface["name"]} on cluster {clusterName} is down.'
-                                              logger.info(message)
-                                              snsClient.publish(TopicArn=config["snsTopicArn"], Message=message, Subject=f'Monitor ONTAP Services Alert for cluster {clusterName}')
+                                              sendAlert(message, "WARNING")
                                               event = {
                                                   "index": uniqueIdentifier,
                                                   "refresh": eventResilience
@@ -659,7 +990,7 @@ Resources:
                                   i = 0
                                   while i < len(fsxStatus["downInterfaces"]):
                                       if fsxStatus["downInterfaces"][i]["refresh"] <= 0:
-                                          print(f'Deleting downed interface: {fsxStatus["downInterfaces"][i]["index"]}')
+                                          logger.debug(f'Deleting interface: {fsxStatus["downInterfaces"][i]["index"]}')
                                           del fsxStatus["downInterfaces"][i]
                                           changedEvents = True
                                       else:
@@ -667,9 +998,9 @@ Resources:
                                               changedEvents = True
                                           i += 1
                               else:
-                                  print(f'API call to {endpoint} failed. HTTP status code: {response.status}.')
+                                  logger.warning(f'API call to {endpoint} failed. HTTP status code: {response.status}.')
                       else:
-                          print(f'Unknown System Health alert type: "{key}".')
+                          logger.warning(f'Unknown System Health alert type: "{key}".')
           
               if changedEvents:
                   s3Client.put_object(Key=config["systemStatusFilename"], Bucket=config["s3BucketName"], Body=json.dumps(fsxStatus).encode('UTF-8'))
@@ -699,7 +1030,7 @@ Resources:
                   event["refresh"] -= 1
               #
               # Run the API call to get the current list of EMS events.
-              endpoint = f'https://{config["OntapAdminServer"]}/api/support/ems/events'
+              endpoint = f'https://{config["OntapAdminServer"]}/api/support/ems/events?return_timeout=15'
               response = http.request('GET', endpoint, headers=headers)
               if response.status == 200:
                   data = json.loads(response.data)
@@ -709,27 +1040,31 @@ Resources:
                   logger.debug(f'Received {len(data["records"])} EMS records.')
                   for record in data["records"]:
                       for rule in service["rules"]:
-                          if (re.search(rule["name"], record["message"]["name"]) and
+                          messageFilter = rule.get("filter")
+                          if messageFilter == None or messageFilter == "":
+                              messageFilter = "ThisShouldn'tMatchAnything"
+          
+                          if (not re.search(messageFilter, record["log_message"]) and
+                              re.search(rule["name"], record["message"]["name"]) and
                               re.search(rule["severity"], record["message"]["severity"]) and
                               re.search(rule["message"], record["log_message"])):
                               if (not eventExist (events, record["index"])):  # This resets the "refresh" field if found.
                                   message = f'{record["time"]} : {clusterName} {record["message"]["name"]}({record["message"]["severity"]}) - {record["log_message"]}'
                                   useverity=record["message"]["severity"].upper()
                                   if useverity == "EMERGENCY":
-                                      logger.critical(message)
+                                      sendAlert(message, "CRITICAL")
                                   elif useverity == "ALERT":
-                                      logger.error(message)
-                                  elif useverity == "ERROR": 
-                                      logger.warning(message)
+                                      sendAlert(message, "ERROR")
+                                  elif useverity == "ERROR":
+                                      sendAlert(message, "WARNING")
                                   elif useverity == "NOTICE" or useverity == "INFORMATIONAL":
-                                      logger.info(message)
+                                      sendAlert(message, "INFO")
                                   elif useverity == "DEBUG":
-                                      logger.debug(message)
+                                      sendAlert(message, "DEBUG")
                                   else:
-                                      print(f'Received unknown severity from ONTAP "{record["message"]["severity"]}". The message received is next.')
-                                      logger.info(f'Received unknown severity from ONTAP "{record["message"]["severity"]}". The message received is next.')
-                                      logger.info(message)
-                                  snsClient.publish(TopicArn=config["snsTopicArn"], Message=message, Subject=f'Monitor ONTAP Services Alert for cluster {clusterName}')
+                                      sendAlert(f'Received unknown severity from ONTAP "{record["message"]["severity"]}". The message received is next.', "INFO")
+                                      sendAlert(message, "INFO")
+          
                                   changedEvents = True
                                   event = {
                                           "index": record["index"],
@@ -738,14 +1073,13 @@ Resources:
                                           "message": record["log_message"],
                                           "refresh": eventResilience
                                           }
-                                  print(message)
                                   events.append(event)
                   #
                   # Now that we have processed all the events, check to see if any events should be deleted.
                   i = 0
                   while i < len(events):
                       if events[i]["refresh"] <= 0:
-                          print(f'Deleting event: {events[i]["time"]} : {events[i]["message"]}')
+                          logger.debug(f'Deleting event: {events[i]["time"]} : {events[i]["message"]}')
                           del events[i]
                           changedEvents = True
                       else:
@@ -758,32 +1092,170 @@ Resources:
                   if changedEvents:
                       s3Client.put_object(Key=config["emsEventsFilename"], Bucket=config["s3BucketName"], Body=json.dumps(events).encode('UTF-8'))
               else:
-                  print(f'API call to {endpoint} failed. HTTP status code: {response.status}.')
-                  logger.debug(f'API call to {endpoint} failed. HTTP status code: {response.status}.')
+                  logger.warning(f'API call to {endpoint} failed. HTTP status code: {response.status}.')
           
           ################################################################################
           # This function is used to find an existing SM relationship based on the source
           # and destinatino path passed in. It returns None if one isn't found
           ################################################################################
-          def getPreviousSMRecord(relationShips, sourceCluster, sourcePath, destPath):
+          def getPreviousSMRecord(relationShips, uuid):
               for relationship in relationShips:
-                  if relationship['sourcePath'] == sourcePath and relationship['destPath'] == destPath and relationship['sourceCluster'] == sourceCluster:
+                  if relationship.get('uuid') == uuid:
                       relationship['refresh'] = True
                       return(relationship)
           
               return(None)
           
           ################################################################################
+          # This function will convert seconds into an ascii string of number days, hours,
+          # minutes, and seconds. It will return the string.
+          ################################################################################
+          def lagTimeStr(seconds):
+              days = seconds // (60 * 60 * 24)
+              seconds = seconds - (days * (60 * 60 * 24))
+              hours = seconds // (60 * 60)
+              seconds = seconds - (hours * (60 * 60))
+              minutes = seconds // 60
+              seconds = seconds - (minutes * 60)
+          
+              timeStr=""
+              if days > 0:
+                  plural = "s" if days != 1 else ""
+                  timeStr = f'{days} day{plural} '
+              if hours > 0 or days > 0:
+                  plural = "s" if hours != 1 else ""
+                  timeStr += f'{hours} hour{plural} '
+              if minutes > 0 or days > 0 or hours > 0:
+                  plural = "s" if minutes != 1 else ""
+                  timeStr += f'{minutes} minute{plural} and '
+              plural = "s" if seconds != 1 else ""
+              timeStr += f'{seconds} second{plural}'
+              return timeStr
+          
+          ################################################################################
+          # This function converts an array of numbers to a comma separated string. If
+          # the array is empty, it returns "*".
+          ################################################################################
+          def convertArrayToString(array):
+          
+              text = ""
+              for item in array:
+                  if text != "":
+                       text += ","
+                  text += str(item)
+          
+              return text if text != "" else "*"
+          
+          ################################################################################
+          # This function takes a schedule dictionary and returns the last time it should
+          # run. It returns the time in seconds since the UNIX epoch.
+          ################################################################################
+          def getLastRunTime(scheduleUUID):
+              global config, http, headers, clusterName, clusterVersion, logger, clusterTimezone
+          
+              minutes = ""
+              hours = ""
+              months = ""
+              daysOfMonth = ""
+              daysOfWeek = ""
+              #
+              # Run the API call to get the schedule information.
+              endpoint = f'https://{config["OntapAdminServer"]}/api/cluster/schedules/{scheduleUUID}?fields=*&return_timeout=15'
+              response = http.request('GET', endpoint, headers=headers)
+              if response.status == 200:
+                  schedule = json.loads(response.data)
+          
+                  if schedule['cron'].get("minutes") is not None:
+                      minutes = convertArrayToString(schedule['cron']['minutes'])
+                  else:
+                      minutes = "*"
+          
+                  if schedule['cron'].get("hours") is not None:
+                      hours = convertArrayToString(schedule['cron']['hours'])
+                  else:
+                      hours = "*"
+          
+                  if schedule['cron'].get("days") is not None:
+                      daysOfMonth = convertArrayToString(schedule['cron']['days'])
+                  else:
+                      daysOfMonth = "*"
+          
+                  if schedule['cron'].get("months") is not None:
+                      months = convertArrayToString(schedule['cron']['months'])
+                  else:
+                      months = "*"
+          
+                  if schedule['cron'].get("weekdays") is not None:
+                      daysOfWeek = convertArrayToString(schedule['cron']['weekdays'])
+                  else:
+                      daysOfWeek = "*"
+                  #
+                  # Create the cron expression.
+                  cron_expression = f"{minutes} {hours} {daysOfMonth} {months} {daysOfWeek}"
+                  #
+                  # Initialize CronSim with the cron expression and current time.
+                  curTime = datetime.datetime.now(pytz.timezone(clusterTimezone) if clusterTimezone != None else datetime.timezone.utc)
+                  curTimeSec = curTime.timestamp()
+                  it = CronSim(cron_expression, curTime, reverse=True)
+                  #
+                  # Get the last run time.
+                  lastRunTime = next(it)
+                  lastRunTimeSec = lastRunTime.timestamp()
+                  return int(lastRunTimeSec)
+              else:
+                  logger.error(f'API call to {endpoint} failed. HTTP status code: {response.status}.')
+                  return -1
+          
+          ################################################################################
+          ################################################################################
+          def getPolicySchedule(policyUUID):
+              global config, http, headers, clusterName, clusterVersion, logger
+          
+              # Run the API call to get the policy information.
+              endpoint = f'https://{config["OntapAdminServer"]}/api/snapmirror/policies/{policyUUID}?fields=*&return_timeout=15'
+              response = http.request('GET', endpoint, headers=headers)
+              if response.status == 200:
+                  data = json.loads(response.data)
+                  if data.get('transfer_schedule') != None:
+                      return data['transfer_schedule']['uuid']
+                  else:
+                      return None
+              else:
+                  logger.error(f'API call to {endpoint} failed. HTTP status code: {response.status}.')
+                  return None
+          
+          ################################################################################
+          # This function is used to find the last time a SnapMirror relationship should
+          # have been updated. It returns the time in seconds since the UNIX epoch.
+          ################################################################################
+          def getLastScheduledUpdate(record):
+              global config, http, headers, clusterName, clusterVersion, logger
+              #
+              # First check to see if there is a schedule associated with the SM relationship.
+              if record.get("transfer_schedule") is not None:
+                  lastRunTime = getLastRunTime(record["transfer_schedule"]["uuid"])
+              else:
+                  #
+                  # If there is no schedule at the relationship level, check to see
+                  # if the policy has one.
+                  scheduleUUID = getPolicySchedule(record["policy"]["uuid"])
+                  if scheduleUUID is not None:
+                      lastRunTime = getLastRunTime(scheduleUUID)
+                  else:
+                      lastRunTime = -1
+              return lastRunTime
+          
+          ################################################################################
           # This function is used to check SnapMirror relationships.
           ################################################################################
           def processSnapMirrorRelationships(service):
-              global config, s3Client, snsClient, http, headers, clusterName, clusterVersion, logger
+              global config, s3Client, snsClient, http, headers, clusterName, clusterVersion, logger, clusterTimezone
               #
               # Get the saved events so we can ensure we are only reporting on new ones.
               try:
                   data = s3Client.get_object(Key=config["smEventsFilename"], Bucket=config["s3BucketName"])
               except botocore.exceptions.ClientError as err:
-                  # If the error is that the object doesn't exist, then it will get created once an alert it sent.
+                  # If the error is that the object doesn't exist, then it will get created once an alert is sent.
                   if err.response['Error']['Code'] == "NoSuchKey":
                       events = []
                   else:
@@ -801,7 +1273,7 @@ Resources:
               try:
                   data = s3Client.get_object(Key=config["smRelationshipsFilename"], Bucket=config["s3BucketName"])
               except botocore.exceptions.ClientError as err:
-                  # If the error is that the object doesn't exist, then it will get created once an alert it sent.
+                  # If the error is that the object doesn't exist, then it will get created once an alert is sent.
                   if err.response['Error']['Code'] == "NoSuchKey":
                       smRelationships = []
                   else:
@@ -816,112 +1288,154 @@ Resources:
               updateRelationships = False
               #
               # Get the current time in seconds since UNIX epoch 01/01/1970.
-              curTime = int(datetime.datetime.now().timestamp())
+              curTimeSeconds = int(datetime.datetime.now(pytz.timezone(clusterTimezone) if clusterTimezone != None else datetime.timezone.utc).timestamp())
+              #
+              # Consolidate all the rules so we can decide how to process lagtime.
+              maxLagTime = None
+              maxLagTimePercent = None
+              healthy = None
+              stalledTransferSeconds = None
+              offline = None
+              for rule in service["rules"]:
+                  for key in rule.keys():
+                      lkey = key.lower()
+                      if lkey == "maxlagtime":
+                          maxLagTime = rule[key]
+                          maxLagTimeKey = key
+                      elif lkey == "maxlagtimepercent":
+                          maxLagTimePercent = rule[key]
+                          maxLagTimePercentKey = key
+                      elif lkey == "healthy":
+                          healthy = rule[key]
+                          healthyKey = key
+                      elif lkey == "stalledtransferseconds":
+                          stalledTransferSeconds = rule[key]
+                          stalledTransferSecondsKey = key
+                      else:
+                          logger.warning(f'Unknown snapmirror alert type: "{key}".')
               #
               # Run the API call to get the current state of all the snapmirror relationships.
-              endpoint = f'https://{config["OntapAdminServer"]}/api/snapmirror/relationships?fields=*'
+              endpoint = f'https://{config["OntapAdminServer"]}/api/snapmirror/relationships?fields=*&return_timeout=15'
               response = http.request('GET', endpoint, headers=headers)
               if response.status == 200:
                   data = json.loads(response.data)
-          
                   for record in data["records"]:
-                      for rule in service["rules"]:
-                          for key in rule.keys():
-                              lkey = key.lower()
-                              #
-                              # If the source cluster isn't defined, then assume it is a local SM relationship.
-                              sourceCluster = record['source'].get('cluster')
-                              if sourceCluster == None:
-                                  sourceClusterName = clusterName
-                              else:
-                                  sourceClusterName = sourceCluster['name']
-          
-                              if lkey == "maxlagtime":
-                                  if record.get("lag_time") != None:
-                                      lagSeconds = parseLagTime(record["lag_time"])
-                                      if lagSeconds > rule["maxLagTime"]:
-                                          uniqueIdentifier = record["uuid"] + "_" + key
+                      #
+                      # Since there are multiple ways to process lag time, make sure to only do it one way for each relationship.
+                      processedLagTime = False
+                      #
+                      # If the source cluster isn't defined, then assume it is a local SM relationship.
+                      if record['source'].get('cluster') is None:
+                          sourceClusterName = clusterName
+                      else:
+                          sourceClusterName = record['source']['cluster']['name']
+                      #
+                      # For lag time if maxLagTimePercent is defined check to see if there is a schedule,
+                      # if there is a schedule alert on that otherrwise alert on the maxLagTime.
+                      # But, first check that lag_time is defined, and that the state is not "uninitialized",
+                      # since the lag_time is set to the oldest snapshot of the source volume which would
+                      # cause a false positive.
+                      if record.get("lag_time") is not None and record["state"].lower() != "uninitialized":
+                          lagSeconds = parseLagTime(record["lag_time"])
+                          if maxLagTimePercent is not None:
+                              lastScheduledUpdate = getLastScheduledUpdate(record)
+                              if lastScheduledUpdate != -1:
+                                  processedLagTime = True
+                                  if lagSeconds > ((curTimeSeconds - lastScheduledUpdate) * maxLagTimePercent/100):
+                                      #
+                                      # If the transfer is in progress, and they have stalled transfer alert enabled, we don't need to alert on the lag time.
+                                      if not (record.get("transfer") is not None and record["transfer"]["state"].lower() in ["transferring", "finalizing", "preparing", "fasttransferring"] and stalledTransferSeconds is not None):
+                                          uniqueIdentifier = record["uuid"] + "_" + maxLagTimePercentKey
                                           if not eventExist(events, uniqueIdentifier):  # This resets the "refresh" field if found.
-                                              message = f'Snapmirror Lag Alert: {sourceClusterName}::{record["source"]["path"]} -> {clusterName}::{record["destination"]["path"]} has a lag time of {lagSeconds} seconds.'
-                                              logger.warning(message)
-                                              snsClient.publish(TopicArn=config["snsTopicArn"], Message=message, Subject=f'Monitor ONTAP Services Alert for cluster {clusterName}')
+                                              timeStr = lagTimeStr(lagSeconds)
+                                              asciiTime = datetime.datetime.fromtimestamp(lastScheduledUpdate).strftime('%Y-%m-%d %H:%M:%S')
+                                              message = f'Snapmirror Lag Alert: {sourceClusterName}::{record["source"]["path"]} -> {clusterName}::{record["destination"]["path"]} has a lag time of {lagSeconds} seconds ({timeStr}) which is more than {maxLagTimePercent}% of its last scheduled update at {asciiTime}.'
+                                              sendAlert(message, "WARNING")
                                               changedEvents=True
                                               event = {
                                                   "index": uniqueIdentifier,
                                                   "message": message,
                                                   "refresh": eventResilience
                                               }
-                                              print(message)
                                               events.append(event)
-                              elif lkey == "healthy":
-                                  if not record["healthy"]:
-                                      uniqueIdentifier = record["uuid"] + "_" + key
-                                      if not eventExist(events, uniqueIdentifier):  # This resets the "refresh" field if found.
-                                          message = f'Snapmirror Health Alert: {sourceClusterName}::{record["source"]["path"]} {clusterName}::{record["destination"]["path"]} has a status of {record["healthy"]}'
-                                          logger.warning(message)  # Intentionally put this before adding the reasons, since I'm not sure how syslog will handle a multi-line message.
-                                          for reason in record["unhealthy_reason"]:
-                                              message += "\n" + reason["message"]
-                                          snsClient.publish(TopicArn=config["snsTopicArn"], Message=message, Subject=f'Monitor ONTAP Services Alert for cluster {clusterName}')
-                                          changedEvents=True
-                                          event = {
-                                              "index": uniqueIdentifier,
-                                              "message": message,
-                                              "refresh": eventResilience
-                                          }
-                                          print(message)
-                                          events.append(event)
-                              elif lkey == "stalledtransferseconds":
-                                  if record.get('transfer') and record['transfer']['state'].lower() == "transferring":
-                                      sourcePath = record['source']['path']
-                                      destPath = record['destination']['path']
-                                      bytesTransferred = record['transfer']['bytes_transferred']
           
-                                      prevRec =  getPreviousSMRecord(smRelationships, sourceClusterName, sourcePath, destPath)
+                          if maxLagTime is not None and not processedLagTime:
+                              if lagSeconds > maxLagTime:
+                                  uniqueIdentifier = record["uuid"] + "_" + maxLagTimeKey
+                                  if not eventExist(events, uniqueIdentifier):  # This resets the "refresh" field if found.
+                                      timeStr = lagTimeStr(lagSeconds)
+                                      message = f'Snapmirror Lag Alert: {sourceClusterName}::{record["source"]["path"]} -> {clusterName}::{record["destination"]["path"]} has a lag time of {lagSeconds} seconds, or {timeStr} which is more than {maxLagTime}.'
+                                      sendAlert(message, "WARNING")
+                                      changedEvents=True
+                                      event = {
+                                          "index": uniqueIdentifier,
+                                          "message": message,
+                                          "refresh": eventResilience
+                                      }
+                                      events.append(event)
           
-                                      if prevRec != None:
-                                          timeDiff=curTime - prevRec["time"]
-                                          print(f'transfer bytes last time:{prevRec["bytesTransferred"]} this time:{bytesTransferred} and {timeDiff} > {rule[key]}')
-                                          if prevRec['bytesTransferred'] == bytesTransferred:
-                                              if (curTime - prevRec['time']) > rule[key]:
-                                                  uniqueIdentifier = record['uuid'] + "_" + "transfer"
-              
-                                                  if not eventExist(events, uniqueIdentifier):
-                                                      message = f'Snapmiorror transfer has stalled: {sourceClusterName}::{sourcePath} -> {clusterName}::{destPath}.'
-                                                      logger.warning(message)
-                                                      snsClient.publish(TopicArn=config["snsTopicArn"], Message=message, Subject='Monitor ONTAP Services Alert for cluster {clusterName}')
-                                                      changedEvents=True
-                                                      event = {
-                                                          "index": uniqueIdentifier,
-                                                          "message": message,
-                                                          "refresh": eventResilience
-                                                      }
-                                                      print(message)
-                                                      events.append(event)
-                                          else:
-                                              prevRec['time'] = curTime
-                                              prevRec['refresh'] = True
-                                              prevRec['bytesTransferred'] = bytesTransferred
-                                              updateRelationships = True
-                                      else:
-                                          prevRec = {
-                                              "time": curTime,
-                                              "refresh": True,
-                                              "bytesTransferred": bytesTransferred,
-                                              "sourcePath": sourcePath,
-                                              "destPath": destPath,
-                                              "sourceCluster": sourceClusterName
-                                          }
-                                          updateRelationships = True
-                                          smRelationships.append(prevRec)
+                      if healthy is not None:
+                          if not healthy and not record["healthy"]: # Report on "not healthy" and the status is "not healthy"
+                              uniqueIdentifier = record["uuid"] + "_" + healthyKey
+                              if not eventExist(events, uniqueIdentifier):  # This resets the "refresh" field if found.
+                                  message = f'Snapmirror Health Alert: {sourceClusterName}::{record["source"]["path"]} {clusterName}::{record["destination"]["path"]} has a status of {record["healthy"]}.'
+                                  for reason in record["unhealthy_reason"]:
+                                      message += "\n" + reason["message"]
+                                  sendAlert(message, "WARNING")
+                                  changedEvents=True
+                                  event = {
+                                      "index": uniqueIdentifier,
+                                      "message": message,
+                                      "refresh": eventResilience
+                                  }
+                                  events.append(event)
+          
+                      if stalledTransferSeconds is not None:
+                          if record.get('transfer') is not None and record['transfer']['state'].lower() == "transferring":
+                              transferUuid = record['transfer']['uuid']
+                              bytesTransferred = record['transfer']['bytes_transferred']
+                              prevRec =  getPreviousSMRecord(smRelationships, transferUuid) # This reset the "refresh" field if found.
+                              if prevRec != None:
+                                  timeDiff=curTimeSeconds - prevRec["time"]
+                                  if prevRec['bytesTransferred'] == bytesTransferred:
+                                      if (curTimeSeconds - prevRec['time']) > stalledTransferSeconds:
+                                          uniqueIdentifier = record['uuid'] + "_" + "transfer"
+          
+                                          if not eventExist(events, uniqueIdentifier):
+                                              message = f"Snapmiorror transfer has stalled: {sourceClusterName}::{record['source']['path']} -> {clusterName}::{record['destination']['path']}."
+                                              sendAlert(message, "WARNING")
+                                              changedEvents=True
+                                              event = {
+                                                  "index": uniqueIdentifier,
+                                                  "message": message,
+                                                  "refresh": eventResilience
+                                              }
+                                              events.append(event)
+                                  else:
+                                      prevRec['time'] = curTimeSeconds
+                                      prevRec['refresh'] = True
+                                      prevRec['bytesTransferred'] = bytesTransferred
+                                      updateRelationships = True
                               else:
-                                  message = f'Unknown snapmirror alert type: "{key}".'
-                                  logger.warning(message)
-                                  print(message)
+                                  prevRec = {
+                                      "time": curTimeSeconds,
+                                      "refresh": True,
+                                      "bytesTransferred": bytesTransferred,
+                                      "uuid": transferUuid
+                                  }
+                                  updateRelationships = True
+                                  smRelationships.append(prevRec)
                   #
                   # After processing the records, see if any SM relationships need to be removed.
                   i = 0
                   while i < len(smRelationships):
                       if not smRelationships[i]["refresh"]:
+                          relationshipId = smRelationships[i].get("uuid")
+                          if relationshipId is None:
+                              id="Old format"
+                          else:
+                              id = relationshipId
+                          logger.debug(f'Deleting smRelationship: {id}')
                           del smRelationships[i]
                           updateRelationships = True
                       else:
@@ -935,7 +1449,7 @@ Resources:
                   i = 0
                   while i < len(events):
                       if events[i]["refresh"] <= 0:
-                          print(f'Deleting event: {events[i]["message"]}')
+                          logger.debug(f'Deleting event: {events[i]["message"]}')
                           del events[i]
                           changedEvents = True
                       else:
@@ -948,7 +1462,7 @@ Resources:
                   if(changedEvents):
                       s3Client.put_object(Key=config["smEventsFilename"], Bucket=config["s3BucketName"], Body=json.dumps(events).encode('UTF-8'))
               else:
-                  print(f'API call to {endpoint} failed. HTTP status code {response.status}.')
+                  logger.warning(f'API call to {endpoint} failed. HTTP status code {response.status}.')
           
           ################################################################################
           # This function is used to check all the volume and aggregate utlization.
@@ -973,71 +1487,120 @@ Resources:
               # Decrement the refresh field to know if any records have really gone away.
               for event in events:
                   event["refresh"] -= 1
+              #
+              # Run the API call to get the physical storage used.
+              endpoint = f'https://{config["OntapAdminServer"]}/api/storage/aggregates?fields=space&return_timeout=15'
+              aggrResponse = http.request('GET', endpoint, headers=headers)
+              if aggrResponse.status != 200:
+                  logger.error(f'API call to {endpoint} failed. HTTP status code {aggrResponse.status}.')
+                  aggrResponse = None
+              #
+              # Run the API call to get the volume information.
+              endpoint = f'https://{config["OntapAdminServer"]}/api/storage/volumes?fields=space,files,svm,state&return_timeout=15'
+              volumeResponse = http.request('GET', endpoint, headers=headers)
+              if volumeResponse.status != 200:
+                  logger.error(f'API call to {endpoint} failed. HTTP status code {volumeResponse.status}.')
+                  volumeResponse = None
+                  volumeRecords = None
+              else:
+                  volumeRecords = json.loads(volumeResponse.data).get("records")
+                  #
+                  # Now get the constituent volumes.
+                  endpoint = f'https://{config["OntapAdminServer"]}/api/storage/volumes?is_constituent=true&fields=space,files,svm,state&return_timeout=15'
+                  volumeResponse = http.request('GET', endpoint, headers=headers)
+                  if volumeResponse.status != 200:
+                      logger.error(f'API call to {endpoint} failed. HTTP status code {volumeResponse.status}.')
+                  else:
+                      volumeRecords.extend(json.loads(volumeResponse.data).get("records"))
+              #
+              # If both API calls failed, no point on continuing.
+              if volumeResponse is None and aggrResponse is None:
+                  return
           
               for rule in service["rules"]:
                   for key in rule.keys():
                       lkey=key.lower()
                       if lkey == "aggrwarnpercentused" or lkey == 'aggrcriticalpercentused':
-                          #
-                          # Run the API call to get the physical storage used.
-                          endpoint = f'https://{config["OntapAdminServer"]}/api/storage/aggregates?fields=space'
-                          response = http.request('GET', endpoint, headers=headers)
-                          if response.status == 200:
-                              data = json.loads(response.data)
+                          if aggrResponse is not None:
+                              data = json.loads(aggrResponse.data)
                               for aggr in data["records"]:
                                   if aggr["space"]["block_storage"]["used_percent"] >= rule[key]:
                                       uniqueIdentifier = aggr["uuid"] + "_" + key
                                       if not eventExist(events, uniqueIdentifier):  # This resets the "refresh" field if found.
                                           alertType = 'Warning' if lkey == "aggrwarnpercentused" else 'Critical'
                                           message = f'Aggregate {alertType} Alert: Aggregate {aggr["name"]} on {clusterName} is {aggr["space"]["block_storage"]["used_percent"]}% full, which is more or equal to {rule[key]}% full.'
-                                          logger.warning(message)
-                                          snsClient.publish(TopicArn=config["snsTopicArn"], Message=message, Subject=f'Monitor ONTAP Services Alert for cluster {clusterName}')
+                                          sendAlert(message, "WARNING")
                                           changedEvents = True
                                           event = {
                                                   "index": uniqueIdentifier,
                                                   "message": message,
                                                   "refresh": eventResilience
                                               }
-                                          print(event)
+                                          logger.debug(event)
                                           events.append(event)
-                          else:
-                              print(f'API call to {endpoint} failed. HTTP status code {response.status}.')
                       elif lkey == "volumewarnpercentused" or lkey == "volumecriticalpercentused":
-                          #
-                          # Run the API call to get the volume information.
-                          endpoint = f'https://{config["OntapAdminServer"]}/api/storage/volumes?fields=space,svm'
-                          response = http.request('GET', endpoint, headers=headers)
-                          if response.status == 200:
-                              data = json.loads(response.data)
-                              for record in data["records"]:
+                          if volumeResponse is not None:
+                              for record in volumeRecords:
                                   if record["space"].get("percent_used"):
                                       if record["space"]["percent_used"] >= rule[key]:
                                           uniqueIdentifier = record["uuid"] + "_" + key
                                           if not eventExist(events, uniqueIdentifier):  # This resets the "refresh" field if found.
                                               alertType = 'Warning' if lkey == "volumewarnpercentused" else 'Critical'
-                                              message = f'Volume Usage {alertType} Alert: volume {record["svm"]["name"]}:/{record["name"]} on {clusterName} is {record["space"]["percent_used"]}% full, which is more or equal to {rule[key]}% full.'
-                                              logger.warning(message)
-                                              snsClient.publish(TopicArn=config["snsTopicArn"], Message=message, Subject=f'Monitor ONTAP Services Alert for cluster {clusterName}')
+                                              message = f'Volume Usage {alertType} Alert: volume {record["svm"]["name"]}:{record["name"]} on {clusterName} is {record["space"]["percent_used"]}% full, which is more or equal to {rule[key]}% full.'
+                                              sendAlert(message, "WARNING")
                                               changedEvents = True
                                               event = {
                                                       "index": uniqueIdentifier,
                                                       "message": message,
                                                       "refresh": eventResilience
                                                   }
-                                              print(message)
                                               events.append(event)
-                          else:
-                              print(f'API call to {endpoint} failed. HTTP status code {response.status}.')
+                      elif lkey == "volumewarnfilespercentused" or lkey == "volumecriticalfilespercentused":
+                          if volumeResponse is not None:
+                              for record in volumeRecords:
+                                  #
+                                  # If a volume is offline, the API will not report the "files" information.
+                                  if record.get("files") is not None:
+                                      maxFiles = record["files"].get("maximum")
+                                      usedFiles = record["files"].get("used")
+                                      if maxFiles != None and usedFiles != None:
+                                          percentUsed = (usedFiles / maxFiles) * 100
+                                          if percentUsed >= rule[key]:
+                                              uniqueIdentifier = record["uuid"] + "_" + key
+                                              if not eventExist(events, uniqueIdentifier):
+                                                  alertType = 'Warning' if lkey == "volumewarnfilespercentused" else 'Critical'
+                                                  message = f"Volume File (inode) Usage {alertType} Alert: volume {record['svm']['name']}:{record['name']} on {clusterName} is using {percentUsed:.0f}% of it's inodes, which is more or equal to {rule[key]}% utilization."
+                                                  sendAlert(message, "WARNING")
+                                                  changedEvents = True
+                                                  event = {
+                                                          "index": uniqueIdentifier,
+                                                          "message": message,
+                                                          "refresh": eventResilience
+                                                      }
+                                                  events.append(event)
+                      elif lkey == "offline":
+                          for record in volumeRecords:
+                              if rule[key] and record["state"].lower() == "offline":
+                                  uniqueIdentifier = f'{record["uuid"]}_{key}_{rule[key]}'
+                                  if not eventExist(events, uniqueIdentifier):  # This resets the "refresh" field if found.
+                                      message = f"Volume Offline Alert: volume {record['svm']['name']}:{record['name']} on {clusterName} is offline."
+                                      sendAlert(message, "WARNING")
+                                      changedEvents=True
+                                      event = {
+                                          "index": uniqueIdentifier,
+                                          "message": message,
+                                          "refresh": eventResilience
+                                      }
+                                      events.append(event)
                       else:
                           message = f'Unknown storage alert type: "{key}".'
                           logger.warning(message)
-                          print(message)
               #
               # After processing the records, see if any events need to be removed.
               i = 0
               while i < len(events):
                   if events[i]["refresh"] <= 0:
-                      print(f'Deleting event: {events[i]["message"]}')
+                      logger.debug(f'Deleting event: {events[i]["message"]}')
                       del events[i]
                       changedEvents = True
                   else:
@@ -1049,6 +1612,55 @@ Resources:
               # If the events array changed, save it.
               if(changedEvents):
                   s3Client.put_object(Key=config["storageEventsFilename"], Bucket=config["s3BucketName"], Body=json.dumps(events).encode('UTF-8'))
+          
+          ################################################################################
+          # This function sends the message to the various alerting systems.
+          ################################################################################
+          def sendAlert(message, severity):
+              global config, snsClient, logger, cloudWatchClient
+          
+              if severity == "CRITICAL":
+                  logger.critical(message)
+              elif severity == "ERROR":
+                  logger.error(message)
+              elif severity == "WARNING":
+                  logger.warning(message)
+              elif severity == "INFO":
+                  logger.info(message)
+              elif severity == "DEBUG":
+                  logger.debug(message)
+              else:
+                  logger.info(message)
+          
+              snsClient.publish(TopicArn=config["snsTopicArn"], Message=message, Subject=f'{severity}: Monitor ONTAP Services Alert for cluster {clusterName}')
+          
+              if cloudWatchClient is not None:
+                  #
+                  # Create a new log stream for the current day if it doesn't exist.
+                  dateStr = datetime.datetime.now().strftime("%Y-%m-%d")
+                  logStreamName = f'{clusterName}-monitor-ontap-services-{dateStr}'
+                  #
+                  # Don't ask me why AWS puts a ":*" at the end of the log group ARN, but they do.
+                  logGroupName = config["cloudWatchLogGroupArn"].split(":")[-2] if config["cloudWatchLogGroupArn"].endswith(":*") else config["cloudWatchLogGroupArn"].split(":")[-1]
+                  #
+                  # Check to see if the log stream already exists.
+                  logStreams = cloudWatchClient.describe_log_streams(logGroupName=logGroupName, logStreamNamePrefix=logStreamName)
+                  if len(logStreams["logStreams"]) == 0:
+                      cloudWatchClient.create_log_stream(
+                          logGroupName=logGroupName,
+                          logStreamName=logStreamName)
+                  #
+                  # Send the message to CloudWatch.
+                  cloudWatchClient.put_log_events(
+                      logGroupName=logGroupName,
+                      logStreamName=logStreamName,
+                      logEvents=[
+                          {
+                              'timestamp': int(datetime.datetime.now().timestamp() * 1000),
+                              'message': message
+                          },
+                      ]
+                  )
           
           ################################################################################
           # This function is used to check utilization of quota limits.
@@ -1075,7 +1687,7 @@ Resources:
                   event["refresh"] -= 1
               #
               # Run the API call to get the quota report.
-              endpoint = f'https://{config["OntapAdminServer"]}/api/storage/quota/reports?fields=*'
+              endpoint = f'https://{config["OntapAdminServer"]}/api/storage/quota/reports?fields=*&return_timeout=30'
               response = http.request('GET', endpoint, headers=headers)
               if response.status == 200:
                   data = json.loads(response.data)
@@ -1087,18 +1699,18 @@ Resources:
                                   #
                                   # Since the quota report might not have the files key, and even if it does, it might not have
                                   # the hard_limit_percent" key, need to check for their existencae first.
-                                  if(record.get("files") != None and record["files"]["used"].get("hard_limit_percent") != None and
+                                  if(record.get("files") is not None and record["files"]["used"].get("hard_limit_percent") is not None and
                                           record["files"]["used"]["hard_limit_percent"] > rule[key]):
                                       uniqueIdentifier = str(record["index"]) + "_" + key
                                       if not eventExist(events, uniqueIdentifier):  # This resets the "refresh" field if found.
-                                          if record.get("qtree") != None:
+                                          if record.get("qtree") is not None:
                                               qtree=f' under qtree: {record["qtree"]["name"]} '
                                           else:
                                               qtree=' '
-                                          if record.get("users") != None:
+                                          if record.get("users") is not None:
                                               users=None
                                               for user in record["users"]:
-                                                  if users == None:
+                                                  if users is None:
                                                       users = user["name"]
                                                   else:
                                                       users += ',{user["name"]}'
@@ -1106,29 +1718,28 @@ Resources:
                                           else:
                                               user=''
                                           message = f'Quota Inode Usage Alert: Quota of type "{record["type"]}" on {record["svm"]["name"]}:/{record["volume"]["name"]}{qtree}{user}on {clusterName} is using {record["files"]["used"]["hard_limit_percent"]}% which is more than {rule[key]}% of its inodes.'
-                                          logger.warning(message)
-                                          snsClient.publish(TopicArn=config["snsTopicArn"], Message=message, Subject=f'Monitor ONTAP Services Alert for cluster {clusterName}')
+                                          sendAlert(message, "WARNING")
                                           changedEvents=True
                                           event = {
                                                   "index": uniqueIdentifier,
                                                   "message": message,
                                                   "refresh": eventResilience
                                                   }
-                                          print(message)
+                                          logger.debug(message)
                                           events.append(event)
                               elif lkey == "maxhardquotaspacepercentused":
-                                  if(record.get("space") != None and record["space"]["used"].get("hard_limit_percent") and
+                                  if(record.get("space") is not None and record["space"]["used"].get("hard_limit_percent") and
                                           record["space"]["used"]["hard_limit_percent"] >= rule[key]):
                                       uniqueIdentifier = str(record["index"]) + "_" + key
                                       if not eventExist(events, uniqueIdentifier):  # This resets the "refresh" field if found.
-                                          if record.get("qtree") != None:
+                                          if record.get("qtree") is not None:
                                               qtree=f' under qtree: {record["qtree"]["name"]} '
                                           else:
                                               qtree=" "
-                                          if record.get("users") != None:
+                                          if record.get("users") is not None:
                                               users=None
                                               for user in record["users"]:
-                                                  if users == None:
+                                                  if users is None:
                                                       users = user["name"]
                                                   else:
                                                       users += ',{user["name"]}'
@@ -1136,29 +1747,28 @@ Resources:
                                           else:
                                               user=''
                                           message = f'Quota Space Usage Alert: Hard quota of type "{record["type"]}" on {record["svm"]["name"]}:/{record["volume"]["name"]}{qtree}{user}on {clusterName} is using {record["space"]["used"]["hard_limit_percent"]}% which is more than {rule[key]}% of its allocaed space.'
-                                          logger.warning(message)
-                                          snsClient.publish(TopicArn=config["snsTopicArn"], Message=message, Subject=f'Monitor ONTAP Services Alert for cluster {clusterName}')
+                                          sendAlert(message, "WARNING")
                                           changedEvents=True
                                           event = {
                                                   "index": uniqueIdentifier,
                                                   "message": message,
                                                   "refresh": eventResilience
                                                   }
-                                          print(message)
+                                          logger.debug(message)
                                           events.append(event)
                               elif lkey == "maxsoftquotaspacepercentused":
-                                  if(record.get("space") != None and record["space"]["used"].get("soft_limit_percent") and
+                                  if(record.get("space") is not None and record["space"]["used"].get("soft_limit_percent") and
                                           record["space"]["used"]["soft_limit_percent"] >= rule[key]):
                                       uniqueIdentifier = str(record["index"]) + "_" + key
                                       if not eventExist(events, uniqueIdentifier):  # This resets the "refresh" field if found.
-                                          if record.get("qtree") != None:
+                                          if record.get("qtree") is not None:
                                               qtree=f' under qtree: {record["qtree"]["name"]} '
                                           else:
                                               qtree=" "
-                                          if record.get("users") != None:
+                                          if record.get("users") is not None:
                                               users=None
                                               for user in record["users"]:
-                                                  if users == None:
+                                                  if users is None:
                                                       users = user["name"]
                                                   else:
                                                       users += ',{user["name"]}'
@@ -1166,26 +1776,24 @@ Resources:
                                           else:
                                               user=''
                                           message = f'Quota Space Usage Alert: Soft quota of type "{record["type"]}" on {record["svm"]["name"]}:/{record["volume"]["name"]}{qtree}{user}on {clusterName} is using {record["space"]["used"]["soft_limit_percent"]}% which is more than {rule[key]}% of its allocaed space.'
-                                          logger.info(message)
-                                          snsClient.publish(TopicArn=config["snsTopicArn"], Message=message, Subject=f'Monitor ONTAP Services Alert for cluster {clusterName}')
+                                          sendAlert(message, "WARNING")
                                           changedEvents=True
                                           event = {
                                               "index": uniqueIdentifier,
                                               "message": message,
                                               "refresh": eventResilience
                                           }
-                                          print(message)
+                                          logger.debug(message)
                                           events.append(event)
                               else:
                                   message = f'Unknown quota matching condition type "{key}".'
                                   logger.warning(message)
-                                  print(message)
                   #
                   # After processing the records, see if any events need to be removed.
                   i=0
                   while i < len(events):
                       if events[i]["refresh"] <= 0:
-                          print(f'Deleting event: {events[i]["message"]}')
+                          logger.debug(f'Deleting event: {events[i]["message"]}')
                           del events[i]
                           changedEvents = True
                       else:
@@ -1198,7 +1806,135 @@ Resources:
                   if(changedEvents):
                       s3Client.put_object(Key=config["quotaEventsFilename"], Bucket=config["s3BucketName"], Body=json.dumps(events).encode('UTF-8'))
               else:
-                  print(f'API call to {endpoint} failed. HTTP status code {response.status}.')
+                  logger.error(f'API call to {endpoint} failed. HTTP status code {response.status}.')
+          
+          ################################################################################
+          ################################################################################
+          def processVserver(service):
+              global config, s3Client, snsClient, http, headers, clusterName, logger
+          
+              changedEvents=False
+              #
+              # Get the saved events so we can ensure we are only reporting on new ones.
+              try:
+                  data = s3Client.get_object(Key=config["vserverEventsFilename"], Bucket=config["s3BucketName"])
+              except botocore.exceptions.ClientError as err:
+                  # If the error is that the object doesn't exist, then it will get created once an alert it sent.
+                  if err.response['Error']['Code'] == "NoSuchKey":
+                      events = []
+                  else:
+                      raise err
+              else:
+                  events = json.loads(data["Body"].read().decode('UTF-8'))
+              #
+              # Decrement the refresh field to know if any records have really gone away.
+              for event in events:
+                  event["refresh"] -= 1
+              #
+              # Consolidate the rules
+              vserverState = None
+              nfsProtocolState = None
+              cifsProtocolState = None
+              for rule in service["rules"]:
+                  for key in rule.keys():
+                      lkey = key.lower() # Convert to all lower case so the key can be case insensitive.
+                      if lkey == "vserverstate":
+                          vserverState = rule[key]
+                          vserverStateKey = key
+                      elif lkey == "nfsprotocolstate":
+                          nfsProtocolState = rule[key]
+                          nfsProtocolStateKey = key
+                      elif lkey == "cifsprotocolstate":
+                          cifsProtocolState = rule[key]
+                          cifsProtocolStateKey = key
+              #
+              # Check for any vservers that are down.
+              if vserverState is not None and vserverState:
+                  #
+                  # Run the API call to get the vserver state for each vserver.
+                  endpoint = f'https://{config["OntapAdminServer"]}/api/svm/svms?fields=state&return_timeout=15'
+                  response = http.request('GET', endpoint, headers=headers)
+                  if response.status == 200:
+                      data = json.loads(response.data)
+                      for record in data["records"]:
+                          if record["state"].lower() != "running":
+                              uniqueIdentifier = str(record["uuid"]) + "_" + vserverStateKey
+                              if not eventExist(events, uniqueIdentifier):
+                                  message = f'SVM State Alert: SVM {record["name"]} on {clusterName} is not online.'
+                                  sendAlert(message, "WARNING")
+                                  changedEvents=True
+                                  event = {
+                                          "index": uniqueIdentifier,
+                                          "message": message,
+                                          "refresh": eventResilience
+                                          }
+                                  events.append(event)
+                  else:
+                      logger.error(f'API call to {endpoint} failed. HTTP status code {response.status}.')
+          
+              if nfsProtocolState is not None and nfsProtocolState:
+                  #
+                  # Run the API call to get the NFS protocol state for each vserver.
+                  endpoint = f'https://{config["OntapAdminServer"]}/api/protocols/nfs/services?fields=state&return_timeout=15'
+                  response = http.request('GET', endpoint, headers=headers)
+                  if response.status == 200:
+                      data = json.loads(response.data)
+                      for record in data["records"]:
+                          if record["state"].lower() != "online":
+                              uniqueIdentifier = str(record["svm"]["uuid"]) + "_" + nfsProtocolStateKey
+                              if not eventExist(events, uniqueIdentifier):
+                                  message = f'NFS Protocol State Alert: NFS protocol on {record["svm"]["name"]} on {clusterName} is not online.'
+                                  sendAlert(message, "WARNING")
+                                  changedEvents=True
+                                  event = {
+                                          "index": uniqueIdentifier,
+                                          "message": message,
+                                          "refresh": eventResilience
+                                          }
+                                  events.append(event) 
+                  else:
+                      logger.error(f'API call to {endpoint} failed. HTTP status code {response.status}.')
+          
+              if cifsProtocolState is not None and cifsProtocolState:
+                  #
+                  # Run the API call to get the NFS protocol state for each vserver.
+                  endpoint = f'https://{config["OntapAdminServer"]}/api/protocols/cifs/services?fields=enabled&return_timeout=15'
+                  response = http.request('GET', endpoint, headers=headers)
+                  if response.status == 200:
+                      data = json.loads(response.data)
+                      for record in data["records"]:
+                          if not record["enabled"]:
+                              uniqueIdentifier = str(record["svm"]["uuid"]) + "_" + cifsProtocolStateKey
+                              if not eventExist(events, uniqueIdentifier):
+                                  message = f'CIFS Protocol State Alert: CIFS protocol on {record["svm"]["name"]} on {clusterName} is not online.'
+                                  sendAlert(message, "WARNING")
+                                  changedEvents=True
+                                  event = {
+                                          "index": uniqueIdentifier,
+                                          "message": message,
+                                          "refresh": eventResilience
+                                          }
+                                  events.append(event) 
+                  else:
+                      logger.error(f'API call to {endpoint} failed. HTTP status code {response.status}.')
+          
+              #
+              # After processing the records, see if any events need to be removed.
+              i=0
+              while i < len(events):
+                  if events[i]["refresh"] <= 0:
+                      logger.debug(f'Deleting event: {events[i]["message"]}')
+                      del events[i]
+                      changedEvents = True
+                  else:
+                      # If an event wasn't refreshed, then we need to save the new refresh count.
+                      if events[i]["refresh"] != eventResilience:
+                          changedEvents = True
+                      i += 1
+              #
+              # If the events array changed, save it.
+              if(changedEvents):
+                  s3Client.put_object(Key=config["vserverEventsFilename"], Bucket=config["s3BucketName"], Body=json.dumps(events).encode('UTF-8'))
           
           ################################################################################
           # This function returns the index of the service in the conditions dictionary.
@@ -1210,7 +1946,7 @@ Resources:
                   if conditions["services"][i]["name"] == targetService:
                       return i
                   i += 1
-              
+          
               return None
           
           ################################################################################
@@ -1228,7 +1964,8 @@ Resources:
                   {"name": "ems", "rules": []},
                   {"name": "snapmirror", "rules": []},
                   {"name": "storage", "rules": []},
-                  {"name": "quota", "rules": []}
+                  {"name": "quota", "rules": []},
+                  {"name": "vserver", "rules": []}
               ]}
               #
               # Now, add rules based on the environment variables.
@@ -1250,7 +1987,7 @@ Resources:
                           conditions["services"][getServiceIndex("systemHealth", conditions)]["rules"].append({"networkInterfaces": False})
                   elif name == "initialEmsEventsAlert":
                       if value == "true":
-                          conditions["services"][getServiceIndex("ems", conditions)]["rules"].append({"name": "", "severity": "error|alert|emergency", "message": ""})
+                          conditions["services"][getServiceIndex("ems", conditions)]["rules"].append({"name": "", "severity": "error|alert|emergency", "message": "", "filter": ""})
                   elif name == "initialSnapMirrorHealthAlert":
                       if value == "true":
                           conditions["services"][getServiceIndex("snapmirror", conditions)]["rules"].append({"Healthy": False})  # This is what it matches on, so it is interesting when the health is false.
@@ -1260,6 +1997,10 @@ Resources:
                       value = int(value)
                       if value > 0:
                           conditions["services"][getServiceIndex("snapmirror", conditions)]["rules"].append({"maxLagTime": value})
+                  elif name == "initialSnapMirrorLagTimePercentAlert":
+                      value = int(value)
+                      if value > 0:
+                          conditions["services"][getServiceIndex("snapmirror", conditions)]["rules"].append({"maxLagTimePercent": value})
                   elif name == "initialSnapMirrorStalledAlert":
                       value = int(value)
                       if value > 0:
@@ -1280,6 +2021,19 @@ Resources:
                       value = int(value)
                       if value > 0:
                           conditions["services"][getServiceIndex("storage", conditions)]["rules"].append({"volumeCriticalPercentUsed": value})
+                  elif name == "initialVolumeFileUtilizationWarnAlert":
+                      value = int(value)
+                      if value > 0:
+                          conditions["services"][getServiceIndex("storage", conditions)]["rules"].append({"volumeWarnFilesPercentUsed": value})
+                  elif name == "initialVolumeFileUtilizationCriticalAlert":
+                      value = int(value)
+                      if value > 0:
+                          conditions["services"][getServiceIndex("storage", conditions)]["rules"].append({"volumeCriticalFilesPercentUsed": value})
+                  elif name == "initialVolumeOfflineAlert":
+                      if value == "true":
+                          conditions["services"][getServiceIndex("storage", conditions)]["rules"].append({"offline": True})
+                      else:
+                          conditions["services"][getServiceIndex("storage", conditions)]["rules"].append({"offline": False})
                   elif name == "initialSoftQuotaUtilizationAlert":
                       value = int(value)
                       if value > 0:
@@ -1292,6 +2046,21 @@ Resources:
                       value = int(value)
                       if value > 0:
                           conditions["services"][getServiceIndex("quota", conditions)]["rules"].append({"maxQuotaInodesPercentUsed": value})
+                  elif name == "initialVserverStateAlert":
+                      if value == "true":
+                          conditions["services"][getServiceIndex("vserver", conditions)]["rules"].append({"vserverState": True})
+                      else:
+                          conditions["services"][getServiceIndex("vserver", conditions)]["rules"].append({"vserverState": False})
+                  elif name == "initialVserverNFSProtocolStateAlert":
+                      if value == "true":
+                          conditions["services"][getServiceIndex("vserver", conditions)]["rules"].append({"nfsProtocolState": True})
+                      else:
+                          conditions["services"][getServiceIndex("vserver", conditions)]["rules"].append({"nfsProtocolState": False})
+                  elif name == "initialVserverCIFSProtocolStateAlert":
+                      if value == "true":
+                          conditions["services"][getServiceIndex("vserver", conditions)]["rules"].append({"cifsProtocolState": True})
+                      else:
+                          conditions["services"][getServiceIndex("vserver", conditions)]["rules"].append({"cifsProtocolState": False})
           
               return conditions
           
@@ -1319,7 +2088,9 @@ Resources:
                   "configFilename": None,
                   "secretsManagerEndPointHostname": None,
                   "snsEndPointHostname": None,
+                  "cloudWatchLogsEndPointHostname": None,
                   "syslogIP": None,
+                  "cloudWatchLogGroupArn": None,
                   "awsAccountId": None
                   }
           
@@ -1330,7 +2101,8 @@ Resources:
                   "conditionsFilename": None,
                   "storageEventsFilename": None,
                   "quotaEventsFilename": None,
-                  "systemStatusFilename": None
+                  "systemStatusFilename": None,
+                  "vserverEventsFilename": None
                   }
           
               config = {
@@ -1347,13 +2119,21 @@ Resources:
               for var in config:
                   config[var] = os.environ.get(var)
               #
-              # Check to see if s3BacketArn was provided instead of s3BucketName.
-              if config["s3BucketName"] == None and os.environ.get("s3BucketArn") != None:
+              # Since the CloudFormation template will set the environment variables
+              # to an empty string if someone doesn't provide a value, reset the
+              # values back to None.
+              for var in config:
+                  if config[var] == "":
+                      config[var] = None
+              #
+              # Since CloudFormation has to pass an ARN, get the Bucket name from it.
+              # Too bad the bucket ARN doesn't include the region, like most (all?) the others do.
+              if config["s3BucketName"] is None and os.environ.get("s3BucketArn") is not None:
                   config["s3BucketName"] = os.environ.get("s3BucketArn").split(":")[-1]
               #
               # Check that required environmental variables are there.
               for var in requiredEnvVariables:
-                  if config[var] == None:
+                  if config[var] is None:
                       raise Exception (f'\n\nMissing required environment variable "{var}".')
               #
               # Open a client to the s3 service.
@@ -1361,13 +2141,8 @@ Resources:
               #
               # Calculate the config filename if it hasn't already been provided.
               defaultConfigFilename = config["OntapAdminServer"] + "-config"
-              if config["configFilename"] == None:
+              if config["configFilename"] is None:
                   config["configFilename"] = defaultConfigFilename
-              #
-              # Calculate the conditions filename if it hasn't already been provided.
-              defaultConditionsFilename = config["OntapAdminServer"] + "-conditions"
-              if config["conditionsFilename"] == None:
-                  config["conditionsFilename"] = defaultConditionsFilename
               #
               # Process the config file if it exist.
               try:
@@ -1377,7 +2152,7 @@ Resources:
                       raise err
                   else:
                       if config["configFilename"] != defaultConfigFilename:
-                          print(f"Warning, did not find file '{config['configFilename']}' in s3 bucket '{config['s3BucketName']}' in region '{config['s3BucketRegion']}'.")
+                          logger.warning(f"Warning, did not find file '{config['configFilename']}' in s3 bucket '{config['s3BucketName']}' in region '{config['s3BucketRegion']}'.")
               else:
                   #
                   # While iterating through the file, get rid of any "export ", comments, blank lines, or anything else that isn't key=value.
@@ -1392,42 +2167,39 @@ Resources:
                           (key, value) = line.split("=")
                       key = key.strip()
                       value = value.strip()
-                      #
-                      # Preserve any environment variables settings.
-                      if key in config:
-                          if config[key] == None:
-                              config[key] = value
+                      if len(value) == 0:
+                          logger.warning(f"Warning, empty value for key '{key}'. Ignored.")
                       else:
-                          print(f"Warning, unknown config parameter '{key}'.")
+                          #
+                          # Preserve any environment variables settings.
+                          if key in config:
+                              if config[key] is None:
+                                  config[key] = value
+                          else:
+                              logger.warning(f"Warning, unknown config parameter '{key}'.")
               #
               # Now, fill in the filenames for any that aren't already defined.
               for filename in filenameVariables:
-                  if config[filename] == None:
+                  if config[filename] is None:
                       config[filename] = config["OntapAdminServer"] + "-" + filename.replace("Filename", "")
               #
-              # Define the endpoints if alternates weren't provided.
-              if config.get("secretArn") != None:
+              # Define endpoints if alternates weren't provided.
+              if config.get("secretArn") is not None and config["secretsManagerEndPointHostname"] is None:
                   secretRegion = config["secretArn"].split(":")[3]
-              else:
-                  #
-                  # Give it a value so secretsManagerEndPointHostname can be set. The check for all variables will correctly error out because secretArn is missing.
-                  secretRegion = "No-secretArn-was-provided"
-              if config["secretsManagerEndPointHostname"] == None or config["secretsManagerEndPointHostname"] == "":
                   config["secretsManagerEndPointHostname"] = f'secretsmanager.{secretRegion}.amazonaws.com'
           
-              if config.get("snsTopicArn") != None:
+              if config.get("snsTopicArn") is not None and config["snsEndPointHostname"] is None:
                   snsRegion = config["snsTopicArn"].split(":")[3]
-              else:
-                  #
-                  # Give it a value so snsEndPointHostname can be set. The check for all variables will correctly error out because snsTopicArn is missing.
-                  snsRegion = "No-snsTopicArn-was-provided"
-              if config["snsEndPointHostname"] == None or config["snsEndPointHostname"] == "":
                   config["snsEndPointHostname"] = f'sns.{snsRegion}.amazonaws.com'
+          
+              if config.get("cloudWatchLogGroupArn") is not None and config["cloudWatchLogsEndPointHostname"] is None:
+                  cloudWatchRegion = config["cloudWatchLogGroupArn"].split(":")[3]
+                  config["cloudWatchLogsEndPointHostname"] = f'logs.{cloudWatchRegion}.amazonaws.com'
               #
               # Now, check that all the configuration parameters have been set.
               for key in config:
-                  if config[key] == None and key not in optionalVariables:
-                      raise Exception(f'Missing configuration parameter "{key}".')
+                  if config[key] is None and key not in optionalVariables:
+                      raise Exception(f'\n\nMissing configuration parameter "{key}".\n\n')
           
           ################################################################################
           # Main logic
@@ -1435,18 +2207,30 @@ Resources:
           def lambda_handler(event, context):
               #
               # Define global variables so we don't have to pass them to all the functions.
-              global config, s3Client, snsClient, http, headers, clusterName, clusterVersion, logger
+              global config, s3Client, snsClient, http, headers, clusterName, clusterVersion, logger, cloudWatchClient, clusterTimezone
+              #
+              # Set up logging.
+              logger = logging.getLogger("mon_fsxn_service")
+              if lambdaFunction:
+                  logger.setLevel(logging.INFO)       # Anything at this level and above this get logged.
+              else: # Assume we are running in a test environment.
+                  logger.setLevel(logging.DEBUG)      # Anything at this level and above this get logged.
+                  formatter = logging.Formatter(
+                          fmt="%(name)s:%(funcName)s - Level:%(levelname)s - Message:%(message)s",
+                          datefmt="%Y-%m-%d %H:%M:%S"
+                      )
+                  loggerscreen = logging.StreamHandler()
+                  loggerscreen.setFormatter(formatter)
+                  logger.addHandler(loggerscreen)
               #
               # Read in the configuraiton.
               readInConfig()   # This defines the s3Client variable.
               #
-              # Set up loging.
-              logger = logging.getLogger("mon_fsxn_service")
-              logger.setLevel(logging.DEBUG)       # Anything at this level and above this get logged.
-              if config["syslogIP"] != None:
+              # Set up the logger to log to a file and to syslog.
+              if config["syslogIP"] is not None:
                   #
                   # Due to a bug with the SysLogHandler() of not sending proper framing with a message
-                  # when using TCP (it should end it with a LF and not a NUL like it does now) you must add 
+                  # when using TCP (it should end it with a LF and not a NUL like it does now) you must add
                   # an additional frame delimiter to the receiving syslog server. With rsyslog, you add
                   # a AddtlFrameDelimiter="0" directive to the "input()" line where they have it listen
                   # to a TCP port. For example:
@@ -1454,7 +2238,7 @@ Resources:
                   #  # provides TCP syslog reception
                   #  module(load="imtcp")
                   #  input(type="imtcp" port="514" AddtlFrameDelimiter="0")
-                  # 
+                  #
                   # Because of this bug, I am going to stick with UDP, the default protocol used by
                   # the syslog handler. If TCP is required, then the above changes will have to be made
                   # to the syslog server. Or, the program will have to handle closing and opening the
@@ -1484,12 +2268,12 @@ Resources:
               # Get the username and password of the ONTAP/FSxN system.
               secretsInfo = client.get_secret_value(SecretId=config["secretArn"])
               secrets = json.loads(secretsInfo['SecretString'])
-              if secrets.get(config['secretUsernameKey']) == None:
-                  print(f'Error, "{config["secretUsernameKey"]}" not found in secret "{config["secretArn"]}".')
+              if secrets.get(config['secretUsernameKey']) is None:
+                  logger.critical(f'Error, "{config["secretUsernameKey"]}" not found in secret "{config["secretArn"]}".')
                   return
           
-              if secrets.get(config['secretPasswordKey']) == None:
-                  print(f'Error, "{config["secretPasswordKey"]}" not found in secret "{config["secretArn"]}".')
+              if secrets.get(config['secretPasswordKey']) is None:
+                  logger.critical(f'Error, "{config["secretPasswordKey"]}" not found in secret "{config["secretArn"]}".')
                   return
           
               username = secrets[config['secretUsernameKey']]
@@ -1499,6 +2283,10 @@ Resources:
               #s3Client = boto3.client('s3', config["s3BucketRegion"])  # Defined in readInConfig()
               snsRegion = config["snsTopicArn"].split(":")[3]
               snsClient = boto3.client('sns', region_name=snsRegion, endpoint_url=f'https://{config["snsEndPointHostname"]}')
+              cloudWatchClient = None
+              if config["cloudWatchLogGroupArn"] is not None:
+                  cloudWatchRegion = config["cloudWatchLogGroupArn"].split(":")[3]
+                  cloudWatchClient = boto3.client('logs', region_name=cloudWatchRegion, endpoint_url=f'https://{config["cloudWatchLogsEndPointHostname"]}')
               #
               # Create a http handle to make ONTAP/FSxN API calls with.
               auth = urllib3.make_headers(basic_auth=f'{username}:{password}')
@@ -1512,15 +2300,17 @@ Resources:
               # Get the conditions we know what to alert on.
               try:
                   data = s3Client.get_object(Key=config["conditionsFilename"], Bucket=config["s3BucketName"])
+                  matchingConditions = json.loads(data["Body"].read().decode('UTF-8'))
               except botocore.exceptions.ClientError as err:
                   if err.response['Error']['Code'] != "NoSuchKey":
-                      print(f'\n\nError, could not retrieve configuration file {config["conditionsFilename"]} from: s3://{config["s3BucketName"]}.\nBelow is additional information:\n\n')
+                      logger.error(f'Error, could not retrieve configuration file {config["conditionsFilename"]} from: s3://{config["s3BucketName"]}.\nBelow is additional information:')
                       raise err
                   else:
                       matchingConditions = buildDefaultMatchingConditions()
                       s3Client.put_object(Key=config["conditionsFilename"], Bucket=config["s3BucketName"], Body=json.dumps(matchingConditions, indent=4).encode('UTF-8'))
-              else:
-                  matchingConditions = json.loads(data["Body"].read().decode('UTF-8'))
+              except json.decoder.JSONDecodeError as err:
+                  logger.error(f'Error, could not decode JSON from configuration file "{config["conditionsFilename"]}". The error message from the decoder:\n{err}\n')
+                  return
           
               if(checkSystem()):
                   #
@@ -1536,11 +2326,13 @@ Resources:
                           processStorageUtilization(service)
                       elif service["name"].lower() == "quota":
                           processQuotaUtilization(service)
+                      elif service["name"].lower() == "vserver":
+                          processVserver(service)
                       else:
-                          print(f'Unknown service "{service["name"]}".')
+                          logger.warning(f'Unknown service "{service["name"]}".')
               return
           
-          if os.environ.get('AWS_LAMBDA_FUNCTION_NAME') == None:
+          if os.environ.get('AWS_LAMBDA_FUNCTION_NAME') is None:
               lambdaFunction = False
               lambda_handler(None, None)
           else:

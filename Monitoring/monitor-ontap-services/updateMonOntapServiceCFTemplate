@@ -13,11 +13,11 @@ tmpfile2=$(mktemp /tmp/tmpfile2.XXXXXX)
 trap "rm -f $tmpfile1 $tmpfile2" exit
 #
 # First get the monitoring code out of the CF template.
-sed -e '1,/ZipFile/d' cloudformation.yaml > cloudformation.yaml.tmp
+sed -e '1,\(#!/bin/python3(d' cloudformation.yaml > cloudformation.yaml.tmp
 #
 # Now get the Date and Version lines out of both files.
 egrep -v '^          # Date:|^          # Version' cloudformation.yaml.tmp > $tmpfile1
-egrep -v '^# Date:|^# Version:' $file > $tmpfile2
+sed -e 1d $file | egrep -v '^# Date:|^# Version:' > $tmpfile2
 
 if diff -w $tmpfile1 $tmpfile2 > /dev/null; then
   echo "No changes to the monitor code."
@@ -36,8 +36,8 @@ fi
 version="v${majorVersionNum}.${minorVersionNum}"
 #
 # Strip out the monitoring code.
-sed -e '/ZipFile/,$d' cloudformation.yaml > cloudformation.yaml.tmp
-echo "        ZipFile: |" >> cloudformation.yaml.tmp
+sed -e '\(#!/bin/python3(,$d' cloudformation.yaml > cloudformation.yaml.tmp
+#echo "        ZipFile: |" >> cloudformation.yaml.tmp
 #
 # Add the monitoring code to the CF template while updating the version and date.
 cat "$file" | sed -e 's/^/          /' -e "s/%%VERSION%%/${version}/" -e "s/%%DATE%%/$(date +%Y-%m-%d-%H:%M:%S)/" >> cloudformation.yaml.tmp

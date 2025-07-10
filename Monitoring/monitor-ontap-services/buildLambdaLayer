@@ -1,0 +1,7 @@
+#!/bin/bash
+#
+# This script builds the Lambda Layer required for the monitor_ontap_services to function.
+rm -rf python lambda_layer.zip
+mkdir python
+pip3 install --target ./python 'cronsim>=2.6' pytz
+zip -r lambda_layer.zip python
