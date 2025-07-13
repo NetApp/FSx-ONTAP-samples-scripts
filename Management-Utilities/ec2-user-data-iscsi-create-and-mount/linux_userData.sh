@@ -12,21 +12,20 @@ VOLUME_NAME=[Fsx volume name, e.g. iscsiVol]
 VOLUME_SIZE=[volume size in GB, e.g 100g]
 # Default value is fsx, but you can change it to any other value according to yours FSx for ONTAP SVM name
 SVM_NAME=fsx
+# Default value is fsxadmin, but you can change it to any other value according to yours FSx for ONTAP admin user name
+ONTAP_USER=fsxadmin
 # end - user data
-
 
 min=100
 max=999
 LUN_NAME=${VOLUME_NAME}_$(($RANDOM%($max-$min+1)+$min))
 
 # defaults
-# All FSxN instances are created with the user 'fsxadmin' which can't be changed
 # The script will create a log file in the ec2-user home directory
-ONTAP_USER=fsxadmin
 LOG_FILE=/home/ec2-user/install.log
 
 VOL_SIZE=$(echo $VOLUME_SIZE | sed 's/.$//')
-LUN_SIZE=$(bc -l <<< "0.85*$VOL_SIZE" )
+LUN_SIZE=$(bc -l <<< "0.90*$VOL_SIZE" )
 
 echo "# Uninstall file" >> uninstall.sh
 chmod u+x uninstall.sh
@@ -76,6 +75,7 @@ addUndoCommand "yum remove -y device-mapper-multipath iscsi-initiator-utils"
 commandDescription="Set multisession replacment time from default 120 sec to 5 sec"
 logMessage "${commandDescription}"
 sed -i 's/node.session.timeo.replacement_timeout = .*/node.session.timeo.replacement_timeout = 5/' /etc/iscsi/iscsid.conf; cat /etc/iscsi/iscsid.conf | grep node.session.timeo.replacement_timeout
+cat /etc/iscsi/iscsid.conf | grep "node.session.timeo.replacement_timeout = 5"
 checkCommand "${commandDescription}"
 addUndoCommand "sed -i 's/node.session.timeo.replacement_timeout = .*/node.session.timeo.replacement_timeout = 120/' /etc/iscsi/iscsid.conf; cat /etc/iscsi/iscsid.conf | grep node.session.timeo.replacement_timeout"
 
@@ -86,7 +86,7 @@ systemctl start iscsid
 checkCommand "${commandDescription}"
 
 # check if the service is running
-isIscsciServiceRunning=$(systemctl is-active --quiet iscsid.service && echo "1")
+isIscsciServiceRunning=$(systemctl is-active --quiet iscsid.service && echo "1" || echo "0")
 if [ "$isIscsciServiceRunning" -eq 1 ]; then
     logMessage "iscsi service is running"
     addUndoCommand "systemctl --now disable iscsid.service"
@@ -152,7 +152,7 @@ sshpass -p $FSXN_PASSWORD ssh -o StrictHostKeyChecking=no $ONTAP_USER@$FSXN_ADMI
 checkCommand "${commandDescription}"
 addUndoCommand "sshpass -p ${FSXN_PASSWORD} ssh -o StrictHostKeyChecking=no ${ONTAP_USER}@${FSXN_ADMIN_IP} volume delete -vserver ${SVM_NAME} -volume ${VOLUME_NAME} -force"
 
-commandDescription="Create iscsi lun for vserver: ${SVM_NAME} volume name: ${VOLUME_NAME} and lun name: ${LUN_NAME} and size: ${LUN_SIZE}g"
+commandDescription="Create iscsi lun for vserver: ${SVM_NAME} volume name: ${VOLUME_NAME} and lun name: ${LUN_NAME} and size: ${LUN_SIZE}g which is 90% of the volume size"
 logMessage "${commandDescription}"
 sshpass -p $FSXN_PASSWORD ssh -o StrictHostKeyChecking=no $ONTAP_USER@$FSXN_ADMIN_IP "lun create -vserver $SVM_NAME -path /vol/$VOLUME_NAME/$LUN_NAME -size "${LUN_SIZE}g" -ostype linux -space-allocation enabled"
 checkCommand "${commandDescription}"
@@ -305,5 +305,15 @@ echo "test mount iscsci" > /$directory_path/$mount_point/testIscsi.txt
 cat /$directory_path/$mount_point/testIscsci.txt
 
 logMessage "Mounting the FSXn iSCSI volume was successful."
+
+# Add the mount entry to /etc/fstab
+commandDescription="Add the mount entry to /etc/fstab"
+logMessage "${commandDescription}"
+echo "/dev/mapper/$ALIAS /$directory_path/$mount_point ext4 defaults,_netdev 0 0" >> /etc/fstab
+checkCommand "${commandDescription}"
+addUndoCommand "sed -i '/\/dev\/mapper\/$ALIAS \/mnt\/$mount_point ext4 defaults,_netdev 0 0/d' /etc/fstab"
+# End of script
+logMessage "Script completed successfully."
+
 
 rm -f uninstall.sh
