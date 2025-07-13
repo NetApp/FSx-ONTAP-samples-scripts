@@ -4,10 +4,15 @@
 These sample scripts provide a way to launch an AWS EC2 instance with `user data` that will create an FSxN
 volume and LUN, mount it to the instance, while installing all the needed libraries and resources.
 
+## Notes
+- LUN size will be set to 90% of the volume size, the remain space is needed for the the LUN managment operation.
+  This means that usuable volume size is 90% of the requestd size.
+- The process might take several minutes to be compleetd.
+
 ## Set Up
 1. Create an AWS SecretsManager secret to hold the password of the account you plan to use to authenicate to the FSxN file system with.
 The secret should be of type `other` with value set to `Plain Text` that holds just the password.
-1. Create an AWS IAM role that has EC2 as the trusted entity and has permissions to read the secret value. Here is an example policy that will do that:
+2. Create an AWS IAM role that has EC2 as the trusted entity and has permissions to read the secret value. Here is an example policy that will do that:
     ```json
     {
       "Version": "2012-10-17",
