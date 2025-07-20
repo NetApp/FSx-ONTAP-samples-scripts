@@ -7,6 +7,8 @@ $volName="Fsx volume name, e.g. iscsiVol"
 $volSize="volume size in GB, e.g 100"
 $drive_letter="drive letter to use, e.g. d"
 
+# Default value is fsxnIscsi1, but you can change it to any other value according to yours FSx for ONTAP defintion
+$user="fsxadmin"
 # Default value is fsx, but you can change it to any other value according to yours FSx for ONTAP SVM name
 $svm_name="fsx"
 
@@ -24,15 +26,16 @@ function unInstall {
 }
 
 # default values
-# All FSxN instances are created with the user 'fsxadmin' which can't be changed
 # The script will create a log file in the Administrator home directory
 # The script will create an uninstall script in the Administrator home directory
-$user="fsxadmin"
 $currentLogPath="C:\Users\Administrator\install.log"
 $uninstallFile="C:\Users\Administrator\uninstall.ps1"
 
 $password=Get-SECSecretValue -SecretId "$secretId" -Select "SecretString"
 
+if (Test-Path $currentLogPath){ 
+   Remove-Item -Path $currentLogPath -Force 
+}
 
 if( $null -eq $password -or $password -eq "" ) {
    Write-Output "Failed to get data from Secrets Manager, exiting..." >> $currentLogPath 
@@ -49,14 +52,14 @@ $m = "NetApp.ONTAP"
 $path= "HKLM:\Software\UserData"
 $itemName = "FSXnRunStep"
 
-if(!(Get-Item $Path -ErrorAction SilentlyContinue)) {
-   New-Item $Path
-   New-ItemProperty -Path $Path -Name $itemName -Value 0 -PropertyType dword
+if(!(Get-Item $path -ErrorAction SilentlyContinue)) {
+   New-Item $path
+   New-ItemProperty -Path $path -Name $itemName -Value 0 -PropertyType dword
 }
 
 $runStep = Get-ItemProperty -Path $path -Name $itemName -ErrorAction SilentlyContinue | Select-Object -ExpandProperty $itemName
 
-if($runStep -eq 0 -or (Get-Module | Where-Object {$_.Name -ne $m})) {
+if($runStep -eq 0) {
    Write-Output "Write-Host ""Uninstall FSxn configuration""" >> $uninstallFile
    Write-Output "# FSXn uninstall:" >> $uninstallFile
    Write-Output "Installing/ Import ONTAP module" >> $currentLogPath 
@@ -192,20 +195,21 @@ if($runStep -eq 1) {
    catch {
       Write-Output "Failed create volume, due to: $_" >> $currentLogPath 
       Write-Host "Failed create volume, due to: $_" -ForegroundColor Red
-      unInstall $printUninstallConnect $ip $credntials $svm_name
+      unInstall -printUninstallConnect $printUninstallConnect -ip $ip -credntials $credntials -svm_name $svm_name
       break
    }
 
    Write-Output "Creating LUN" >> $currentLogPath 
    Write-Host "Creating LUN" -ForegroundColor Yellow
    try {
-      New-NcLun -Size $volSize'g' -OsType windows -Path /vol/$vol_name/$lun_name -Unreserved -ErrorAction stop
+      $lunSize=0.9*$volSize
+      New-NcLun -Size $lunSize'g' -OsType windows -Path /vol/$vol_name/$lun_name -Unreserved -ErrorAction stop
       @("Remove-NcLun $lun_name -force") + (Get-Content $uninstallFile) | Set-Content $uninstallFile
    }
    catch {
       Write-Output "Failed create LUN, due to: $_" >> $currentLogPath 
       Write-Host "Failed create LUN, due to: $_" -ForegroundColor Red
-      unInstall $printUninstallConnect $ip $credntials $svm_name
+      unInstall -printUninstallConnect $printUninstallConnect -ip $ip -credntials $credntials -svm_name $svm_name
       break
    }
 
@@ -218,7 +222,7 @@ if($runStep -eq 1) {
    catch {
       Write-Output "Failed create Igroup, due to: $_" >> $currentLogPath 
       Write-Host "Failed create Igroup, due to: $_" -ForegroundColor Red
-      unInstall $printUninstallConnect $ip $credntials $svm_name
+      unInstall -printUninstallConnect $printUninstallConnect -ip $ip -credntials $credntials -svm_name $svm_name
       break
    }
 
@@ -235,7 +239,7 @@ if($runStep -eq 1) {
    catch {
       Write-Output "Failed to add igroup initiator, due to: $_" >> $currentLogPath 
       Write-Host "Failed to add igroup initiator, due to: $_" -ForegroundColor Red
-      unInstall $printUninstallConnect
+      unInstall -printUninstallConnect $printUninstallConnect
       break
    }
 
@@ -248,7 +252,7 @@ if($runStep -eq 1) {
    catch {
       Write-Output "Failed mapping LUN to igroup, due to: $_" >> $currentLogPath 
       Write-Host "Failed mapping LUN to igroup, due to: $_" -ForegroundColor Red
-      unInstall $printUninstallConnect
+      unInstall -printUninstallConnect $printUninstallConnect
       break
    }
 
@@ -266,19 +270,19 @@ if($runStep -eq 1) {
    catch {
       Write-Output "Failed to add new target, due to: $_" >> $currentLogPath 
       Write-Host "Failed to add new target, due to: $_" -ForegroundColor Red
-      unInstall $printUninstallConnect
+      unInstall -printUninstallConnect$printUninstallConnect
       break
    }
 
    Write-Output "Connect to the new target" >> $currentLogPath 
    try {
-      Get-IscsiTarget | Connect-IscsiTarget -IsMultipathEnabled $true -ErrorAction stop
+      Get-IscsiTarget | Connect-IscsiTarget -IsMultipathEnabled $true -ErrorAction stop -IsPersistent $true
       @("Get-IscsiTarget | Disconnect-IscsiTarget") + (Get-Content $uninstallFile) | Set-Content $uninstallFile
    }
    catch {
       Write-Output "Failed to connect to the new target, due to: $_" >> $currentLogPath 
       Write-Host "Failed to connect to the new target, due to: $_" -ForegroundColor Red
-      unInstall $printUninstallConnect
+      unInstall -printUninstallConnect$printUninstallConnect
       break
    }
    @("Connect-NcController $ip -Credential $credntials -Vserver $svm_name -ErrorAction Stop") + (Get-Content $uninstallFile) | Set-Content $uninstallFile
@@ -338,5 +342,10 @@ else {
    Write-Output "FSx disk already created" >> $currentLogPath 
    Write-Host "FSx disk already created" -ForegroundColor Green
 }
-Remove-Item -Path $uninstallFile -Force 
+if (Test-Path $uninstallFile){ 
+   Remove-Item -Path $uninstallFile -Force 
+   Write-Output "Uninstall script removed" >> $currentLogPath
+   Write-Host "Uninstall script removed" -ForegroundColor Green
+}
 </powershell>
+<persist>true</persist>
