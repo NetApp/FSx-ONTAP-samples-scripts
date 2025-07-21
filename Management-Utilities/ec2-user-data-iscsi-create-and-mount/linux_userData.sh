@@ -303,6 +303,7 @@ chown $username:$username /$directory_path/$mount_point
 # example: echo "test mount iscsci" > /mnt/myIscsi/testIscsi.txt
 echo "test mount iscsci" > /$directory_path/$mount_point/testIscsi.txt
 cat /$directory_path/$mount_point/testIscsci.txt
+rm /$directory_path/$mount_point/testIscsi.txt
 
 logMessage "Mounting the FSXn iSCSI volume was successful."
 
