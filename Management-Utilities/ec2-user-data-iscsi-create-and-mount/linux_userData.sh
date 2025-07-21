@@ -9,7 +9,7 @@ FSXN_ADMIN_IP=[Fsx admin ip, e.g. 172.25.45.32]
 # Volume name
 VOLUME_NAME=[Fsx volume name, e.g. iscsiVol]
 # Volume size in GB
-VOLUME_SIZE=[volume size in GB, e.g 100g]
+VOLUME_SIZE=[volume size in GB, e.g 100]
 # Default value is fsx, but you can change it to any other value according to yours FSx for ONTAP SVM name
 SVM_NAME=fsx
 # Default value is fsxadmin, but you can change it to any other value according to yours FSx for ONTAP admin user name
@@ -146,15 +146,15 @@ else
     ./uninstall.sh
 fi
 
-commandDescription="Create volume for vserver: ${SVM_NAME} volume name: ${VOLUME_NAME} and size: ${VOLUME_SIZE}"
+commandDescription="Create volume for vserver: ${SVM_NAME} volume name: ${VOLUME_NAME} and size: ${VOLUME_SIZE}g"
 logMessage "${commandDescription}"
-sshpass -p $FSXN_PASSWORD ssh -o StrictHostKeyChecking=no $ONTAP_USER@$FSXN_ADMIN_IP "volume create -vserver $SVM_NAME -volume $VOLUME_NAME -aggregate aggr1 -size $VOLUME_SIZE -state online"
+sshpass -p $FSXN_PASSWORD ssh -o StrictHostKeyChecking=no $ONTAP_USER@$FSXN_ADMIN_IP "volume create -vserver ${SVM_NAME} -volume ${VOLUME_NAME} -aggregate aggr1 -size ${VOLUME_SIZE}g -state online"
 checkCommand "${commandDescription}"
 addUndoCommand "sshpass -p ${FSXN_PASSWORD} ssh -o StrictHostKeyChecking=no ${ONTAP_USER}@${FSXN_ADMIN_IP} volume delete -vserver ${SVM_NAME} -volume ${VOLUME_NAME} -force"
 
 commandDescription="Create iscsi lun for vserver: ${SVM_NAME} volume name: ${VOLUME_NAME} and lun name: ${LUN_NAME} and size: ${LUN_SIZE}g which is 90% of the volume size"
 logMessage "${commandDescription}"
-sshpass -p $FSXN_PASSWORD ssh -o StrictHostKeyChecking=no $ONTAP_USER@$FSXN_ADMIN_IP "lun create -vserver $SVM_NAME -path /vol/$VOLUME_NAME/$LUN_NAME -size "${LUN_SIZE}g" -ostype linux -space-allocation enabled"
+sshpass -p $FSXN_PASSWORD ssh -o StrictHostKeyChecking=no $ONTAP_USER@$FSXN_ADMIN_IP "lun create -vserver ${SVM_NAME} -path /vol/${VOLUME_NAME}/$LUN_NAME -size ${LUN_SIZE}g -ostype linux -space-allocation enabled"
 checkCommand "${commandDescription}"
 addUndoCommand "sshpass -p ${FSXN_PASSWORD} ssh -o StrictHostKeyChecking=no ${ONTAP_USER}@${FSXN_ADMIN_IP} lun delete -vserver ${SVM_NAME} -path /vol/${VOLUME_NAME}/${LUN_NAME} -force"
 
@@ -164,12 +164,12 @@ addUndoCommand "sshpass -p ${FSXN_PASSWORD} ssh -o StrictHostKeyChecking=no ${ON
 commandDescription="Create a mapping from the LUN you created to the igroup you created"
 logMessage "${commandDescription}"
 lun_id=0
-sshpass -p $FSXN_PASSWORD ssh -o StrictHostKeyChecking=no $ONTAP_USER@$FSXN_ADMIN_IP "lun mapping create -vserver $SVM_NAME -path /vol/$VOLUME_NAME/$LUN_NAME -igroup $groupName -lun-id 0"
+sshpass -p $FSXN_PASSWORD ssh -o StrictHostKeyChecking=no $ONTAP_USER@$FSXN_ADMIN_IP "lun mapping create -vserver ${SVM_NAME} -path /vol/${VOLUME_NAME}/${LUN_NAME} -igroup ${groupName} -lun-id 0"
 checkCommand "${commandDescription}"
 
 commandDescription="Validate the lun mapping was created"
 logMessage "${commandDescription}"
-serialHex=$(sshpass -p $FSXN_PASSWORD ssh -o StrictHostKeyChecking=no $ONTAP_USER@$FSXN_ADMIN_IP "lun show -path /vol/$VOLUME_NAME/$LUN_NAME -fields state,mapped,serial-hex" | grep $SVM_NAME | awk '{print $3}')
+serialHex=$(sshpass -p $FSXN_PASSWORD ssh -o StrictHostKeyChecking=no $ONTAP_USER@$FSXN_ADMIN_IP "lun show -path /vol/${VOLUME_NAME}/${LUN_NAME} -fields state,mapped,serial-hex" | grep $SVM_NAME | awk '{print $3}')
 if [ -n "$serialHex" ]; then
     logMessage "Lun mapping was created"
 else
@@ -180,8 +180,8 @@ fi
 # The serail hex in needed for creating readable name for the block device.
 commandDescription="Get the iscsi interface addresses for the svm ${SVM_NAME}"
 logMessage "${commandDescription}"
-iscsi1IP=$(sshpass -p $FSXN_PASSWORD ssh -o StrictHostKeyChecking=no $ONTAP_USER@$FSXN_ADMIN_IP "network interface show -vserver $SVM_NAME"  | grep -e iscsi_1 | awk '{print $3}')
-iscsi2IP=$(sshpass -p $FSXN_PASSWORD ssh -o StrictHostKeyChecking=no $ONTAP_USER@$FSXN_ADMIN_IP "network interface show -vserver $SVM_NAME"  | grep -e iscsi_2 | awk '{print $3}')
+iscsi1IP=$(sshpass -p $FSXN_PASSWORD ssh -o StrictHostKeyChecking=no $ONTAP_USER@$FSXN_ADMIN_IP "network interface show -vserver ${SVM_NAME}"  | grep -e iscsi_1 | awk '{print $3}')
+iscsi2IP=$(sshpass -p $FSXN_PASSWORD ssh -o StrictHostKeyChecking=no $ONTAP_USER@$FSXN_ADMIN_IP "network interface show -vserver ${SVM_NAME}"  | grep -e iscsi_2 | awk '{print $3}')
 
 if [ -n "$i$iscsi1IP" ] && [ -n "$iscsi2IP" ]; then
     iscsi1IP=$(echo ${iscsi1IP%/*})
@@ -197,8 +197,8 @@ commandDescription="Discover the target iSCSI nodes, iscsi IP: ${iscsi1IP}"
 logMessage "${commandDescription}"
 iscsiadm --mode discovery --op update --type sendtargets --portal $iscsi1IP
 checkCommand "${commandDescription}"
-addUndoCommand "iscsiadm --mode discovery --op delete --type sendtargets --portal $iscsi1IP"
-addUndoCommand "iscsiadm --mode discovery --op delete --type sendtargets --portal $iscsi2IP"
+addUndoCommand "iscsiadm --mode discovery --op delete --type sendtargets --portal ${iscsi1IP}"
+addUndoCommand "iscsiadm --mode discovery --op delete --type sendtargets --portal ${iscsi2IP}"
 
 logMessage "Getting target initiator"
 targetInitiator=$(iscsiadm --mode discovery --op update --type sendtargets --portal $iscsi1IP | awk '{print $2}' | head -n 1)
@@ -302,7 +302,7 @@ chown $username:$username /$directory_path/$mount_point
 # verify read write
 # example: echo "test mount iscsci" > /mnt/myIscsi/testIscsi.txt
 echo "test mount iscsci" > /$directory_path/$mount_point/testIscsi.txt
-cat /$directory_path/$mount_point/testIscsci.txt
+cat /$directory_path/$mount_point/testIscsi.txt
 rm /$directory_path/$mount_point/testIscsi.txt
 
 logMessage "Mounting the FSXn iSCSI volume was successful."
