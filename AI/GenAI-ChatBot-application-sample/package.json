@@ -9,30 +9,30 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@clerk/nextjs": "^6.12.5",
-    "@reduxjs/toolkit": "^2.6.1",
+    "@clerk/nextjs": "^6.24.0",
+    "@reduxjs/toolkit": "^2.8.2",
     "@types/react-redux": "^7.1.34",
     "aws-amplify": "5.3.11",
     "cross-env": "^7.0.3",
-    "html-react-parser": "^5.2.3",
-    "i18next": "^24.2.3",
+    "html-react-parser": "^5.2.5",
+    "i18next": "^25.3.2",
     "i18next-resources-to-backend": "^1.2.1",
     "moment": "^2.30.1",
-    "next": "15.2.4",
-    "next-i18n-router": "^5.5.1",
+    "next": "15.3.5",
+    "next-i18n-router": "^5.5.2",
     "react": "^19",
     "react-dom": "^19",
-    "react-i18next": "^15.4.1",
+    "react-i18next": "^15.6.0",
     "react-redux": "^9.2.0",
-    "sass": "^1.86.3"
+    "sass": "^1.89.2"
   },
   "devDependencies": {
     "@svgr/webpack": "^8.1.0",
-    "@types/node": "^22",
+    "@types/node": "^24",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "15.2.4",
+    "eslint-config-next": "15.3.5",
     "typescript": "^5"
   }
 }
