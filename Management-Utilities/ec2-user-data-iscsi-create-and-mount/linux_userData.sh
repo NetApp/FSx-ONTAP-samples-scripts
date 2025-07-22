@@ -24,8 +24,7 @@ LUN_NAME=${VOLUME_NAME}_$(($RANDOM%($max-$min+1)+$min))
 # The script will create a log file in the ec2-user home directory
 LOG_FILE=/home/ec2-user/install.log
 
-VOL_SIZE=$(echo $VOLUME_SIZE | sed 's/.$//')
-LUN_SIZE=$(bc -l <<< "0.90*$VOL_SIZE" )
+LUN_SIZE=$(bc -l <<< "0.90*$VOLUME_SIZE" )
 
 echo "# Uninstall file" >> uninstall.sh
 chmod u+x uninstall.sh
