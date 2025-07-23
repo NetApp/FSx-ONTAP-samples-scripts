@@ -219,7 +219,7 @@ device_name=fsxontap
 # multipaths {
 #    multipath {
 #        wwid 3600a0980${serialHex}
-#        alias ${device_name}
+#        alias ${VOLUME_NAME}
 #    }
 # }
 # Assign name to block device, this should be function that will get serial hex and device name
@@ -228,7 +228,6 @@ logMessage "${commandDescription}"
 cp /etc/multipath.conf /etc/multipath.conf_backup
 
 SERIAL_HEX=$serialHex
-#ALIAS=$device_name
 ALIAS=$VOLUME_NAME
 CONF=/etc/multipath.conf
 chmod o+rw $CONF
@@ -240,7 +239,7 @@ else
     printf "multipaths {\n\tmultipath {\n\t\twwid 3600a0980$SERIAL_HEX\n\t\talias $ALIAS\n\t}\n}" >> $CONF
 fi
 
-fileContent=$(cat $CONF)
+fileContent="$(cat $CONF)"
 logMessage "Updated /etc/multipath.conf file content: $fileContent"
 
 commandDescription="Restart the multipathd service for the changes at: /etc/multipathd.conf will take effect."
@@ -283,7 +282,7 @@ checkCommand "${commandDescription}"
 addUndoCommand "rm -rf /$directory_path/$mount_point"
 
 #check this command
-# volume_name=the frindly device name as we set it in the multipath.conf file
+# volume_name=the friendly device name as we set it in the multipath.conf file
 commandDescription="Creating the file system for the new partition: /dev/mapper/${ALIAS}"
 logMessage "${commandDescription}"
 mkfs.ext4 /dev/mapper/$ALIAS
@@ -295,13 +294,13 @@ mount -t ext4 /dev/mapper/$ALIAS /$directory_path/$mount_point
 checkCommand "${commandDescription}"
 addUndoCommand "umount /$directory_path/$mount_point"
 
-username=$(whoami)
-chown $username:$username /$directory_path/$mount_point
-
 # verify read write
 # example: echo "test mount iscsci" > /mnt/myIscsi/testIscsi.txt
+commandDescription="Verify read write on the mounted file system"
+logMessage "${commandDescription}"
 echo "test mount iscsci" > /$directory_path/$mount_point/testIscsi.txt
 cat /$directory_path/$mount_point/testIscsi.txt
+checkCommand "${commandDescription}"
 rm /$directory_path/$mount_point/testIscsi.txt
 
 logMessage "Mounting the FSXn iSCSI volume was successful."
