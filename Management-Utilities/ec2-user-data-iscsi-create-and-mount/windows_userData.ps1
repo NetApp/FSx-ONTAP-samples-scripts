@@ -7,7 +7,7 @@ $volName="Fsx volume name, e.g. iscsiVol"
 $volSize="volume size in GB, e.g 100"
 $drive_letter="drive letter to use, e.g. d"
 
-# Default value is fsxnIscsi1, but you can change it to any other value according to yours FSx for ONTAP defintion
+# Default value is fsxadmin, but you can change it to any other value according to yours FSx for ONTAP defintion
 $user="fsxadmin"
 # Default value is fsx, but you can change it to any other value according to yours FSx for ONTAP SVM name
 $svm_name="fsx"
@@ -239,7 +239,7 @@ if($runStep -eq 1) {
    catch {
       Write-Output "Failed to add igroup initiator, due to: $_" >> $currentLogPath 
       Write-Host "Failed to add igroup initiator, due to: $_" -ForegroundColor Red
-      unInstall -printUninstallConnect $printUninstallConnect
+      unInstall
       break
    }
 
@@ -252,7 +252,7 @@ if($runStep -eq 1) {
    catch {
       Write-Output "Failed mapping LUN to igroup, due to: $_" >> $currentLogPath 
       Write-Host "Failed mapping LUN to igroup, due to: $_" -ForegroundColor Red
-      unInstall -printUninstallConnect $printUninstallConnect
+      unInstall
       break
    }
 
@@ -270,7 +270,7 @@ if($runStep -eq 1) {
    catch {
       Write-Output "Failed to add new target, due to: $_" >> $currentLogPath 
       Write-Host "Failed to add new target, due to: $_" -ForegroundColor Red
-      unInstall -printUninstallConnect$printUninstallConnect
+      unInstall
       break
    }
 
@@ -282,7 +282,7 @@ if($runStep -eq 1) {
    catch {
       Write-Output "Failed to connect to the new target, due to: $_" >> $currentLogPath 
       Write-Host "Failed to connect to the new target, due to: $_" -ForegroundColor Red
-      unInstall -printUninstallConnect$printUninstallConnect
+      unInstall
       break
    }
    @("Connect-NcController $ip -Credential $credntials -Vserver $svm_name -ErrorAction Stop") + (Get-Content $uninstallFile) | Set-Content $uninstallFile
