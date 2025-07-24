@@ -16,7 +16,7 @@ usage() {
   cat >&2 <<EOF
 This script is used to associate a link to an FSx for ONTAP file system.
 
-Usage: $(basename $0) -t refresh_token -a blueXP_account_ID -c credentials_id -r aws_region -f filesystem_ID -l link_id
+Usage: $(basename $0) -t refresh_token -a blueXP_account_ID -c credentials_ID -r aws_region -f filesystem_ID -l link_ID
 
 Where: refresh_token - Is a refresh token used to obtain an access token needed
                        to run the Workload Factory APIs. You can obtain a refresh
@@ -26,8 +26,8 @@ Where: refresh_token - Is a refresh token used to obtain an access token needed
        credentials_ID - is the Workload Factory credentials ID for the AWS account. Run
                         'list_credentials' to get a list of credentials you have access to
        aws_region - is the AWS region where the FSx file systems are located
-       filesystem_id - is the AWS file system ID of the FSx file system where the volume resides
-       link_id - Is the id of the link you want to disassociate
+       filesystem_ID - is the AWS file system ID of the FSx file system where the volume resides
+       link_ID - Is the id of the link you want to disassociate
 
 Instead of passing parameters on the command line, you can set the
 following environment variables:
