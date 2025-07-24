@@ -42,7 +42,7 @@ EOF
 tmpout=$(mktemp /tmp/list_filesystems-out.XXXXXX)
 tmpout2=$(mktemp /tmp/list_filesystems-out2.XXXXXX)
 tmperr=$(mktemp /tmp/list_filesystems-err.XXXXXX)
-trap 'rm -f $tmpout $tmpout2 $tmperr' exit
+#trap 'rm -f $tmpout $tmpout2 $tmperr' exit
 
 while getopts "ht:a:" opt; do
   case $opt in
@@ -109,7 +109,7 @@ if [ -z "$token" ]; then
 fi
 
 run_curl GET "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/links/v1/links?filter=type%20eq%20%27lambda%27&include=associatedTargets,state,features" $tmpout $tmperr
-if jq -r '.items[] | "\(.name);\(.id);\(.state.status);\(.region);\(.vpcId);\(.cloudResourceId | split(":") | .[6]);\(.associatedTargets.items)"' $tmpout > $tmpout2 2> $tmperr; then
+if jq -r '.items[] | if(.cloudResourceId == null) then "\(.name);\(.id);\(.state.status);\(.region);\(.vpcId);N/A;\(.associatedTargets.items)" else "\(.name);\(.id);\(.state.status);\(.region);\(.vpcId);\(.cloudResourceId | split(":") | .[6]);\(.associatedTargets.items)" end' $tmpout > $tmpout2 2> $tmperr; then
   :
 else
   echo "Failed to parse the response from the API." >&2
@@ -121,7 +121,7 @@ fi
 nextToken=$(jq -r '.nextToken' $tmpout)
 while [ "$nextToken" != "null" ]; do
   run_curl GET "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/links/v1/links?filter=type%20eq%20%27lambda%27&include=associatedTargets,state,features" $tmpout $tmperr
-  if jq -r '.items[] | "\(.name);\(.id);\(.state.status);\(.state.status);\(.region);\(.vpcId);\(.cloudResourceId | split(":") | .[6]);\(.associatedTargets.items)"' $tmpout > $tmpout2 2> $tmperr; then
+  if jq -r '.items[] | if(.cloudResourceId == null) then "\(.name);\(.id);\(.state.status);\(.region);\(.vpcId);N/A;\(.associatedTargets.items)" else "\(.name);\(.id);\(.state.status);\(.region);\(.vpcId);\(.cloudResourceId | split(":") | .[6]);\(.associatedTargets.items)" end' $tmpout > $tmpout2 2> $tmperr; then
     :
   else
     echo "Failed to parse the response from the API." >&2
