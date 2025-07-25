@@ -1,8 +1,7 @@
 #!/bin/bash
 #
 ################################################################################
-# This script is used to list all the FSx for ONTAP file systems that the
-# user has access to.
+# This script is used to delete a Workload Factory link.
 #
 # It is dependent on the 'wf_utils' file that is included in this repo. That
 # file contains the 'get_token' function that is used to obtain a valid
@@ -15,28 +14,24 @@
 ################################################################################
 usage() {
   cat >&2 <<EOF
-This script is used to list all the FSx for ONTAP file systems that the
+This script is used to delete a Workload Factory link.
 you have access to.
 
-usage: $(basename $0) -t refresh_token -a blueXP_account_ID -c credentials_ID -r aws_region
+usage: $(basename $0) -t refresh_token -a blueXP_account_ID -l link_ID
 
 Where: refresh_token - Is a refresh token used to obtain an access token needed
                        to run the Workload Factory APIs. You can obtain a refresh
                        token by going to https://services.cloud.netapp.com/refresh-token
        blueXP_account_ID - is the BlueXP account ID. Run 'list_bluexp_accts' to get a
                            list of accounts you have access to.
-       credentials_ID - is the Workload Factory credentials ID for the AWS account.
-                        Run 'list_credentials' to get a list of Workload Factory
-                        credentials you have access to.
-       aws_region - is the AWS region where you want the list of FSx file system from.
+       link_ID - is the ID of the link to delete. You can get a list of links by
+                 running the 'list_links' script.
 
 Instead of passing parameters on the command line, you can set the
 following environment variables:
 
     export REFRESH_TOKEN=<refresh_token>
     export BLUEXP_ACCOUNT_ID=<blueXP_account_ID>
-    export CREDENTIALS_ID=<credentials_ID>
-    export AWS_REGION=<aws_region>
 EOF
   exit 1
 }
@@ -50,12 +45,11 @@ tmpout2=$(mktemp /tmp/list_filesystems-out2.XXXXXX)
 tmperr=$(mktemp /tmp/list_filesystems-err.XXXXXX)
 trap 'rm -f $tmpout $tmpout2 $tmperr' exit
 
-while getopts "ht:a:c:r:" opt; do
+while getopts "ht:a:l:" opt; do
   case $opt in
     t) REFRESH_TOKEN="$OPTARG" ;;
     a) BLUEXP_ACCOUNT_ID="$OPTARG" ;;
-    c) CREDENTIALS_ID="$OPTARG" ;;
-    r) AWS_REGION="$OPTARG" ;;
+    l) LINK_ID="$OPTARG" ;;
     *) usage ;;
   esac
 done
@@ -81,20 +75,11 @@ EOF
   missingParmeter=true
 fi
 
-if [ -z "$CREDENTIALS_ID" ]; then
+if [ -z "$LINK_ID" ]; then
   cat >&2 <<EOF
-Error: The Workload Factory credentials ID is required to run this script.
-You can get the list of credentials you have access to by running the "list_credentials" script
+Error: A link ID is required to run this script.
+You can get the list of links you have access to by running the "list_links" script
 found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples
-
-EOF
-  missingParmeter=true
-fi
-
-if [ -z "$AWS_REGION" ]; then
-  cat >&2 <<EOF
-Error: You must specify the AWS region where you want the list the FSx file systems to come from.
-
 EOF
   missingParmeter=true
 fi
@@ -134,26 +119,4 @@ if [ -z "$token" ]; then
   exit 1
 fi
 
-run_curl GET "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/fsx/v2/credentials/${CREDENTIALS_ID}/regions/${AWS_REGION}/file-systems" $tmpout $tmperr
-if jq -r '.items[] | "\(.id),\(.name),\(.region),\(.deploymentType),\(.status.status)"' $tmpout > $tmpout2 2> $tmperr; then
-  :
-else
-  echo "Error: Failed to parse the output from the API." >&2
-  cat $tmperr >&2
-  exit 1
-fi
-#
-# Check to see if there are more.
-nextToken=$(jq -r '.nextToken' $tmpout)
-while [ "$nextToken" != "null" ]; do
-  run_curl GET "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/fsx/v2/credentials/${CREDENTIALS_ID}/regions/${AWS_REGION}/file-systems"
-  if jq -r '.items[] | "\(.id),\(.name),\(.region),\(.deploymentType),\(.status.status)"' $tmpout >> $tmpout2 2> $tmperr; then
-    :
-  else
-    echo "Error: Failed to parse the output from the API." >&2
-    cat $tmperr >&2
-    exit 1
-  fi
-  nextToken=$(jq -r '.nextToken' $tmpout)
-done
-sort -t, -f -k 2,2 $tmpout2 | column -t -s, -N ID,Name,Region,Deployment_Type,Status
+run_curl DELETE "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/links/v1/links/${LINK_ID}" $tmpout $tmperr

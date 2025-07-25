@@ -17,7 +17,7 @@ usage () {
 This script is used to list all the BlueXP members that are
 associated with the BlueXP account.
 
-Usage is: $(basename $0) -t refresh_token  -u bluexp_account_uuid
+Usage is: $(basename $0) -t refresh_token -u bluexp_account_uuid
 
 Where: refresh_token    - Is a refresh token used to obtain an access token needed
                           to run the Workload Factory APIs. You can obtain a refresh
@@ -25,7 +25,6 @@ Where: refresh_token    - Is a refresh token used to obtain an access token need
        bluexp_account_uuid - The BlueXP account UUID to list the members for. You can
                              find all the accounts you have access to by running the
                              "list_bluexp_accts" script.
-       -h                - Displays this help message.
 
 Note, instead of passing parameters on the command line, you can set the
 following environment variables instead:
