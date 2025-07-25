@@ -53,7 +53,7 @@ If you do create a new script, please consider contributing it back to this repo
 | [snapshot_create](snapshot_create) | This creates a snapshot of the specified volume. |
 | [volume_clone](volume_clone) | This clones the specified volume. |
 | [volume_delete](volume_delete) | This deletes the specified volume. |
-| [wf_utils](wf_utils) | This file contains common functions used by all the scripts. It includes the `get_token()` function that retrieves an authentication token from the Workload Factory API. |
+| [wf_utils](wf_utils) | This file contains common functions used by all the scripts. It includes the `get_token()` function that retrieves an access token from the Workload Factory API. |
 
 ## Author Information
 
