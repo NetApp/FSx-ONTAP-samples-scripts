@@ -1,6 +1,6 @@
 import { ThunkDispatch } from "@reduxjs/toolkit";
 import { apiSlice, BASE_URL } from "./api.slice";
-import { History, Message } from "./api.types";
+import { History, Message, PreSignUrl } from "./api.types";
 import { setMessage } from "../slices/chat.slice";
 import { AiChatState } from "../store.types";
 import initTranslations from "@/app/i18n";
@@ -12,6 +12,11 @@ interface ChatParams {
 interface ChatSocketParams extends ChatParams {
     chatId: string,
     question: string,
+}
+
+interface PreSignUrlParams extends ChatParams {
+    chatId: string,
+    questionDate: number
 }
 
 let socket: WebSocket;
@@ -183,11 +188,21 @@ const chatApiSlice = apiSlice.injectEndpoints({
             },
             invalidatesTags: [{ type: 'history', id: 'LIST' }]
         }),
+        createPreSignUrl: builder.mutation<PreSignUrl, PreSignUrlParams>({
+            query: ({ knowledgeBaseId, chatId, questionDate }) => {
+                return {
+                    url: `knowledge-bases/${knowledgeBaseId}/v1/chats/${chatId}/questionDate/${questionDate}/preSignUrl`,
+                    method: 'POST',
+                }
+            },
+            invalidatesTags: [{ type: 'preSignUrl', id: 'LIST' }]
+        })
     })
 })
 
 export const {
     useGetMessagesQuery,
     useSendMessageMutation,
-    useDeleteChatMutation
+    useDeleteChatMutation,
+    useCreatePreSignUrlMutation
 } = chatApiSlice;

@@ -55,7 +55,9 @@
             },
             "citations": {
                 "sources": "Sources"
-            }
+            },
+            "downloadLabel": "Download results",
+            "downloadStarted": "Download request has been sent"
         }
     }
 }

@@ -35,7 +35,9 @@ export interface Notification extends NotificationProps {
 
 export interface FileData {
     fileName: string,
-    text: string
+    text: string,
+    sqlQuery?: string,
+    bucket?: string
 }
 export interface Message {
     date?: number,

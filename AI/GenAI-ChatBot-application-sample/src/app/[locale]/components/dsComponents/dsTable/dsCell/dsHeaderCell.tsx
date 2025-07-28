@@ -1,4 +1,4 @@
-import { ReactNode, RefObject, useEffect, useRef, useState } from "react";
+import { ReactElement, RefObject, useEffect, useRef, useState } from "react";
 import './dsHeaderCell.scss';
 import { DsCell, DsCellBase, DsCellProps, DsCellVariant, FreezColumn } from "./dsCell";
 import SortIcon from "@/app/[locale]/svgs/tableIcons/sort.svg";
@@ -16,7 +16,7 @@ export interface ColumnWidthType {
 export interface DsTableColumn extends DsCellBase {
     id: string,
     isSortable?: boolean,
-    formatCells?: (cell: DsCellProps, row: DsRow, rowIndex: number) => ReactNode
+    formatCells?: (cell: DsCellProps, row: DsRow, rowIndex: number) => ReactElement
     isResizable?: boolean,
     isFilterable?: boolean,
     isHidden?: boolean,
