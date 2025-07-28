@@ -48,7 +48,24 @@ EOF
 tmpout=$(mktemp /tmp/create_snapshot-out.XXXXXX)
 tmperr=$(mktemp /tmp/create_snapshot-err.XXXXXX)
 trap 'rm -f $tmpout $tmperr' exit
-
+#
+# Source the wf_utils file.
+wf_utils=$(command -v wf_utils)
+if [ -z "$wf_utils" ]; then
+  if [ ! -x "./wf_utils" ]; then
+    cat >&2 <<EOF
+Error: The 'wf_utils' script was not found in the current directory or in the command search path.
+It is required to run this script. You can download it from:
+https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples
+EOF
+    exit 1
+  else
+    wf_utils=./wf_utils
+  fi
+fi
+. "$wf_utils"
+#
+# Process command line options.
 while getopts "ht:a:c:r:f:v:s:" opt; do
   case $opt in
     t) REFRESH_TOKEN="$OPTARG" ;;
@@ -62,95 +79,24 @@ while getopts "ht:a:c:r:f:v:s:" opt; do
   esac
 done
 #
-# Check if the required parameters are set.
-missing_args=false
-if [ -z "$REFRESH_TOKEN" ]; then
-  cat >&2 <<EOF
-Error: A BlueXP refresh tokon is required to run this script.
-Can you be obtain from this web page:
-
-    https://services.cloud.netapp.com/refresh-token
-
-EOF
-  missing_args=true
-fi
-
-if [ -z "$BLUEXP_ACCOUNT_ID" ]; then
-  cat >&2 <<EOF
-Error: A BlueXP account is required to run this script.
+# Declare an array of required options and the error message to display if they are not set.
+declare -A required_options
+required_options["REFRESH_TOKEN"]='Error: A BlueXP refresh tokon is required to run this script. It can be obtain from this web page:
+  https://services.cloud.netapp.com/refresh-token\n\n'
+required_options["BLUEXP_ACCOUNT_ID"]='Error: A BlueXP account ID is required to run this script.
 You can get the list of accounts you have access to by running the "list_bluexp_accts" script
-found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples
-
-EOF
-  missing_args=true
-fi
-
-if [ -z "$CREDENTIALS_ID" ]; then
-  cat >&2 <<EOF
-Error: A Workload Factory credentials ID is required to run this script.
-found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples
-
-EOF
-  missing_args=true
-fi
-
-if [ -z "$AWS_REGION" ]; then
-  cat >&2 <<EOF
-Error: An AWS region where the volume is located is required to run this script.
-
-EOF
-  missing_args=true
-fi 
-
-if [ -z "$FILESYSTEM_ID" ]; then
-  cat >&2 <<EOF
-Error: An FSx file system ID is required to run this script.
-You can get the list of file systems you have access to by running the "list_filesystems" script
-found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples
-
-EOF
-  missing_args=true
-fi
-
-if [ -z "$VOLUME_ID" ]; then
-  cat >&2 <<EOF
-Error: An AWS Volume ID is required to run this script.
+found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
+required_options["CREDENTIALS_ID"]='Error: The ID of the credentials to delete is required.
+You can get a list of credentials by running the "list_credentials" script
+found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
+required_options["AWS_REGION"]='Error: The AWS region where the file system is located is required.\n\n'
+required_options["FILESYSTEM_ID"]='Error: The ID of the FSxN file system is required.\n\n'
+required_options["VOLUME_ID"]='Error: An AWS Volume ID is required to run this script.
 You can get the list of file systems you have access to by running the "list_volumes" script
-found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples
+found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
+required_options["SNAPSHOT_NAME"]='Error: The name you want to call the snapshot is required.\n\n'
 
-EOF
-  missing_args=true
-fi
-
-if [ -z "$SNAPSHOT_NAME" ]; then
-  cat >&2 <<EOF
-Error: A snapshot name is required to run this script.
-
-EOF
-  missing_args=true
-fi
-
-if [ "$missing_args" != "false" ];  then
-  usage
-fi
-#
-# Find the wf_utils script in the command path or current directory.
-wf_utils=$(command -v wf_utils)
-if [ -z "$wf_utils" ]; then
-  if [ -x "./wf_utils" ]; then
-    wf_utils="./wf_utils"
-  else
-    cat >&2 <<EOF
-Error: The 'wf_utils' script was not found in the current directory or in the command search path.
-It is required to run this script. You can download it from:
-https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples
-EOF
-    exit 1
-  fi
-fi
-#
-# Source the wf_utils script to get the get_token and run_curl function.
-. "$wf_utils"
+check_required_options
 #
 # Check if the required commands are available.
 for cmd in jq curl; do

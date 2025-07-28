@@ -43,86 +43,9 @@ EOF
 ################################################################################
 # Main logic starts here.
 ################################################################################
-tmpout=$(mktemp /tmp/clone_volume-out.XXXXXX)
-tmperr=$(mktemp /tmp/clone_volume-err.XXXXXX)
+tmpout=$(mktemp /tmp/link_assoicate-out.XXXXXX)
+tmperr=$(mktemp /tmp/link_assoicate-err.XXXXXX)
 trap 'rm -f $tmpout $tmperr' exit
-
-while getopts "ht:a:c:r:f:l:" opt; do
-  case $opt in
-    t) REFRESH_TOKEN="$OPTARG" ;;
-    a) BLUEXP_ACCOUNT_ID="$OPTARG" ;;
-    c) CREDENTIALS_ID="$OPTARG" ;;
-    r) AWS_REGION="$OPTARG" ;;
-    f) FILESYSTEM_ID="$OPTARG" ;;
-    l) LINK_ID="$OPTARG" ;;
-    *) usage ;;
-  esac
-done
-#
-# Check fi the required parameters are set.
-missing_args=false
-if [ -z "$REFRESH_TOKEN" ]; then
-  cat >&2 <<EOF
-Error: A BlueXP refresh tokon is required to run this script.
-Can you be obtain from this web page:
-
-    https://services.cloud.netapp.com/refresh-token
-
-EOF
-  missing_args=true
-fi
-
-if [ -z "$BLUEXP_ACCOUNT_ID" ]; then
-  cat >&2 <<EOF
-Error: A BlueXP account is required to run this script.
-You can get the list of accounts you have access to by running the "list_bluexp_accts" script
-found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples
-
-EOF
-  missing_args=true
-fi
-
-if [ -z "$CREDENTIALS_ID" ]; then
-  cat >&2 <<EOF
-Error: A Workload Factory credentials ID is required to run this script.
-You can get the list of credentials you have access to by running the "list_credentials" script
-found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples
-
-EOF
-  missing_args=true
-fi
-
-if [ -z "$AWS_REGION" ]; then
-  cat >&2 <<EOF
-Error: The AWS region where the file system is located is required to run this script.
-
-EOF
-  missing_args=true
-fi 
-
-if [ -z "$FILESYSTEM_ID" ]; then
-  cat >&2 <<EOF
-Error: An FSx file system ID is required to run this script.
-You can get the list of file systems you have access to by running the "list_filesystems" script
-found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples
-
-EOF
-  missing_args=true
-fi
-
-if [ -z "$LINK_ID" ]; then
-  cat >&2 <<EOF
-Error: The link ID is required to run this script.
-You can get the list of links associated with a file systems by running the "list_links" script
-found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples
-
-EOF
-  missing_args=true
-fi
-
-if [ "$missing_args" != "false" ];  then
-  usage
-fi
 #
 # Source the wf_utils file.
 wf_utils=$(command -v wf_utils)
@@ -139,6 +62,37 @@ EOF
   fi
 fi
 . "$wf_utils" 
+#
+# Process command line options.
+while getopts "ht:a:c:r:f:l:" opt; do
+  case $opt in
+    t) REFRESH_TOKEN="$OPTARG" ;;
+    a) BLUEXP_ACCOUNT_ID="$OPTARG" ;;
+    c) CREDENTIALS_ID="$OPTARG" ;;
+    r) AWS_REGION="$OPTARG" ;;
+    f) FILESYSTEM_ID="$OPTARG" ;;
+    l) LINK_ID="$OPTARG" ;;
+    *) usage ;;
+  esac
+done
+#
+# Declare an array of required options and the error message to display if they are not set.
+declare -A required_options
+required_options["REFRESH_TOKEN"]='Error: A BlueXP refresh tokon is required to run this script. It can be obtain from this web page:
+  https://services.cloud.netapp.com/refresh-token\n\n'
+required_options["BLUEXP_ACCOUNT_ID"]='Error: A BlueXP account ID is required to run this script.
+You can get the list of accounts you have access to by running the "list_bluexp_accts" script
+found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
+required_options["CREDENTIALS_ID"]='Error: The ID of the credentials to delete is required.
+You can get a list of credentials by running the "list_credentials" script
+found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
+required_options["AWS_REGION"]='Error: The AWS region where the file system is located is required.\n\n'
+required_options["FILESYSTEM_ID"]='Error: The ID of the FSxN file system is required.\n\n'
+required_options["LINK_ID"]='Error: The link ID is required to run this script.
+You can get the list of links associated with a file systems by running the "list_links" script
+found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
+
+check_required_options
 #
 # Check that the required commands are available.
 for cmd in jq curl; do

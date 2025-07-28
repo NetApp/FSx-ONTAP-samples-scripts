@@ -17,15 +17,15 @@ usage() {
 This script is used to delete a Workload Factory link.
 you have access to.
 
-usage: $(basename $0) -t refresh_token -a blueXP_account_ID -l link_ID
+usage: $(basename $0) -t refresh_token -a blueXP_account_ID -l delete_link_ID
 
 Where: refresh_token - Is a refresh token used to obtain an access token needed
                        to run the Workload Factory APIs. You can obtain a refresh
                        token by going to https://services.cloud.netapp.com/refresh-token
-       blueXP_account_ID - is the BlueXP account ID. Run 'list_bluexp_accts' to get a
+       blueXP_account_ID - Is the BlueXP account ID. Run 'list_bluexp_accts' to get a
                            list of accounts you have access to.
-       link_ID - is the ID of the link to delete. You can get a list of links by
-                 running the 'list_links' script.
+       delete_link_ID - Is the ID of the link to delete. You can get a list of links by
+                        running the 'list_links' script.
 
 Instead of passing parameters on the command line, you can set the
 following environment variables:
@@ -40,53 +40,9 @@ EOF
 # Main logic starts here.
 ################################################################################
 
-tmpout=$(mktemp /tmp/list_filesystems-out.XXXXXX)
-tmpout2=$(mktemp /tmp/list_filesystems-out2.XXXXXX)
-tmperr=$(mktemp /tmp/list_filesystems-err.XXXXXX)
-trap 'rm -f $tmpout $tmpout2 $tmperr' exit
-
-while getopts "ht:a:l:" opt; do
-  case $opt in
-    t) REFRESH_TOKEN="$OPTARG" ;;
-    a) BLUEXP_ACCOUNT_ID="$OPTARG" ;;
-    l) LINK_ID="$OPTARG" ;;
-    *) usage ;;
-  esac
-done
-#
-# Check that all the required parameters are set.
-missingParmeter="false"
-if [ -z "$REFRESH_TOKEN" ]; then
-  cat >&2 <<EOF
-Error: A BlueXP refresh tokon is required to run this script. It can be obtain from this web page:
-
-  https://services.cloud.netapp.com/refresh-token
-EOF
-  missingParmeter=true
-fi
-
-if [ -z "$BLUEXP_ACCOUNT_ID" ]; then
-  cat >&2 <<EOF
-Erorr: A BlueXP account ID is required to run this script.
-You can get the list of accounts you have access to by running the "list_bluexp_accts" script
-found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples
-
-EOF
-  missingParmeter=true
-fi
-
-if [ -z "$LINK_ID" ]; then
-  cat >&2 <<EOF
-Error: A link ID is required to run this script.
-You can get the list of links you have access to by running the "list_links" script
-found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples
-EOF
-  missingParmeter=true
-fi
-
-if [ "$missingParmeter" != "false" ]; then
-  usage
-fi
+tmpout=$(mktemp /tmp/link_delete-out.XXXXXX)
+tmperr=$(mktemp /tmp/link_delete-err.XXXXXX)
+trap 'rm -f $tmpout $tmperr' exit
 #
 # Source the wf_utils file.
 wf_utils=$(command -v wf_utils)
@@ -104,6 +60,29 @@ EOF
 fi
 . "$wf_utils"
 #
+# Parse the command line options.
+while getopts "ht:a:l:" opt; do
+  case $opt in
+    t) REFRESH_TOKEN="$OPTARG" ;;
+    a) BLUEXP_ACCOUNT_ID="$OPTARG" ;;
+    l) DELETE_LINK_ID="$OPTARG" ;;
+    *) usage ;;
+  esac
+done
+#
+# Declare an array of required options and the error message to display if they are not set.
+declare -A required_options
+required_options["REFRESH_TOKEN"]='Error: A BlueXP refresh tokon is required to run this script. It can be obtain from this web page:
+  https://services.cloud.netapp.com/refresh-token\n\n'
+required_options["BLUEXP_ACCOUNT_ID"]='Error: A BlueXP account ID is required to run this script.
+You can get the list of accounts you have access to by running the "list_bluexp_accts" script
+found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
+required_options["DELETE_LINK_ID"]='Error: The link ID you want to delete is required to run this script.
+You can get the list of links associated with a file systems by running the "list_links" script
+found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
+
+check_required_options
+#
 # Check that the required commands are available.
 for cmd in jq curl; do
   if ! command -v $cmd &> /dev/null; then
@@ -119,4 +98,4 @@ if [ -z "$token" ]; then
   exit 1
 fi
 
-run_curl DELETE "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/links/v1/links/${LINK_ID}" $tmpout $tmperr
+run_curl DELETE "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/links/v1/links/${DELETE_LINK_ID}" $tmpout $tmperr

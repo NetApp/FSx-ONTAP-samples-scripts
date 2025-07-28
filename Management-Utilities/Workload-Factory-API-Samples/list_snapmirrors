@@ -49,71 +49,6 @@ tmpout=$(mktemp /tmp/list_snapmirror-out.XXXXXX)
 tmpout2=$(mktemp /tmp/list_snapmirror-out2.XXXXXX)
 tmperr=$(mktemp /tmp/list_snapmirror-err.XXXXXX)
 trap 'rm -f $tmpout $tmpout2 $tmperr' exit
-
-while getopts "ht:a:c:r:f:" opt; do
-  case $opt in
-    t) REFRESH_TOKEN="$OPTARG" ;;
-    a) BLUEXP_ACCOUNT_ID="$OPTARG" ;;
-    c) CREDENTIALS_ID="$OPTARG" ;;
-    r) AWS_REGION="$OPTARG" ;;
-    f) FILESYSTEM_ID="$OPTARG" ;;
-    *) usage ;;
-  esac
-done
-
-missing_args=false
-if [ -z "$REFRESH_TOKEN" ]; then
-  cat >&2 <<EOF
-Error: A BlueXP refresh tokon is required to run this script.
-Can you be obtain from this web page:
-
-    https://services.cloud.netapp.com/refresh-token
-
-EOF
-  missing_args=true
-fi
-
-if [ -z "$BLUEXP_ACCOUNT_ID" ]; then
-  cat >&2 <<EOF
-Error: A BlueXP account is required to run this script.
-You can get the list of accounts you have access to by running the "list_bluexp_accts" script
-found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples
-
-EOF
-  missing_args=true
-fi
-
-if [ -z "$CREDENTIALS_ID" ]; then
-  cat >&2 <<EOF
-Error: A Workload Factory credentials ID is required to run this script.
-You can get the list of credentials you have access to by running the "list_credentials" script
-found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples
-
-EOF
-  missing_args=true
-fi
-
-if [ -z "$AWS_REGION" ]; then
-  cat >&2 <<EOF
-Error: You must specify the AWS region where the file system resides.
-
-EOF
-  missing_args=true
-fi 
-
-if [ -z "$FILESYSTEM_ID" ]; then
-  cat >&2 <<EOF
-Error: An FSx file system ID is required to run this script.
-You can get the list of file systems you have access to by running the "list_filesystems" script
-found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples
-
-EOF
-  missing_args=true
-fi
-
-if [ "$missing_args" != "false" ];  then
-  usage
-fi
 #
 # Source the wf_utils file.
 wf_utils=$(command -v wf_utils)
@@ -131,6 +66,33 @@ EOF
 fi
 . "$wf_utils"
 #
+# Parse the command line options.
+while getopts "ht:a:c:r:f:" opt; do
+  case $opt in
+    t) REFRESH_TOKEN="$OPTARG" ;;
+    a) BLUEXP_ACCOUNT_ID="$OPTARG" ;;
+    c) CREDENTIALS_ID="$OPTARG" ;;
+    r) AWS_REGION="$OPTARG" ;;
+    f) FILESYSTEM_ID="$OPTARG" ;;
+    *) usage ;;
+  esac
+done
+#
+# Declare an array of required options and the error message to display if they are not set.
+declare -A required_options
+required_options["REFRESH_TOKEN"]='Error: A BlueXP refresh tokon is required to run this script. It can be obtain from this web page:
+  https://services.cloud.netapp.com/refresh-token\n\n'
+required_options["BLUEXP_ACCOUNT_ID"]='Error: A BlueXP account ID is required to run this script.
+You can get the list of accounts you have access to by running the "list_bluexp_accts" script
+found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
+required_options["CREDENTIALS_ID"]='Error: The ID of the credentials to delete is required.
+You can get a list of credentials by running the "list_credentials" script
+found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
+required_options["AWS_REGION"]='Error: The AWS region where the file system is located is required.\n\n'
+required_options["FILESYSTEM_ID"]='Error: The ID of the FSxN file system is required.\n\n'
+
+check_required_options
+#
 # Check that the required commands are available.
 for cmd in jq curl; do
   if ! command -v $cmd &> /dev/null; then
@@ -145,8 +107,10 @@ if [ -z "$token" ]; then
   exit 1
 fi
 
+jq_query='.items[] | "\(.sourceCluster)::\(.sourceSvm):\(.sourceVolume) \(.destinationCluster)::\(if(.destinationSvm != null) then .destinationSvm else "Unknown" end):\(.destinationVolume) \(.id) \(if(.isHealthy != null) then .isHealthy else "Unknown" end) \(if(.mirrorState != null) then .mirrorState else "Unknown" end) \(if(.schedule != null) then .schedule else "None" end) \(if(.lagTime != null) then .lagTime else "Unknown" end)"'
+
 run_curl GET "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/fsx/v2/replication/${CREDENTIALS_ID}/regions/${AWS_REGION}/file-systems/${FILESYSTEM_ID}/relationships" $tmpout $tmperr
-if jq -r '.items[] | "\(.sourceCluster)::\(.sourceSvm):\(.sourceVolume) \(.destinationCluster)::\(if(.destinationSvm != null) then .destinationSvm else "Unknown" end):\(.destinationVolume) \(.id) \(if(.isHealthy != null) then .isHealthy else "Unknown" end) \(if(.mirrorState != null) then .mirrorState else "Unknown" end) \(if(.schedule != null) then .schedule else "None" end) \(if(.lagTime != null) then .lagTime else "Unknown" end)"' $tmpout  > $tmpout2 2> $tmperr; then
+if jq -r "$jq_query" $tmpout  > $tmpout2 2> $tmperr; then
   :
 else
   echo "Error: Failed to parse the output from the API." >&2
@@ -158,7 +122,7 @@ fi
 nextToken=$(jq -r '.nextToken' $tmpout)
 while [ "$nextToken" != "null" ]; do
   run_curl GET "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/fsx/v2/replication/${CREDENTIALS_ID}/regions/${AWS_REGION}/file-systems/${FILESYSTEM_ID}/relationships?nextToken=${nextToken}" $tmpout $tmperr
-  if jq -r '.items[] | "\(.sourceCluster)::\(.sourceSvm):\(.sourceVolume) \(.destinationCluster)::\(if(.destinationSvm != null) then .destinationSvm else "Unknown" end):\(.destinationVolume) \(.id) \(if(.isHealthy != null) then .isHealthy else "Unknown" end) \(if(.mirrorState != null) then .mirrorState else "Unknown" end) \(if(.schedule != null) then.schedule else "None" end) \(if(.lagTime != null) then .lagTime else "Unknown" end)"' $tmpout >> $tmpout2 2> $tmperr; then
+  if jq -r "$jq_query" $tmpout >> $tmpout2 2> $tmperr; then
     :
   else
     echo "Error: Failed to parse the output from the API." >&2
@@ -167,4 +131,4 @@ while [ "$nextToken" != "null" ]; do
   fi
   nextToken=$(jq -r '.nextToken' $tmpout)
 done
-sort -f $tmpout2 | column -t -N Source,Destination,SnapMirror_Relationship_ID,Healthy,State,Schedule,Lag_Time
+sort -f $tmpout2 | column -t -N "Source,Destination,SnapMirror Relationship ID,Healthy,State,Schedule,Lag Time"

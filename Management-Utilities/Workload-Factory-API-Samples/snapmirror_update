@@ -45,82 +45,6 @@ EOF
 tmpout=$(mktemp /tmp/snapmirror-update-out.XXXXXX)
 tmperr=$(mktemp /tmp/snapmirror-update-err.XXXXXX)
 trap 'rm -f $tmpout $tmperr' exit
-
-while getopts "ht:a:c:r:f:s:" opt; do
-  case $opt in
-    t) REFRESH_TOKEN="$OPTARG" ;;
-    a) BLUEXP_ACCOUNT_ID="$OPTARG" ;;
-    c) DESTINATION_CREDENTIALS_ID="$OPTARG" ;;
-    r) DESTINATION_AWS_REGION="$OPTARG" ;;
-    f) DESTINATION_FS_ID="$OPTARG" ;;
-    s) SNAPMIRROR_ID="$OPTARG" ;;
-    *) usage ;;
-  esac
-done
-
-missing_args=false
-if [ -z "$REFRESH_TOKEN" ]; then
-  cat >&2 <<EOF
-Error: A BlueXP refresh tokon is required to run this script.
-Can you be obtain from this web page:
-
-    https://services.cloud.netapp.com/refresh-token
-
-EOF
-  missing_args=true
-fi
-
-if [ -z "$BLUEXP_ACCOUNT_ID" ]; then
-  cat >&2 <<EOF
-Error: A BlueXP account is required to run this script.
-You can get the list of accounts you have access to by running the "list_bluexp_accts" script
-found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples
-
-EOF
-  missing_args=true
-fi
-
-if [ -z "$DESTINATION_CREDENTIALS_ID" ]; then
-  cat >&2 <<EOF
-Error: The destination Workload Factory credentials ID is required to run this script.
-You can get the list of credentials you have access to by running the "list_credentials" script
-found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples
-
-EOF
-  missing_args=true
-fi
-
-if [ -z "$DESTINATION_AWS_REGION" ]; then
-  cat >&2 <<EOF
-Error: An AWS region where the destination is located is required to run this script.
-
-EOF
-  missing_args=true
-fi 
-
-if [ -z "$DESTINATION_FS_ID" ]; then
-  cat >&2 <<EOF
-Error: The destination FSx file system ID is required to run this script.
-You can get the list of file systems you have access to by running the "list_filesystems" script
-found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples
-
-EOF
-  missing_args=true
-fi
-
-if [ -z "$SNAPMIRROR_ID" ]; then
-  cat >&2 <<EOF
-Error: The SnapMirror relationship ID is required to run this script.
-You can get the list of snapmirror relationships by running the "list_snapmirrors" script
-found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples
-
-EOF
-  missing_args=true
-fi
-
-if [ "$missing_args" != "false" ];  then
-  usage
-fi
 #
 # Source the wf_utils file.
 wf_utils=$(command -v wf_utils)
@@ -137,6 +61,39 @@ EOF
   fi
 fi
 . "$wf_utils"
+#
+# Process the command line options.
+while getopts "ht:a:c:r:f:s:" opt; do
+  case $opt in
+    t) REFRESH_TOKEN="$OPTARG" ;;
+    a) BLUEXP_ACCOUNT_ID="$OPTARG" ;;
+    c) DESTINATION_CREDENTIALS_ID="$OPTARG" ;;
+    r) DESTINATION_AWS_REGION="$OPTARG" ;;
+    f) DESTINATION_FS_ID="$OPTARG" ;;
+    s) SNAPMIRROR_ID="$OPTARG" ;;
+    *) usage ;;
+  esac
+done
+#
+# Declare an array of required options and the error message to display if they are not set.
+declare -A required_options
+required_options["REFRESH_TOKEN"]='Error: A BlueXP refresh tokon is required to run this script. It can be obtain from this web page:
+  https://services.cloud.netapp.com/refresh-token\n\n'
+required_options["BLUEXP_ACCOUNT_ID"]='Error: A BlueXP account ID is required to run this script.
+You can get the list of accounts you have access to by running the "list_bluexp_accts" script
+found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
+required_options["DESTINATION_CREDENTIALS_ID"]='Error: The Workload Factory credentials ID for the destination file system is required to run this script.
+You can get the list of credentials you have access to by running the "list_credentials" script
+found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
+required_options["DESTINATION_AWS_REGION"]='Error: The AWS region where the destination of the SnapMirror is located is required to run this script.\n\n'
+required_options["DESTINATION_FS_ID"]='Error: The destination FSx file system ID is required to run this script.
+You can get the list of file systems you have access to by running the "list_filesystems" script
+found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
+required_options["SNAPMIRROR_ID"]='Error: The SnapMirror relationship ID is required to run this script.
+You can get the list of snapmirror relationships by running the "list_snapmirrors" script
+found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
+
+check_required_options
 #
 # Check that the required commands are available.
 for cmd in jq curl; do

@@ -39,60 +39,9 @@ EOF
 # Main logic starts here.
 ################################################################################
 
-tmpout=$(mktemp /tmp/list_filesystems-out.XXXXXX)
-tmpout2=$(mktemp /tmp/list_filesystems-out2.XXXXXX)
-tmperr=$(mktemp /tmp/list_filesystems-err.XXXXXX)
-trap 'rm -f $tmpout $tmpout2 $tmperr' exit
-
-while getopts "ht:a:l:n:" opt; do
-  case $opt in
-    t) REFRESH_TOKEN="$OPTARG" ;;
-    a) BLUEXP_ACCOUNT_ID="$OPTARG" ;;
-    l) LAMBDA_ARN="$OPTARG" ;;
-    n) NAME="$OPTARG" ;;
-    *) usage ;;
-  esac
-done
-#
-# Check that all the required parameters are set.
-missingParmeter="false"
-if [ -z "$REFRESH_TOKEN" ]; then
-  cat >&2 <<EOF
-Error: A BlueXP refresh tokon is required to run this script. It can be obtain from this web page:
-
-  https://services.cloud.netapp.com/refresh-token
-EOF
-  missingParmeter=true
-fi
-
-if [ -z "$BLUEXP_ACCOUNT_ID" ]; then
-  cat >&2 <<EOF
-Erorr: A BlueXP account ID is required to run this script.
-You can get the list of accounts you have access to by running the "list_bluexp_accts" script
-found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples
-
-EOF
-  missingParmeter=true
-fi
-
-if [ -z "$NAME" ]; then
-  cat >&2 <<EOF
-Error: You must provide a name for the link to register.
-EOF
-  missingParmeter=true
-fi
-
-if [ -z "$LAMBDA_ARN" ]; then
-  cat >&2 <<EOF
-Error: The ARN of the AWS Lambda function is required to run this script.
-You can get the ARN from the AWS console.
-EOF
-  missingParmeter=true
-fi
-
-if [ "$missingParmeter" != "false" ]; then
-  usage
-fi
+tmpout=$(mktemp /tmp/link_register-out.XXXXXX)
+tmperr=$(mktemp /tmp/link_register-err.XXXXXX)
+trap 'rm -f $tmpout $tmperr' exit
 #
 # Source the wf_utils file.
 wf_utils=$(command -v wf_utils)
@@ -109,6 +58,30 @@ EOF
   fi
 fi
 . "$wf_utils"
+#
+# Parse the command line options.
+while getopts "ht:a:l:n:" opt; do
+  case $opt in
+    t) REFRESH_TOKEN="$OPTARG" ;;
+    a) BLUEXP_ACCOUNT_ID="$OPTARG" ;;
+    l) LAMBDA_ARN="$OPTARG" ;;
+    n) NAME="$OPTARG" ;;
+    *) usage ;;
+  esac
+done
+#
+# Declare an array of required options and the error message to display if they are not set.
+declare -A required_options
+required_options["REFRESH_TOKEN"]='Error: A BlueXP refresh tokon is required to run this script. It can be obtain from this web page:
+  https://services.cloud.netapp.com/refresh-token\n\n'
+required_options["BLUEXP_ACCOUNT_ID"]='Error: A BlueXP account ID is required to run this script.
+You can get the list of accounts you have access to by running the "list_bluexp_accts" script
+found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
+required_options["LAMBDA_ARN"]='Error: The ARN of the AWS Lambda function is required to run this script.
+You can get the ARN from the AWS console.\n\n'
+required_options["NAME"]='Error: You must provide a name for the link to register.\n\n'
+
+check_required_options
 #
 # Check that the required commands are available.
 for cmd in jq curl; do

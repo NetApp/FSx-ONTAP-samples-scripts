@@ -39,43 +39,10 @@ EOF
 # Main logic starts here.
 ################################################################################
 
-tmpout=$(mktemp /tmp/list_filesystems-out.XXXXXX)
-tmpout2=$(mktemp /tmp/list_filesystems-out2.XXXXXX)
-tmperr=$(mktemp /tmp/list_filesystems-err.XXXXXX)
-#trap 'rm -f $tmpout $tmpout2 $tmperr' exit
-
-while getopts "ht:a:" opt; do
-  case $opt in
-    t) REFRESH_TOKEN="$OPTARG" ;;
-    a) BLUEXP_ACCOUNT_ID="$OPTARG" ;;
-    *) usage ;;
-  esac
-done
-#
-# Check that all the required parameters are set.
-missingParmeter="false"
-if [ -z "$REFRESH_TOKEN" ]; then
-  cat >&2 <<EOF
-Error: A BlueXP refresh tokon is required to run this script. It can be obtain from this web page:
-
-  https://services.cloud.netapp.com/refresh-token
-EOF
-  missingParmeter=true
-fi
-
-if [ -z "$BLUEXP_ACCOUNT_ID" ]; then
-  cat >&2 <<EOF
-Erorr: A BlueXP account ID is required to run this script.
-You can get the list of accounts you have access to by running the "list_bluexp_accts" script
-found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples
-
-EOF
-  missingParmeter=true
-fi
-
-if [ "$missingParmeter" != "false" ]; then
-  usage
-fi
+tmpout=$(mktemp /tmp/list_links-out.XXXXXX)
+tmpout2=$(mktemp /tmp/list_links-out2.XXXXXX)
+tmperr=$(mktemp /tmp/list_links-err.XXXXXX)
+trap 'rm -f $tmpout $tmpout2 $tmperr' exit
 #
 # Source the wf_utils file.
 wf_utils=$(command -v wf_utils)
@@ -93,6 +60,25 @@ EOF
 fi
 . "$wf_utils"
 #
+# Process the command line options.
+while getopts "ht:a:" opt; do
+  case $opt in
+    t) REFRESH_TOKEN="$OPTARG" ;;
+    a) BLUEXP_ACCOUNT_ID="$OPTARG" ;;
+    *) usage ;;
+  esac
+done
+#
+# Declare an array of required options and the error message to display if they are not set.
+declare -A required_options
+required_options["REFRESH_TOKEN"]='Error: A BlueXP refresh tokon is required to run this script. It can be obtain from this web page:
+  https://services.cloud.netapp.com/refresh-token\n\n'
+required_options["BLUEXP_ACCOUNT_ID"]='Error: A BlueXP account ID is required to run this script.
+You can get the list of accounts you have access to by running the "list_bluexp_accts" script
+found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
+
+check_required_options
+#
 # Check that the required commands are available.
 for cmd in jq curl; do
   if ! command -v $cmd &> /dev/null; then
@@ -108,8 +94,11 @@ if [ -z "$token" ]; then
   exit 1
 fi
 
-run_curl GET "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/links/v1/links?filter=type%20eq%20%27lambda%27&include=associatedTargets,state,features" $tmpout $tmperr
-if jq -r '.items[] | if(.cloudResourceId == null) then "\(.name);\(.id);\(.state.status);\(.region);\(.vpcId);N/A;\(.associatedTargets.items)" else "\(.name);\(.id);\(.state.status);\(.region);\(.vpcId);\(.cloudResourceId | split(":") | .[6]);\(.associatedTargets.items)" end' $tmpout > $tmpout2 2> $tmperr; then
+jq_query='.items[] | if(.cloudResourceId == null) then "\(.name);\(.id);\(.state.status);\(.region);\(.vpcId);N/A;\(.associatedTargets.items)" else "\(.name);\(.id);\(.state.status);\(.region);\(.vpcId);\(.cloudResourceId | split(":") | .[6]);\(.associatedTargets.items)" end'
+
+filter=$(urlencode "type eq 'lambda'")
+run_curl GET "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/links/v1/links?filter=${filter}&include=associatedTargets,state,features" $tmpout $tmperr
+if jq -r "$jq_query" $tmpout > $tmpout2 2> $tmperr; then
   :
 else
   echo "Failed to parse the response from the API." >&2
@@ -120,8 +109,8 @@ fi
 # Check to see if there are more.
 nextToken=$(jq -r '.nextToken' $tmpout)
 while [ "$nextToken" != "null" ]; do
-  run_curl GET "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/links/v1/links?filter=type%20eq%20%27lambda%27&include=associatedTargets,state,features" $tmpout $tmperr
-  if jq -r '.items[] | if(.cloudResourceId == null) then "\(.name);\(.id);\(.state.status);\(.region);\(.vpcId);N/A;\(.associatedTargets.items)" else "\(.name);\(.id);\(.state.status);\(.region);\(.vpcId);\(.cloudResourceId | split(":") | .[6]);\(.associatedTargets.items)" end' $tmpout > $tmpout2 2> $tmperr; then
+  run_curl GET "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/links/v1/links?nextToken=${nextToken}&include=associatedTargets,state,features" $tmpout $tmperr
+  if jq -r "$jq_query" $tmpout >> $tmpout2 2> $tmperr; then
     :
   else
     echo "Failed to parse the response from the API." >&2
@@ -135,4 +124,4 @@ done
 if [ ! -z "$COLUMNS" ]; then
   colsOpt="-c $COLUMNS -W Associations"
 fi
-column -t -s\; -N Name,ID,Status,Region,VPC,Lambda_Name,Associations $colsOpt $tmpout2
+column -t -s\; -N "Name,Link ID,Status,Region,VPC,Lambda Name,Associations" $colsOpt $tmpout2

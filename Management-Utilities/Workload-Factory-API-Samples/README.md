@@ -31,6 +31,7 @@ If you do create a new script, please consider contributing it back to this repo
 | Script | Description |
 | --- | --- |
 | [credentials_delete](credentials_delete) | This deletes a Workload Factory credential. |
+| [fsxn_credentials_set](fsxn_credentials_set) | This sets the credentials for a specified FSx for ONTAP file system. |
 | [link_associate](link_associate) | This associates a Workload Factory Link with a specified FSx for ONTAP file system. |
 | [link_delete](link_delete) | This deletes a Workload Factory Link. |
 | [link_disassociate](link_disassociate) | This disassociates a Workload Factory Link with a specified FSx for ONTAP file system. |
