@@ -42,6 +42,7 @@ const Chatbot = () => {
     const { getState } = useAppStore();
     const { isSuccess: isSuccessAuth } = useAppSelector(rootSelector.auth);
     const { messages: newMessages, chatId } = useAppSelector(rootSelector.chat);
+
     const { id: knowledgebaseId } = useAppSelector(rootSelector.knowledgeBase);
 
     const { data: knowledgebase, error } = useGetKnowledgebasesQuery({ knowledgebaseId, isSelfHandleErrors: true }, { skip: skip(getState(), !isSuccessAuth || !knowledgebaseId) });
@@ -338,6 +339,7 @@ const Chatbot = () => {
                                 <div className="chatList">
                                     {promptList.filter(message => message.chatId === chatId).map((prompt, index) => {
                                         return <Prompt id={generateUniqueId(index, prompt.user)} key={index} prompt={prompt}
+                                            knowledgeBaseId={knowledgebaseId}
                                             className='prompt' chatAreaRef={chatAreaRef} />
                                     })}
                                 </div>

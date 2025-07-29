@@ -88,31 +88,41 @@
                     display: flex;
                     flex-direction: row;
                     align-items: center;
+                    gap: 16px;
+
+                    .section {
+                        overflow-wrap: initial;
+                        &:not(:last-child) {
+                            padding-right: 16px;
+                            border-right: 1px solid var(--border);
+                        }
+                    }
+
+                    .promptDateTime {
+                        color: var(--text-secondary);
+                        @include ellipsis(100%);
+                    }
+
+                    .copyToClipboard {
+                        height: 16px;
+                        path {
+                            fill: var(--text-button-primary);
+                        }
+                    }
 
                     .copyPrompt {
-                        border-left: 1px solid var(--browser-bg-stroke);
-                        padding-left: 16px;
-                        margin-left: 16px;
-
-                        &.copyToClipboardContainer {
-                            &:hover {
-
-                                .copyToClipboard,
-                                .copyLabel {
-                                    color: var(--text-button-primary-hover);
-
-                                    path {
-                                        fill: var(--text-button-primary-hover);
+                        display: flex;
+                        flex-direction: row;
+                        .copyToClipboardContainer {
+                            .childContainer {
+                                &:hover {
+                                    .copyToClipboard,
+                                    .copyLabel {
+                                        color: var(--text-button-primary-hover);
                                     }
                                 }
-                            }
-
-                            .copyToClipboard {
-                                width: 16px;
-                                height: 16px;
-
-                                path {
-                                    fill: var(--text-button-primary);
+                                .copyToClipboardText {
+                                    @include ellipsis(100%);
                                 }
                             }
                         }
@@ -121,6 +131,46 @@
                     .copyLabel {
                         color: var(--text-button-primary);
                     }
+
+                    .downloadComplexAnswerLayoutContainer {
+                        text-decoration: none;
+                        &.isDisabled {
+                            pointer-events: none;
+
+                            .downloadComplexAnswerLayout {
+                                .downloadComplexAnswerIcon {
+                                    path {
+                                        fill: var(--text-secondary);
+                                    }
+                                }
+
+                                .downloadComplexAnswerLabel {
+                                    @include ellipsis(100%);
+                                    color: var(--text-secondary);
+                                }
+                            }
+                        }
+                        
+                        .downloadComplexAnswerLayout {
+                            display: flex;
+                            flex-direction: row;
+                            align-items: center;
+                            gap: 8px;
+                            cursor: pointer;
+                            
+                            .downloadComplexAnswerIcon {
+                                width: 16px;
+                                height: 16px;
+                                path {
+                                    fill: var(--text-button-primary);
+                                }
+                            }
+                            
+                            .downloadComplexAnswerLabel{
+                                color: var(--text-button-primary);     
+                            }
+                        }
+                    }
                 }
 
                 .citationsLayout {
@@ -128,6 +178,7 @@
                     flex-direction: column;
                     gap: 8px;
                     height: 100%;
+                    margin-top: 8px;
 
                     .sourcesLayout {
                         display: flex;

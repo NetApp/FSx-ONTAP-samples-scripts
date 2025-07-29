@@ -1,4 +1,4 @@
-import { CSSProperties, forwardRef, ReactNode } from "react";
+import { CSSProperties, forwardRef, ReactElement } from "react";
 import './dsCell.scss';
 import { DsBaseComponentProps, TypographyVariant } from "../../dsTypes";
 import { ColumnWidthType } from "./dsHeaderCell";
@@ -15,7 +15,7 @@ export interface FreezColumn {
 export interface DsCellBase extends DsBaseComponentProps {
     isDisabled?: boolean,
     value?: string,
-    formatCell?: (value?: string) => ReactNode,
+    formatCell?: (value?: string) => ReactElement,
     typographyVariant?: TypographyVariant
 }
 
