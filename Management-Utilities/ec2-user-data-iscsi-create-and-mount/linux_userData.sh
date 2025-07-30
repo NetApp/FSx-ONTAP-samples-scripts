@@ -62,7 +62,7 @@ addUndoCommand() {
 
 logMessage "Get secret data"
 getSecretValue "${SECRET_NAME}" "${AWS_REGION}"
-FSXN_PASSWORD=$SECRET_VALUE
+FSXN_PASSWORD="${SECRET_VALUE}"
 logMessage "Secret data retrieved successfully"
 
 commandDescription="Install linux iSCSI packages"
