@@ -17,7 +17,7 @@ usage () {
 This script is used to list all the BlueXP members that are
 associated with the BlueXP account.
 
-Usage is: $(basename $0) -t refresh_token  -u bluexp_account_uuid
+Usage is: $(basename $0) -t refresh_token -u bluexp_account_uuid
 
 Where: refresh_token    - Is a refresh token used to obtain an access token needed
                           to run the Workload Factory APIs. You can obtain a refresh
@@ -25,7 +25,6 @@ Where: refresh_token    - Is a refresh token used to obtain an access token need
        bluexp_account_uuid - The BlueXP account UUID to list the members for. You can
                              find all the accounts you have access to by running the
                              "list_bluexp_accts" script.
-       -h                - Displays this help message.
 
 Note, instead of passing parameters on the command line, you can set the
 following environment variables instead:
@@ -36,17 +35,10 @@ EOF
   exit 1
 }
 
-tmpout=/tmp/list_accounts-out.$$
-tmperr=/tmp/list_accounts-err.$$
-trap 'rm -f $tmpout $tmperr' exit
-
-while getopts ht:u: opt; do
-  case $opt in
-    t) REFRESH_TOKEN="$OPTARG" ;;
-    u) BLUEXP_ACCOUNT_UUID="$OPTARG" ;;
-    *) usage ;;
-  esac
-done
+tmpout=/tmp/list_bluexp_members-out.$$
+tmpout2=/tmp/list_bluexp_members-out2.$$
+tmperr=/tmp/list_bluexp_members-err.$$
+trap 'rm -f $tmpout $tmpout2 $tmperr' exit
 #
 # Source the wf_utils file.
 wf_utils=$(command -v wf_utils)
@@ -64,27 +56,24 @@ EOF
 fi
 . "$wf_utils"
 #
-# Check that all the parameters are set.
-if [ -z "$REFRESH_TOKEN" ]; then
-  cat >&2 <<EOF
-Error: A BlueXP refresh tokon is required to run this script.
-Can you be obtain from this web page:
-
-    https://services.cloud.netapp.com/refresh-token
-
-EOF
-  usage
-fi
-
-if [ -z "$BLUEXP_ACCOUNT_UUID" ]; then
-  cat >&2 <<EOF
-Error: A BlueXP account UUID is required to run this script.
+# Parse the command line options.
+while getopts ht:u: opt; do
+  case $opt in
+    t) REFRESH_TOKEN="$OPTARG" ;;
+    u) BLUEXP_ACCOUNT_UUID="$OPTARG" ;;
+    *) usage ;;
+  esac
+done
+#
+# Declare an array of required options and the error message to display if they are not set.
+declare -A required_options
+required_options["REFRESH_TOKEN"]='Error: A BlueXP refresh tokon is required to run this script. It can be obtain from this web page:
+  https://services.cloud.netapp.com/refresh-token\n\n'
+required_options["BLUEXP_ACCOUNT_UUID"]='Error: A BlueXP account UUID is required to run this script.
 You can see the list of accounts you have access to by running the "list_bluexp_accts" script
-found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples
+found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
 
-EOF
-  usage
-fi
+check_required_options
 #
 # Check that the required commands are available.
 for cmd in jq curl; do
@@ -99,18 +88,36 @@ if [ -z "$token" ]; then
   echo "Error: Failed to obtain an access token. Exiting." >&2
   exit 1
 fi
-
-run_curl GET "$token" "https://api.bluexp.netapp.com/v1/management/organizations/$BLUEXP_ACCOUNT_UUID/users?limit=1000&filter=userType%20ne%20%27agent%27" $tmpout $tmperr "" "application/vnd.netapp.bxp.users.extended+json"
+filter=$(urlencode "userType ne 'agent'")
+numPerPage=1000
+run_curl GET "$token" "https://api.bluexp.netapp.com/v1/management/organizations/$BLUEXP_ACCOUNT_UUID/users?limit=${numPerPage}&filter=$filter" $tmpout $tmperr "" "application/vnd.netapp.bxp.users.extended+json"
 count=$(jq -r '.count' $tmpout 2> /dev/null)
 if [[ "$count" == 0 ]]; then
   echo "No members found for the specified BlueXP account UUID: $BLUEXP_ACCOUNT_UUID." >&2
   echo "Did you provide the UUID or the iD? This script needs the UUID." >&2
   exit 0
 fi 
+total=$numPerPage
 
-if jq -r '.items[] | .name + "," + if(.userType == "user") then .userType + "," + .id else .userType + "," + .auth0Id end + "," + .email' $tmpout > $tmperr; then
-  cat $tmperr | sort -f | column -s, -t -N Name,Type,ID,Email
+jq_query='.items[] | .name + "," + if(.userType == "user") then .userType + "," + .id else .userType + "," + .auth0Id end + "," + .email'
+if jq -r "$jq_query" $tmpout > $tmpout2 2> $tmperr; then
+  :
 else
   echo "Error: Failed to parse the response from the API." >&2
+  cat $tmperr >&2
   exit 1
 fi
+#
+# Check to see if there are more.
+while [ "$total" -lt "$count" ]; do
+  run_curl GET "$token" "https://api.bluexp.netapp.com/v1/management/organizations/$BLUEXP_ACCOUNT_UUID/users?limit=${numPerPage}&skip=${total}&filter=$filter" $tmpout $tmperr "" "application/vnd.netapp.bxp.users.extended+json"
+  if jq -r "$jq_query" $tmpout >> $tmpout2 2> $tmperr; then
+    :
+  else
+    echo "Failed to parse the output from the API."
+    cat $tmperr >&2
+    exit 1
+  fi
+  let total+=numPerPage
+done
+sort -f $tmpout2 | column -s, -t -N Name,Type,ID,Email

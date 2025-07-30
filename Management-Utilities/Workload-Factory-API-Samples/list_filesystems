@@ -49,59 +49,6 @@ tmpout=$(mktemp /tmp/list_filesystems-out.XXXXXX)
 tmpout2=$(mktemp /tmp/list_filesystems-out2.XXXXXX)
 tmperr=$(mktemp /tmp/list_filesystems-err.XXXXXX)
 trap 'rm -f $tmpout $tmpout2 $tmperr' exit
-
-while getopts "ht:a:c:r:" opt; do
-  case $opt in
-    t) REFRESH_TOKEN="$OPTARG" ;;
-    a) BLUEXP_ACCOUNT_ID="$OPTARG" ;;
-    c) CREDENTIALS_ID="$OPTARG" ;;
-    r) AWS_REGION="$OPTARG" ;;
-    *) usage ;;
-  esac
-done
-#
-# Check that all the required parameters are set.
-missingParmeter="false"
-if [ -z "$REFRESH_TOKEN" ]; then
-  cat >&2 <<EOF
-Error: A BlueXP refresh tokon is required to run this script. It can be obtain from this web page:
-
-  https://services.cloud.netapp.com/refresh-token
-EOF
-  missingParmeter=true
-fi
-
-if [ -z "$BLUEXP_ACCOUNT_ID" ]; then
-  cat >&2 <<EOF
-Erorr: A BlueXP account ID is required to run this script.
-You can get the list of accounts you have access to by running the "list_bluexp_accts" script
-found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples
-
-EOF
-  missingParmeter=true
-fi
-
-if [ -z "$CREDENTIALS_ID" ]; then
-  cat >&2 <<EOF
-Error: The Workload Factory credentials ID is required to run this script.
-You can get the list of credentials you have access to by running the "list_credentials" script
-found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples
-
-EOF
-  missingParmeter=true
-fi
-
-if [ -z "$AWS_REGION" ]; then
-  cat >&2 <<EOF
-Error: You must specify the AWS region where you want the list the FSx file systems to come from.
-
-EOF
-  missingParmeter=true
-fi
-
-if [ "$missingParmeter" != "false" ]; then
-  usage
-fi
 #
 # Source the wf_utils file.
 wf_utils=$(command -v wf_utils)
@@ -119,6 +66,31 @@ EOF
 fi
 . "$wf_utils"
 #
+# Parse the command line options.
+while getopts "ht:a:c:r:" opt; do
+  case $opt in
+    t) REFRESH_TOKEN="$OPTARG" ;;
+    a) BLUEXP_ACCOUNT_ID="$OPTARG" ;;
+    c) CREDENTIALS_ID="$OPTARG" ;;
+    r) AWS_REGION="$OPTARG" ;;
+    *) usage ;;
+  esac
+done
+#
+# Declare an array of required options and the error message to display if they are not set.
+declare -A required_options
+required_options["REFRESH_TOKEN"]='Error: A BlueXP refresh tokon is required to run this script. It can be obtain from this web page:
+  https://services.cloud.netapp.com/refresh-token\n\n'
+required_options["BLUEXP_ACCOUNT_ID"]='Error: A BlueXP account ID is required to run this script.
+You can get the list of accounts you have access to by running the "list_bluexp_accts" script
+found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
+required_options["CREDENTIALS_ID"]='Error: The ID of the credentials to delete is required.
+You can get a list of credentials by running the "list_credentials" script
+found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
+required_options["AWS_REGION"]='Error: The AWS region where the file system is located is required.\n\n'
+
+check_required_options
+#
 # Check that the required commands are available.
 for cmd in jq curl; do
   if ! command -v $cmd &> /dev/null; then
@@ -134,14 +106,27 @@ if [ -z "$token" ]; then
   exit 1
 fi
 
+jq_query='.items[] | "\(.id),\(.name),\(.region),\(.deploymentType),\(.status.status)"'
 run_curl GET "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/fsx/v2/credentials/${CREDENTIALS_ID}/regions/${AWS_REGION}/file-systems" $tmpout $tmperr
-jq -r '.items[] | "\(.id),\(.name),\(.region),\(.deploymentType),\(.status.status)"' $tmpout > $tmpout2
+if jq -r "$jq_query" $tmpout > $tmpout2 2> $tmperr; then
+  :
+else
+  echo "Error: Failed to parse the output from the API." >&2
+  cat $tmperr >&2
+  exit 1
+fi
 #
 # Check to see if there are more.
 nextToken=$(jq -r '.nextToken' $tmpout)
 while [ "$nextToken" != "null" ]; do
-  run_curl GET "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/fsx/v2/credentials/${CREDENTIALS_ID}/regions/${AWS_REGION}/file-systems"
-  jq -r '.items[] | "\(.id),\(.name),\(.region),\(.deploymentType),\(.status.status)"' $tmpout >> $tmpout2
+  run_curl GET "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/fsx/v2/credentials/${CREDENTIALS_ID}/regions/${AWS_REGION}/file-systems?nextToken=${nextToken}" $tmpout $tmperr
+  if jq -r "$jq_query" $tmpout >> $tmpout2 2> $tmperr; then
+    :
+  else
+    echo "Error: Failed to parse the output from the API." >&2
+    cat $tmperr >&2
+    exit 1
+  fi
   nextToken=$(jq -r '.nextToken' $tmpout)
 done
 sort -t, -f -k 2,2 $tmpout2 | column -t -s, -N ID,Name,Region,Deployment_Type,Status

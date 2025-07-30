@@ -1,34 +1,31 @@
 #!/bin/bash
 #
 ################################################################################
-# This script is used to reverse a SnapMirror relationship on a
-# FSx for ONTAP file system.
+# This script is used to delete a Workload Factory link.
 #
 # It is dependent on the 'wf_utils' file that is included in this repo. That
 # file contains the 'get_token' function that is used to obtain a valid
-# auth0 token.  The file needs to either be in the command search path or in
-# the current directory.
+# access token that is needed to run the Workload Factory APIs. The file needs
+# to either be in the command search path or in the current directory.
 ################################################################################
-
+#
 ################################################################################
-# This function just prints the usage of this script and exits the program.
+# This function displays the usage of this script and exits.
 ################################################################################
 usage() {
   cat >&2 <<EOF
-This script will reverse a SnapMirror relationship on a FSx for ONTAP file system.
+This script is used to delete a Workload Factory link.
+you have access to.
 
-Usage: $(basename $0) -t refresh_token -a blueXP_account_ID -c destination_credentials_id -r destination_aws_region -f destination_fs_id -s snapmirror_id
+usage: $(basename $0) -t refresh_token -a blueXP_account_ID -l delete_link_ID
 
 Where: refresh_token - Is a refresh token used to obtain an access token needed
                        to run the Workload Factory APIs. You can obtain a refresh
                        token by going to https://services.cloud.netapp.com/refresh-token
-       blueXP_account_ID - is the BlueXP account ID. Run 'list_bluexp_accts' to get a
-                           list of accounts you have access to
-       destination_credentials_ID - is the Workload Factory credentials ID for the AWS account. Run
-                                   'list_credentials' to get a list of credentials you have access to
-       destination_aws_region - is the AWS region where the destination file system is located
-       destination_fs_id - is the AWS file system ID of the file system that is the destination of the relationship relationship
-       snapmirror_id - is the SnapMirror Relationship ID of the relationship to break
+       blueXP_account_ID - Is the BlueXP account ID. Run 'list_bluexp_accts' to get a
+                           list of accounts you have access to.
+       delete_link_ID - Is the ID of the link to delete. You can get a list of links by
+                        running the 'list_links' script.
 
 Instead of passing parameters on the command line, you can set the
 following environment variables:
@@ -42,8 +39,9 @@ EOF
 ################################################################################
 # Main logic starts here.
 ################################################################################
-tmpout=$(mktemp /tmp/reverse-snapmirror-out.XXXXXX)
-tmperr=$(mktemp /tmp/reverse-snapmirror-err.XXXXXX)
+
+tmpout=$(mktemp /tmp/link_delete-out.XXXXXX)
+tmperr=$(mktemp /tmp/link_delete-err.XXXXXX)
 trap 'rm -f $tmpout $tmperr' exit
 #
 # Source the wf_utils file.
@@ -62,15 +60,12 @@ EOF
 fi
 . "$wf_utils"
 #
-# Process command line arguments.
-while getopts "ht:a:c:r:f:s:" opt; do
+# Parse the command line options.
+while getopts "ht:a:l:" opt; do
   case $opt in
     t) REFRESH_TOKEN="$OPTARG" ;;
     a) BLUEXP_ACCOUNT_ID="$OPTARG" ;;
-    c) DESTINATION_CREDENTIALS_ID="$OPTARG" ;;
-    r) DESTINATION_AWS_REGION="$OPTARG" ;;
-    f) DESTINATION_FS_ID="$OPTARG" ;;
-    s) SNAPMIRROR_ID="$OPTARG" ;;
+    l) DELETE_LINK_ID="$OPTARG" ;;
     *) usage ;;
   esac
 done
@@ -82,15 +77,8 @@ required_options["REFRESH_TOKEN"]='Error: A BlueXP refresh tokon is required to 
 required_options["BLUEXP_ACCOUNT_ID"]='Error: A BlueXP account ID is required to run this script.
 You can get the list of accounts you have access to by running the "list_bluexp_accts" script
 found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
-required_options["DESTINATION_CREDENTIALS_ID"]='Error: The Workload Factory credentials ID for the destination file system is required to run this script.
-You can get the list of credentials you have access to by running the "list_credentials" script
-found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
-required_options["DESTINATION_AWS_REGION"]='Error: The AWS region where the destination of the SnapMirror is located is required to run this script.\n\n'
-required_options["DESTINATION_FS_ID"]='Error: The destination FSx file system ID is required to run this script.
-You can get the list of file systems you have access to by running the "list_filesystems" script
-found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
-required_options["SNAPMIRROR_ID"]='Error: The SnapMirror relationship ID is required to run this script.
-You can get the list of snapmirror relationships by running the "list_snapmirrors" script
+required_options["DELETE_LINK_ID"]='Error: The link ID you want to delete is required to run this script.
+You can get the list of links associated with a file systems by running the "list_links" script
 found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
 
 check_required_options
@@ -102,11 +90,12 @@ for cmd in jq curl; do
     exit 1
   fi
 done
-
+#
+# Get the token to use for the API call.
 token=$(get_token)
 if [ -z "$token" ]; then
   echo "Error: Failed to obtain an access token. Exiting." >&2
   exit 1
 fi
 
-run_curl POST "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/fsx/v2/replication/${DESTINATION_CREDENTIALS_ID}/regions/${DESTINATION_AWS_REGION}/file-systems/${DESTINATION_FS_ID}/relationships/${SNAPMIRROR_ID}/reverse" $tmpout $tmperr '{}'
+run_curl DELETE "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/links/v1/links/${DELETE_LINK_ID}" $tmpout $tmperr

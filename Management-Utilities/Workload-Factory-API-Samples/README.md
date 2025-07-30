@@ -30,13 +30,21 @@ If you do create a new script, please consider contributing it back to this repo
 ## Available Scripts
 | Script | Description |
 | --- | --- |
+| [credentials_delete](credentials_delete) | This deletes a Workload Factory credential. |
+| [fsxn_credentials_set](fsxn_credentials_set) | This sets the credentials for a specified FSx for ONTAP file system. |
+| [link_associate](link_associate) | This associates a Workload Factory Link with a specified FSx for ONTAP file system. |
+| [link_delete](link_delete) | This deletes a Workload Factory Link. |
+| [link_disassociate](link_disassociate) | This disassociates a Workload Factory Link with a specified FSx for ONTAP file system. |
+| [link_register](link_register) | This registers a Lambda function as a Workload Factory Link. |
 | [list_bluexp_accts](list_bluexp_accts) | This list all the BlueXP accounts (a.k.a. organizations) that you have access to. |
 | [list_bluexp_members](list_bluexp_members) | This list all members of a provided BlueXP account. |
 | [list_credentials](list_credentials) | This lists all the Workload Factory credentials that you have access to. |
 | [list_filesystems](list_filesystems) | This lists all the FSx for ONTAP file systems that you have access to in the specified AWS region. |
+| [list_links](list_links) | This lists all the Workload Factory Links that you have access to. |
 | [list_snapmirrors](list_snapmirrors) | This lists all the SnapMirror relationships that are associated with the specified file system. |
 | [list_svms](list_svms) | This lists all the SVMs that are associated with the specified file system. |
 | [list_volumes](list_volumes) | This lists all the volumes that are associated with the specified file system. |
+| [show_fsxn_credentials](show_fsxn_credentials) | This shows the credentials that Workload Factory has stored for the specified FSx for ONTAP file system. |
 | [snapmirror_break](snapmirror_break) | This breaks the SnapMirror relationship for the specified relationship. |
 | [snapmirror_create](snapmirror_create) | This creates a SnapMirror relationship between the specified source volume and destination SVM. |
 | [snapmirror_delete](snapmirror_delete) | This deletes the SnapMirror relationship for the specified relationship. |
@@ -46,7 +54,7 @@ If you do create a new script, please consider contributing it back to this repo
 | [snapshot_create](snapshot_create) | This creates a snapshot of the specified volume. |
 | [volume_clone](volume_clone) | This clones the specified volume. |
 | [volume_delete](volume_delete) | This deletes the specified volume. |
-| [wf_utils](wf_utils) | This file contains common functions used by all the scripts. It includes the `get_token()` function that retrieves an authentication token from the Workload Factory API. |
+| [wf_utils](wf_utils) | This file contains common functions used by all the scripts. It includes the `get_token()` function that retrieves an access token from the Workload Factory API. |
 
 ## Author Information
 

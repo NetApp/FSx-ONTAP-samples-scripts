@@ -34,13 +34,6 @@ EOF
 tmpout=/tmp/list_accounts-out.$$
 tmperr=/tmp/list_accounts-err.$$
 trap 'rm -f $tmpout $tmperr' exit
-
-while getopts ht: opt; do
-  case $opt in
-    t) REFRESH_TOKEN="$OPTARG" ;;
-    *) usage ;;
-  esac
-done
 #
 # Source the wf_utils file.
 wf_utils=$(command -v wf_utils)
@@ -57,6 +50,21 @@ EOF
   fi
 fi
 . "$wf_utils"
+#
+# Parse the command line options.
+while getopts ht: opt; do
+  case $opt in
+    t) REFRESH_TOKEN="$OPTARG" ;;
+    *) usage ;;
+  esac
+done
+#
+# Declare an array of required options and the error message to display if they are not set.
+declare -A required_options
+required_options["REFRESH_TOKEN"]='Error: A BlueXP refresh tokon is required to run this script. It can be obtain from this web page:
+  https://services.cloud.netapp.com/refresh-token\n\n'
+
+check_required_options
 #
 # Check that the required commands are available.
 for cmd in jq curl; do
