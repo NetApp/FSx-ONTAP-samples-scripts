@@ -32,11 +32,11 @@ chmod u+x uninstall.sh
 function getSecretValue() {
     secret_name=$1
     aws_region=$2
-    SECRET_VALUE=$(aws secretsmanager get-secret-value \
+    SECRET_VALUE="$(aws secretsmanager get-secret-value \
         --secret-id "$secret_name" \
         --region "$aws_region" \
         --query 'SecretString' \
-        --output text)
+        --output text)"
     
     if [ $? -ne 0 ]; then
         echo "Failed to retrieve the secret: $secret_name, Aborting."
@@ -116,7 +116,7 @@ addUndoCommand "yum remove -y sshpass"
 # Test connection to ONTAP
 commandDescription="Testing connection to ONTAP."
 logMessage "${commandDescription}"
-sshpass -p $FSXN_PASSWORD ssh -o StrictHostKeyChecking=no $ONTAP_USER@$FSXN_ADMIN_IP "version"
+sshpass -p "$FSXN_PASSWORD" ssh -o StrictHostKeyChecking=no $ONTAP_USER@$FSXN_ADMIN_IP "version"
 checkCommand "${commandDescription}"
 
 # group name should be the hostname of the linux host
@@ -124,19 +124,19 @@ groupName=$(hostname)
 
 commandDescription="Create initiator group for vserver: ${SVM_NAME} group name: ${groupName} and intiator name: ${initiatorName}"
 
-lunGroupresult=$(sshpass -p $FSXN_PASSWORD ssh -o StrictHostKeyChecking=no $ONTAP_USER@$FSXN_ADMIN_IP "lun igroup show -vserver $SVM_NAME -igroup $groupName -initiator $initiatorName -protocol iscsi -ostype linux")
+lunGroupresult=$(sshpass -p "$FSXN_PASSWORD" ssh -o StrictHostKeyChecking=no $ONTAP_USER@$FSXN_ADMIN_IP "lun igroup show -vserver $SVM_NAME -igroup $groupName -initiator $initiatorName -protocol iscsi -ostype linux")
 if [[ "$lunGroupresult" == *"There are no entries matching your query."* ]]; then
     logMessage "Initiator ${initiatorName} with group ${groupName} does not exist, creating it."
     logMessage "${commandDescription}"
-    sshpass -p $FSXN_PASSWORD ssh -o StrictHostKeyChecking=no $ONTAP_USER@$FSXN_ADMIN_IP "lun igroup create -vserver $SVM_NAME -igroup $groupName -initiator $initiatorName -protocol iscsi -ostype linux"
+    sshpass -p "$FSXN_PASSWORD" ssh -o StrictHostKeyChecking=no $ONTAP_USER@$FSXN_ADMIN_IP "lun igroup create -vserver $SVM_NAME -igroup $groupName -initiator $initiatorName -protocol iscsi -ostype linux"
     checkCommand "${commandDescription}"
-    addUndoCommand "sshpass -p ${FSXN_PASSWORD} ssh -o StrictHostKeyChecking=no ${ONTAP_USER}@${FSXN_ADMIN_IP} lun igroup delete -vserver ${SVM_NAME} -igroup ${groupName} -force"
+    addUndoCommand "sshpass -p \"${FSXN_PASSWORD}\" ssh -o StrictHostKeyChecking=no ${ONTAP_USER}@${FSXN_ADMIN_IP} lun igroup delete -vserver ${SVM_NAME} -igroup ${groupName} -force"
 else
     logMessage "Initiator ${initiatorName} with group ${groupName} already exists, skipping creation."
 fi
 
 # confirm that igroup was created
-isInitiatorGroupCreadted=$(sshpass -p $FSXN_PASSWORD ssh -o StrictHostKeyChecking=no $ONTAP_USER@$FSXN_ADMIN_IP "lun igroup show -igroup $groupName -protocol iscsi" | grep $groupName | wc -l)
+isInitiatorGroupCreadted=$(sshpass -p "$FSXN_PASSWORD" ssh -o StrictHostKeyChecking=no $ONTAP_USER@$FSXN_ADMIN_IP "lun igroup show -igroup $groupName -protocol iscsi" | grep $groupName | wc -l)
 if [ "$isInitiatorGroupCreadted" -eq 1 ]; then
     logMessage "Initiator group ${groupName} was created"
 else
@@ -147,15 +147,15 @@ fi
 
 commandDescription="Create volume for vserver: ${SVM_NAME} volume name: ${VOLUME_NAME} and size: ${VOLUME_SIZE}g"
 logMessage "${commandDescription}"
-sshpass -p $FSXN_PASSWORD ssh -o StrictHostKeyChecking=no $ONTAP_USER@$FSXN_ADMIN_IP "volume create -vserver ${SVM_NAME} -volume ${VOLUME_NAME} -aggregate aggr1 -size ${VOLUME_SIZE}g -state online"
+sshpass -p "$FSXN_PASSWORD" ssh -o StrictHostKeyChecking=no $ONTAP_USER@$FSXN_ADMIN_IP "volume create -vserver ${SVM_NAME} -volume ${VOLUME_NAME} -aggregate aggr1 -size ${VOLUME_SIZE}g -state online"
 checkCommand "${commandDescription}"
-addUndoCommand "sshpass -p ${FSXN_PASSWORD} ssh -o StrictHostKeyChecking=no ${ONTAP_USER}@${FSXN_ADMIN_IP} volume delete -vserver ${SVM_NAME} -volume ${VOLUME_NAME} -force"
+addUndoCommand "sshpass -p \"$FSXN_PASSWORD\" ssh -o StrictHostKeyChecking=no ${ONTAP_USER}@${FSXN_ADMIN_IP} volume delete -vserver ${SVM_NAME} -volume ${VOLUME_NAME} -force"
 
 commandDescription="Create iscsi lun for vserver: ${SVM_NAME} volume name: ${VOLUME_NAME} and lun name: ${LUN_NAME} and size: ${LUN_SIZE}g which is 90% of the volume size"
 logMessage "${commandDescription}"
-sshpass -p $FSXN_PASSWORD ssh -o StrictHostKeyChecking=no $ONTAP_USER@$FSXN_ADMIN_IP "lun create -vserver ${SVM_NAME} -path /vol/${VOLUME_NAME}/$LUN_NAME -size ${LUN_SIZE}g -ostype linux -space-allocation enabled"
+sshpass -p "$FSXN_PASSWORD" ssh -o StrictHostKeyChecking=no $ONTAP_USER@$FSXN_ADMIN_IP "lun create -vserver ${SVM_NAME} -path /vol/${VOLUME_NAME}/$LUN_NAME -size ${LUN_SIZE}g -ostype linux -space-allocation enabled"
 checkCommand "${commandDescription}"
-addUndoCommand "sshpass -p ${FSXN_PASSWORD} ssh -o StrictHostKeyChecking=no ${ONTAP_USER}@${FSXN_ADMIN_IP} lun delete -vserver ${SVM_NAME} -path /vol/${VOLUME_NAME}/${LUN_NAME} -force"
+addUndoCommand "sshpass -p \"$FSXN_PASSWORD\" ssh -o StrictHostKeyChecking=no ${ONTAP_USER}@${FSXN_ADMIN_IP} lun delete -vserver ${SVM_NAME} -path /vol/${VOLUME_NAME}/${LUN_NAME} -force"
 
 # Create a mapping from the LUN you created to the igroup you created
 # The LUN ID integer is specific to the mapping, not to the LUN itself. 
@@ -163,24 +163,24 @@ addUndoCommand "sshpass -p ${FSXN_PASSWORD} ssh -o StrictHostKeyChecking=no ${ON
 commandDescription="Create a mapping from the LUN you created to the igroup you created"
 logMessage "${commandDescription}"
 lun_id=0
-sshpass -p $FSXN_PASSWORD ssh -o StrictHostKeyChecking=no $ONTAP_USER@$FSXN_ADMIN_IP "lun mapping create -vserver ${SVM_NAME} -path /vol/${VOLUME_NAME}/${LUN_NAME} -igroup ${groupName} -lun-id 0"
+sshpass -p "$FSXN_PASSWORD" ssh -o StrictHostKeyChecking=no $ONTAP_USER@$FSXN_ADMIN_IP "lun mapping create -vserver ${SVM_NAME} -path /vol/${VOLUME_NAME}/${LUN_NAME} -igroup ${groupName} -lun-id 0"
 checkCommand "${commandDescription}"
 
 commandDescription="Validate the lun mapping was created"
 logMessage "${commandDescription}"
-serialHex=$(sshpass -p $FSXN_PASSWORD ssh -o StrictHostKeyChecking=no $ONTAP_USER@$FSXN_ADMIN_IP "lun show -path /vol/${VOLUME_NAME}/${LUN_NAME} -fields state,mapped,serial-hex" | grep $SVM_NAME | awk '{print $3}')
+serialHex=$(sshpass -p "$FSXN_PASSWORD" ssh -o StrictHostKeyChecking=no $ONTAP_USER@$FSXN_ADMIN_IP "lun show -path /vol/${VOLUME_NAME}/${LUN_NAME} -fields state,mapped,serial-hex" | grep $SVM_NAME | awk '{print $3}')
 if [ -n "$serialHex" ]; then
     logMessage "Lun mapping was created"
 else
     logMessage "Lun mapping was not created, aborting"
-    addUndoCommand "sshpass -p ${FSXN_PASSWORD} ssh -o StrictHostKeyChecking=no ${ONTAP_USER}@${FSXN_ADMIN_IP} lun mapping delete -vserver ${SVM_NAME} -path /vol/${VOLUME_NAME}/${LUN_NAME} -igroup ${groupName}"    
+    addUndoCommand "sshpass -p \"${FSXN_PASSWORD}\" ssh -o StrictHostKeyChecking=no ${ONTAP_USER}@${FSXN_ADMIN_IP} lun mapping delete -vserver ${SVM_NAME} -path /vol/${VOLUME_NAME}/${LUN_NAME} -igroup ${groupName}"    
 fi
 
 # The serail hex in needed for creating readable name for the block device.
 commandDescription="Get the iscsi interface addresses for the svm ${SVM_NAME}"
 logMessage "${commandDescription}"
-iscsi1IP=$(sshpass -p $FSXN_PASSWORD ssh -o StrictHostKeyChecking=no $ONTAP_USER@$FSXN_ADMIN_IP "network interface show -vserver ${SVM_NAME}"  | grep -e iscsi_1 | awk '{print $3}')
-iscsi2IP=$(sshpass -p $FSXN_PASSWORD ssh -o StrictHostKeyChecking=no $ONTAP_USER@$FSXN_ADMIN_IP "network interface show -vserver ${SVM_NAME}"  | grep -e iscsi_2 | awk '{print $3}')
+iscsi1IP=$(sshpass -p "$FSXN_PASSWORD" ssh -o StrictHostKeyChecking=no $ONTAP_USER@$FSXN_ADMIN_IP "network interface show -vserver ${SVM_NAME}"  | grep -e iscsi_1 | awk '{print $3}')
+iscsi2IP=$(sshpass -p "$FSXN_PASSWORD" ssh -o StrictHostKeyChecking=no $ONTAP_USER@$FSXN_ADMIN_IP "network interface show -vserver ${SVM_NAME}"  | grep -e iscsi_2 | awk '{print $3}')
 
 if [ -n "$i$iscsi1IP" ] && [ -n "$iscsi2IP" ]; then
     iscsi1IP=$(echo ${iscsi1IP%/*})
@@ -213,7 +213,6 @@ addUndoCommand "iscsiadm --mode node -T $targetInitiator --logout"
 
 # verify that dm-multipath has identified and merged the iSCSI sessions
 multipath -ll 
-device_name=fsxontap
 
 # Add the following section to the /etc/multipath.conf file:
 # multipaths {
