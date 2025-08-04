@@ -76,7 +76,7 @@ logMessage "${commandDescription}"
 sed -i 's/node.session.timeo.replacement_timeout = .*/node.session.timeo.replacement_timeout = 5/' /etc/iscsi/iscsid.conf; cat /etc/iscsi/iscsid.conf | grep node.session.timeo.replacement_timeout
 cat /etc/iscsi/iscsid.conf | grep "node.session.timeo.replacement_timeout = 5"
 checkCommand "${commandDescription}"
-addUndoCommand "sed -i 's/node.session.timeo.replacement_timeout = .*/node.session.timeo.replacement_timeout = 120/' /etc/iscsi/iscsid.conf; cat /etc/iscsi/iscsid.conf | grep node.session.timeo.replacement_timeout"
+addUndoCommand "sed -i 's/node.session.timeo.replacement_timeout = .*/node.session.timeo.replacement_timeout = 120/' /etc/iscsi/iscsid.conf;"
 
 commandDescription="Start iscsi service"
 logMessage "${commandDescription}"
@@ -210,9 +210,6 @@ logMessage "Target initiator is: ${targetInitiator}"
 logMessage "Log into target initiator: ${targetInitiator}"
 iscsiadm --mode node -T $targetInitiator --login
 addUndoCommand "iscsiadm --mode node -T $targetInitiator --logout"
-
-# verify that dm-multipath has identified and merged the iSCSI sessions
-multipath -ll 
 
 # Add the following section to the /etc/multipath.conf file:
 # multipaths {
