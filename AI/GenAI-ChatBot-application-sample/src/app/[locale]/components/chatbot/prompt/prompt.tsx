@@ -1,9 +1,10 @@
-import { ReactElement, RefObject, useMemo, useState } from "react";
+import { ReactElement, RefObject, useEffect, useMemo, useRef, useState } from "react";
 import './prompt.scss';
 import UserIcon from '@/app/[locale]/svgs/chatbot/user.svg';
 import BotIcon from "@/app/[locale]/svgs/chatbot/bot.svg";
 import LocationIcon from "@/app/[locale]/svgs/location.svg";
 import ArrowDown from "@/app/[locale]/svgs/arrowDown.svg";
+import DownloadIcon from "@/app/[locale]/svgs/download.svg";
 import parse from 'html-react-parser';
 import { formatDate } from "@/utils/formatterUtils";
 import { FileData, MessageType } from "@/lib/api/api.types";
@@ -13,11 +14,13 @@ import { DsFlashingDotsLoader } from "../../dsComponents/dsFlashingDotsLoader/ds
 import { useOutsideClick } from "@/app/[locale]/hooks/useOutsideClick";
 import { _Classes } from "@/utils/cssHelper.util";
 import { DsPopover } from "../../dsComponents/dsPopover/dsPopover";
-import CopyToClipboard from "../../copyToClipboard/copyToClipboard";
+import DsCopyToClipboard from "../../copyToClipboard/copyToClipboard";
 import { DsCellProps } from "../../dsComponents/dsTable/dsCell/dsCell";
 import { DsColumn, DsRow, DsTable } from "../../dsComponents/dsTable/dsTable";
 import { useTranslation } from "react-i18next";
-
+import { useCreatePreSignUrlMutation } from "@/lib/api/chatApi.slice";
+import { useDispatch } from "react-redux";
+import { addNotification, removeNotification } from "@/lib/slices/notifications.slice";
 
 export type UserType = 'USER' | 'BOT';
 
@@ -37,15 +40,28 @@ interface PromptProps {
     id: string,
     className?: string,
     prompt: PromptItem,
+    knowledgeBaseId: string,
     chatAreaRef: RefObject<HTMLDivElement | null>
 }
 
-const Prompt = ({ className, prompt, id, chatAreaRef }: PromptProps) => {
+const Prompt = ({ className, prompt, id, chatAreaRef, knowledgeBaseId }: PromptProps) => {
     const { t } = useTranslation();
-    const { user, isWriting, message, date, filesData, type } = prompt;
+    const { chatId, user, isWriting, message, date, filesData = [], type } = prompt;
+    const dispetch = useDispatch();
+
+    const complexAnswerDownloadRef = useRef<HTMLAnchorElement>(null);
 
     const [isExpandCitations, setIsExpandCitations] = useState<boolean>(false)
     const [expandCitationsId, setExpandCitationsId] = useState<number>()
+    const [isDownloadStarted, setIsDownloadStarted] = useState<boolean>(false);
+
+    const [createPreSignUrl, { data: { url: preSignUrl } = {} }] = useCreatePreSignUrlMutation();
+
+    useEffect(() => {
+        if (preSignUrl && complexAnswerDownloadRef?.current) {
+            complexAnswerDownloadRef.current.click()
+        }
+    }, [preSignUrl]);
 
     const clickOutsideRef = useOutsideClick(() => {
         setExpandCitationsId(undefined)
@@ -101,7 +117,7 @@ const Prompt = ({ className, prompt, id, chatAreaRef }: PromptProps) => {
                                     <div className="content">
                                         <div className="titleLayout">
                                             <DsTypography variant="Semibold_13" className="nameTitle">{name}</DsTypography>
-                                            <CopyToClipboard
+                                            <DsCopyToClipboard
                                                 tooltipTitle="Response"
                                                 value={`${name}\n\n${fileData.text}\n\nPath: ${path}`}
                                                 className="citationCopyIcon" monitorPosition="off"
@@ -214,6 +230,32 @@ const Prompt = ({ className, prompt, id, chatAreaRef }: PromptProps) => {
                 <DsTypography variant="Regular_14" className={`promptMessage  ${isWriting && !!htmlString ? 'textWriting' : ''}`} >{generatePromptString()}</DsTypography>
             )
         }
+        const downlowedFinished = () => {
+            setIsDownloadStarted(false);
+        }
+
+        const clickDownload = () => {
+            dispetch(addNotification({
+                id: 'downloadingComplexAnswer',
+                type: 'info',
+                children: t('genAI.chatBot.downloadStarted'),
+                onClose: downlowedFinished
+            }));
+            setIsDownloadStarted(true);
+
+            setTimeout(() => {
+                dispetch(removeNotification(
+                    'downloadingComplexAnswer'
+                ))
+                setIsDownloadStarted(false);
+            }, 8000); // delay to show the notification
+
+            return createPreSignUrl({
+                knowledgeBaseId,
+                chatId,
+                questionDate: (date!),
+            })
+        }
 
         return (
             <div className="baloonContainer">
@@ -224,15 +266,26 @@ const Prompt = ({ className, prompt, id, chatAreaRef }: PromptProps) => {
                     </div>
                     {isWriting && <DsFlashingDotsLoader className={`${isWriting && !!htmlString ? 'flashingDots' : ''}`} />}
                     {(user === 'BOT' && !isWriting) && <div className="dateAndCopyLayout" id={id}>
-                        {!!date && <DsTypography variant="Regular_12" className="promptDateTime">{formatDate(date)}</DsTypography>}
-                        <CopyToClipboard
+                        {!!date && <DsTypography variant="Regular_12" className="promptDateTime section">{formatDate(date)}</DsTypography>}
+                        <DsCopyToClipboard
                             tooltipTitle="Response"
                             value={message ? message : ""}
                             monitorPosition="off"
                             offset={{ top: -80, left: 20 }}
-                            className="copyPrompt">
-                            <DsTypography variant="Semibold_14" className="copyLabel">{t('genAI.general.copy')}</DsTypography>
-                        </CopyToClipboard>
+                            className="copyPrompt section">
+                            <DsTypography variant="Semibold_13" className="copyLabel">{t('genAI.general.copy')}</DsTypography>
+                        </DsCopyToClipboard>
+                        {filesData && filesData.length > 0 && filesData[0]?.sqlQuery && filesData[0]?.bucket && <a href={preSignUrl}
+                            download
+                            rel="noreferrer"
+                            ref={complexAnswerDownloadRef}
+                            className={_Classes('downloadComplexAnswerLayoutContainer', { isDisabled: isDownloadStarted })}
+                        >
+                            <div className="downloadComplexAnswerLayout section" onClick={clickDownload}>
+                                <DownloadIcon className="downloadComplexAnswerIcon" />
+                                <DsTypography variant="Semibold_13" className="downloadComplexAnswerLabel">{t(`genAI.chatBot.downloadLabel`)}</DsTypography>
+                            </div>
+                        </a>}
                     </div>}
                     {(user === 'BOT' && !isWriting) && filesData && filesData.length > 0 && <div className="citationsLayout">
                         <div
@@ -249,7 +302,7 @@ const Prompt = ({ className, prompt, id, chatAreaRef }: PromptProps) => {
                 </div>
             </div>
         )
-    }, [message, user, type, isWriting, id, date, t, filesData, isExpandCitations, clickOutsideRef, expandCitationsId, chatAreaRef]);
+    }, [message, user, type, isWriting, id, date, t, filesData, isExpandCitations, clickOutsideRef, expandCitationsId, chatAreaRef, preSignUrl, isDownloadStarted]);
 
     return (
         <div className={`promptItem fadeIn ${className || ''}`}>

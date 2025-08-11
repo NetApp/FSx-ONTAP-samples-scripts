@@ -1,37 +1,49 @@
-import { ReactNode, useRef, useState } from "react";
+import { forwardRef, ReactNode, useRef, useState } from "react";
 import './copyToClipboard.scss';
-import { MonitorPosition } from "../dsComponents/dsTypes";
+import { DsBaseComponentProps, MonitorPosition, Placement } from "../dsComponents/dsTypes";
 import { PositionOffset } from "@/app/[locale]/hooks/usePosition";
 import { DsPopover } from "../dsComponents/dsPopover/dsPopover";
 import { _Classes } from "@/utils/cssHelper.util";
 import { DsTypography } from "../dsComponents/dsTypography/dsTypography";
 import CopyIcon from "@/app/[locale]/svgs/copy.svg";
-import { useTranslation } from "react-i18next";
 
-interface CopyToClipboardProps {
+
+
+export interface DsCopyToClipboardProps extends Omit<DsBaseComponentProps, 'typographyVariant'> {
     tooltipTitle?: string,
     value: string,
     className?: string,
     children?: ReactNode,
     monitorPosition?: MonitorPosition,
-    offset?: PositionOffset
+    offset?: PositionOffset,
+    onCopied?: (value: string) => void,
+    tooltipPlacement?: Placement,
+    isDisabled?: boolean
 }
 
-const CopyToClipboard = ({
+const DsCopyToClipboard = forwardRef<HTMLDivElement, DsCopyToClipboardProps>(({
     value = '',
-    tooltipTitle = '',
+    tooltipTitle = 'Copied to clipboard',
     className,
     children,
     monitorPosition = 'all',
-    offset }: CopyToClipboardProps) => {
-    const { t } = useTranslation();
-
-    const contentForCopyRef = useRef<HTMLInputElement>(null);
+    offset,
+    onClick,
+    onCopied = () => { },
+    style,
+    tooltipPlacement = 'top',
+    isDisabled = false,
+    ...rest
+}: DsCopyToClipboardProps, ref) => {
+    const contentForCopyRef = useRef<HTMLTextAreaElement>(null);
     const [visible, setVisible] = useState<boolean>(false);
 
     const handleCopy = () => {
         contentForCopyRef.current?.select();
-        navigator.clipboard.writeText(value);
+
+        // DO NOT CHANGE THIS LINE
+        // THE BLUEXP IRAME DOES NOT SUPPORT THE USE OF THE CLIPBOARD API
+        document.execCommand('copy');
 
         setVisible(true);
 
@@ -43,18 +55,25 @@ const CopyToClipboard = ({
     return (
         <DsPopover
             trigger="manual"
-            title={[tooltipTitle, t('genAI.general.copied')].filter(value => value).join(' ')}
+            title={tooltipTitle}
             status={visible ? 'open' : 'closed'}
             monitorPosition={monitorPosition}
-            placement="top"
+            placement={tooltipPlacement}
             offset={offset}
-            className="copyToClipboard">
-            <div className={_Classes('copyToClipboardContainer', className)} onClick={() => handleCopy()}>
-                <CopyIcon className={_Classes("copyToClipboard")} />
-                {children && <DsTypography variant="Regular_14">{children}</DsTypography>}
+            className={_Classes('dsCopyToClipboard', className, { isDisabled })}
+            style={style}
+            onClick={onClick}
+            ref={ref}
+            {...rest}>
+            <div className={_Classes('copyToClipboardContainer')} onClick={() => handleCopy()}>
+                <textarea className="contentForCopy" ref={contentForCopyRef} readOnly value={value} />
+                <div className="childContainer" onClick={() => onCopied(value)}>
+                    <CopyIcon className={_Classes("copyToClipboard")} />
+                    {children && <DsTypography className="copyToClipboardText" isDisabled={isDisabled} variant="Regular_14">{children}</DsTypography>}
+                </div>
             </div>
         </DsPopover>
     )
-}
+})
 
-export default CopyToClipboard;
+export default DsCopyToClipboard;

@@ -85,6 +85,7 @@ get_token() {
 #  4. Output file to write the response to
 #  5. Error output file to write errors to
 #  6. Data to send (for POST requests)
+#  7. Accept header (optional, defaults to "application/json, text/plain, */*")
 ################################################################################
 run_curl () {
 
@@ -170,4 +171,25 @@ urlencode() {
     fi
   done
   echo ""
+}
+
+################################################################################
+# This function confirms that the user has provided all the required parameters.
+# It dependson the "required_options" associative array being defined in the
+# script that sources this file. The array should contain key-value pairs
+# where the key is the name of the variable to check and the value is the
+# error message to display if the variable is not set. The message is displayed
+# with printf so it can include formatting characters like \n.
+################################################################################
+check_required_options () {
+  missingParmeter="false"
+  for key in "${!required_options[@]}"; do
+    if [ -z "${!key}" ]; then
+      printf "${required_options[$key]}" >&2
+      missingParmeter="true"
+    fi
+  done
+  if [ "$missingParmeter" != "false" ]; then
+    usage
+  fi
 }

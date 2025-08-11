@@ -9,7 +9,7 @@ import { copyToClipboard } from '@/utils/domUtils';
 import { useAppSelector } from '@/lib/hooks';
 import rootSelector from '@/lib/selectors/root.selector';
 import { useTranslation } from 'react-i18next';
-import CopyToClipboard from '../../copyToClipboard/copyToClipboard';
+import DsCopyToClipboard from '../../copyToClipboard/copyToClipboard';
 
 interface InfoPanelProps {
     isExpanded: boolean,
@@ -28,7 +28,7 @@ const InfoPanel = ({ isExpanded, toggleExpanded }: InfoPanelProps) => {
                     <DsTypography variant='Semibold_14'>{t('genAI.general.id')}</DsTypography>
                     <div className={styles.idCopy}>
                         <DsTypography variant='Regular_14'>{knowledgebaseId}</DsTypography>
-                        <CopyToClipboard value={knowledgebaseId} />
+                        <DsCopyToClipboard value={knowledgebaseId} />
                     </div>
                 </div>
                 <div className={styles.item}>

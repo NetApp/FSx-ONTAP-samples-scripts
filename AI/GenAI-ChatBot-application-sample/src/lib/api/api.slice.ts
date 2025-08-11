@@ -78,7 +78,10 @@ export const apiSlice = createApi({
     'deployment',
     'knowledgeBase',
     'shares',
-    'models'
+    'models',
+    'buckets',
+    'preSignUrl',
+    'complexAnswer'
   ],
   endpoints: (builder) => ({
   })

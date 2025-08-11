@@ -112,7 +112,9 @@ export interface History {
 
 export interface FileData {
     fileName: string,
-    text: string
+    text: string,
+    sqlQuery?: string,
+    bucket?: string
 }
 
 export interface Message {
@@ -123,4 +125,8 @@ export interface Message {
     filesData?: FileData[],
     stopReason: null | string,
     type: MessageType
+}
+
+export interface PreSignUrl {
+    url: string
 }
