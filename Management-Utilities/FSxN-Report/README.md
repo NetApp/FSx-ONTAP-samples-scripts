@@ -2,7 +2,7 @@
 
 ## Introduction
 This sample is used to generate a report of all the FSx for ONTAP file systems in your AWS account.
-It provide information about the file systems, volumes and storage virtual machines (SVMs).
+It provides information about the file systems, volumes and storage virtual machines (SVMs).
 It can generate either an HTML or Textual based report. The HTML report is suitable for being
 sent in an email message (i.e. using "in-line styles"). And finally, it can either
 output the report to "standard out" or be send to an email address using AWS Simple Email Service (SES).
@@ -49,7 +49,7 @@ and click on `Test`. You'll also see any error messages if something goes wrong.
 
 If you want to create your own role, here are the minimum permissions required: 
 |Permission | Minimal Resources | Notes |
-|---|---|---|
+|---|:---:|---|
 |`fsx:describe_file_systems`| `*` | Needed to list all FSx for ONTAP file systems in the account. |
 |`fsx:describe_volumes`| `*` | Needed to list all volumes in the account. |
 |`fsx:describe_stroage_virtual_machines`| `*` | Needed to list all volumes and SVMs in the account. |
