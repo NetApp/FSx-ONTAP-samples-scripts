@@ -59,7 +59,7 @@ def getFSxNInfo(region):
             fsxns.append(fsxn)
     nextToken = fsxnData.get('NextToken')
     while nextToken:
-        fsxnData = fsxClient.describe_file_systems(NextToken=next)
+        fsxnData = fsxClient.describe_file_systems(NextToken=nextToken)
         for fsxn in fsxnData['FileSystems']:
             if fsxn['FileSystemType'] == 'ONTAP':
                 fsxns.append(fsxn)
