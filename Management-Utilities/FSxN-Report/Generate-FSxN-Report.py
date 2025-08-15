@@ -24,9 +24,7 @@
 
 import boto3
 from botocore.config import Config
-import json
 from datetime import datetime, timedelta
-import argparse
 import os
 
 ################################################################################
@@ -59,13 +57,13 @@ def getFSxNInfo(region):
     for fsxn in fsxnData['FileSystems']:
         if fsxn['FileSystemType'] == 'ONTAP':
             fsxns.append(fsxn)
-    next = fsxnData.get('NextToken')
-    while next:
+    nextToken = fsxnData.get('NextToken')
+    while nextToken:
         fsxnData = fsxClient.describe_file_systems(NextToken=next)
         for fsxn in fsxnData['FileSystems']:
             if fsxn['FileSystemType'] == 'ONTAP':
                 fsxns.append(fsxn)
-        next = fsxnData.get('NextToken')
+        nextToken = fsxnData.get('NextToken')
     #
     # Retrieve all the FSxN usage information
     fsxnUsageInfo = {}
@@ -360,7 +358,7 @@ def generateTextReport(region):
 def emailReport(report, fromAddress, toAddress):
 
     sesClient = boto3.client('ses')
-    response = sesClient.send_email(
+    sesClient.send_email(
                     Destination={
                         'ToAddresses': [
                             toAddress
@@ -482,7 +480,7 @@ def lambda_handler(event, context):
                 raise Exception(f"Report for region {region} exceeds maximum email size of {maxEmailSize} characters.")
 
             if len(report) + len(currentReport) > maxEmailSize:
-                emailReport(report, fromAddress, toAddress)
+                emailReport(report, config['FROM_ADDRESS'], config['TO_ADDRESS'])
                 report = currentReport
                 currentReport = ""
             else:
