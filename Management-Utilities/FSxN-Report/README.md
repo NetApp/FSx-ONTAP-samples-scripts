@@ -16,7 +16,7 @@ following environment variables can be set to control the behavior of the progra
 - `REPORT_TYPE`: The type of report to generate. Can be either `html` or `text`. Defaults to `html`.
 
 If you want the program to run on a regular basis, and send you an email with the report, it is
-recommedned to deploy it as a Lambda function with an EventBridge rule to trigger it on a schedule (e.g. daily, weekly, montly, etc.).
+recommended to deploy it as a Lambda function with an EventBridge rule to trigger it on a schedule (e.g. daily, weekly, monthly, etc.).
 
 ## Deployment
 To ease with the deployment, a CloudFormation template has been provided. It will:
@@ -52,7 +52,7 @@ If you want to create your own role, here are the minimum permissions required:
 |---|:---:|---|
 |`fsx:describe_file_systems`| `*` | Needed to list all FSx for ONTAP file systems in the account. |
 |`fsx:describe_volumes`| `*` | Needed to list all volumes in the account. |
-|`fsx:describe_stroage_virtual_machines`| `*` | Needed to list all volumes and SVMs in the account. |
+|`fsx:describe_storage_virtual_machines`| `*` | Needed to list all volumes and SVMs in the account. |
 |`cw:get_metric_data`| `*` | Needed to get the metrics for the file systems. |
 |`ec2:describe_region`| `*` | Needed to list all AWS regions. |
 |`ses:send_email`| `arn:aws:ses:${AWS_REGION}:${AWS_ACCOUNT}:identity/${EMAIL_ADDRESS}`<br>`arn:aws:ses:${AWS_REGION}:${AWS_ACCOUNT}:configuration-set/${EMAIL_ADDRESS}`| Recommend just using `*` for the email addresses, otherwise you'll need a resource line for each `To` and `From` email address. |

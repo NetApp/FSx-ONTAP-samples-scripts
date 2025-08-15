@@ -249,7 +249,7 @@ def generateHTMLReport(region):
         htmlBody += f"<b>Name:</b> {name}<br>\n"
         htmlBody += f"<b>Region:</b> {region}<br>\n"
         htmlBody += f"<b>Availability:</b> {ontapConfig['DeploymentType']}<br>\n"
-        htmlBody += f"<b>Provised Performance Tier Storage:</b> {fsxn['StorageCapacity']}GB<br>\n"
+        htmlBody += f"<b>Provisioned Performance Tier Storage:</b> {fsxn['StorageCapacity']}GB<br>\n"
         htmlBody += f"<b>Used Performance Tier Storage:</b> {fileSystemUsedCapacity}<br>\n"
         htmlBody += f"<b>Percent Used Performance Tier:</b> {percentUsed}<br>\n"
         htmlBody += "</td></tr>\n"
@@ -277,7 +277,7 @@ def generateHTMLReport(region):
                 htmlBody += f'<td align="right" style="{tableCellStyle}">{ontapConfig["VolumeStyle"]}</td><td align="right" style="{tableCellStyle}">{securityStyle}</td>\n'
                 htmlBody += f'<td align="right" style="{tableCellStyle}">{int(volumeCapacity/1024/1024)}</td><td align="right" style="{tableCellStyle}">{volumePercentUsed}</td>\n'
                 htmlBody += f'<td align="right" style="{tableCellStyle}">{int(volumeFilesCapacity)}</td><td align="right" style="{tableCellStyle}">{volumeFilesPercentUsed}</td></tr>\n'
-        htmlBody += '<tr><td style="{tableCellStyle}"> </td></tr>\n'
+        htmlBody += f'<tr><td style="{tableCellStyle}"> </td></tr>\n'
     htmlBody += "</table>\n"
     htmlBody += "<br><br>\n"
 
@@ -314,7 +314,7 @@ def generateTextReport(region):
             fileSystemUsedCapacity = 'N/A'
             percentUsed = 'N/A'
         textReport += f"{indent}Used Capacity: {fileSystemUsedCapacity}\n"
-        textReport += f"{indent}Percent Capacity Used: {percentUsed}%\n"
+        textReport += f"{indent}Percent Capacity Used: {percentUsed}\n"
 
         textReport += f"{indent}Storage Virtual Machines:\n"
         for svm in svms:
@@ -355,7 +355,7 @@ def generateTextReport(region):
 ################################################################################
 # This function is used to email the report.
 ################################################################################
-def emailReport(report, fromAddress, toAddress):
+def emailReport(report, fromAddress, toAddress, reportType):
 
     sesClient = boto3.client('ses')
     sesClient.send_email(
@@ -366,7 +366,7 @@ def emailReport(report, fromAddress, toAddress):
                     },
                     Message= {
                         'Body': {
-                            'Html': {
+                            reportType: {
                                 'Data': report,
                             }
                         },
@@ -414,9 +414,19 @@ def getConfig():
     # set REPORT_TYPE appropriately.
     if config['TEXT_REPORT'] != None and config['REPORT_TYPE'] is None:
         if config['TEXT_REPORT'].lower() == 'true':
-            config['REPORT_TYPE'] = "text"
+            config['REPORT_TYPE'] = "Text"
         else:
-            config['REPORT_TYPE'] = "html"
+            config['REPORT_TYPE'] = "Html"
+    #
+    # Since the API is case sensitive, make sure the REPORT_TYPE is set to
+    # either 'Text' or 'Html'.
+    if config['REPORT_TYPE'] is not None:
+        if config['REPORT_TYPE'].lower() == 'text':
+            config['REPORT_TYPE'] = 'Text'
+        else:
+            config['REPORT_TYPE'] = 'Html'
+    else:
+        config['REPORT_TYPE'] = 'Html'
 
 ################################################################################
 ################################################################################
@@ -459,7 +469,7 @@ def lambda_handler(event, context):
     report = ""
     #
     # For an HTML report, just want the HTML start and end data once for all the regions.
-    if config['REPORT_TYPE'] != "text":
+    if config['REPORT_TYPE'].lower() != "text":
         currentReport = "<!DOCTYPE html>\n<html>\n"
         currentReport += "<head>\n<title>FSxN Report</title>\n"
         currentReport += "</head>\n<body>\n"
@@ -471,7 +481,7 @@ def lambda_handler(event, context):
             getFSxNInfo(region)
             #
             # Generate the report.
-            if config['REPORT_TYPE'] == 'text':
+            if config['REPORT_TYPE'].lower() == 'text':
                 currentReport = generateTextReport(region)
             else:  # Default to an HTML report.
                 currentReport += generateHTMLReport(region)
@@ -480,21 +490,21 @@ def lambda_handler(event, context):
                 raise Exception(f"Report for region {region} exceeds maximum email size of {maxEmailSize} characters.")
 
             if len(report) + len(currentReport) > maxEmailSize:
-                emailReport(report, config['FROM_ADDRESS'], config['TO_ADDRESS'])
+                emailReport(report, config['FROM_ADDRESS'], config['TO_ADDRESS'], config['REPORT_TYPE'])
                 report = currentReport
                 currentReport = ""
             else:
                 report += currentReport
                 currentReport = ""
 
-    if config['REPORT_TYPE'] != 'text':
+    if config['REPORT_TYPE'].lower() != 'text':
         report += "</body></html>\n"
     #
     # Email the report.
     if config['TO_ADDRESS'] is None or config['FROM_ADDRESS'] is None:
         print(report)
     else:
-        emailReport(report, config['FROM_ADDRESS'], config['TO_ADDRESS'])
+        emailReport(report, config['FROM_ADDRESS'], config['TO_ADDRESS'], config['REPORT_TYPE'])
 
 ################################################################################
 ################################################################################
