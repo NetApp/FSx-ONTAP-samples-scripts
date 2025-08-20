@@ -9,7 +9,7 @@ output the report to "standard out" or be send to an email address using AWS Sim
 
 It is a Python program that can be run either standalone or as a Lambda function. The
 following environment variables can be set to control the behavior of the program:
-- `TO_ADDRESS`: The email address to send the report to. This must be a verified email address in AWS SES.
+- `TO_ADDRESS`: The email address(es) to send the report to. Can be a CSV list. Each address must be a verified email address in AWS SES. If one is not, all will fail.
 - `FROM_ADDRESS`: The email address to send the report from. This must also be a verified email address in AWS SES.
 - `ALL_REGIONS`: If set to `true`, the program will scan all AWS regions for FSx for ONTAP file systems. If not set, it will only scan the regions specified in the `REGIONS` variable.
 - `REGIONS`: A comma-separated list of AWS regions to scan for FSx for ONTAP file systems.
