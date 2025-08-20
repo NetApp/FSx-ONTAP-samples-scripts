@@ -73,7 +73,7 @@ def getFSxNInfo(region):
         fsxnId = fsxn['FileSystemId']
         count += 1
         metrics.append({
-                    "Id": f"{fsxnId.replace('fs-', 'm_')}",
+                    "Id": f"{fsxnId.replace('fs-', 'm_')}_StorageUsed",
                     "MetricStat": {
                         "Metric": {
                             "Namespace": "AWS/FSx",
@@ -97,15 +97,31 @@ def getFSxNInfo(region):
                     },
                     "ReturnData": True
                  })
-        if count > 100:
+
+        metrics.append({
+                    "Id": f"{fsxnId.replace('fs-', 'm_')}_StorageSavings",
+                    "MetricStat": {
+                        "Metric": {
+                            "Namespace": "AWS/FSx",
+                            "MetricName": "StorageEfficiencySavings",
+                            "Dimensions": [{
+                                "Name": "FileSystemId",
+                                "Value": fsxnId
+                            }]
+                        },
+                        "Period": 300,
+                        "Stat": "Average"
+                    },
+                    "ReturnData": True
+                 })
+        #
+        # The maximum is 500 metrics per request. This loop has 2 metric per iteration.
+        if count > 200:
             response = cwClient.get_metric_data(MetricDataQueries=metrics,
                 StartTime=datetime.now() - timedelta(minutes=10),
                 EndTime=datetime.now())
             for metric in response['MetricDataResults']:
-                fsxnId = metric['Id'].replace('m_', 'fs-')
-                fsxnUsageInfo[fsxnId] = {
-                        'UsedCapacity': metric['Values'][0] if len(metric['Values']) > 0 else 'N/A',
-                        'StorageCapacity': fsxn['StorageCapacity']}
+                fsxnUsageInfo[metric['Id']] = metric
             count = 0
             metrics = []
 
@@ -114,10 +130,8 @@ def getFSxNInfo(region):
             StartTime=datetime.now() - timedelta(minutes=10),
             EndTime=datetime.now())
         for metric in response['MetricDataResults']:
-            fsxnId = metric['Id'].replace('m_', 'fs-')
-            fsxnUsageInfo[fsxnId] = {
-                    'UsedCapacity': metric['Values'][0] if len(metric['Values']) > 0 else 'N/A',
-                    'StorageCapacity': fsxn['StorageCapacity']}
+            fsxnUsageInfo[metric['Id']] = metric
+
     #
     # Retrieve all the SVMs
     svmsData = fsxClient.describe_storage_virtual_machines()
@@ -206,7 +220,8 @@ def getFSxNInfo(region):
                     },
                     "ReturnData": True
                 })
-
+        #
+        # The maximum is 500 metrics per request. This loop has 6 metric per iteration.
         if count > 70:
             response = cwClient.get_metric_data(MetricDataQueries=metrics,
                 StartTime=datetime.now() - timedelta(minutes=10),
@@ -222,6 +237,7 @@ def getFSxNInfo(region):
             EndTime=datetime.now())
         for metric in response['MetricDataResults']:
             volumeUsageInfo[metric['Id']] = metric
+
 ################################################################################
 # This function is used to generate a html version of the report.
 ################################################################################
@@ -238,20 +254,23 @@ def generateHTMLReport(region):
         fsxnId = fsxn['FileSystemId']
         name = getTag('Name', fsxn.get('Tags', []))
         ontapConfig = fsxn['OntapConfiguration']
-        if fsxnUsageInfo[fsxnId]['UsedCapacity'] != 'N/A' :
-            fileSystemUsedCapacity = int(fsxnUsageInfo[fsxnId]['UsedCapacity']/1024/1024/1024)
+        if len(fsxnUsageInfo[fsxnId.replace('fs-', 'm_') + '_StorageUsed']['Values']) > 0:
+            fileSystemUsedCapacity = int(fsxnUsageInfo[fsxnId.replace('fs-', 'm_') + '_StorageUsed']['Values'][0]/1024/1024/1024)
             percentUsed = f"{((fileSystemUsedCapacity / fsxn['StorageCapacity']) * 100):.2f}%"
             fileSystemUsedCapacity = f"{fileSystemUsedCapacity}GB"
         else:
             fileSystemUsedCapacity = 'N/A'
             percentUsed = 'N/A'
+        fileSystemStorageSavings = f"{fsxnUsageInfo[fsxnId.replace('fs-', 'm_') + '_StorageSavings']['Values'][0]/1024/1024/1024:.2f}GB" if len(fsxnUsageInfo[fsxnId.replace('fs-', 'm_') + '_StorageSavings']['Values']) > 0 else 'N/A'
         htmlBody += f'<tr><td colspan=11 style="{tableCellStyle}"><b>ID:</b> {fsxnId}<br>\n'
         htmlBody += f"<b>Name:</b> {name}<br>\n"
         htmlBody += f"<b>Region:</b> {region}<br>\n"
         htmlBody += f"<b>Availability:</b> {ontapConfig['DeploymentType']}<br>\n"
+        htmlBody += f"<b>Provisioned Throughput Capacity:</b> {ontapConfig['ThroughputCapacity']} MB/s<br>\n"
         htmlBody += f"<b>Provisioned Performance Tier Storage:</b> {fsxn['StorageCapacity']}GB<br>\n"
         htmlBody += f"<b>Used Performance Tier Storage:</b> {fileSystemUsedCapacity}<br>\n"
         htmlBody += f"<b>Percent Used Performance Tier:</b> {percentUsed}<br>\n"
+        htmlBody += f"<b>Storage Savings:</b> {fileSystemStorageSavings}<br>\n"
         htmlBody += "</td></tr>\n"
         htmlBody += f'<tr><td colspan=11 style="{tableCellStyle}"><b>Volumes:</b></td></tr>\n'
         htmlBody += f'<tr><th style="{tableCellStyle}">Name</th><th style="{tableCellStyle}">SVM</th><th style="{tableCellStyle}">ID</th>\n'
@@ -306,8 +325,8 @@ def generateTextReport(region):
         backupConfig = fsxn.get('AutomaticBackupRetentionDays', 'N/A')
         textReport += f"{indent}Backup Configuration: {backupConfig}\n{indent}Maintenance Schedule: {ontapConfig['WeeklyMaintenanceStartTime']}\n"
         textReport += f"{indent}Provisioned Capacity: {fsxn['StorageCapacity']}GB\n"
-        if fsxnUsageInfo[fsxnId]['UsedCapacity'] != 'N/A' :
-            fileSystemUsedCapacity = int(fsxnUsageInfo[fsxnId]['UsedCapacity']/1024/1024/1024)
+        if len(fsxnUsageInfo[fsxnId.replace('fs-', 'm_') + '_StorageUsed']['Values']) > 0:
+            fileSystemUsedCapacity = int(fsxnUsageInfo[fsxnId.replace('fs-', 'm_') + '_StorageUsed']['Values'][0]/1024/1024/1024)
             percentUsed = f"{((fileSystemUsedCapacity / fsxn['StorageCapacity']) * 100):.2f}%"
             fileSystemUsedCapacity = f"{fileSystemUsedCapacity}GB"
         else:
@@ -315,6 +334,8 @@ def generateTextReport(region):
             percentUsed = 'N/A'
         textReport += f"{indent}Used Capacity: {fileSystemUsedCapacity}\n"
         textReport += f"{indent}Percent Capacity Used: {percentUsed}\n"
+        fileSystemStorageSavings = f"{fsxnUsageInfo[fsxnId.replace('fs-', 'm_') + '_StorageSavings']['Values'][0]/1024/1024/1024:.2f}GB" if len(fsxnUsageInfo[fsxnId.replace('fs-', 'm_') + '_StorageSavings']['Values']) > 0 else 'N/A'
+        textReport += f"{indent}Storage Savings: {fileSystemStorageSavings}\n"
 
         textReport += f"{indent}Storage Virtual Machines:\n"
         for svm in svms:
