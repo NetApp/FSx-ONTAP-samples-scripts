@@ -357,12 +357,11 @@ def generateTextReport(region):
 ################################################################################
 def emailReport(report, fromAddress, toAddress, reportType):
 
+    addresses = toAddress.split(',')
     sesClient = boto3.client('ses')
     sesClient.send_email(
                     Destination={
-                        'ToAddresses': [
-                            toAddress
-                        ]
+                        'ToAddresses': addresses
                     },
                     Message= {
                         'Body': {
