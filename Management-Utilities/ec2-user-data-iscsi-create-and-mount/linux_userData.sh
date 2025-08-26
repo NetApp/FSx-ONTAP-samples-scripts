@@ -23,6 +23,7 @@ LUN_NAME=${VOLUME_NAME}_$(($RANDOM%($max-$min+1)+$min))
 # defaults
 # The script will create a log file in the ec2-user home directory
 LOG_FILE=/home/ec2-user/install.log
+TIMEOUT=2
 
 LUN_SIZE=$(bc -l <<< "0.90*$VOLUME_SIZE" )
 
@@ -91,7 +92,6 @@ if [ "$isIscsciServiceRunning" -eq 1 ]; then
     addUndoCommand "systemctl --now disable iscsid.service"
 else
     logMessage "iscsi service is not running, aborting"
-    # now we have to rollback and exit
     ./uninstall.sh
 fi
 
@@ -106,94 +106,165 @@ name=$(cat /etc/iscsi/initiatorname.iscsi)
 initiatorName="${name:14}"
 logMessage "initiatorName is: ${initiatorName}"
 
-# Configure iSCSI on the FSx for ONTAP file system
-commandDescription="Install sshpass which will allow to connect FSXn using SSH"
-logMessage "${commandDescription}"
-yum install -y sshpass
-checkCommand "${commandDescription}"
-addUndoCommand "yum remove -y sshpass"
-
 # Test connection to ONTAP
-commandDescription="Testing connection to ONTAP."
-logMessage "${commandDescription}"
-sshpass -p "$FSXN_PASSWORD" ssh -o StrictHostKeyChecking=no $ONTAP_USER@$FSXN_ADMIN_IP "version"
-checkCommand "${commandDescription}"
+logMessage "Testing connection to ONTAP."
+
+versionResponse=$(curl -m $TIMEOUT -X GET -u "$ONTAP_USER":"$FSXN_PASSWORD" -k "https://$FSXN_ADMIN_IP/api/cluster?fields=version")
+if [[ "$versionResponse" == *"version"* ]]; then
+    logMessage "Connection to ONTAP is successful."
+else
+    logMessage "Connection to ONTAP failed, aborting."
+    ./uninstall.sh
+fi
 
 # group name should be the hostname of the linux host
 groupName=$(hostname)
 
-commandDescription="Create initiator group for vserver: ${SVM_NAME} group name: ${groupName} and intiator name: ${initiatorName}"
+iGroupResult=$(curl -m $TIMEOUT -X GET -u "$ONTAP_USER":"$FSXN_PASSWORD" -k "https://$FSXN_ADMIN_IP/api/protocols/san/igroups?svm.name=$SVM_NAME&name=$groupName&initiators.name=$initiatorName&protocol=iscsi&os_type=linux")
+initiatorExists=$(echo "${iGroupResult}" | jq '.num_records')
 
-lunGroupresult=$(sshpass -p "$FSXN_PASSWORD" ssh -o StrictHostKeyChecking=no $ONTAP_USER@$FSXN_ADMIN_IP "lun igroup show -vserver $SVM_NAME -igroup $groupName -initiator $initiatorName -protocol iscsi -ostype linux")
-if [[ "$lunGroupresult" == *"There are no entries matching your query."* ]]; then
+if [ "$initiatorExists" -eq 0 ]; then
     logMessage "Initiator ${initiatorName} with group ${groupName} does not exist, creating it."
-    logMessage "${commandDescription}"
-    sshpass -p "$FSXN_PASSWORD" ssh -o StrictHostKeyChecking=no $ONTAP_USER@$FSXN_ADMIN_IP "lun igroup create -vserver $SVM_NAME -igroup $groupName -initiator $initiatorName -protocol iscsi -ostype linux"
-    checkCommand "${commandDescription}"
-    addUndoCommand "sshpass -p \"${FSXN_PASSWORD}\" ssh -o StrictHostKeyChecking=no ${ONTAP_USER}@${FSXN_ADMIN_IP} lun igroup delete -vserver ${SVM_NAME} -igroup ${groupName} -force"
+    logMessage "Create initiator group for vserver: ${SVM_NAME} group name: ${groupName} and intiator name: ${initiatorName}"
+    createGroupResult=$(curl -m $TIMEOUT -X POST -u "$ONTAP_USER":"$FSXN_PASSWORD" -H "Content-Type: application/json" -k "https://$FSXN_ADMIN_IP/api/protocols/san/igroups" -d '{
+      "protocol": "iscsi",
+      "initiators": [
+        {
+          "name": "'$initiatorName'"
+        }
+      ],
+      "os_type": "linux",
+      "name": "'$groupName'",
+      "svm": {
+        "name": "'$SVM_NAME'"
+      }
+    }')
+    iGroupResult=$(curl -m $TIMEOUT -X GET -u "$ONTAP_USER":"$FSXN_PASSWORD" -k "https://$FSXN_ADMIN_IP/api/protocols/san/igroups?svm.name=$SVM_NAME&name=$groupName&initiators.name=$initiatorName&protocol=iscsi&os_type=linux")
+    iGroupUuid=$(echo ${iGroupResult} | jq -r '.records[] | select(.name == "'$groupName'" ) | .uuid')
+    # Check if iGroup was created successfully
+    if [ -n "$iGroupUuid" ]; then
+        logMessage "Initiator group ${groupName} was created successfully with UUID: ${iGroupUuid}"
+    else
+        logMessage "Initiator group ${groupName} was not created, aborting"
+        ./uninstall.sh
+    fi
+    # Add undo command for iGroup creation
+    addUndoCommand "curl -m $TIMEOUT -X DELETE -u \"$ONTAP_USER\":\"$FSXN_PASSWORD\" -k \"https://$FSXN_ADMIN_IP/api/protocols/san/igroups/$iGroupUuid\""
 else
     logMessage "Initiator ${initiatorName} with group ${groupName} already exists, skipping creation."
 fi
 
-# confirm that igroup was created
-isInitiatorGroupCreadted=$(sshpass -p "$FSXN_PASSWORD" ssh -o StrictHostKeyChecking=no $ONTAP_USER@$FSXN_ADMIN_IP "lun igroup show -igroup $groupName -protocol iscsi" | grep $groupName | wc -l)
-if [ "$isInitiatorGroupCreadted" -eq 1 ]; then
-    logMessage "Initiator group ${groupName} was created"
-else
-    logMessage "Initiator group ${groupName} was not created, aborting"
-    # now we have to rollback and exit
+logMessage "Create volume for vserver: ${SVM_NAME} volume name: ${VOLUME_NAME} and size: ${VOLUME_SIZE}g"
+createVolumeResult=$(curl -m $TIMEOUT -X POST -u "$ONTAP_USER":"$FSXN_PASSWORD" -k "https://$FSXN_ADMIN_IP/api/storage/volumes" -d '{
+  "name": "'$VOLUME_NAME'",
+  "size": "'$VOLUME_SIZE'g",
+  "state": "online",
+  "svm": {
+    "name": "'$SVM_NAME'"
+  },
+  "aggregates": [{
+    "name": "aggr1"
+  }]
+}')
+sleep 5
+jobId=$(echo "${createVolumeResult}" | jq -r '.job.uuid')
+jobStatus=$(curl -X GET -u "$ONTAP_USER":"$FSXN_PASSWORD" -k "https://$FSXN_ADMIN_IP/api/cluster/jobs/$jobId")
+jobState=$(echo "$jobStatus" | jq -r '.state')
+if [ "$jobState" != "success" ]; then
+    logMessage "Volume creation job did not complete successfully, aborting"
+    jobError=$(echo "$jobStatus" | jq -r '.error')
+    logMessage "Error details: $jobError"
     ./uninstall.sh
 fi
 
-commandDescription="Create volume for vserver: ${SVM_NAME} volume name: ${VOLUME_NAME} and size: ${VOLUME_SIZE}g"
-logMessage "${commandDescription}"
-sshpass -p "$FSXN_PASSWORD" ssh -o StrictHostKeyChecking=no $ONTAP_USER@$FSXN_ADMIN_IP "volume create -vserver ${SVM_NAME} -volume ${VOLUME_NAME} -aggregate aggr1 -size ${VOLUME_SIZE}g -state online"
-checkCommand "${commandDescription}"
-addUndoCommand "sshpass -p \"$FSXN_PASSWORD\" ssh -o StrictHostKeyChecking=no ${ONTAP_USER}@${FSXN_ADMIN_IP} volume delete -vserver ${SVM_NAME} -volume ${VOLUME_NAME} -force"
-
-commandDescription="Create iscsi lun for vserver: ${SVM_NAME} volume name: ${VOLUME_NAME} and lun name: ${LUN_NAME} and size: ${LUN_SIZE}g which is 90% of the volume size"
-logMessage "${commandDescription}"
-sshpass -p "$FSXN_PASSWORD" ssh -o StrictHostKeyChecking=no $ONTAP_USER@$FSXN_ADMIN_IP "lun create -vserver ${SVM_NAME} -path /vol/${VOLUME_NAME}/$LUN_NAME -size ${LUN_SIZE}g -ostype linux -space-allocation enabled"
-checkCommand "${commandDescription}"
-addUndoCommand "sshpass -p \"$FSXN_PASSWORD\" ssh -o StrictHostKeyChecking=no ${ONTAP_USER}@${FSXN_ADMIN_IP} lun delete -vserver ${SVM_NAME} -path /vol/${VOLUME_NAME}/${LUN_NAME} -force"
-
-# Create a mapping from the LUN you created to the igroup you created
-# The LUN ID integer is specific to the mapping, not to the LUN itself. 
-# This is used by the initiators in the igroup as the Logical Unit Number use this value for the initiator when accessing the storage. 
-commandDescription="Create a mapping from the LUN you created to the igroup you created"
-logMessage "${commandDescription}"
-lun_id=0
-sshpass -p "$FSXN_PASSWORD" ssh -o StrictHostKeyChecking=no $ONTAP_USER@$FSXN_ADMIN_IP "lun mapping create -vserver ${SVM_NAME} -path /vol/${VOLUME_NAME}/${LUN_NAME} -igroup ${groupName} -lun-id 0"
-checkCommand "${commandDescription}"
-
-commandDescription="Validate the lun mapping was created"
-logMessage "${commandDescription}"
-serialHex=$(sshpass -p "$FSXN_PASSWORD" ssh -o StrictHostKeyChecking=no $ONTAP_USER@$FSXN_ADMIN_IP "lun show -path /vol/${VOLUME_NAME}/${LUN_NAME} -fields state,mapped,serial-hex" | grep $SVM_NAME | awk '{print $3}')
-if [ -n "$serialHex" ]; then
-    logMessage "Lun mapping was created"
+# validate if volume was created successfully
+volumeResult=$(curl -m $TIMEOUT -X GET -u "$ONTAP_USER":"$FSXN_PASSWORD" -k "https://$FSXN_ADMIN_IP/api/storage/volumes?name=${VOLUME_NAME}&svm.name=${SVM_NAME}")
+volumeUUid=$(echo "${volumeResult}" | jq -r '.records[] | select(.name == "'$VOLUME_NAME'" ) | .uuid')
+if [ -n "$volumeUUid" ]; then
+    logMessage "Volume ${VOLUME_NAME} was created successfully with UUID: ${volumeUUid}"
 else
-    logMessage "Lun mapping was not created, aborting"
-    addUndoCommand "sshpass -p \"${FSXN_PASSWORD}\" ssh -o StrictHostKeyChecking=no ${ONTAP_USER}@${FSXN_ADMIN_IP} lun mapping delete -vserver ${SVM_NAME} -path /vol/${VOLUME_NAME}/${LUN_NAME} -igroup ${groupName}"    
+    logMessage "Volume ${VOLUME_NAME} was not created, aborting"
+    ./uninstall.sh
+fi
+addUndoCommand "curl -m $TIMEOUT -X DELETE -u \"$ONTAP_USER\":\"$FSXN_PASSWORD\" -k \"https://$FSXN_ADMIN_IP/api/storage/volumes/${volumeUUid}\""
+
+logMessage "Create iscsi lun for vserver: ${SVM_NAME} volume name: ${VOLUME_NAME} and lun name: ${LUN_NAME} and size: ${LUN_SIZE}g which is 90% of the volume size"
+createLunResult=$(curl -m $TIMEOUT -X POST -u "$ONTAP_USER":"$FSXN_PASSWORD" -k "https://$FSXN_ADMIN_IP/api/storage/luns" -d '{
+  "name": "'/vol/${VOLUME_NAME}/$LUN_NAME'",
+  "space": {
+    "size": "'$LUN_SIZE'GB",
+    "scsi_thin_provisioning_support_enabled": true
+  },
+  "svm": {
+    "name": "'$SVM_NAME'"
+  },
+  "os_type": "linux"
+}')
+lunResult=$(curl -X GET -u "$ONTAP_USER":"$FSXN_PASSWORD" -k "https://$FSXN_ADMIN_IP/api/storage/luns?fields=uuid&name=/vol/${VOLUME_NAME}/$LUN_NAME")
+# Validate if LUN was created successfully
+lunUuid=$(echo "${lunResult}" | jq -r '.records[] | select(.name == "'/vol/${VOLUME_NAME}/$LUN_NAME'" ) | .uuid')
+if [ -n "$lunUuid" ]; then
+    logMessage "LUN ${LUN_NAME} was created successfully with UUID: ${lunUuid}"
+else
+    logMessage "LUN ${LUN_NAME} was not created, aborting"
+    ./uninstall.sh
 fi
 
-# The serail hex in needed for creating readable name for the block device.
-commandDescription="Get the iscsi interface addresses for the svm ${SVM_NAME}"
-logMessage "${commandDescription}"
-iscsi1IP=$(sshpass -p "$FSXN_PASSWORD" ssh -o StrictHostKeyChecking=no $ONTAP_USER@$FSXN_ADMIN_IP "network interface show -vserver ${SVM_NAME}"  | grep -e iscsi_1 | awk '{print $3}')
-iscsi2IP=$(sshpass -p "$FSXN_PASSWORD" ssh -o StrictHostKeyChecking=no $ONTAP_USER@$FSXN_ADMIN_IP "network interface show -vserver ${SVM_NAME}"  | grep -e iscsi_2 | awk '{print $3}')
+addUndoCommand "curl -m $TIMEOUT -X DELETE -u \"$ONTAP_USER\":\"$FSXN_PASSWORD\" -k \"https://$FSXN_ADMIN_IP/api/storage/luns/${lunUuid}\""
 
-if [ -n "$i$iscsi1IP" ] && [ -n "$iscsi2IP" ]; then
+# The LUN ID integer is specific to the mapping, not to the LUN itself. 
+# This is used by the initiators in the igroup as the Logical Unit Number. Use this value for the initiator when accessing the storage. 
+logMessage "Create a mapping from the LUN you created to the igroup you created"
+
+lunMapResult=$(curl -m $TIMEOUT -X POST -u "$ONTAP_USER":"$FSXN_PASSWORD" -k "https://$FSXN_ADMIN_IP/api/protocols/san/lun-maps" -d '{
+  "lun": {
+    "name": "/vol/'${VOLUME_NAME}'/'${LUN_NAME}'"
+  },
+  "igroup": {
+    "name": "'${groupName}'"
+  },
+  "svm": {
+    "name": "'${SVM_NAME}'"
+  },
+  "logical_unit_number": 0
+}')
+logMessage "Validate the lun mapping was created"
+
+getLunMap=$(curl -m $TIMEOUT -X GET -u "$ONTAP_USER":"$FSXN_PASSWORD" -k "https://$FSXN_ADMIN_IP/api/protocols/san/lun-maps?lun.name=/vol/${VOLUME_NAME}/${LUN_NAME}&igroup.name=${groupName}&svm.name=${SVM_NAME}")
+lunGroupCreated=$(echo "${getLunMap}" | jq -r '.num_records')
+if [ "$lunGroupCreated" -eq 0 ]; then
+    logMessage "LUN mapping was not created, aborting"
+    ./uninstall.sh
+else
+    logMessage "LUN mapping was created successfully"
+fi
+
+addUndoCommand "curl -m $TIMEOUT -X DELETE -u \"$ONTAP_USER\":\"$FSXN_PASSWORD\" -k \"https://$FSXN_ADMIN_IP/api/protocols/san/lun-maps?lun.name=/vol/${VOLUME_NAME}/${LUN_NAME}&igroup.name=${groupName}&svm.name=${SVM_NAME}\""
+
+getLunSerialNumberResult=$(curl -m $TIMEOUT -X GET -u "$ONTAP_USER":"$FSXN_PASSWORD" -k "https://$FSXN_ADMIN_IP/api/storage/luns?fields=serial_number")
+serialNumber=$(echo "${getLunSerialNumberResult}" | jq -r '.records[] | select(.name == "'/vol/$VOLUME_NAME/$LUN_NAME'" ) | .serial_number')
+serialHex=$(echo -n "${serialNumber}" | xxd -p)
+if [ -z "$serialHex" ]; then
+    logMessage "Serial number for the LUN is not available, aborting"
+    ./uninstall.sh
+fi
+
+# The serial hex in needed for creating readable name for the block device.
+logMessage "Get the iscsi interface addresses for the svm ${SVM_NAME}"
+getInterfacesResult=$(curl -m $TIMEOUT -X GET -u "$ONTAP_USER":"$FSXN_PASSWORD" -k "https://$FSXN_ADMIN_IP/api/network/ip/interfaces?svm.name=$SVM_NAME&fields=ip")
+iscsi1IP=$(echo "$getInterfacesResult" | jq -r '.records[] | select(.name == "iscsi_1") | .ip.address')
+iscsi2IP=$(echo "$getInterfacesResult" | jq -r '.records[] | select(.name == "iscsi_2") | .ip.address')
+
+if [ -n "$iscsi1IP" ] && [ -n "$iscsi2IP" ]; then
     iscsi1IP=$(echo ${iscsi1IP%/*})
     iscsi2IP=$(echo ${iscsi2IP%/*})
     logMessage "iscsi interface addresses for the svm ${SVM_NAME} are: ${iscsi1IP} and ${iscsi2IP}"
 else
     logMessage "iscsi interface addresses for the svm ${SVM_NAME} are not available, aborting"
-    # now we have to rollback and exit
     ./uninstall.sh
 fi
 
-commandDescription="Discover the target iSCSI nodes, iscsi IP: ${iscsi1IP}"
-logMessage "${commandDescription}"
+logMessage "Discover the target iSCSI nodes, iscsi IP: ${iscsi1IP}"
 iscsiadm --mode discovery --op update --type sendtargets --portal $iscsi1IP
 checkCommand "${commandDescription}"
 addUndoCommand "iscsiadm --mode discovery --op delete --type sendtargets --portal ${iscsi1IP}"
@@ -219,8 +290,7 @@ addUndoCommand "iscsiadm --mode node -T $targetInitiator --logout"
 #    }
 # }
 # Assign name to block device, this should be function that will get serial hex and device name
-commandDescription="Update /etc/multipath.conf file, Assign name to block device."
-logMessage "${commandDescription}"
+logMessage "Update /etc/multipath.conf file, Assign name to block device."
 cp /etc/multipath.conf /etc/multipath.conf_backup
 
 SERIAL_HEX=$serialHex
@@ -266,7 +336,6 @@ fi
 
 # Partition the LUN
 # mount the LUN on the Linux client
-
 # Create a directory directory_path as the mount point for your file system.
 directory_path=mnt
 mount_point=$VOLUME_NAME
@@ -277,8 +346,7 @@ mkdir /$directory_path/$mount_point
 checkCommand "${commandDescription}"
 addUndoCommand "rm -rf /$directory_path/$mount_point"
 
-#check this command
-# volume_name=the friendly device name as we set it in the multipath.conf file
+# volume_name = the friendly device name as we set it in the multipath.conf file
 commandDescription="Creating the file system for the new partition: /dev/mapper/${ALIAS}"
 logMessage "${commandDescription}"
 mkfs.ext4 /dev/mapper/$ALIAS
@@ -309,6 +377,5 @@ checkCommand "${commandDescription}"
 addUndoCommand "sed -i '/\/dev\/mapper\/$ALIAS \/mnt\/$mount_point ext4 defaults,_netdev 0 0/d' /etc/fstab"
 # End of script
 logMessage "Script completed successfully."
-
 
 rm -f uninstall.sh
