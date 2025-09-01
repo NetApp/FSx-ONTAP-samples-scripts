@@ -357,4 +357,3 @@ if (Test-Path $uninstallFile){
    Write-Host "Uninstall script removed" -ForegroundColor Green
 }
 </powershell>
-<persist>true</persist>
