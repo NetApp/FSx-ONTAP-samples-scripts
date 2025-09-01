@@ -42,21 +42,12 @@ if(!(Get-Item $path -ErrorAction SilentlyContinue)) {
    New-ItemProperty -Path $path -Name $itemName -Value 0 -PropertyType dword
 }
 
-$runStep = Get-ItemProperty -Path $path -Name $itemName -ErrorAction SilentlyContinue | Select-Object -ExpandProperty $itemName
 Write-Output "Write-Host ""Uninstall FSxn configuration""" >> $uninstallFile
 Write-Output "# FSXn uninstall:" >> $uninstallFile
 
-if($runStep -eq 0) {
-   if (Get-Module | Where-Object {$_.Name -ne 'NuGet'}) {
-      Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
-      @("Uninstall-PackageProvider -Name NuGet -Force") + (Get-Content $uninstallFile) | Set-Content $uninstallFile
-   }
-         Set-ItemProperty -Path $path -Name $itemName -Value 1
-}
-
 $runStep = Get-ItemProperty -Path $path -Name $itemName -ErrorAction SilentlyContinue | Select-Object -ExpandProperty $itemName
 
-if($runStep -eq 1) {
+if($runStep -eq 0) {
 
    ### Install MPIO ####
    Write-Output "Installing Multipath-IO windows feature" >> $currentLogPath 
@@ -72,7 +63,7 @@ if($runStep -eq 1) {
    else {
       # restart the instance after installing MPIO
       Install-WindowsFeature -name Multipath-IO -Restart 
-      @("Uninstall-PackageProvider -Name Multipath-IO -Force") + (Get-Content $uninstallFile) | Set-Content $uninstallFile   
+      @("Uninstall-WindowsFeature -Name Multipath-IO -Remove -Confirm:$false") + (Get-Content $uninstallFile) | Set-Content $uninstallFile   
    }
 
    $vol_number = get-random -Minimum 1 -Maximum 10000
@@ -352,7 +343,7 @@ if($runStep -eq 1) {
       Write-Host "Failed create new partition, due to: $_" -ForegroundColor Red  -ErrorAction stop
       break
    }
-   Set-ItemProperty -Path $path -Name $itemName -Value 2
+   Set-ItemProperty -Path $path -Name $itemName -Value 1
    Write-Output "Done creating new FSx disk, drive letter: $drive_letter" >> $currentLogPath 
    Write-Host "Done creating new FSx disk, drive letter: $drive_letter" -ForegroundColor Green
 }

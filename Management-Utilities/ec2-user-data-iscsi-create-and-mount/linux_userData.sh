@@ -23,7 +23,7 @@ LUN_NAME=${VOLUME_NAME}_$(($RANDOM%($max-$min+1)+$min))
 # defaults
 # The script will create a log file in the ec2-user home directory
 LOG_FILE=/home/ec2-user/install.log
-TIMEOUT=2
+TIMEOUT=5
 
 LUN_SIZE=$(bc -l <<< "0.90*$VOLUME_SIZE" )
 
@@ -241,6 +241,7 @@ fi
 
 addUndoCommand "curl -m $TIMEOUT -X DELETE -u \"$ONTAP_USER\":\"$FSXN_PASSWORD\" -k \"https://$FSXN_ADMIN_IP/api/protocols/san/lun-maps?lun.name=/vol/${VOLUME_NAME}/${LUN_NAME}&igroup.name=${groupName}&svm.name=${SVM_NAME}\""
 
+# The serial hex in needed for creating readable name for the block device.
 getLunSerialNumberResult=$(curl -m $TIMEOUT -X GET -u "$ONTAP_USER":"$FSXN_PASSWORD" -k "https://$FSXN_ADMIN_IP/api/storage/luns?fields=serial_number")
 serialNumber=$(echo "${getLunSerialNumberResult}" | jq -r '.records[] | select(.name == "'/vol/$VOLUME_NAME/$LUN_NAME'" ) | .serial_number')
 serialHex=$(echo -n "${serialNumber}" | xxd -p)
@@ -249,7 +250,6 @@ if [ -z "$serialHex" ]; then
     ./uninstall.sh
 fi
 
-# The serial hex in needed for creating readable name for the block device.
 logMessage "Get the iscsi interface addresses for the svm ${SVM_NAME}"
 getInterfacesResult=$(curl -m $TIMEOUT -X GET -u "$ONTAP_USER":"$FSXN_PASSWORD" -k "https://$FSXN_ADMIN_IP/api/network/ip/interfaces?svm.name=$SVM_NAME&fields=ip")
 iscsi1IP=$(echo "$getInterfacesResult" | jq -r '.records[] | select(.name == "iscsi_1") | .ip.address')
