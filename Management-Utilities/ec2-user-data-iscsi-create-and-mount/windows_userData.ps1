@@ -7,29 +7,16 @@ $volName="Fsx volume name, e.g. iscsiVol"
 $volSize="volume size in GB, e.g 100"
 $drive_letter="drive letter to use, e.g. d"
 
-# Default value is fsxnIscsi1, but you can change it to any other value according to yours FSx for ONTAP defintion
+# Default value is fsxadmin
 $user="fsxadmin"
-# Default value is fsx, but you can change it to any other value according to yours FSx for ONTAP SVM name
+# Default value is fsx
 $svm_name="fsx"
 
-function unInstall {
-   param (
-      [bool]$printUninstallConnect,
-      [string]$ip,
-      [System.Management.Automation.PSCredential]$credntials,
-      [string]$svm_name
-   )
-   if( $printUninstallConnect -eq $true ) {
-      @("Connect-NcController $ip -Credential $credntials -Vserver $svm_name -ErrorAction Stop") + (Get-Content $uninstallFile) | Set-Content $uninstallFile
-   }
-   . $uninstallFile
-}
-
 # default values
-# The script will create a log file in the Administrator home directory
-# The script will create an uninstall script in the Administrator home directory
+# The script will create a log file and uninstall script
 $currentLogPath="C:\Users\Administrator\install.log"
 $uninstallFile="C:\Users\Administrator\uninstall.ps1"
+$TIMEOUT=5
 
 $password=Get-SECSecretValue -SecretId "$secretId" -Select "SecretString"
 
@@ -47,8 +34,6 @@ Write-Output "Get data from Secrets Manager, successfully" >> $currentLogPath
 write-host "Get data from Secrets Manager, successfully" -ForegroundColor Green
 $totaldisks = (get-disk | Sort-Object -Property number | Select-Object -Last 1 -ExpandProperty number)
 
-#### Installing ONTAP module #####
-$m = "NetApp.ONTAP"
 $path= "HKLM:\Software\UserData"
 $itemName = "FSXnRunStep"
 
@@ -57,64 +42,17 @@ if(!(Get-Item $path -ErrorAction SilentlyContinue)) {
    New-ItemProperty -Path $path -Name $itemName -Value 0 -PropertyType dword
 }
 
+Write-Output "Write-Host ""Uninstall FSxn configuration""" >> $uninstallFile
+Write-Output "# FSXn uninstall:" >> $uninstallFile
+
 $runStep = Get-ItemProperty -Path $path -Name $itemName -ErrorAction SilentlyContinue | Select-Object -ExpandProperty $itemName
 
 if($runStep -eq 0) {
-   Write-Output "Write-Host ""Uninstall FSxn configuration""" >> $uninstallFile
-   Write-Output "# FSXn uninstall:" >> $uninstallFile
-   Write-Output "Installing/ Import ONTAP module" >> $currentLogPath 
-   Write-Host "Installing/ Import ONTAP module" -ForegroundColor Yellow
 
-   if (Get-Module | Where-Object {$_.Name -ne 'NuGet'}) {
-      Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
-      @("Uninstall-PackageProvider -Name NuGet -Force") + (Get-Content $uninstallFile) | Set-Content $uninstallFile
-   }
-   Write-Output "Validate if module $m imported, otherwise import it" >> $currentLogPath 
-   write-host "Validate if module $m imported, otherwise import it" -ForegroundColor Yellow
-   if (Get-Module | Where-Object {$_.Name -eq $m}) {
-      write-host "Module $m is already imported."
-   }
-   else {
-
-      # If module is not imported, but available on disk then import
-      if (Get-Module -ListAvailable | Where-Object {$_.Name -eq $m}) {
-         Write-Output "Import module $m." >> $currentLogPath 
-         write-host "Import module $m."
-         Import-Module $m -Verbose
-         Set-ItemProperty -Path $path -Name $itemName -Value 1
-      }
-      else {
-
-         # If module is not imported, not available on disk, but is in online gallery then install and import
-         if (Find-Module -Name $m | Where-Object {$_.Name -eq $m}) {
-            Install-Module -Name $m -Force -Verbose -Scope CurrentUser
-            Write-Output "Import module $m." >> $currentLogPath 
-            write-host "Import module $m."
-            Import-Module $m -Verbose
-            Set-ItemProperty -Path $path -Name $itemName -Value 1
-            @("Uninstall-PackageProvider -Name $m -Force") + (Get-Content $uninstallFile) | Set-Content $uninstallFile   
-         }
-         else {
-            # If the module is not imported, not available and not in the online gallery then abort
-            Write-Output "Failed installing Module $m, exiting...." >> $currentLogPath 
-            write-host "Failed installing Module $m, exiting...." -ForegroundColor Red
-            # run uninstall script
-            . $uninstallFile
-            EXIT 1
-         }
-      }
-   }
-}
-
-$runStep = Get-ItemProperty -Path $path -Name $itemName -ErrorAction SilentlyContinue | Select-Object -ExpandProperty $itemName
-
-if($runStep -eq 1) {
-
-   $printUninstallConnect = $false
    ### Install MPIO ####
    Write-Output "Installing Multipath-IO windows feature" >> $currentLogPath 
    Write-Host "Installing Multipath-IO windows feature" -ForegroundColor Yellow
-   $res = Get-WindowsFeature -Name Multipath-IO
+   $res = Get-WindowsFeature -Name Multipath-IO | Where-Object {$_.InstallState -eq "Installed"} 
    if(($res.Installed))
    {
       Write-Output "Windows feature Multipath-IO already installed" >> $currentLogPath 
@@ -125,10 +63,10 @@ if($runStep -eq 1) {
    else {
       # restart the instance after installing MPIO
       Install-WindowsFeature -name Multipath-IO -Restart 
-      @("Uninstall-PackageProvider -Name Multipath-IO -Force") + (Get-Content $uninstallFile) | Set-Content $uninstallFile   
+      @("Uninstall-WindowsFeature -Name Multipath-IO -Remove -Confirm:$false") + (Get-Content $uninstallFile) | Set-Content $uninstallFile   
    }
 
-   $vol_number= get-random -Minimum 1 -Maximum 10000
+   $vol_number = get-random -Minimum 1 -Maximum 10000
    $vol_name = $volName
    $lun_name = $volName + "_" + $vol_number
    $igroup_name = "winhost_ig_" + $vol_number
@@ -169,16 +107,13 @@ if($runStep -eq 1) {
 
    Set-Service -Name msiscsi -StartupType Automatic
 
-   #### Connect to FSX ####
-   Write-Host "Connectiong to FSx filesystem" -ForegroundColor Yellow
-   $PWord = ConvertTo-SecureString -String $password -AsPlainText -Force
-   $credntials = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $user, $PWord
-   try {
-      Connect-NcController $ip -Credential $credntials -Vserver $svm_name -ErrorAction Stop
-   }
-   catch {
-      Write-Output "Failed connect to FSXn filesystem, due to: $_" >> $currentLogPath 
-      Write-Host "Failed connect to FSXn filesystem, due to: $_" -ForegroundColor Red
+   #### Validate connection to FSX ####
+   Write-Host "Connectiong to FSxN filesystem" -ForegroundColor Yellow
+            
+   $connectResult = curl.exe -X GET -k "https://$ip/api/cluster?fields=version" -u "${user}:${password}" | ConvertFrom-Json
+   if ($null -eq $connectResult.version) {
+      Write-Output "Failed connect to FSXn filesystem, due to: $connectResult.error.message" >> $currentLogPath 
+      Write-Host "Failed connect to FSXn filesystem, due to: $connectResult.error.message" -ForegroundColor Red
       . $uninstallFile
       break
    }
@@ -186,91 +121,166 @@ if($runStep -eq 1) {
    Write-Output "Creating volume: $vol_name" >> $currentLogPath 
    Write-Host "Creating volume: $vol_name" -ForegroundColor Yellow
 
-   try {
-      New-Ncvol -Name $vol_name -Aggregate aggr1 -Size $volSize'g' -JunctionPath /$vol_name -SecurityStyle ntfs -ErrorAction stop
-      @("Remove-NcVol $vol_name") + (Get-Content $uninstallFile) | Set-Content $uninstallFile
-      @("Set-NcVol $vol_name -offline") + (Get-Content $uninstallFile) | Set-Content $uninstallFile
-      $printUninstallConnect = $true
+   $jsonPayload = @"
+   {
+      \"name\": \"$vol_name\",
+      \"size\": \"${volSize}g\",
+      \"state\": \"online\",
+      \"svm\": {
+         \"name\": \"$svm_name\"
+      },
+      \"aggregates\": [{
+         \"name\": \"aggr1\"
+      }]
    }
-   catch {
-      Write-Output "Failed create volume, due to: $_" >> $currentLogPath 
-      Write-Host "Failed create volume, due to: $_" -ForegroundColor Red
-      unInstall -printUninstallConnect $printUninstallConnect -ip $ip -credntials $credntials -svm_name $svm_name
+"@
+   $createVolumeResult = curl.exe -m $TIMEOUT -X POST -u "${user}:${password}" -k "https://$ip/api/storage/volumes" -d $jsonPayload | ConvertFrom-Json
+   Start-Sleep -Seconds 10
+   $jobId = $createVolumeResult.job.uuid
+   $jobStatus = curl.exe -X GET -u "${user}:${password}" -k "https://$ip/api/cluster/jobs/$jobId" | ConvertFrom-Json
+   if ($jobStatus.state -ne "success") {
+      Write-Output "Failed create volume: $vol_name, due to: $($jobStatus.error)" >> $currentLogPath 
+      Write-Host "Failed create volume: $vol_name, due to: $($jobStatus.error)" -ForegroundColor Red
+      . $uninstallFile
       break
    }
-
-   Write-Output "Creating LUN" >> $currentLogPath 
-   Write-Host "Creating LUN" -ForegroundColor Yellow
-   try {
-      $lunSize=0.9*$volSize
-      New-NcLun -Size $lunSize'g' -OsType windows -Path /vol/$vol_name/$lun_name -Unreserved -ErrorAction stop
-      @("Remove-NcLun $lun_name -force") + (Get-Content $uninstallFile) | Set-Content $uninstallFile
-   }
-   catch {
-      Write-Output "Failed create LUN, due to: $_" >> $currentLogPath 
-      Write-Host "Failed create LUN, due to: $_" -ForegroundColor Red
-      unInstall -printUninstallConnect $printUninstallConnect -ip $ip -credntials $credntials -svm_name $svm_name
+   $volumeResult = curl.exe -m $TIMEOUT -X GET -u "${user}:${password}" -k "https://$ip/api/storage/volumes?name=${vol_name}&svm.name=${svm_name}" | ConvertFrom-Json
+   $record = $volumeResult.records | Where-Object { $_.name -eq $vol_name }
+   $volumeUUid = $record.uuid
+   if ($null -eq $volumeUUid) {
+      Write-Output "Failed create volume: $vol_name, aborting" >> $currentLogPath 
+      Write-Host "Failed create volume: $vol_name, aborting" -ForegroundColor Red
+      . $uninstallFile
       break
    }
+   @("curl.exe -m $TIMEOUT -X DELETE -u `"${user}:${password}`" -k `"https://$ip/api/storage/volumes/$volumeUUid`"") + (Get-Content $uninstallFile) | Set-Content $uninstallFile
 
-   Write-Output "Creating Igroup" >> $currentLogPath 
-   Write-Host "Creating Igroup" -ForegroundColor Yellow
-   try {
-      New-NcIgroup -Name $igroup_name -Protocol iscsi -Type windows -ErrorAction stop
-      @("Remove-NcIgroup -Name $igroup_name -force") + (Get-Content $uninstallFile) | Set-Content $uninstallFile
+   Write-Output "Creating LUN: /vol/$vol_name/$lun_name" >> $currentLogPath 
+   Write-Host "Creating LUN: /vol/$vol_name/$lun_name" -ForegroundColor Yellow
+
+   $lunSize=0.9*$volSize
+   $jsonPayload = @"
+   {
+      \"name\": \"/vol/$vol_name/$lun_name\",
+      \"space\": {
+         \"size\": \"${lunSize}GB\",
+         \"scsi_thin_provisioning_support_enabled\": true
+      },
+      \"svm\": {
+         \"name\": \"$svm_name\"
+      },
+      \"os_type\": \"windows\"
    }
-   catch {
-      Write-Output "Failed create Igroup, due to: $_" >> $currentLogPath 
-      Write-Host "Failed create Igroup, due to: $_" -ForegroundColor Red
-      unInstall -printUninstallConnect $printUninstallConnect -ip $ip -credntials $credntials -svm_name $svm_name
+"@
+   curl.exe -m $TIMEOUT -X POST -u "${user}:${password}" -k "https://$ip/api/storage/luns" -d $jsonPayload 
+   $lunResult = curl.exe -X GET -u "${user}:${password}" -k "https://$ip/api/storage/luns?fields=uuid&name=/vol/${vol_name}/$lun_name" | ConvertFrom-Json
+   $record = $lunResult.records | Where-Object { $_.name -eq "/vol/$vol_name/$lun_name" }
+   $lunUuid = $record.uuid
+   if ($null -eq $lunUuid) {
+      Write-Output "Failed create LUN: $lun_name, aborting" >> $currentLogPath 
+      Write-Host "Failed create LUN: $lun_name, aborting" -ForegroundColor Red
+      . $uninstallFile
       break
    }
-
-   #### map server iqn to lun ####
-   Write-Output "Add Igroup initiator" >> $currentLogPath 
-   Write-Host "Add Igroup initiator" -ForegroundColor Yellow
-
-   $iqn = Get-NcHostIscsiAdapter | sort-object iqn | ForEach-Object {$_.iqn}
-   try {
-      Add-NcIgroupInitiator -Initiator $iqn -Name $igroup_name -ErrorAction stop
-      @("Remove-NcIgroupInitiator -Name $igroup_name -Initiator $iqn -force") + (Get-Content $uninstallFile) | Set-Content $uninstallFile
+   Write-Output "LUN created successfully with UUID: $lunUuid" >> $currentLogPath
+   Write-Host "LUN created successfully with UUID: $lunUuid" -ForegroundColor Green
+   @("curl.exe -m $TIMEOUT -X DELETE -u `"${user}:${password}`" -k `"https://$ip/api/storage/luns/$lunUuid`"") + (Get-Content $uninstallFile) | Set-Content $uninstallFile
+   
+   $iqn = (Get-InitiatorPort).NodeAddress | sort-object iqn 
+   $iGroupResult=curl.exe -m $TIMEOUT -X GET -u "${user}:${password}" -k "https://$ip/api/protocols/san/igroups?svm.name=$svm_name&name=$igroup_name&initiators.name=$iqn&protocol=iscsi&os_type=windows" | ConvertFrom-Json
+   $initiatorExists = $iGroupResult.num_records
+   if ($initiatorExists -eq 0) {
+      Write-Output "Creating Igroup" >> $currentLogPath 
+      Write-Host "Creating Igroup" -ForegroundColor Yellow
       
-   }
-   catch {
-      Write-Output "Failed to add igroup initiator, due to: $_" >> $currentLogPath 
-      Write-Host "Failed to add igroup initiator, due to: $_" -ForegroundColor Red
-      unInstall -printUninstallConnect $printUninstallConnect -ip $ip -credntials $credntials -svm_name $svm_name
+      $jsonPayload = @"
+      {
+         \"protocol\": \"iscsi\",
+         \"initiators\": [
+         {
+            \"name\": \"$iqn\"
+         }
+         ],
+         \"os_type\": \"windows\",
+         \"name\": \"$igroup_name\",
+         \"svm\": {
+            \"name\": \"$svm_name\"
+         }
+      }
+"@
+      curl.exe -m $TIMEOUT -X POST -u "${user}:${password}" -H "Content-Type: application/json" -k "https://$ip/api/protocols/san/igroups" -d $jsonPayload | ConvertFrom-Json
+      $iGroupResult=curl.exe -m $TIMEOUT -X GET -u "${user}:${password}" -k "https://$ip/api/protocols/san/igroups?svm.name=$svm_name&name=$igroup_name&initiators.name=$iqn&protocol=iscsi&os_type=windows" | ConvertFrom-Json
+      $record = $iGroupResult.records | Where-Object { $_.name -eq $igroup_name }
+      $iGroupUuid = $record.uuid
+      if ($null -eq $iGroupUuid) {
+         Write-Output "Failed create Igroup: $igroup_name, aborting" >> $currentLogPath 
+         Write-Host "Failed create Igroup: $igroup_name, aborting" -ForegroundColor Red
+         . $uninstallFile
       break
    }
-
+      @("curl.exe -m $TIMEOUT -X DELETE -u `"${user}:${password}`" -k `"https://$ip/api/protocols/san/igroups/$iGroupUuid`"") + (Get-Content $uninstallFile) | Set-Content $uninstallFile
+   }  
+   else {
+      Write-Output "Initiator ${iqn} with group ${igroup_name} already exists, skipping creation." >> $currentLogPath 
+      Write-Host "Initiator ${iqn} with group ${igroup_name} already exists, skipping creation." -ForegroundColor Green
+   } 
+   #### map server iqn to lun ####
    Write-Output "Mapping LUN to Igroup" >> $currentLogPath 
    Write-Host "Mapping LUN to Igroup" -ForegroundColor Yellow
-   try {
-      Add-NcLunMap -Path /vol/$vol_name/$lun_name -InitiatorGroup $igroup_name -ErrorAction stop
-      @("Remove-NcLunMap -Path /vol/$vol_name/$lun_name -InitiatorGroup $igroup_name -force") + (Get-Content $uninstallFile) | Set-Content $uninstallFile
+   
+   $jsonPayload = @"
+   {
+      \"lun\": {
+         \"name\": \"/vol/$vol_name/$lun_name\"
+      },
+      \"igroup\": {
+         \"name\": \"${igroup_name}\"
+      },
+      \"svm\": {
+         \"name\": \"${svm_name}\"
+      },
+      \"logical_unit_number\": 0
    }
-   catch {
-      Write-Output "Failed mapping LUN to igroup, due to: $_" >> $currentLogPath 
-      Write-Host "Failed mapping LUN to igroup, due to: $_" -ForegroundColor Red
-      unInstall -printUninstallConnect $printUninstallConnect -ip $ip -credntials $credntials -svm_name $svm_name
+"@
+
+   curl.exe -m $TIMEOUT -X POST -u "${user}:${password}" -k "https://$ip/api/protocols/san/lun-maps" -d $jsonPayload
+   $getLunMap = curl.exe -m $TIMEOUT -X GET -u "${user}:${password}" -k "https://$ip/api/protocols/san/lun-maps?lun.name=/vol/$vol_name/$lun_name&igroup.name=$group_name&svm.name=$svm_name" | ConvertFrom-Json
+   $lunGroupCreated = $getLunMap.num_records
+   if ($lunGroupCreated -eq 0) {
+      Write-Output "Failed mapping LUN: $lun_name to igroup: $igroup_name" >> $currentLogPath 
+      Write-Host "Failed mapping LUN: $lun_name to igroup: $igroup_name" -ForegroundColor Red
+      . $uninstallFile
       break
    }
-
+   @("curl.exe -m $TIMEOUT -X DELETE -u `"${user}:${password}`" -k `"https://$ip/api/protocols/san/lun-maps?lun.name=/vol/$vol_name/$lun_name&igroup.name=$igroup_name&svm.name=$svm_name`"") + (Get-Content $uninstallFile) | Set-Content $uninstallFile
 
    ### create new target ####
    Write-Output "Creating new target" >> $currentLogPath 
    Write-Host "Creating new target" -ForegroundColor Yellow
-   $iscsi_address = get-ncnetinterface -Name iscsi_* |  sort-object address | ForEach-Object {$_.address}
+
+   # Query ONTAP REST API for iSCSI interfaces
+   $interfacesResult = curl.exe -m $TIMEOUT -X GET -u "${user}:${password}" -k "https://$ip/api/network/ip/interfaces?svm.name=$svm_name&fields=ip,name" | ConvertFrom-Json
+
+   $iscsi1IP = $interfacesResult.records | Where-Object { $_.name -eq "iscsi_1" } | Select-Object -ExpandProperty ip | Select-Object -ExpandProperty address
+   $iscsi2IP = $interfacesResult.records | Where-Object { $_.name -eq "iscsi_2" } | Select-Object -ExpandProperty ip | Select-Object -ExpandProperty address
+
+   if ($null -eq $iscsi1IP -or $null -eq $iscsi2IP) {
+      Write-Output "Failed to get iSCSI interfaces from ONTAP, aborting" >> $currentLogPath 
+      Write-Host "Failed to get iSCSI interfaces from ONTAP, aborting" -ForegroundColor Red
+      . $uninstallFile
+      break
+   }
+
    try {
-      New-IscsiTargetPortal -TargetPortalAddress $iscsi_address[0] -ErrorAction stop
-      New-IscsiTargetPortal -TargetPortalAddress $iscsi_address[1] -ErrorAction stop
-      @("Remove-IscsiTargetPortal -TargetPortalAddress $iscsi_address[1]") + (Get-Content $uninstallFile) | Set-Content $uninstallFile
-      @("Remove-IscsiTargetPortal -TargetPortalAddress $iscsi_address[0]") + (Get-Content $uninstallFile) | Set-Content $uninstallFile
+      New-IscsiTargetPortal -TargetPortalAddress $iscsi1IP -ErrorAction stop
+      New-IscsiTargetPortal -TargetPortalAddress $iscsi2IP -ErrorAction stop
+      @("Remove-IscsiTargetPortal -TargetPortalAddress $iscsi2IP") + (Get-Content $uninstallFile) | Set-Content $uninstallFile
+      @("Remove-IscsiTargetPortal -TargetPortalAddress $iscsi1IP") + (Get-Content $uninstallFile) | Set-Content $uninstallFile
    }
    catch {
       Write-Output "Failed to add new target, due to: $_" >> $currentLogPath 
       Write-Host "Failed to add new target, due to: $_" -ForegroundColor Red
-      unInstall -printUninstallConnect $printUninstallConnect -ip $ip -credntials $credntials -svm_name $svm_name
+      . $uninstallFile
       break
    }
 
@@ -282,10 +292,9 @@ if($runStep -eq 1) {
    catch {
       Write-Output "Failed to connect to the new target, due to: $_" >> $currentLogPath 
       Write-Host "Failed to connect to the new target, due to: $_" -ForegroundColor Red
-      unInstall -printUninstallConnect $printUninstallConnect -ip $ip -credntials $credntials -svm_name $svm_name
+      . $uninstallFile
       break
    }
-   @("Connect-NcController $ip -Credential $credntials -Vserver $svm_name -ErrorAction Stop") + (Get-Content $uninstallFile) | Set-Content $uninstallFile
    
    #### create new ISCSI disk ####
    Write-Output "Online, Initialize and format disks" >> $currentLogPath 
@@ -334,7 +343,7 @@ if($runStep -eq 1) {
       Write-Host "Failed create new partition, due to: $_" -ForegroundColor Red  -ErrorAction stop
       break
    }
-   Set-ItemProperty -Path $path -Name $itemName -Value 2
+   Set-ItemProperty -Path $path -Name $itemName -Value 1
    Write-Output "Done creating new FSx disk, drive letter: $drive_letter" >> $currentLogPath 
    Write-Host "Done creating new FSx disk, drive letter: $drive_letter" -ForegroundColor Green
 }
@@ -348,4 +357,3 @@ if (Test-Path $uninstallFile){
    Write-Host "Uninstall script removed" -ForegroundColor Green
 }
 </powershell>
-<persist>true</persist>
