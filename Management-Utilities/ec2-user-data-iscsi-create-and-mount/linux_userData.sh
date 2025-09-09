@@ -1,20 +1,26 @@
 #!/bin/bash
 
 # user data
-# Set the secret name and region
-SECRET_NAME=[Secret name has it been saved in AWS secret manager]
-AWS_REGION=[AWS region]
-
-FSXN_ADMIN_IP=[Fsx admin ip, e.g. 172.25.45.32]
-# Volume name
-VOLUME_NAME=[Fsx volume name, e.g. iscsiVol]
-# Volume size in GB
-VOLUME_SIZE=[volume size in GB, e.g 100]
+# Secret name has it been saved in AWS secret manager
+SECRET_NAME=
+AWS_REGION=
+# Fsx admin ip, e.g. 172.25.45.32
+FSXN_ADMIN_IP=
+# FSxN Volume name , e.g. iscsiVol
+VOLUME_NAME=
+# Volume size in GB e.g 100
+VOLUME_SIZE=
 # Default value is fsx, but you can change it to any other value according to yours FSx for ONTAP SVM name
 SVM_NAME=fsx
 # Default value is fsxadmin, but you can change it to any other value according to yours FSx for ONTAP admin user name
 ONTAP_USER=fsxadmin
 # end - user data
+
+SECRET_NAME="${SECRET_NAME:=$1}"
+AWS_REGION="${AWS_REGION:=$2}"
+FSXN_ADMIN_IP="${FSXN_ADMIN_IP:=$3}"
+VOLUME_NAME="${VOLUME_NAME:=$4}"
+VOLUME_SIZE="${VOLUME_SIZE:=$5}"
 
 min=100
 max=999
@@ -154,6 +160,11 @@ else
     logMessage "Initiator ${initiatorName} with group ${groupName} already exists, skipping creation."
 fi
 
+instance_id=$(ec2-metadata -i | awk '{print $2}')
+if [ -z "$instance_id" ]; then
+  instance_id="unknown"
+fi
+
 logMessage "Create volume for vserver: ${SVM_NAME} volume name: ${VOLUME_NAME} and size: ${VOLUME_SIZE}g"
 createVolumeResult=$(curl -m $TIMEOUT -X POST -u "$ONTAP_USER":"$FSXN_PASSWORD" -k "https://$FSXN_ADMIN_IP/api/storage/volumes" -d '{
   "name": "'$VOLUME_NAME'",
@@ -164,9 +175,14 @@ createVolumeResult=$(curl -m $TIMEOUT -X POST -u "$ONTAP_USER":"$FSXN_PASSWORD" 
   },
   "aggregates": [{
     "name": "aggr1"
-  }]
+  }],
+  "_tags": [
+    "instanceId:'$instance_id'",
+    "hostName:'$(hostname)'",
+    "mountPoint:'$VOLUME_NAME'"
+  ]
 }')
-sleep 5
+sleep 10
 jobId=$(echo "${createVolumeResult}" | jq -r '.job.uuid')
 jobStatus=$(curl -X GET -u "$ONTAP_USER":"$FSXN_PASSWORD" -k "https://$FSXN_ADMIN_IP/api/cluster/jobs/$jobId")
 jobState=$(echo "$jobStatus" | jq -r '.state')

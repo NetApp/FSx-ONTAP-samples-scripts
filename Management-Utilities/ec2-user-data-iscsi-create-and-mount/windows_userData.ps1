@@ -1,15 +1,31 @@
 <powershell>
 # This script is used to install and configure FSx for Windows File Server
-#### Process param ####
-$secretId="AWS secret ARN, e.g arn:aws:secretsmanager:us-east-1:111222333444:secret:MySecret-123456"
-$ip="Fsx admin ip, e.g. 111.22.33.44"
-$volName="Fsx volume name, e.g. iscsiVol"
-$volSize="volume size in GB, e.g 100"
-$drive_letter="drive letter to use, e.g. d"
+param(
+   [string]$SecretIdParam,
+   [string]$FSxNAdminIpParam,
+   [string]$VolumeNameParam,
+   [string]$VolumeSizeParam,
+   [string]$DriveLetterParam
+)
+# "AWS secret ARN, e.g arn:aws:secretsmanager:us-east-1:111222333444:secret:MySecret-123456"
+$secretId=
+# "Fsx admin ip, e.g. 111.22.33.44"
+$ip=
+# "Fsx volume name, e.g. iscsiVol"
+$volName=
+# "volume size in GB, e.g 100"
+$volSize=
+# "drive letter to use, e.g. d"
+$drive_letter=
 
-# Default value is fsxadmin
+$secretId = if ($SecretIdParam) { $SecretIdParam } else { $secretId }
+$ip = if ($FSxNAdminIpParam) { $FSxNAdminIpParam } else { $ip }
+$volName = if ($VolumeNameParam) { $VolumeNameParam } else { $volName }
+$volSize = if ($VolumeSizeParam) { $VolumeSizeParam } else { $volSize }
+$drive_letter = if ($DriveLetterParam) { $DriveLetterParam } else { $drive_letter }
+
+# Defaults
 $user="fsxadmin"
-# Default value is fsx
 $svm_name="fsx"
 
 # default values
@@ -25,13 +41,15 @@ if (Test-Path $currentLogPath){
 }
 
 if( $null -eq $password -or $password -eq "" ) {
-   Write-Output "Failed to get data from Secrets Manager, exiting..." >> $currentLogPath 
-   write-host "Failed to get data from Secrets Manager, exiting..." -ForegroundColor Red
+   $message = "Failed to get data from Secrets Manager, exiting..."
+   Write-Output $message >> $currentLogPath 
+   write-host $message -ForegroundColor Red
    EXIT 1
 }
 
-Write-Output "Get data from Secrets Manager, successfully" >> $currentLogPath 
-write-host "Get data from Secrets Manager, successfully" -ForegroundColor Green
+$message = "Get data from Secrets Manager, successfully"
+Write-Output $message >> $currentLogPath 
+write-host $message -ForegroundColor Green
 $totaldisks = (get-disk | Sort-Object -Property number | Select-Object -Last 1 -ExpandProperty number)
 
 $path= "HKLM:\Software\UserData"
@@ -50,14 +68,16 @@ $runStep = Get-ItemProperty -Path $path -Name $itemName -ErrorAction SilentlyCon
 if($runStep -eq 0) {
 
    ### Install MPIO ####
-   Write-Output "Installing Multipath-IO windows feature" >> $currentLogPath 
-   Write-Host "Installing Multipath-IO windows feature" -ForegroundColor Yellow
-   $res = Get-WindowsFeature -Name Multipath-IO | Where-Object {$_.InstallState -eq "Installed"} 
+   $message = "Installing Multipath-IO windows feature"
+   Write-Output $message >> $currentLogPath
+   Write-Host $message -ForegroundColor Yellow
+   $res = Get-WindowsFeature -Name Multipath-IO | Where-Object {$_.InstallState -eq "Installed"}
    if(($res.Installed))
    {
-      Write-Output "Windows feature Multipath-IO already installed" >> $currentLogPath 
-      Write-Output "IDone.." >> $currentLogPath 
-      write-host "Windows feature Multipath-IO already installed" -ForegroundColor Green
+      $message = "Windows feature Multipath-IO already installed"
+      Write-Output $message >> $currentLogPath
+      Write-Output "IDone.." >> $currentLogPath
+      write-host $message -ForegroundColor Green
       write-host "Done.." -ForegroundColor Green
    }
    else {
@@ -74,15 +94,17 @@ if($runStep -eq 0) {
    #### check if letter drive already in used and in the correct format ####
    if($drive_letter.Length -gt 1 -or !($drive_letter -match '[a-zA-Z]'))
    {
-      Write-Output "Drive letter: $drive_letter is not in the correct format" >> $currentLogPath 
-      Write-Host "Drive letter: $drive_letter is not in the correct format" -ForegroundColor Red
+      $message = "Drive letter: $drive_letter is not in the correct format"
+      Write-Output $message >> $currentLogPath 
+      Write-Host $message -ForegroundColor Red
       . $uninstallFile
       break
    }
    if(Test-Path $drive_letter':')
    {
-      Write-Output "Drive letter: $drive_letter already in use" >> $currentLogPath 
-      Write-Host "Drive letter: $drive_letter already in use" -ForegroundColor Red
+      $message = "Drive letter: $drive_letter already in use"
+      Write-Output $message >> $currentLogPath 
+      Write-Host $message -ForegroundColor Red
       . $uninstallFile
       break
    }
@@ -92,15 +114,17 @@ if($runStep -eq 0) {
    Write-Host "Enabling MPIO" -ForegroundColor Yellow
    Enable-MSDSMAutomaticClaim -BusType iSCSI -Confirm
    @("Disable-MSDSMAutomaticClaim -BusType iSCSI -Confirm") + (Get-Content $uninstallFile) | Set-Content $uninstallFile   
-   Write-Output "Starting iSCSI service and setting on automatic status" >> $currentLogPath 
-   Write-Host "Starting iSCSI service and setting on automatic status" -ForegroundColor Yellow
+   $message = "Starting iSCSI service and setting on automatic status"
+   Write-Output $message >> $currentLogPath
+   Write-Host $message -ForegroundColor Yellow
    try {
       Start-Service -Name msiscsi -ErrorAction Stop
       @("Stop-Service  -Name msiscsi -Force") + (Get-Content $uninstallFile) | Set-Content $uninstallFile
    }
    catch {
-      Write-Output "Failed start msiscsi, due to: $_" >> $currentLogPath 
-      Write-Host "Failed start msiscsi, due to: $_" -ForegroundColor Red
+      $message = "Failed start msiscsi, due to: $_"
+      Write-Output $message >> $currentLogPath 
+      Write-Host $message -ForegroundColor Red
       . $uninstallFile
       break
    }
@@ -112,14 +136,16 @@ if($runStep -eq 0) {
             
    $connectResult = curl.exe -X GET -k "https://$ip/api/cluster?fields=version" -u "${user}:${password}" | ConvertFrom-Json
    if ($null -eq $connectResult.version) {
-      Write-Output "Failed connect to FSXn filesystem, due to: $connectResult.error.message" >> $currentLogPath 
-      Write-Host "Failed connect to FSXn filesystem, due to: $connectResult.error.message" -ForegroundColor Red
+      $message = "Failed connect to FSXn filesystem, due to: $connectResult.error.message"
+      Write-Output $message >> $currentLogPath 
+      Write-Host $message -ForegroundColor Red
       . $uninstallFile
       break
    }
 
    Write-Output "Creating volume: $vol_name" >> $currentLogPath 
    Write-Host "Creating volume: $vol_name" -ForegroundColor Yellow
+   $instanceId = Get-EC2InstanceMetadata -Category InstanceId
 
    $jsonPayload = @"
    {
@@ -131,7 +157,12 @@ if($runStep -eq 0) {
       },
       \"aggregates\": [{
          \"name\": \"aggr1\"
-      }]
+      }],
+      \"_tags\": [
+         \"instanceId:$instanceId\",
+         \"hostName:$env:COMPUTERNAME\",
+         \"mountPoint:$drive_letter\"
+      ]
    }
 "@
    $createVolumeResult = curl.exe -m $TIMEOUT -X POST -u "${user}:${password}" -k "https://$ip/api/storage/volumes" -d $jsonPayload | ConvertFrom-Json
@@ -139,8 +170,9 @@ if($runStep -eq 0) {
    $jobId = $createVolumeResult.job.uuid
    $jobStatus = curl.exe -X GET -u "${user}:${password}" -k "https://$ip/api/cluster/jobs/$jobId" | ConvertFrom-Json
    if ($jobStatus.state -ne "success") {
-      Write-Output "Failed create volume: $vol_name, due to: $($jobStatus.error)" >> $currentLogPath 
-      Write-Host "Failed create volume: $vol_name, due to: $($jobStatus.error)" -ForegroundColor Red
+      $message = "Failed create volume: $vol_name, due to: $($jobStatus.error)"
+      Write-Output $message >> $currentLogPath 
+      Write-Host $message -ForegroundColor Red
       . $uninstallFile
       break
    }
@@ -148,15 +180,17 @@ if($runStep -eq 0) {
    $record = $volumeResult.records | Where-Object { $_.name -eq $vol_name }
    $volumeUUid = $record.uuid
    if ($null -eq $volumeUUid) {
-      Write-Output "Failed create volume: $vol_name, aborting" >> $currentLogPath 
-      Write-Host "Failed create volume: $vol_name, aborting" -ForegroundColor Red
+      $message = "Failed create volume: $vol_name, aborting"
+      Write-Output $message >> $currentLogPath 
+      Write-Host $message -ForegroundColor Red
       . $uninstallFile
       break
    }
    @("curl.exe -m $TIMEOUT -X DELETE -u `"${user}:${password}`" -k `"https://$ip/api/storage/volumes/$volumeUUid`"") + (Get-Content $uninstallFile) | Set-Content $uninstallFile
 
-   Write-Output "Creating LUN: /vol/$vol_name/$lun_name" >> $currentLogPath 
-   Write-Host "Creating LUN: /vol/$vol_name/$lun_name" -ForegroundColor Yellow
+   $message = "Creating LUN: /vol/$vol_name/$lun_name"
+   Write-Output $message >> $currentLogPath 
+   Write-Host $message -ForegroundColor Yellow
 
    $lunSize=0.9*$volSize
    $jsonPayload = @"
@@ -177,13 +211,16 @@ if($runStep -eq 0) {
    $record = $lunResult.records | Where-Object { $_.name -eq "/vol/$vol_name/$lun_name" }
    $lunUuid = $record.uuid
    if ($null -eq $lunUuid) {
-      Write-Output "Failed create LUN: $lun_name, aborting" >> $currentLogPath 
-      Write-Host "Failed create LUN: $lun_name, aborting" -ForegroundColor Red
+      $message = "Failed create LUN: $lun_name, aborting"
+      Write-Output $message >> $currentLogPath 
+      Write-Host $message -ForegroundColor Red
       . $uninstallFile
       break
    }
-   Write-Output "LUN created successfully with UUID: $lunUuid" >> $currentLogPath
-   Write-Host "LUN created successfully with UUID: $lunUuid" -ForegroundColor Green
+
+   $message = "LUN created successfully with UUID: $lunUuid"
+   Write-Output $message >> $currentLogPath
+   Write-Host $message -ForegroundColor Green
    @("curl.exe -m $TIMEOUT -X DELETE -u `"${user}:${password}`" -k `"https://$ip/api/storage/luns/$lunUuid`"") + (Get-Content $uninstallFile) | Set-Content $uninstallFile
    
    $iqn = (Get-InitiatorPort).NodeAddress | sort-object iqn 
@@ -213,16 +250,18 @@ if($runStep -eq 0) {
       $record = $iGroupResult.records | Where-Object { $_.name -eq $igroup_name }
       $iGroupUuid = $record.uuid
       if ($null -eq $iGroupUuid) {
-         Write-Output "Failed create Igroup: $igroup_name, aborting" >> $currentLogPath 
-         Write-Host "Failed create Igroup: $igroup_name, aborting" -ForegroundColor Red
+         $message = "Failed create Igroup: $igroup_name, aborting"
+         Write-Output $message >> $currentLogPath 
+         Write-Host $message -ForegroundColor Red
          . $uninstallFile
       break
    }
       @("curl.exe -m $TIMEOUT -X DELETE -u `"${user}:${password}`" -k `"https://$ip/api/protocols/san/igroups/$iGroupUuid`"") + (Get-Content $uninstallFile) | Set-Content $uninstallFile
    }  
    else {
-      Write-Output "Initiator ${iqn} with group ${igroup_name} already exists, skipping creation." >> $currentLogPath 
-      Write-Host "Initiator ${iqn} with group ${igroup_name} already exists, skipping creation." -ForegroundColor Green
+      $message = "Initiator ${iqn} with group ${igroup_name} already exists, skipping creation."
+      Write-Output $message >> $currentLogPath 
+      Write-Host $message -ForegroundColor Green
    } 
    #### map server iqn to lun ####
    Write-Output "Mapping LUN to Igroup" >> $currentLogPath 
@@ -247,8 +286,9 @@ if($runStep -eq 0) {
    $getLunMap = curl.exe -m $TIMEOUT -X GET -u "${user}:${password}" -k "https://$ip/api/protocols/san/lun-maps?lun.name=/vol/$vol_name/$lun_name&igroup.name=$group_name&svm.name=$svm_name" | ConvertFrom-Json
    $lunGroupCreated = $getLunMap.num_records
    if ($lunGroupCreated -eq 0) {
-      Write-Output "Failed mapping LUN: $lun_name to igroup: $igroup_name" >> $currentLogPath 
-      Write-Host "Failed mapping LUN: $lun_name to igroup: $igroup_name" -ForegroundColor Red
+      $message = "Failed mapping LUN: $lun_name to igroup: $igroup_name"
+      Write-Output $message >> $currentLogPath 
+      Write-Host $message -ForegroundColor Red
       . $uninstallFile
       break
    }
@@ -265,8 +305,9 @@ if($runStep -eq 0) {
    $iscsi2IP = $interfacesResult.records | Where-Object { $_.name -eq "iscsi_2" } | Select-Object -ExpandProperty ip | Select-Object -ExpandProperty address
 
    if ($null -eq $iscsi1IP -or $null -eq $iscsi2IP) {
-      Write-Output "Failed to get iSCSI interfaces from ONTAP, aborting" >> $currentLogPath 
-      Write-Host "Failed to get iSCSI interfaces from ONTAP, aborting" -ForegroundColor Red
+      $message = "Failed to get iSCSI interfaces from ONTAP, aborting"
+      Write-Output $message >> $currentLogPath 
+      Write-Host $message -ForegroundColor Red
       . $uninstallFile
       break
    }
@@ -278,8 +319,9 @@ if($runStep -eq 0) {
       @("Remove-IscsiTargetPortal -TargetPortalAddress $iscsi1IP") + (Get-Content $uninstallFile) | Set-Content $uninstallFile
    }
    catch {
-      Write-Output "Failed to add new target, due to: $_" >> $currentLogPath 
-      Write-Host "Failed to add new target, due to: $_" -ForegroundColor Red
+      $message = "Failed to add new target, due to: $_"
+      Write-Output $message >> $currentLogPath 
+      Write-Host $message -ForegroundColor Red
       . $uninstallFile
       break
    }
@@ -290,15 +332,17 @@ if($runStep -eq 0) {
       @("Get-IscsiTarget | Disconnect-IscsiTarget") + (Get-Content $uninstallFile) | Set-Content $uninstallFile
    }
    catch {
-      Write-Output "Failed to connect to the new target, due to: $_" >> $currentLogPath 
-      Write-Host "Failed to connect to the new target, due to: $_" -ForegroundColor Red
+      $message = "Failed to connect to the new target, due to: $_"
+      Write-Output $message >> $currentLogPath 
+      Write-Host $message -ForegroundColor Red
       . $uninstallFile
       break
    }
    
    #### create new ISCSI disk ####
-   Write-Output "Online, Initialize and format disks" >> $currentLogPath 
-   Write-host 'Online, Initialize and format disks' -ForegroundColor Yellow
+   $message = "Online, Initialize and format disks"
+   Write-Output $message >> $currentLogPath 
+   Write-host $message -ForegroundColor Yellow
    #### find free disk ####
    $maxRetries = 5
    $counter = 0
@@ -316,36 +360,42 @@ if($runStep -eq 0) {
       set-disk -Number $diskNum -IsOffline $false
    }
    catch {
-      Write-Output "Failed set disk to online, due to: $_" >> $currentLogPath 
-      Write-Host "Failed set disk to online, due to: $_" -ForegroundColor Red -ErrorAction stop
+      $message = "Failed set disk to online, due to: $_"
+      Write-Output $message >> $currentLogPath 
+      Write-Host $message -ForegroundColor Red -ErrorAction stop
       break
    }
 
-   Write-Output "Set disk to have Read/Write permissions" >> $currentLogPath 
-   Write-host 'Set disk to have Read/Write permissions' -ForegroundColor Yellow
+   $message = "Set disk to have Read/Write permissions"
+   Write-Output $message >> $currentLogPath 
+   Write-host $message -ForegroundColor Yellow
    try {
       set-disk -Number $diskNum -IsReadOnly $false
    }
    catch {
-      Write-Output "Failed set disk to RW, due to: $_" >> $currentLogPath 
-      Write-Host "Failed set disk to RW, due to: $_" -ForegroundColor Red -ErrorAction stop
+      $message = "Failed set disk to RW, due to: $_"
+      Write-Output $message >> $currentLogPath 
+      Write-Host $message -ForegroundColor Red -ErrorAction stop
       break
    }
 
    try {
-      Write-Output "Starting Initialize and format disk number: $diskNum" >> $currentLogPath 
-      Write-host "Starting Initialize and format disk number: $diskNum" -ForegroundColor Yellow
+      $message = "Starting Initialize and format disk number: $diskNum"
+      Write-Output $message >> $currentLogPath 
+      Write-host $message -ForegroundColor Yellow
       Initialize-Disk -Number $diskNum -PartitionStyle MBR
       New-Partition -DiskNumber $diskNum -UseMaximumSize -IsActive -DriveLetter $drive_letter | Format-Volume
    }
    catch {
-      Write-Output "Failed create new partition, due to: $_" >> $currentLogPath 
-      Write-Host "Failed create new partition, due to: $_" -ForegroundColor Red  -ErrorAction stop
+      $message = "Failed create new partition, due to: $_"
+      Write-Output $message >> $currentLogPath 
+      Write-Host $message -ForegroundColor Red  -ErrorAction stop
       break
    }
    Set-ItemProperty -Path $path -Name $itemName -Value 1
-   Write-Output "Done creating new FSx disk, drive letter: $drive_letter" >> $currentLogPath 
-   Write-Host "Done creating new FSx disk, drive letter: $drive_letter" -ForegroundColor Green
+   $message = "Done creating new FSx disk, drive letter: $drive_letter"
+   Write-Output $message >> $currentLogPath 
+   Write-Host $message -ForegroundColor Green
 }
 else {
    Write-Output "FSx disk already created" >> $currentLogPath 
