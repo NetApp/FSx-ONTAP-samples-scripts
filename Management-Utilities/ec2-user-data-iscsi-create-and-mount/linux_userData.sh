@@ -161,6 +161,9 @@ else
 fi
 
 instance_id=$(ec2-metadata -i | awk '{print $2}')
+if [ -z "$instance_id" ]; then
+  instance_id="unknown"
+fi
 
 logMessage "Create volume for vserver: ${SVM_NAME} volume name: ${VOLUME_NAME} and size: ${VOLUME_SIZE}g"
 createVolumeResult=$(curl -m $TIMEOUT -X POST -u "$ONTAP_USER":"$FSXN_PASSWORD" -k "https://$FSXN_ADMIN_IP/api/storage/volumes" -d '{
