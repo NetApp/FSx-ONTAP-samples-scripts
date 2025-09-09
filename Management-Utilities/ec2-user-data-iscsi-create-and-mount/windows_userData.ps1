@@ -1,11 +1,11 @@
 <powershell>
 # This script is used to install and configure FSx for Windows File Server
 param(
-   [string]$SecretId,
-   [string]$FSxNAdminIp,
-   [string]$VolumeName,
-   [string]$VolumeSize,
-   [string]$DriveLetter
+   [string]$SecretIdParam,
+   [string]$FSxNAdminIpParam,
+   [string]$VolumeNameParam,
+   [string]$VolumeSizeParam,
+   [string]$DriveLetterParam
 )
 # "AWS secret ARN, e.g arn:aws:secretsmanager:us-east-1:111222333444:secret:MySecret-123456"
 $secretId=
@@ -18,11 +18,11 @@ $volSize=
 # "drive letter to use, e.g. d"
 $drive_letter=
 
-$secretId = if ($SecretId) { $SecretId } else { $secretId }
-$ip = if ($FSxNAdminIp) { $FSxNAdminIp } else { $ip }
-$volName = if ($VolumeName) { $VolumeName } else { $volName }
-$volSize = if ($VolumeSize) { $VolumeSize } else { $volSize }
-$drive_letter = if ($DriveLetter) { $DriveLetter } else { $drive_letter }
+$secretId = if ($SecretIdParam) { $SecretIdParam } else { $secretId }
+$ip = if ($FSxNAdminIpParam) { $FSxNAdminIpParam } else { $ip }
+$volName = if ($VolumeNameParam) { $VolumeNameParam } else { $volName }
+$volSize = if ($VolumeSizeParam) { $VolumeSizeParam } else { $volSize }
+$drive_letter = if ($DriveLetterParam) { $DriveLetterParam } else { $drive_letter }
 
 # Defaults
 $user="fsxadmin"
