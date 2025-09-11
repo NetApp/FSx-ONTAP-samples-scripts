@@ -24,7 +24,7 @@
 get_token() {
 
   tokenFile="$HOME/.blueXP_token"
-  tmpfile=$(mktemp -t create_token.XXXXXX)
+  tmpfile=$(mktemp -t get_token.XXXXXX)
   trap 'rm -f "$tmpfile"' RETURN
   
   if [ -z "$REFRESH_TOKEN" ]; then
@@ -78,24 +78,36 @@ get_token() {
 
 ################################################################################
 # This function runs 'curl' checking for the status code and handling errors.
-# It takes the following parameters:
-#  1. HTTP method (GET or POST)
+# It takes the following positional parameters:
+#  1. HTTP method (GET, POST, PUT or DELETE)
 #  2. Bearer token
 #  3. URL to call
 #  4. Output file to write the response to
 #  5. Error output file to write errors to
-#  6. Data to send (for POST requests)
+#  6. Data to send (for POST or PUT requests)
 #  7. Accept header (optional, defaults to "application/json, text/plain, */*")
+#  8 -> ??? optional headers to add.
 ################################################################################
 run_curl () {
 
-  method="$1"
+  method="$(echo $1 | tr 'a-z' 'A-Z')"
   token="$2"
   url="$3"
   output="$4"
   errorOutput="$5"
   data="$6"
   accept="$7"
+  shift 7
+
+  declare -a extraHeaders
+  while [ $# -gt 0 ]; do
+    extraHeader="$1"
+    if [ -n "$extraHeader" ]; then
+      extraHeaders+=(-H "$extraHeader")
+    fi
+    shift
+  done
+
   if [[ -z "$method" || -z "$token" || -z "$url" || -z "$output" || -z "$errorOutput" ]]; then
     echo "Error: Missing required parameters for run_curl function." >&2
     exit 1
@@ -104,22 +116,22 @@ run_curl () {
     accept="application/json, text/plain, */*"
   fi
   case "$method" in
-    GET|get)
+    GET)
       curl -sw "%{stderr}%{http_code},%{errormsg}" "$url" \
-         -H "Accept: $accept" \
-         -H "Authorization: Bearer $token" > $output 2> $errorOutput
+         -H "Accept: $accept" "${extraHeaders[@]}" \
+         -H "Authorization: Bearer $token" ${extraHeaders[*]} > $output 2> $errorOutput
       exitCode=$?
       ;;
-    POST|post)
-      curl -X POST -sw "%{stderr}%{http_code},%{errormsg}" "$url" \
-         -H "Accept: $accept" \
+    POST|PUT)
+      curl -X "$method" -sw "%{stderr}%{http_code},%{errormsg}" "$url" \
+         -H "Accept: $accept" "${extraHeaders[@]}" \
          -H "Content-Type:application/json" \
          -H "Authorization: Bearer $token" --data "$data" > $output 2> $errorOutput
       exitCode=$?
       ;;
-    DELETE|delete)
+    DELETE)
       curl -X DELETE -sw "%{stderr}%{http_code},%{errormsg}" "$url" \
-         -H "Accept: $accept" \
+         -H "Accept: $accept" "${extraHeaders[@]}" \
          -H "Authorization: Bearer $token" > $output 2> $errorOutput
       exitCode=$?
       ;;

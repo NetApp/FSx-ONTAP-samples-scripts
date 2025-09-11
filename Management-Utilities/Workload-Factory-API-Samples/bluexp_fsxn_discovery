@@ -1,0 +1,162 @@
+#!/bin/bash
+#
+# This script adds a filesystem to a BlueXP workspace and sets the filesystem
+# password based on the secret stored in AWS Secrets Manager. The secret must
+# be of "other" type with two fields (case sensitive): username and password.
+# The username field is optional and defaults to fsxadmin if not present.
+#
+################################################################################
+# Display usage information then exists the script.
+################################################################################
+usage () {
+  cat 1>&2 <<EOF
+Usage: $(basename $0) -t REFRESH_TOKEN -a blueXP_BLUE_ACCOUNT_ID -c CREDENTIALS_ID -r aws_AWS_REGION -f FILESYSTEM_ID -C CONNECTOR_ID -w WORKSPACE_ID -s SECRET_NAME -u USERNAME -p PASSWORD [-P]
+
+Where: REFRESH_TOKEN - Is a refresh token used to obtain an access token needed
+                       to run the Workload Factory APIs. You can obtain a refresh
+                       token by going to https://services.cloud.netapp.com/refresh-token
+       blueXP_BLUE_ACCOUNT_ID - is the BlueXP account ID. Run 'list_bluexp_accts' to get a
+                           list of accounts you have access to
+       CREDENTIALS_ID - is the Workload Factory credentials ID for the AWS account. Run
+                        'list_credentials' to get a list of credentials you have access to
+       aws_AWS_REGION - is the AWS AWS_REGION where the FSx file systems are located
+       FILESYSTEM_ID - is the AWS file system ID of the FSx file system where the volume resides
+       CONNECTOR_ID - The BlueXP connector ID. Run 'list_bluexp_connectors' to get a list
+                      of connectors you have access to
+       WORKSPACE_ID - The BlueXP workspace ID. Run 'list_bluexp_workspaces' to get a list of workspaces
+                      you have access to.
+       SECRET_NAME - The name of the secret that holds the credentials to assoicate with the FSxN.
+       USERNAME - The username to set the password for (defaults to fsxadmin if not specified).
+       PASSWORD - The password to set for the username.
+       -P - Means to just try to set the password.
+
+Instead of passing parameters on the command line, you can set the following
+environment variables:
+
+    export REFRESH_TOKEN=<REFRESH_TOKEN>
+    export BLUEXP_BLUE_ACCOUNT_ID=<blueXP_BLUE_ACCOUNT_ID>
+    export CREDENTIALS_ID=<CREDENTIALS_ID>
+    export AWS_AWS_REGION=<aws_AWS_REGION>
+    export USERNAME=<username>
+    export PASSWORD=<password>
+
+NOTES: 
+o You must provide either a SECRET_NAME or a passowrd. 
+o If you don't provide a username, it will default to fsxadmin unless
+  you use a secret and the secret has a username field.
+o If you provide a username and a secret, the username provided
+  will be used and the username field in the secret will be ignored.
+o The secret must be of "other" type with two fields: username and password.
+EOF
+  exit 1
+}
+
+################################################################################
+# Main logic starts here.
+################################################################################
+tmpout=$(mktemp /tmp/add_fsxn_to_bluexp-out.XXXXXX)
+tmperr=$(mktemp /tmp/add_fsxn_to_bluexp-err.XXXXXX)
+trap 'rm -f $tmpout $tmperr' exit
+#
+# Source the wf_utils file.
+wf_utils=$(command -v wf_utils)
+if [ -z "$wf_utils" ]; then
+  if [ ! -x "./wf_utils" ]; then
+    cat >&2 <<EOF
+Error: The 'wf_utils' script was not found in the current directory or in the command search path.
+It is required to run this script. You can download it from:
+https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples
+EOF
+    exit 1
+  else
+    wf_utils=./wf_utils
+  fi
+fi
+. "$wf_utils"
+#
+# Parse the command line options.
+skip_add=false
+while getopts "ht:a:c:r:f:C:s:w:u:p:P" opt; do
+  case ${opt} in
+    t) REFRESH_TOKEN=$OPTARG ;;
+    a) BLUEXP_ACCOUNT_ID=$OPTARG ;;
+    c) CREDENTIALS_ID=$OPTARG ;;
+    r) AWS_REGION=$OPTARG ;;
+    f) FILESYSTEM_ID=$OPTARG ;;
+    C) CONNECTOR_ID=$OPTARG ;;
+    s) SECRET_NAME=$OPTARG ;;
+    w) WORKSPACE_ID=$OPTARG ;;
+    u) USERNAME=$OPTARG ;;
+    p) PASSWORD=$OPTARG ;;
+    P) skip_add=true ;;
+    *) usage ;;
+  esac
+done
+#
+# Declare an array of required options and the error message to display if they are not set.
+declare -A required_options
+required_options["REFRESH_TOKEN"]='Error: A BlueXP refresh tokon is required to run this script. It can be obtain from this web page:
+  https://services.cloud.netapp.com/refresh-token\n\n'
+required_options["BLUEXP_ACCOUNT_ID"]='Error: A BlueXP account ID is required to run this script.
+You can get the list of accounts you have access to by running the "list_bluexp_accts" script
+found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
+required_options["CREDENTIALS_ID"]='Error: The ID of the credentials to delete is required.
+You can get a list of credentials by running the "list_credentials" script
+found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
+required_options["AWS_REGION"]='Error: The AWS region where the file system is located is required.\n\n'
+required_options["FILESYSTEM_ID"]='Error: The ID of the FSxN file system is required.\n\n'
+required_options["CONNECTOR_ID"]='Error: A BlueXP connector ID is required to run this script.
+You can get the list of connectors you have access to by running the "list_bluexp_connectors" script
+found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
+required_options["WORKSPACE_ID"]='Error: A BlueXP workspace ID is required to run this script.
+You can get the list of workspaces you have access to by running the "list_bluexp_workspaces" script
+found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
+
+check_required_options
+
+if [ -z "$SECRET_NAME"  -a -z "$PASSWORD" ]; then
+  echo "Error: You must provide either a secret name or password." >&2
+  usage
+fi
+#
+# If the username and/or password were not provide, get them from the secret.
+if [ -z "$USERNAME" -a ! -z "$SECRET_NAME" ]; then
+  USERNAME=$(aws secretsmanager --region $AWS_REGION get-secret-value --secret-id $SECRET_NAME --query SecretString --output text | sed -ne 's/.*"username":"\([^"]*\).*/\1/p')
+fi
+if [ -z "$USERNAME" ]; then
+  USERNAME="fsxadmin"
+fi
+if [ -z "$PASSWORD" ]; then
+  PASSWORD=$(aws secretsmanager --region $AWS_REGION get-secret-value --secret-id $SECRET_NAME --query SecretString --output text | sed -ne 's/.*"password":"\([^"]*\).*/\1/p')
+fi
+if [ -z "$PASSWORD" ]; then
+  echo "Failed to get the password from the secret." >&2
+  exit 1
+fi
+#
+# Check that the required commands are available.
+for cmd in jq curl; do
+  if ! command -v $cmd &> /dev/null; then
+    echo "Error: The required command '$cmd' was not found. Please install it." >&2
+    exit 1
+  fi
+done
+#
+# Get an access token.
+token=$(get_token)
+if [ -z "$token" ]; then
+  echo "Failed to get a token."
+  exit 1
+fi
+#
+# Add the filesystem to the BlueXP workspace.
+if [ "$skip_add" == false ]; then
+  echo -n "Adding $FILESYSTEM_ID to BlueXP workspace $WORKSPACE_ID..."
+  run_curl "POST" "$token" "https://api.workloads.netapp.com/accounts/$BLUEXP_ACCOUNT_ID/fsx/v2/credentials/$CREDENTIALS_ID/regions/$AWS_REGION/bluexp/register-file-systems?workspaceId=$WORKSPACE_ID" $tmpout $tmperr '["'$FILESYSTEM_ID'"]' 'application/json' 'x-bluexp-source: true' "x-agent-id: $CONNECTOR_ID" 
+  echo "Done."
+fi
+#
+# Set the filesystem password.
+echo -n "Setting password for $USERNAME on $FILESYSTEM_ID..."
+run_curl "POST" "$token" "https://api.workloads.netapp.com/accounts/$BLUEXP_ACCOUNT_ID/fsx/v2/credentials/$CREDENTIALS_ID/regions/$AWS_REGION/file-systems/$FILESYSTEM_ID/ontap-credentials" $tmpout $tmperr '{"user": "'$USERNAME'", "password":"'$PASSWORD'","resetFsxAdminPassword":false}' 'application/json' 'x-bluexp-source: true' "x-agent-id: $CONNECTOR_ID"
+echo "Done."
