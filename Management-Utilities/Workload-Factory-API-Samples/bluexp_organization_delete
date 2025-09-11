@@ -7,7 +7,7 @@
 ################################################################################
 usage () {
   cat 1>&2 <<EOF
-Usage: $(basename $0) -t REFRESH_TOKEN -o ORAGANIZATION_ID
+Usage: $(basename $0) -t REFRESH_TOKEN -o ORGANIZATION_ID
 
 Where: REFRESH_TOKEN - Is a refresh token used to obtain an access token needed
                        to run the Workload Factory APIs. You can obtain a refresh
@@ -56,7 +56,7 @@ done
 #
 # Declare an array of required options and the error message to display if they are not set.
 declare -A required_options
-required_options["REFRESH_TOKEN"]='Error: A BlueXP refresh tokon is required to run this script. It can be obtain from this web page:
+required_options["REFRESH_TOKEN"]='Error: A BlueXP refresh token is required to run this script. It can be obtained from this web page:
   https://services.cloud.netapp.com/refresh-token\n\n'
 required_options["ORGANIZATION_ID"]='Error: You must provide the name of the organization you want to delete.
 You can get the list of organization you have access to by running the "list_bluexp_accts" script

@@ -41,7 +41,7 @@ environment variables:
     export PASSWORD=<password>
 
 NOTES: 
-o You must provide either a SECRET_NAME or a passowrd. 
+o You must provide either a SECRET_NAME or a password. 
 o If you don't provide a username, it will default to fsxadmin unless
   you use a secret and the secret has a username field.
 o If you provide a username and a secret, the username provided
@@ -95,7 +95,7 @@ done
 #
 # Declare an array of required options and the error message to display if they are not set.
 declare -A required_options
-required_options["REFRESH_TOKEN"]='Error: A BlueXP refresh tokon is required to run this script. It can be obtain from this web page:
+required_options["REFRESH_TOKEN"]='Error: A BlueXP refresh token is required to run this script. It can be obtained from this web page:
   https://services.cloud.netapp.com/refresh-token\n\n'
 required_options["BLUEXP_ACCOUNT_ID"]='Error: A BlueXP account ID is required to run this script.
 You can get the list of accounts you have access to by running the "list_bluexp_accts" script

@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# This script is used to list all the connetors that a user has
+# This script is used to list all the BlueXP workspaces that a user has
 # access to.
 #
 # It is dependent on the 'wf_utils' file that is included in this repo. That
@@ -67,7 +67,7 @@ done
 #
 # Declare an array of required options and the error message to display if they are not set.
 declare -A required_options
-required_options["REFRESH_TOKEN"]='Error: A BlueXP refresh tokon is required to run this script. It can be obtain from this web page:
+required_options["REFRESH_TOKEN"]='Error: A BlueXP refresh token is required to run this script. It can be obtained from this web page:
   https://services.cloud.netapp.com/refresh-token\n\n'
 required_options["BLUEXP_ACCOUNT_ID"]='Error: A BlueXP account ID is required to run this script.
 You can get the list of accounts you have access to by running the "list_bluexp_accts" script

@@ -119,7 +119,7 @@ run_curl () {
     GET)
       curl -sw "%{stderr}%{http_code},%{errormsg}" "$url" \
          -H "Accept: $accept" "${extraHeaders[@]}" \
-         -H "Authorization: Bearer $token" ${extraHeaders[*]} > $output 2> $errorOutput
+         -H "Authorization: Bearer $token" > $output 2> $errorOutput
       exitCode=$?
       ;;
     POST|PUT)
