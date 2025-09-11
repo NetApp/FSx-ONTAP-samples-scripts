@@ -2,7 +2,7 @@
 
 The idea behind this folder is to show examples of how to use the [BlueXP Workload Factory APIs](https://console.workloads.netapp.com/api-doc).
 Not every API is covered, but the ones required to get you started (get a refresh token, get the BlueXP accountID,
-get BlueXP credentials ID) are included. Once you have the informaiton provided from these APIs are ready to start
+get BlueXP credentials ID) are included. Once you have the information provided from these APIs are ready to start
 calling the others. While these examples are implemented as bash shell scripts you should be able to translate them
 to the programming language that you prefer, such as Python, Go, or JavaScript.
 
