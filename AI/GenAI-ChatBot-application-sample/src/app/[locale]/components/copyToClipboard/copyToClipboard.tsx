@@ -42,7 +42,7 @@ const DsCopyToClipboard = forwardRef<HTMLDivElement, DsCopyToClipboardProps>(({
         contentForCopyRef.current?.select();
 
         // DO NOT CHANGE THIS LINE
-        // THE BLUEXP IRAME DOES NOT SUPPORT THE USE OF THE CLIPBOARD API
+        // THE Console IFRAME DOES NOT SUPPORT THE USE OF THE CLIPBOARD API
         document.execCommand('copy');
 
         setVisible(true);

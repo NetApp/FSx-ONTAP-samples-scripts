@@ -94,7 +94,7 @@ npm run build
 
 ## Learn More
 
-- Learn more about [BlueXP Workload Factory for AWS](https://docs.netapp.com/us-en/workload-genai/index.html).
+- Learn more about [Console Workload Factory for AWS](https://docs.netapp.com/us-en/workload-genai/index.html).
 - Learn more about the APIs used in this sample application by visiting the [Workload Factory API documentation](https://console.workloads.netapp.com/api-doc).
 - To learn more about Next.js, take a look at the following resources:
     - [Next.js documentation](https://nextjs.org/docs) - learn about Next.js features and API.
