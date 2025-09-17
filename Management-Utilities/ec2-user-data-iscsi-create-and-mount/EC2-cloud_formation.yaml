@@ -1,0 +1,135 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Launch EC2 instance with user data script downloaded from S3 and dynamic parameters
+
+Parameters:
+  OperationSystem:
+    Type: String
+    AllowedValues:
+      - Linux
+      - Windows
+  InstanceType:
+    Type: String
+    Default: t3.micro
+    Description: EC2 instance type
+  InstanceName:
+    Type: String
+    Description: EC2 instance name
+  KeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: Name of an existing EC2 KeyPair
+  ImageId:
+    Type: AWS::EC2::Image::Id
+    Description: AMI ID for the instance
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC ID
+  SubnetId:
+    Type: AWS::EC2::Subnet::Id
+    Description: Subnet ID
+  SecretName:
+    Type: String
+    Description: Aws Secret name
+  AWSRegion:
+    Type: String
+    Description: AWS Region
+  FSxNAdminIp:
+    Type: String
+    Description: FSxN Admin IP
+  VolumeName:
+    Type: String
+    Description: Volume Name
+  VolumeSize:
+    Type: Number
+    Description: Volume Size in GiB
+  SvmName:
+    Type: String
+    Default: fsx
+    Description: SVM Name
+  DriveLetter:
+    Type: String
+    Default: d
+    Description: Drive Letter - valid for Windows only
+  CidrIp:
+    Type: String
+    Default: 0.0.0.0/0 # For testing; restrict to your IP for production
+    Description: CIDR IP for SSH access to the instance
+  LinuxUserDataUrl:
+    Type: String
+    Default: https://raw.githubusercontent.com/NetApp/FSx-ONTAP-samples-scripts/refs/heads/main/Management-Utilities/ec2-user-data-iscsi-create-and-mount/linux_userData.sh
+    Description: URL to Linux user data script
+  WindowsUserDataUrl:
+    Type: String
+    Default: https://raw.githubusercontent.com/NetApp/FSx-ONTAP-samples-scripts/refs/heads/main/Management-Utilities/ec2-user-data-iscsi-create-and-mount/windows_userData.ps1
+    Description: URL to Windows user data script
+
+Conditions:
+  IsLinux: !Equals [ !Ref OperationSystem, "Linux" ]
+  IsWindows: !Equals [ !Ref OperationSystem, "Windows" ]
+
+Resources:
+  EC2InstanceSecurityGroup: 
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for the EC2 instance
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: !If
+          - IsLinux
+          - 22
+          - 3389
+          ToPort: !If
+          - IsLinux
+          - 22
+          - 3389
+          CidrIp: !Ref CidrIp
+  EC2InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/SecretsManagerReadWrite
+
+  EC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref EC2InstanceRole
+  MyEC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      ImageId: !Ref ImageId
+      KeyName: !Ref KeyName
+      SecurityGroupIds:
+        - !Ref EC2InstanceSecurityGroup
+      SubnetId: !Ref SubnetId
+      IamInstanceProfile: !Ref EC2InstanceProfile
+      Tags:
+        - Key: Name
+          Value: !Ref InstanceName
+      UserData: !If
+          - IsLinux
+          - Fn::Base64: !Sub |
+              #!/bin/bash
+              curl -o /tmp/userdata-script.sh ${LinuxUserDataUrl}
+              chmod +x /tmp/userdata-script.sh
+              # Pass parameters to the script
+              /tmp/userdata-script.sh "${SecretName}" "${AWSRegion}" "${FSxNAdminIp}" "${VolumeName}" "${VolumeSize}" "${SvmName}"
+          - Fn::Base64: !Sub |
+              <powershell>
+              Invoke-WebRequest -Uri ${WindowsUserDataUrl} -OutFile C:\userdata-script.ps1
+              (Get-Content 'C:\userdata-script.ps1') | Where-Object { $_ -notmatch '^<powershell>$|^</powershell>$' } | Set-Content 'C:\userdata-script.ps1'
+              powershell.exe -ExecutionPolicy Bypass -File C:\userdata-script.ps1 -SecretIdParam "${SecretName}" -FSxNAdminIpParam "${FSxNAdminIp}" -VolumeNameParam "${VolumeName}" -VolumeSizeParam "${VolumeSize}" -DriveLetterParam "${DriveLetter}" -SvmNameParam "${SvmName}"
+              </powershell>
+Outputs:
+  InstanceId:
+    Description: EC2 Instance ID
+    Value: !Ref MyEC2Instance
