@@ -92,8 +92,10 @@ Parameters:
     Type: AWS::EC2::Image::Id
     Description: AMI ID for the instance
     AllowedValues:
-        - ami-0b09ffb6d8b58ca91 # Amazon Linux 2023 Kernel-6.1 AMI (us-east-1)
-        - ami-0e3c2921641a4a215 # Microsoft Windows Server 2025 Base (us-east-1)
+      # Amazon Linux 2023 Kernel-6.1 AMI (us-east-1)
+      - ami-0b09ffb6d8b58ca91
+      # Microsoft Windows Server 2025 Base (us-east-1) 
+      - ami-0e3c2921641a4a215
   VpcId:
     Type: AWS::EC2::VPC::Id
     Description: VPC ID
@@ -106,7 +108,7 @@ Parameters:
   AWSRegion:
     Type: String
     Description: AWS Secret region(in which you have yours secret)
-  ManagementEndpointIP :
+  ManagementEndpointIP:
     Type: String
     Description: Management endpoint IP Address of your FSxN
   VolumeName:
