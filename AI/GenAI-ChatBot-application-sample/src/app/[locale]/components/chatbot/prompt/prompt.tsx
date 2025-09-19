@@ -1,4 +1,4 @@
-import { ReactElement, RefObject, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, ReactElement, RefObject, useEffect, useMemo, useRef, useState } from "react";
 import './prompt.scss';
 import UserIcon from '@/app/[locale]/svgs/chatbot/user.svg';
 import BotIcon from "@/app/[locale]/svgs/chatbot/bot.svg";
@@ -22,6 +22,8 @@ import { useCreatePreSignUrlMutation } from "@/lib/api/chatApi.slice";
 import { useDispatch } from "react-redux";
 import { addNotification, removeNotification } from "@/lib/slices/notifications.slice";
 
+import { UploadedFileProp } from "@/app/[locale]/fileUpload/dsMultipleFileUpload/dsListOfFilesForUpload/dsListOfFilesForUpload";
+
 export type UserType = 'USER' | 'BOT';
 
 export interface PromptItem {
@@ -33,7 +35,8 @@ export interface PromptItem {
     isWriting: boolean,
     filesData?: FileData[],
     isTemp: boolean,
-    type: MessageType
+    type: MessageType,
+    images?: UploadedFileProp[],
 }
 
 interface PromptProps {
@@ -150,6 +153,36 @@ const Prompt = ({ className, prompt, id, chatAreaRef, knowledgeBaseId }: PromptP
             const TABLE_TAG_START = '&lt;table&gt;';
             const TABLE_TAG_END = '&lt;/table&gt;';
 
+            // if (prompt.images && prompt.images.length > 0 && prompt.user === 'USER') {
+            if (prompt.images && prompt.images.length > 0) {
+                if (prompt.user === 'USER') {
+                    return (<>
+                        {prompt.message}
+                        <div className="imageContainer">
+                            {prompt.images.map((image, index) => (
+                                <div className="imageLayout" key={index}>
+                                    <img className="thumbnail" key={index} src={image.imageURLs![0] || ""} alt={`Uploaded file ${index}`} />
+                                    {image.fileName}
+                                </div>
+                            ))}
+                        </div>
+                    </>)
+                } else if (prompt.user === 'BOT') {
+                    return (<>
+                        {prompt.message}
+                        <div className="imageContainer">
+                            {prompt.images.map((image, index) => (
+                                <div className="imageLayout" key={index}>
+                                    <img className="thumbnail" key={index} src={image.imageURLs![0] || ""} alt={`Uploaded file ${index}`} />
+                                    {image.fileName}
+                                </div>
+                            ))}
+                        </div>
+                        whould like to further investigate these cases.
+                    </>)
+                }
+            }
+
             const generateTable = (tableString: string): ReactElement => {
                 const regex = /{[^}]*}/g;
                 const matchRows = tableString.replaceAll('<br/>', '').match(regex);
@@ -225,6 +258,8 @@ const Prompt = ({ className, prompt, id, chatAreaRef, knowledgeBaseId }: PromptP
 
                 return promptString;
             }
+
+
 
             return (
                 <DsTypography variant="Regular_14" className={`promptMessage  ${isWriting && !!htmlString ? 'textWriting' : ''}`} >{generatePromptString()}</DsTypography>

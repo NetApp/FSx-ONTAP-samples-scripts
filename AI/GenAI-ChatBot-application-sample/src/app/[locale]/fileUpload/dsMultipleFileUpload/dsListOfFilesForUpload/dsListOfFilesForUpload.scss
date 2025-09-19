@@ -1,0 +1,39 @@
+@use '../../../styles/mixins.scss' as *;
+
+.dsListOfFilesForUpload {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 384px;
+
+    .fileItemName {
+        @include fadeIn(0.3s);
+
+        .dsTextFieldFrame {
+            .inputWithActionsContainer {
+                &:hover {
+                    outline: none;
+
+                    .textFieldInput {
+                        background-color: var(--hover-background);
+                    }
+                }
+            }
+
+            .extraInfoContainer {
+                position: relative;
+                top: 4px;
+            }
+
+            &:not(.isError) {
+                .inputWithActionsContainer {
+                    border: none;
+
+                    &:hover {
+                        outline: none;
+                    }
+                }
+            }
+        }
+    }
+}

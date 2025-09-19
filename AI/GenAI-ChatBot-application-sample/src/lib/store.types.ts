@@ -5,6 +5,8 @@ import authSlice from "./slices/auth.slice";
 import knowledgeBaseSlice from "./slices/KnowledgeBase.slice";
 import { KnowledgeBase } from "./api/api.types";
 import errorHandelingSlice from "./slices/errorHandeling.slice";
+import { StaticImageData } from "next/image";
+import { UploadedFileProp } from "@/app/[locale]/fileUpload/dsMultipleFileUpload/dsListOfFilesForUpload/dsListOfFilesForUpload";
 
 export type MessageType = 'ANSWER' | 'ERROR';
 
@@ -46,7 +48,8 @@ export interface Message {
     answer: string,
     filesData?: FileData[],
     stopReason: null | string,
-    type: MessageType
+    type: MessageType,
+    images?: UploadedFileProp[],
 }
 
 export interface ChatMessage extends Message {

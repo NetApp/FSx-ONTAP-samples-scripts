@@ -1,0 +1,7 @@
+@use '../../../styles/mixins.scss' as *;
+
+.dsMultipleFileUpload {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}

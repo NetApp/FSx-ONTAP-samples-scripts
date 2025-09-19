@@ -1,0 +1,13 @@
+@use '../../../styles/mixins.scss' as *;
+
+.dsSingleFileUpload {
+    .dsTextFieldFrame:not(.isDisabled) {
+        .inputTextContainer {
+            .inputWithActionsContainer {
+                .textFieldInput {
+                    background-color: var(--background-content);
+                }
+            }
+        }
+    }
+}

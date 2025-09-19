@@ -24,6 +24,16 @@ import { ErrorApi } from '@/lib/api/api.types';
 import HistoryPanel from '../panels/historyPanel/historyPanel';
 import InfoPanel from '../panels/infoPanel/infoPanel';
 import { useTranslation } from 'react-i18next';
+import { DsDragDropFileUploader } from '../../fileUpload/dsDragDropFileUploader/dsDragDropFileUploader';
+import { Message } from '../dsComponents/dsTypes';
+import { UploadedFileProp } from '../../fileUpload/dsMultipleFileUpload/dsListOfFilesForUpload/dsListOfFilesForUpload';
+
+export interface imageInfo {
+    url: string,
+    name: string,
+    size: number,
+    type: string
+}
 
 const Chatbot = () => {
     const { t } = useTranslation();
@@ -38,6 +48,8 @@ const Chatbot = () => {
     const [message, setMessageInput] = useState<string>('');
     const [panelsMap, setPanelsMap] = useState<Map<PanelType, boolean>>(initialPanelState);
     const [question, setQuestion] = useState<ChatMessage[]>([]);
+    const [fakeAnswers, setFakeAnswers] = useState<ChatMessage[]>([]);
+    const [isImageReceived, setIsImageReceived] = useState<boolean>(false);
 
     const { getState } = useAppStore();
     const { isSuccess: isSuccessAuth } = useAppSelector(rootSelector.auth);
@@ -69,10 +81,28 @@ const Chatbot = () => {
     }, [historyList]);
 
     const sortedMessageList: ChatMessage[] = useMemo(() => {
-        return ([...messageListFromHistory, ...newMessages, ...question] as ChatMessage[]).filter(message => message.chatId === chatId).sort((mess1, mess2) => {
+        return ([...messageListFromHistory, ...newMessages, ...question, ...fakeAnswers] as ChatMessage[]).filter(message => message.chatId === chatId).sort((mess1, mess2) => {
             return (mess1.index || 0) - (mess2.index || 0);
         });
-    }, [chatId, newMessages, question, messageListFromHistory]);
+    }, [chatId, newMessages, question, messageListFromHistory, fakeAnswers]);
+
+    const imgList: UploadedFileProp[] = [
+        {
+            imageURLs: ['/static/chest-ct-27783.png'], fileName: 'chest-ct-27783.png', size: 12345, fileType: 'image/png',
+            id: 'image1',
+            data: new FormData()
+        },
+        {
+            imageURLs: ['/static/CT-1a684be5-169842ce-05242004.png'], fileName: 'CT-1a684be5-169842ce-05242004.png', size: 12345, fileType: 'image/png',
+            id: 'image2',
+            data: new FormData()
+        },
+        {
+            imageURLs: ['/static/rawct-chest-case-A158299.png'], fileName: 'rawct-chest-case-A158299.png', size: 12345, fileType: 'image/png',
+            id: 'image3',
+            data: new FormData()
+        }
+    ];
 
     const promptList: PromptItem[] = useMemo(() => {
         const createQuestionAnswer = (chatId: string, message: ChatMessage): PromptItem[] => {
@@ -84,7 +114,8 @@ const Chatbot = () => {
                 date: message.date,
                 isWriting: false,
                 isTemp: false,
-                type: message.type
+                type: message.type,
+                images: message.images
             }, {
                 chatId: message.chatId || chatId,
                 user: 'BOT',
@@ -94,7 +125,8 @@ const Chatbot = () => {
                 isWriting: !message.stopReason,
                 isTemp: false,
                 filesData: message.filesData,
-                type: message.type
+                type: message.type,
+                images: isImageReceived ? imgList : []
             }]
         }
 
@@ -125,7 +157,11 @@ const Chatbot = () => {
 
     const allUniqueStartersList = useMemo<string[]>(() => {
         const map: { [key: string]: string } = {};
-        const { conversationStarters = [] } = knowledgebase || {};
+        const conversationStarters: string[] = ["Upload an image and find similar medical cases.",
+            "Show me cases related to this MRI scan.",
+            "What conditions could this CT image indicate?",
+            "Find cases with similar findings and diagnoses."];
+        // const { conversationStarters = [] } = knowledgebase || {};
 
         conversationStarters.forEach(starter => map[starter] = starter);
 
@@ -214,25 +250,50 @@ const Chatbot = () => {
         return `uniqueMessageId--${index}--${user}`;
     }
 
-    const sendMessage = (newMessage: string = message) => {
+    const sendMessage = (newMessage: string = message, images?: UploadedFileProp[]) => {
+
         if (newMessage) {
-            sendMessageInputContainerRef.current?.focus();
+            if (images && images.length > 0) {
+                setQuestion([{
+                    chatId: chatId!,
+                    question: newMessage,
+                    answer: '',
+                    stopReason: null,
+                    index: (sortedMessageList[sortedMessageList.length - 1]?.index || 0),
+                    type: 'ANSWER',
+                    images: images
+                }]);
 
-            setQuestion([{
-                chatId: chatId!,
-                question: newMessage,
-                answer: '',
-                stopReason: null,
-                index: (newMessages[newMessages.length - 1]?.index || 0),
-                type: 'ANSWER'
-            }]);
+                setTimeout(() => {
+                    setIsImageReceived(true);
+                    setFakeAnswers([{
+                        chatId: chatId!,
+                        question: newMessage,
+                        answer: 'Similar chest CT cases showing masses, airway obstruction, and abnormal lung findings',
+                        stopReason: "null",
+                        index: (sortedMessageList[sortedMessageList.length - 1]?.index || 0),
+                        type: 'ANSWER',
+                        images: imgList
+                    }]);
+                }, 5000);
+            } else {
+                sendMessageInputContainerRef.current?.focus();
 
-            createMessage({
-                chatId: chatId!,
-                question: newMessage,
-                knowledgeBaseId: knowledgebase?.id!
-            });
+                setQuestion([{
+                    chatId: chatId!,
+                    question: newMessage,
+                    answer: '',
+                    stopReason: null,
+                    index: (sortedMessageList[sortedMessageList.length - 1]?.index || 0),
+                    type: 'ANSWER'
+                }]);
 
+                createMessage({
+                    chatId: chatId!,
+                    question: newMessage,
+                    knowledgeBaseId: knowledgebase?.id!
+                });
+            }
             setMessageInput('');
         }
     }
@@ -299,6 +360,23 @@ const Chatbot = () => {
         setPanelsMap(new Map(panelsMap));
     }
 
+    // Drag and drop file upload
+    const dragDropRef = useRef<HTMLDivElement>(null);
+    const [isDragging, setIsDragging] = useState<boolean>(false);
+    const onClick = () => { };
+    const acceptableTypes = ['.pdf', '.docx', '.txt', '.png', '.jpeg', '.jpg', '.csv'];
+    const filesInQueue: UploadedFileProp[] = [];
+    const placeholder = 'drag over here to upload file';
+
+    const handleDragDrop = (event: React.DragEvent<HTMLDivElement>, dataList: UploadedFileProp[]) => {
+        setIsDragging(false);
+        sendMessage(message, dataList);
+
+    }
+
+
+
+
     return (
         <div className='chatbotContaier' id='box'>
             <div className={_Classes('chatbot', { isPanelExpanded: !!panelsMap.get('history') || !!panelsMap.get('info') })}>
@@ -309,7 +387,12 @@ const Chatbot = () => {
                     setIsExpanded={toggleExpanded}
                     setNewChatId={setNewChatId} />
                 <div className="content">
-                    <div className={_Classes('chatArea', { emptyChat: promptList?.length === 0 })} ref={chatAreaRef}>
+                    <div className={_Classes('chatArea', { emptyChat: promptList?.length === 0 })} ref={chatAreaRef}
+                        onDragOver={() =>
+                            setIsDragging(true)
+                        }
+                        onDragLeave={() => setIsDragging(false)}>
+
                         {knowledgebase && <DsSelect
                             className={`allConversationStarters`}
                             variant='underline'
@@ -355,6 +438,27 @@ const Chatbot = () => {
                             </div>}
                             {!errorMessage && <LoadingIcon width={60} className='loadingChatIcon' />}
                         </>}
+                        {isDragging && <DsDragDropFileUploader ref={dragDropRef}
+                            onChange={() => { }}
+                            onDragOver={() => setIsDragging(true)}
+                            onDragStart={() => { }}
+                            onDrop={(event, files) => {
+                                handleDragDrop(event, files || []);
+                            }}
+                            onDropFailed={() => { setIsDragging(false) }}
+                            onClick={onClick}
+                            acceptableTypes={acceptableTypes}
+                            acceptMultiple={false}
+                            filesInQueue={filesInQueue}
+                            // isDisabled={true}
+                            placeholder={placeholder}
+                            onDragLeave={() => setIsDragging(false)}
+                        // message={uploadMessage}
+                        // className={className}
+                        // style={style}
+                        // typographyVariant={typographyVariant}
+
+                        />}
                     </div>
                     <div className="discussion" tabIndex={0} ref={sendMessageInputContainerRef}>
                         <div className="textArea">

@@ -137,6 +137,7 @@
         flex-direction: column;
         height: calc(100% - 120px);
         background-color: var(--main-background);
+        position: relative;
 
         &.emptyChat {
           @include mixins.showScrollbarY();

@@ -39,7 +39,7 @@ const UpperBar = () => {
 
     return (
         <div className={_Classes(styles.upperBar)}>
-            <DsTypography variant='Semibold_20'>{t('genAI.title')}</DsTypography>
+            <DsTypography variant='Semibold_20'>GenAI application</DsTypography>
             <div className='userNameContainer'>
                 <DsButton className='dsButton' type='text' icon={<UserIcon width={24} />} variant='secondary' dropDown={{
                     items: [

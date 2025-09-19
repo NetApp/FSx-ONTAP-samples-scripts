@@ -24,7 +24,7 @@ const ChatBotHeader = ({ isDisabled, knowledgebase, isSendMessageDisabled, setNe
     return (
         <div className={_Classes(styles.chatBotHeader)}>
             <div className={_Classes(styles.leftWithKnowledgeName)}>
-                <DsTypography isDisabled={isDisabled} variant='Regular_20' title={knowledgebase?.id ? knowledgebase.name : undefined} className={_Classes(styles.knowledgebaseName)}>{`${knowledgebase ? `"${knowledgebase?.name}"` : ''} ${t('genAI.chatBot.title')}`}</DsTypography>
+                <DsTypography isDisabled={isDisabled} variant='Regular_20' title={"Medical Imaging Bot"} className={_Classes(styles.knowledgebaseName)}>Medical Imaging Bot</DsTypography>
             </div>
             <div className={_Classes(styles.right, { [styles.isDisabled]: isDisabled })}>
                 <DsPopover placement="bottomLeft" trigger='hover' title={t('genAI.chatBot.newChat')}>

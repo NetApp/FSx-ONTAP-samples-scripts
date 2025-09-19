@@ -1,0 +1,64 @@
+.dsDragDropFileUploader {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    height: 100%;
+    width: 100%;
+    padding: 12px;
+
+    &.isDisabled {
+        pointer-events: none;
+
+        .dragDropContainerWithMessage {
+            .dragDropContainer {
+                border-color: var(--field-border-disabled);
+
+                .placehoder {
+                    color: var(--text-disabled);
+                }
+            }
+        }
+    }
+
+    .dragDropContainerWithMessage {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+
+        .dragDropContainer {
+            height: 100%;
+            background-color: var(--item-selection-bg);
+            padding: 8px 16px;
+            box-sizing: border-box;
+            border: 1px dashed var(--button-secondary);
+            border-radius: 2px;
+            margin: 1px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: end;
+            background-color: transparent;
+            
+            &.isDragOver,
+            &:hover {
+                border: 1px solid var(--button-secondary);
+                outline: 1px solid var(--button-secondary);
+            }
+
+            .placehoder {
+                color: var(--text-button-primary);
+                position: relative;
+            }
+        }
+    }
+
+    .thumbnail {
+        width: 100px;
+        height: 100px;
+        margin: 10px;
+        object-fit: cover; /* Ensures image covers the area without distortion */
+        border: 1px solid #ddd;
+    }
+}
