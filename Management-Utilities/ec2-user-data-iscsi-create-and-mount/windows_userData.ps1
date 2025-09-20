@@ -5,7 +5,8 @@ param(
    [string]$FSxNAdminIpParam,
    [string]$VolumeNameParam,
    [string]$VolumeSizeParam,
-   [string]$DriveLetterParam
+   [string]$DriveLetterParam,
+   [string]$SvmNameParam
 )
 # "AWS secret ARN, e.g arn:aws:secretsmanager:us-east-1:111222333444:secret:MySecret-123456"
 $secretId=
@@ -18,15 +19,16 @@ $volSize=
 # "drive letter to use, e.g. d"
 $drive_letter=
 
+# Defaults
+$user="fsxadmin"
+$svm_name="fsx"
+
 $secretId = if ($SecretIdParam) { $SecretIdParam } else { $secretId }
 $ip = if ($FSxNAdminIpParam) { $FSxNAdminIpParam } else { $ip }
 $volName = if ($VolumeNameParam) { $VolumeNameParam } else { $volName }
 $volSize = if ($VolumeSizeParam) { $VolumeSizeParam } else { $volSize }
 $drive_letter = if ($DriveLetterParam) { $DriveLetterParam } else { $drive_letter }
-
-# Defaults
-$user="fsxadmin"
-$svm_name="fsx"
+$svm_name = if ($SvmNameParam) { $SvmNameParam } else { $svm_name }
 
 # default values
 # The script will create a log file and uninstall script
