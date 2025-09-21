@@ -14,7 +14,6 @@ Metadata:
           - ImageId
           - VpcId
           - SubnetId
-          - ManagedPolicyArn
       - Label:
           default: "FSxN Configuration"
         Parameters:
@@ -69,9 +68,7 @@ Metadata:
         default: "Linux User Data Script URL"
       WindowsUserDataUrl:
         default: "Windows User Data Script URL"
-      ManagedPolicyArn:
-        default: "IAM Managed Policy ARN"
-
+      
 Parameters:
   OperationSystem:
     Type: String
@@ -88,14 +85,6 @@ Parameters:
   KeyName:
     Type: AWS::EC2::KeyPair::KeyName
     Description: Name of an existing EC2 KeyPair
-  ImageId:
-    Type: AWS::EC2::Image::Id
-    Description: AMI ID for the instance
-    AllowedValues:
-      # Amazon Linux 2023 Kernel-6.1 AMI (us-east-1)
-      - ami-0b09ffb6d8b58ca91
-      # Microsoft Windows Server 2025 Base (us-east-1) 
-      - ami-0e3c2921641a4a215
   VpcId:
     Type: AWS::EC2::VPC::Id
     Description: VPC ID
@@ -136,9 +125,15 @@ Parameters:
     Type: String
     Default: https://raw.githubusercontent.com/NetApp/FSx-ONTAP-samples-scripts/refs/heads/main/Management-Utilities/ec2-user-data-iscsi-create-and-mount/windows_userData.ps1
     Description: URL to Windows user data script
-  ManagedPolicyArn:
-    Type: String
-    Description: IAM managed policy ARN to attach to the EC2 instance role
+  LatestLinuxAMI:  
+    Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'  
+    Default: '/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64'  
+    Description: 'The latest Amazon Linux 2 AMI ID'  
+  LatestWindowsAMI:  
+    Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'  
+    Default: '/aws/service/ami-windows-latest/TPM-Windows_Server-2025-English-Full-Base'  
+    Description: 'The latest Windows Server AMI ID'
+
 Conditions:
   IsLinux: !Equals [ !Ref OperationSystem, "Linux" ]
   IsWindows: !Equals [ !Ref OperationSystem, "Windows" ]
@@ -171,8 +166,17 @@ Resources:
               Service: ec2.amazonaws.com
             Action: sts:AssumeRole
       Path: /
-      ManagedPolicyArns:
-        - !Ref ManagedPolicyArn
+
+      Policies:  
+        - PolicyName: "LambdaPolicy"  
+          PolicyDocument:  
+            Version: "2012-10-17"  
+            Statement:  
+              - Effect: "Allow"  
+                Action:  
+                  - "secretsManager:GetSecretValue"
+                Resource:  
+                  - !Sub "arn:aws:secretsmanager:${AWSRegion}:${AWS::AccountId}:secret:${SecretName}*"
 
   EC2InstanceProfile:
     Type: AWS::IAM::InstanceProfile
@@ -183,7 +187,7 @@ Resources:
     Type: AWS::EC2::Instance
     Properties:
       InstanceType: !Ref InstanceType
-      ImageId: !Ref ImageId
+      ImageId: !If [IsLinux, !Ref LatestLinuxAMI, !Ref LatestWindowsAMI]  
       KeyName: !Ref KeyName
       SecurityGroupIds:
         - !Ref EC2InstanceSecurityGroup
