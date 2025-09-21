@@ -2,7 +2,7 @@
 
 The idea behind this folder is to show examples of how to use the [BlueXP Workload Factory APIs](https://console.workloads.netapp.com/api-doc).
 Not every API is covered, but the ones required to get you started (get a refresh token, get the BlueXP accountID,
-get BlueXP credentials ID) are included. Once you have the informaiton provided from these APIs are ready to start
+get BlueXP credentials ID) are included. Once you have the information provided from these APIs are ready to start
 calling the others. While these examples are implemented as bash shell scripts you should be able to translate them
 to the programming language that you prefer, such as Python, Go, or JavaScript.
 
@@ -30,6 +30,9 @@ If you do create a new script, please consider contributing it back to this repo
 ## Available Scripts
 | Script | Description |
 | --- | --- |
+| [bluexp_fsxn_discovery](bluexp_fsxn_discovery) | This discovers FSx for ONTAP file systems for the giving bluexp account and workspace. |
+| [bluexp_organization_add](bluexp_organization_add) | This adds a new BlueXP organization (a.k.a. account). |
+| [bluexp_organization_delete](bluexp_organization_delete) | This deletes a BlueXP organization (a.k.a. account). |
 | [credentials_delete](credentials_delete) | This deletes a Workload Factory credential. |
 | [fsxn_credentials_set](fsxn_credentials_set) | This sets the credentials for a specified FSx for ONTAP file system. |
 | [link_associate](link_associate) | This associates a Workload Factory Link with a specified FSx for ONTAP file system. |
@@ -37,7 +40,9 @@ If you do create a new script, please consider contributing it back to this repo
 | [link_disassociate](link_disassociate) | This disassociates a Workload Factory Link with a specified FSx for ONTAP file system. |
 | [link_register](link_register) | This registers a Lambda function as a Workload Factory Link. |
 | [list_bluexp_accts](list_bluexp_accts) | This list all the BlueXP accounts (a.k.a. organizations) that you have access to. |
+| [list_bluexp_connectors](list_bluexp_connectors) | This list all the BlueXP connectors that you have access to. |
 | [list_bluexp_members](list_bluexp_members) | This list all members of a provided BlueXP account. |
+| [list_bluexp_workspaces](list_bluexp_workspaces) | This list all the BlueXP workspaces that you have access to. |
 | [list_credentials](list_credentials) | This lists all the Workload Factory credentials that you have access to. |
 | [list_filesystems](list_filesystems) | This lists all the FSx for ONTAP file systems that you have access to in the specified AWS region. |
 | [list_links](list_links) | This lists all the Workload Factory Links that you have access to. |
