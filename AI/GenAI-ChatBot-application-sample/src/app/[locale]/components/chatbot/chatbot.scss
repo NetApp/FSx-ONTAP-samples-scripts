@@ -428,6 +428,9 @@
             right: 20px;
             top: 18px;
             padding-left: 15px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
 
             .sendButton {
               position: relative;
@@ -444,6 +447,16 @@
                 path {
                   fill: var(--text-button-disabled);
                 }
+              }
+            }
+            .uploadButton {
+                position: relative;
+                top: 1px;
+                @include mixins.rotate(-35deg);
+
+                cursor: pointer;
+              path {
+                fill: var(--button-primary-bg)
               }
             }
           }

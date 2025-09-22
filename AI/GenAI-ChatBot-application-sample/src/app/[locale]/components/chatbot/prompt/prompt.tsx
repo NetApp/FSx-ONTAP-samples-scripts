@@ -162,7 +162,7 @@ const Prompt = ({ className, prompt, id, chatAreaRef, knowledgeBaseId }: PromptP
                             {prompt.images.map((image, index) => (
                                 <div className="imageLayout" key={index}>
                                     <img className="thumbnail" key={index} src={image.imageURLs![0] || ""} alt={`Uploaded file ${index}`} />
-                                    {image.fileName}
+                                    <DsTypography variant="Regular_13" className="imageName">{image.fileName}</DsTypography>
                                 </div>
                             ))}
                         </div>
@@ -174,11 +174,11 @@ const Prompt = ({ className, prompt, id, chatAreaRef, knowledgeBaseId }: PromptP
                             {prompt.images.map((image, index) => (
                                 <div className="imageLayout" key={index}>
                                     <img className="thumbnail" key={index} src={image.imageURLs![0] || ""} alt={`Uploaded file ${index}`} />
-                                    {image.fileName}
+                                    <DsTypography variant="Regular_13" className="imageName">{image.fileName}</DsTypography>
                                 </div>
                             ))}
                         </div>
-                        whould like to further investigate these cases.
+                        Would like to further investigate these cases?
                     </>)
                 }
             }

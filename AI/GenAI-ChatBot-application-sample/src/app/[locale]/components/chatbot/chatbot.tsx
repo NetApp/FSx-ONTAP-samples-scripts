@@ -3,6 +3,8 @@
 import React, { KeyboardEvent, ReactElement, useEffect, useMemo, useRef, useState } from 'react';
 import './chatbot.scss'
 import SendIcon from "@/app/[locale]/svgs/chatbot/send.svg";
+import UploadIcon from "@/app/[locale]/svgs/upload.svg";
+import Attachment from "@/app/[locale]/svgs/attachment.svg";
 import EnterpriseChatIcon from "@/app/[locale]/svgs/chatbot/enterpriseChat.svg";
 import EmptyPromptIcon from '@/app/[locale]/svgs/chatbot/emptyPrompt.svg';
 import LoadingIcon from '@/app/[locale]/svgs/loaderMain.svg';
@@ -121,7 +123,7 @@ const Chatbot = () => {
                 user: 'BOT',
                 message: message.answer,
                 question: message.question,
-                date: message.date,
+                date: message.date ? message.date : Date.now(),
                 isWriting: !message.stopReason,
                 isTemp: false,
                 filesData: message.filesData,
@@ -275,6 +277,9 @@ const Chatbot = () => {
                         type: 'ANSWER',
                         images: imgList
                     }]);
+                    setTimeout(() => {
+                        setIsImageReceived(false);
+                    }, 1000);
                 }, 5000);
             } else {
                 sendMessageInputContainerRef.current?.focus();
@@ -450,13 +455,9 @@ const Chatbot = () => {
                             acceptableTypes={acceptableTypes}
                             acceptMultiple={false}
                             filesInQueue={filesInQueue}
-                            // isDisabled={true}
                             placeholder={placeholder}
                             onDragLeave={() => setIsDragging(false)}
-                        // message={uploadMessage}
-                        // className={className}
-                        // style={style}
-                        // typographyVariant={typographyVariant}
+
 
                         />}
                     </div>
@@ -470,6 +471,9 @@ const Chatbot = () => {
                                 onChange={event => setMessageInput(event!.target.value)}
                                 onKeyDown={(event: KeyboardEvent<HTMLInputElement>) => event.key === 'Enter' && sendMessage()} />
                             <div className='sendContainer'>
+                                {/* <UploadIcon width={20} className='uploadButton' /> */}
+                                <Attachment width={25} className='uploadButton' />
+                                |
                                 <SendIcon width={28} className={`sendButton ${isSendMessageDisabled || !knowledgebase ? 'disabled' : ''}`} onClick={() => sendMessage()} />
                             </div>
                         </div>
