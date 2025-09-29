@@ -24,8 +24,6 @@
 get_token() {
 
   tokenFile="$HOME/.blueXP_token"
-  tmpfile=$(mktemp -t get_token.XXXXXX)
-  trap 'rm -f "$tmpfile"' RETURN
   
   if [ -z "$REFRESH_TOKEN" ]; then
     echo "Error: The REFRESH_TOKEN environment variable has not been set." >&2
@@ -55,14 +53,13 @@ get_token() {
   fi
   
   if [ $createToken == "true" ]; then
-    curl -s -X POST 'https://netapp-cloud-account.auth0.com/oauth/token' \
+    token=$(curl -s -X POST 'https://netapp-cloud-account.auth0.com/oauth/token' \
     -H 'Content-Type: application/json' \
     --data-raw '{
       "grant_type": "refresh_token",
       "refresh_token": "'$REFRESH_TOKEN'",
       "client_id": "Mu0V1ywgYteI6w1MbD15fKfVIUrNXGWC"
-    }' > $tmpfile 2>&1
-    token=$(sed -ne 's/."access_token":"\([^"]*\).*/\1/p' < $tmpfile)
+    }' | sed -ne 's/."access_token":"\([^"]*\).*/\1/p')
   
     if [ -z "$token" ]; then
       echo "Error: Unable to obtain a bearer token. Error message:" >&2
@@ -97,7 +94,13 @@ run_curl () {
   errorOutput="$5"
   data="$6"
   accept="$7"
-  shift 7
+
+  if [ -z "$accept" ]; then
+    accept="application/json, text/plain, */*"
+    shift 6
+  else
+    shift 7
+  fi
 
   declare -a extraHeaders
   while [ $# -gt 0 ]; do
@@ -111,9 +114,6 @@ run_curl () {
   if [[ -z "$method" || -z "$token" || -z "$url" || -z "$output" || -z "$errorOutput" ]]; then
     echo "Error: Missing required parameters for run_curl function." >&2
     exit 1
-  fi
-  if [ -z "$accept" ]; then
-    accept="application/json, text/plain, */*"
   fi
   case "$method" in
     GET)
