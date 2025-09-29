@@ -94,10 +94,11 @@ if [ -z "$token" ]; then
   exit 1
 fi
 
-jq_query='.items[] | if(.cloudResourceId == null) then "\(.name);\(.id);\(.state.status);\(.region);\(.vpcId);N/A;\(.associatedTargets.items)" else "\(.name);\(.id);\(.state.status);\(.region);\(.vpcId);\(.cloudResourceId | split(":") | .[6]);\(.associatedTargets.items)" end'
+jq_query='.items[] | if(.type == "connector") then "\(.name);\(.id);\(.type);\(.state.status);N/A;N/A;N/A;\(.associatedTargets.items)" else "\(.name);\(.id);\(.type);\(.state.status);\(.region);\(.vpcId);\(.cloudResourceId | split(":") | .[6]);\(.associatedTargets.items)" end'
 
-filter=$(urlencode "type eq 'lambda'")
-run_curl GET "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/links/v1/links?filter=${filter}&include=associatedTargets,state,features" $tmpout $tmperr
+#filter=$(urlencode "type eq 'lambda'")
+#run_curl GET "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/links/v1/links?filter=${filter}&include=associatedTargets,state,features" $tmpout $tmperr
+run_curl GET "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/links/v1/links?include=associatedTargets,state,features" $tmpout $tmperr
 if jq -r "$jq_query" $tmpout > $tmpout2 2> $tmperr; then
   :
 else
@@ -124,4 +125,4 @@ done
 if [ ! -z "$COLUMNS" ]; then
   colsOpt="-c $COLUMNS -W Associations"
 fi
-column -t -s\; -N "Name,Link ID,Status,Region,VPC,Lambda Name,Associations" $colsOpt $tmpout2
+column -t -s\; -N "Name,Link ID,Type,Status,Region,VPC,Lambda Name,Associations" $colsOpt $tmpout2
