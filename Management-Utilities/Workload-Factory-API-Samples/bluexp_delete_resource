@@ -1,0 +1,92 @@
+#!/bin/bash
+#
+# This script is used to delete a BlueXP resource.
+#
+# It is dependent on the 'wf_utils' file that is included in this repo. That
+# file contains the 'get_token' function that is used to obtain a valid
+# access token that is needed to run the Workload Factory APIs. The file needs
+# to either be in the command search path or in the current directory.
+################################################################################
+
+################################################################################
+# Display usage information then exits the script.
+################################################################################
+usage () {
+  cat >&2 <<EOF
+This script is used to delete BlueXP resource.
+
+Usage is: $(basename $0) -t refresh_token -a blueXP_account_ID -r resource_ID
+                       token by going to https://services.cloud.netapp.com/refresh-token
+       blueXP_account_ID - is the BlueXP account ID. Run 'list_bluexp_accts' to get a
+                           list of accounts you have access to.
+       resource_id - is the BlueXP resource ID of the resource you want to delete.
+
+Note, instead of passing parameters on the command line, you can set the
+following environment variables instead:
+
+    export REFRESH_TOKEN=<refresh_token>
+    export BLUEXP_ACCOUNT_ID=<bluexp_acct_id>
+EOF
+  exit 1
+}
+
+tmpout=/tmp/list_bluexp_resources-out.$$
+tmperr=/tmp/list_bluexp_resources-err.$$
+trap 'rm -f $tmpout $tmperr' exit
+#
+# Source the wf_utils file.
+wf_utils=$(command -v wf_utils)
+if [ -z "$wf_utils" ]; then
+  if [ ! -x "./wf_utils" ]; then
+    cat <<EOF >&2
+Error: The 'wf_utils' script was not found in the current directory or in the command search path.
+It is required to run this script. You can download it from:
+https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples
+EOF
+    exit 1
+  else
+    wf_utils=./wf_utils
+  fi
+fi
+. "$wf_utils"
+#
+# Parse the command line options.
+while getopts ht:a:r: opt; do
+  case $opt in
+    t) REFRESH_TOKEN="$OPTARG" ;;
+    a) BLUEXP_ACCOUNT_ID="$OPTARG" ;;
+    r) RESOURCE_ID="$OPTARG" ;;
+    *) usage ;;
+  esac
+done
+#
+# Declare an array of required options and the error message to display if they are not set.
+declare -A required_options
+required_options["REFRESH_TOKEN"]='Error: A BlueXP refresh tokon is required to run this script. It can be obtain from this web page:
+  https://services.cloud.netapp.com/refresh-token\n\n'
+
+required_options["BLUEXP_ACCOUNT_ID"]='Error: A BlueXP account ID is required to run this script.
+You can get the list of accounts you have access to by running the "list_bluexp_accts" script
+found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
+
+required_options["RESOURCE_ID"]='Error: A BlueXP resources ID is required to run this script.
+You can get the list of all the resources under a BlueXP account by running the "list_bluexp_resources" script
+found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
+
+check_required_options
+#
+# Check that the required commands are available.
+for cmd in jq curl; do
+  if ! command -v $cmd &> /dev/null; then
+    echo "Error: The required command '$cmd' was not found. Please install it." >&2
+    exit 1
+  fi
+done
+
+token=$(get_token)
+if [ -z "$token" ]; then
+  echo "Error: Failed to obtain an access token. Exiting." >&2
+  exit 1
+fi
+
+run_curl DELETE "$token" "https://api.bluexp.netapp.com/tenancy/resource/$RESOURCE_ID" $tmpout $tmperr "" "" "X-Tenancy-Account-Id:$BLUEXP_ACCOUNT_ID"
