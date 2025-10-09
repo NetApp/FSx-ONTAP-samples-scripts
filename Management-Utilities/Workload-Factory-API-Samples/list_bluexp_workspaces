@@ -14,16 +14,15 @@
 ################################################################################
 usage () {
   cat >&2 <<EOF
-This script is used to list all the BlueXP connectors that you have access to.
+This script is used to list all the BlueXP workspaces that you have access to.
 
-Usage is: $(basename $0) -t refresh_token -a blueXP_account_ID [-x]
+Usage is: $(basename $0) -t refresh_token -a blueXP_account_ID
 
 Where: refresh_token - Is a refresh token used to obtain an access token needed
                        to run the Workload Factory APIs. You can obtain a refresh
                        token by going to https://services.cloud.netapp.com/refresh-token
        blueXP_account_ID - is the BlueXP account ID. Run 'list_bluexp_accts' to get a
                            list of accounts you have access to.
-      -x - Means to show all the inactive connectors as well.
 
 Note, instead of passing parameters on the command line, you can set the
 following environment variables instead:
@@ -55,12 +54,10 @@ fi
 . "$wf_utils"
 #
 # Parse the command line options.
-showAll=false
-while getopts ht:a:x opt; do
+while getopts ht:a: opt; do
   case $opt in
     t) REFRESH_TOKEN="$OPTARG" ;;
     a) BLUEXP_ACCOUNT_ID="$OPTARG" ;;
-    x) showAll=true ;;
     *) usage ;;
   esac
 done
