@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# This script adds an organization to a BlueXP account.
+# This script deletes an organization from a BlueXP account.
 #
 ################################################################################
 # Display usage information then exists the script.
