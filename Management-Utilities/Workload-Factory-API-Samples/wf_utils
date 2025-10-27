@@ -115,24 +115,27 @@ run_curl () {
     echo "Error: Missing required parameters for run_curl function." >&2
     exit 1
   fi
+  #
+  # Since older versions of curl don't support the %{stderr} variable, using the -o option
+  # to redirect output to the $output file and getting the http_code from standard out.
   case "$method" in
     GET)
-      curl -sw "%{stderr}%{http_code},%{errormsg}" "$url" \
+      curl -sw "%{http_code},%{errormsg}" "$url" \
          -H "Accept: $accept" "${extraHeaders[@]}" \
-         -H "Authorization: Bearer $token" > $output 2> $errorOutput
+         -H "Authorization: Bearer $token" -o $output > $errorOutput
       exitCode=$?
       ;;
     POST|PUT)
-      curl -X "$method" -sw "%{stderr}%{http_code},%{errormsg}" "$url" \
+      curl -X "$method" -sw "%{http_code},%{errormsg}" "$url" \
          -H "Accept: $accept" "${extraHeaders[@]}" \
          -H "Content-Type:application/json" \
-         -H "Authorization: Bearer $token" --data "$data" > $output 2> $errorOutput
+         -H "Authorization: Bearer $token" --data "$data" -o $output > $errorOutput
       exitCode=$?
       ;;
     DELETE)
-      curl -X DELETE -sw "%{stderr}%{http_code},%{errormsg}" "$url" \
+      curl -X DELETE -sw "%{http_code},%{errormsg}" "$url" \
          -H "Accept: $accept" "${extraHeaders[@]}" \
-         -H "Authorization: Bearer $token" > $output 2> $errorOutput
+         -H "Authorization: Bearer $token" -o $output > $errorOutput
       exitCode=$?
       ;;
     *)
