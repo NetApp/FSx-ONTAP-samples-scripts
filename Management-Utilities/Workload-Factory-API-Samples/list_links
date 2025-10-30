@@ -96,8 +96,6 @@ fi
 
 jq_query='.items[] | if(.type == "connector") then "\(.name);\(.id);\(.type);\(.state.status);N/A;N/A;N/A;\(.associatedTargets.items)" else "\(.name);\(.id);\(.type);\(.state.status);\(.region);\(.vpcId);\(.cloudResourceId | split(":") | .[6]);\(.associatedTargets.items)" end'
 
-#filter=$(urlencode "type eq 'lambda'")
-#run_curl GET "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/links/v1/links?filter=${filter}&include=associatedTargets,state,features" $tmpout $tmperr
 run_curl GET "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/links/v1/links?include=associatedTargets,state,features" $tmpout $tmperr
 if jq -r "$jq_query" $tmpout > $tmpout2 2> $tmperr; then
   :
