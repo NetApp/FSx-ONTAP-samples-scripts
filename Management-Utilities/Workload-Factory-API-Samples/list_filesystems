@@ -84,7 +84,7 @@ required_options["REFRESH_TOKEN"]='Error: A BlueXP refresh tokon is required to 
 required_options["BLUEXP_ACCOUNT_ID"]='Error: A BlueXP account ID is required to run this script.
 You can get the list of accounts you have access to by running the "list_bluexp_accts" script
 found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
-required_options["CREDENTIALS_ID"]='Error: The ID of the credentials to delete is required.
+required_options["CREDENTIALS_ID"]='Error: The ID of the credentials to use to list the file systems is required.
 You can get a list of credentials by running the "list_credentials" script
 found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
 required_options["AWS_REGION"]='Error: The AWS region where the file system is located is required.\n\n'
@@ -120,6 +120,30 @@ fi
 nextToken=$(jq -r '.nextToken' $tmpout)
 while [ "$nextToken" != "null" ]; do
   run_curl GET "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/fsx/v2/credentials/${CREDENTIALS_ID}/regions/${AWS_REGION}/file-systems?nextToken=${nextToken}" $tmpout $tmperr
+  if jq -r "$jq_query" $tmpout >> $tmpout2 2> $tmperr; then
+    :
+  else
+    echo "Error: Failed to parse the output from the API." >&2
+    cat $tmperr >&2
+    exit 1
+  fi
+  nextToken=$(jq -r '.nextToken' $tmpout)
+done
+
+jq_query='.items[] | .clusterUuid + "," + .name + ",N/A,On-Prem," + if(.connected) then "AVAILABLE" else "UNKNOWN" end'
+run_curl GET "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/onprem/v1/onprems" $tmpout $tmperr
+if jq -r "$jq_query" $tmpout >> $tmpout2 2> $tmperr; then
+  :
+else
+  echo "Error: Failed to parse the output from the API." >&2
+  cat $tmperr >&2
+  exit 1
+fi
+#
+# Check to see if there are more.
+nextToken=$(jq -r '.nextToken' $tmpout)
+while [ "$nextToken" != "null" ]; do
+  run_curl GET "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/onprem/v1/onprems?${nextToken}" $tmpout $tmperr
   if jq -r "$jq_query" $tmpout >> $tmpout2 2> $tmperr; then
     :
   else
