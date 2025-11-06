@@ -11,9 +11,13 @@ Metadata:
           - InstanceType
           - InstanceName
           - KeyName
-          - ImageId
           - VpcId
           - SubnetId
+      - Label:
+          default: "AMI Configuration"
+        Parameters:
+          - LatestLinuxAMI
+          - LatestWindowsAMI
       - Label:
           default: "FSxN Configuration"
         Parameters:
@@ -42,8 +46,6 @@ Metadata:
         default: "Instance Name"
       KeyName:
         default: "Key Pair Name"
-      ImageId:
-        default: "AMI ID"
       VpcId:
         default: "VPC ID"
       SubnetId:
@@ -68,6 +70,10 @@ Metadata:
         default: "Linux User Data Script URL"
       WindowsUserDataUrl:
         default: "Windows User Data Script URL"
+      LatestLinuxAMI:
+        default: "Linux AMI"
+      LatestWindowsAMI:
+        default: "Windows AMI"
       
 Parameters:
   OperationSystem:
@@ -128,11 +134,11 @@ Parameters:
   LatestLinuxAMI:  
     Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'  
     Default: '/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64'  
-    Description: 'The latest Amazon Linux 2 AMI ID'  
+    Description: 'Linux AMI to use for the EC2 instance (default is the latest Amazon Linux 2023)'  
   LatestWindowsAMI:  
     Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'  
     Default: '/aws/service/ami-windows-latest/TPM-Windows_Server-2025-English-Full-Base'  
-    Description: 'The latest Windows Server AMI ID'
+    Description: 'Windows AMI to use for the EC2 instance (default is the latest Windows Server 2025)'
 
 Conditions:
   IsLinux: !Equals [ !Ref OperationSystem, "Linux" ]
