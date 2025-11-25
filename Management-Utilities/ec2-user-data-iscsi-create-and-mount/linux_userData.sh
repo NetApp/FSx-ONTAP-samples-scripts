@@ -1,21 +1,20 @@
 #!/bin/bash
 
 # user data
-# Secret name has it been saved in AWS secret manager
+# Set the secret name and region
 SECRET_NAME=
 AWS_REGION=
-# Fsx admin ip, e.g. 172.25.45.32
+# Set the FSx admin IP
 FSXN_ADMIN_IP=
-# FSxN Volume name , e.g. iscsiVol
+# Volume name
 VOLUME_NAME=
-# Volume size in GB e.g 100
+# Volume size in GB
 VOLUME_SIZE=
-# Default value is fsx, but you can change it to any other value according to yours FSx for ONTAP SVM name
+# SVM name (default: fsx)
 SVM_NAME=fsx
-# Default value is fsxadmin, but you can change it to any other value according to yours FSx for ONTAP admin user name
+# ONTAP admin user (default: fsxadmin)
 ONTAP_USER=fsxadmin
 # end - user data
-
 SECRET_NAME="${SECRET_NAME:=$1}"
 AWS_REGION="${AWS_REGION:=$2}"
 FSXN_ADMIN_IP="${FSXN_ADMIN_IP:=$3}"
@@ -26,14 +25,12 @@ SVM_NAME="${6:-$SVM_NAME}"
 min=100
 max=999
 LUN_NAME=${VOLUME_NAME}_$(($RANDOM%($max-$min+1)+$min))
-
 # defaults
-# The script will create a log file in the ec2-user home directory
+# Log file in ec2-user home
 LOG_FILE=/home/ec2-user/install.log
 TIMEOUT=5
 
 LUN_SIZE=$(bc -l <<< "0.90*$VOLUME_SIZE" )
-
 echo "# Uninstall file" >> uninstall.sh
 chmod u+x uninstall.sh
 
@@ -51,11 +48,9 @@ function getSecretValue() {
         exit 1
     fi
 }
-
 logMessage() {
     echo "$(date) - $1" >> $LOG_FILE
 }
-
 checkCommand() {
     if [ $? -ne 0 ]; then
         logMessage "$1 failed. Aborting."
@@ -63,36 +58,37 @@ checkCommand() {
         exit 1
     fi
 }
-
 addUndoCommand() {
     sed -i "1i$1" uninstall.sh
 }
-
+invokeLambda() {
+    aws lambda invoke \
+      --function-name "arn:aws:lambda:${AWS_REGION}:718273455463:function:reporting-monitoring-dashboard-usage" \
+      --payload "$LAMBDA_PAYLOAD" \
+      --cli-binary-format raw-in-base64-out \
+      /home/ec2-user/lambda_response.json 2>/home/ec2-user/lambda_error.log
+}
 logMessage "Get secret data"
 getSecretValue "${SECRET_NAME}" "${AWS_REGION}"
 FSXN_PASSWORD="${SECRET_VALUE}"
 logMessage "Secret data retrieved successfully"
-
 commandDescription="Install linux iSCSI packages"
 logMessage "${commandDescription}"
 yum install -y device-mapper-multipath iscsi-initiator-utils
 checkCommand "${commandDescription}"
 addUndoCommand "yum remove -y device-mapper-multipath iscsi-initiator-utils"
-
-commandDescription="Set multisession replacment time from default 120 sec to 5 sec"
+commandDescription="Set multisession timeout from 120s to 5s"
 logMessage "${commandDescription}"
 sed -i 's/node.session.timeo.replacement_timeout = .*/node.session.timeo.replacement_timeout = 5/' /etc/iscsi/iscsid.conf; cat /etc/iscsi/iscsid.conf | grep node.session.timeo.replacement_timeout
 cat /etc/iscsi/iscsid.conf | grep "node.session.timeo.replacement_timeout = 5"
 checkCommand "${commandDescription}"
 addUndoCommand "sed -i 's/node.session.timeo.replacement_timeout = .*/node.session.timeo.replacement_timeout = 120/' /etc/iscsi/iscsid.conf;"
-
 commandDescription="Start iscsi service"
 logMessage "${commandDescription}"
 systemctl enable iscsid
 systemctl start iscsid
 checkCommand "${commandDescription}"
-
-# check if the service is running
+# check service status
 isIscsciServiceRunning=$(systemctl is-active --quiet iscsid.service && echo "1" || echo "0")
 if [ "$isIscsciServiceRunning" -eq 1 ]; then
     logMessage "iscsi service is running"
@@ -101,21 +97,17 @@ else
     logMessage "iscsi service is not running, aborting"
     ./uninstall.sh
 fi
-
-commandDescription="Set multipath configuration which allow automatic failover between yours file servers"
+commandDescription="Set multipath config for automatic failover"
 logMessage "${commandDescription}"
 mpathconf --enable --with_multipathd y
 checkCommand "${commandDescription}"
 addUndoCommand "mpathconf --disable"
-
-# set the initiator name of your Linux host
+# set Linux host initiator name
 name=$(cat /etc/iscsi/initiatorname.iscsi)
 initiatorName="${name:14}"
 logMessage "initiatorName is: ${initiatorName}"
-
 # Test connection to ONTAP
 logMessage "Testing connection to ONTAP."
-
 versionResponse=$(curl -m $TIMEOUT -X GET -u "$ONTAP_USER":"$FSXN_PASSWORD" -k "https://$FSXN_ADMIN_IP/api/cluster?fields=version")
 if [[ "$versionResponse" == *"version"* ]]; then
     logMessage "Connection to ONTAP is successful."
@@ -123,16 +115,13 @@ else
     logMessage "Connection to ONTAP failed, aborting."
     ./uninstall.sh
 fi
-
-# group name should be the hostname of the linux host
+# group name = hostname
 groupName=$(hostname)
-
 iGroupResult=$(curl -m $TIMEOUT -X GET -u "$ONTAP_USER":"$FSXN_PASSWORD" -k "https://$FSXN_ADMIN_IP/api/protocols/san/igroups?svm.name=$SVM_NAME&name=$groupName&initiators.name=$initiatorName&protocol=iscsi&os_type=linux")
 initiatorExists=$(echo "${iGroupResult}" | jq '.num_records')
-
 if [ "$initiatorExists" -eq 0 ]; then
     logMessage "Initiator ${initiatorName} with group ${groupName} does not exist, creating it."
-    logMessage "Create initiator group for vserver: ${SVM_NAME} group name: ${groupName} and intiator name: ${initiatorName}"
+    logMessage "Create initiator group for vserver: ${SVM_NAME} group: ${groupName} initiator: ${initiatorName}"
     createGroupResult=$(curl -m $TIMEOUT -X POST -u "$ONTAP_USER":"$FSXN_PASSWORD" -H "Content-Type: application/json" -k "https://$FSXN_ADMIN_IP/api/protocols/san/igroups" -d '{
       "protocol": "iscsi",
       "initiators": [
@@ -155,7 +144,7 @@ if [ "$initiatorExists" -eq 0 ]; then
         logMessage "Initiator group ${groupName} was not created, aborting"
         ./uninstall.sh
     fi
-    # Add undo command for iGroup creation
+    # Add undo for iGroup
     addUndoCommand "curl -m $TIMEOUT -X DELETE -u \"$ONTAP_USER\":\"$FSXN_PASSWORD\" -k \"https://$FSXN_ADMIN_IP/api/protocols/san/igroups/$iGroupUuid\""
 else
     logMessage "Initiator ${initiatorName} with group ${groupName} already exists, skipping creation."
@@ -166,7 +155,7 @@ if [ -z "$instance_id" ]; then
   instance_id="unknown"
 fi
 
-logMessage "Create volume for vserver: ${SVM_NAME} volume name: ${VOLUME_NAME} and size: ${VOLUME_SIZE}g"
+logMessage "Create volume: ${SVM_NAME} vol: ${VOLUME_NAME} size: ${VOLUME_SIZE}g"
 createVolumeResult=$(curl -m $TIMEOUT -X POST -u "$ONTAP_USER":"$FSXN_PASSWORD" -k "https://$FSXN_ADMIN_IP/api/storage/volumes" -d '{
   "name": "'$VOLUME_NAME'",
   "size": "'$VOLUME_SIZE'g",
@@ -194,7 +183,7 @@ if [ "$jobState" != "success" ]; then
     ./uninstall.sh
 fi
 
-# validate if volume was created successfully
+# validate volume creation
 volumeResult=$(curl -m $TIMEOUT -X GET -u "$ONTAP_USER":"$FSXN_PASSWORD" -k "https://$FSXN_ADMIN_IP/api/storage/volumes?name=${VOLUME_NAME}&svm.name=${SVM_NAME}")
 volumeUUid=$(echo "${volumeResult}" | jq -r '.records[] | select(.name == "'$VOLUME_NAME'" ) | .uuid')
 if [ -n "$volumeUUid" ]; then
@@ -205,7 +194,7 @@ else
 fi
 addUndoCommand "curl -m $TIMEOUT -X DELETE -u \"$ONTAP_USER\":\"$FSXN_PASSWORD\" -k \"https://$FSXN_ADMIN_IP/api/storage/volumes/${volumeUUid}\""
 
-logMessage "Create iscsi lun for vserver: ${SVM_NAME} volume name: ${VOLUME_NAME} and lun name: ${LUN_NAME} and size: ${LUN_SIZE}g which is 90% of the volume size"
+logMessage "Create iscsi lun: ${SVM_NAME} vol: ${VOLUME_NAME} lun: ${LUN_NAME} size: ${LUN_SIZE}g (90% of volume)"
 createLunResult=$(curl -m $TIMEOUT -X POST -u "$ONTAP_USER":"$FSXN_PASSWORD" -k "https://$FSXN_ADMIN_IP/api/storage/luns" -d '{
   "name": "'/vol/${VOLUME_NAME}/$LUN_NAME'",
   "space": {
@@ -218,7 +207,7 @@ createLunResult=$(curl -m $TIMEOUT -X POST -u "$ONTAP_USER":"$FSXN_PASSWORD" -k 
   "os_type": "linux"
 }')
 lunResult=$(curl -X GET -u "$ONTAP_USER":"$FSXN_PASSWORD" -k "https://$FSXN_ADMIN_IP/api/storage/luns?fields=uuid&name=/vol/${VOLUME_NAME}/$LUN_NAME")
-# Validate if LUN was created successfully
+# Validate LUN creation
 lunUuid=$(echo "${lunResult}" | jq -r '.records[] | select(.name == "'/vol/${VOLUME_NAME}/$LUN_NAME'" ) | .uuid')
 if [ -n "$lunUuid" ]; then
     logMessage "LUN ${LUN_NAME} was created successfully with UUID: ${lunUuid}"
@@ -229,8 +218,7 @@ fi
 
 addUndoCommand "curl -m $TIMEOUT -X DELETE -u \"$ONTAP_USER\":\"$FSXN_PASSWORD\" -k \"https://$FSXN_ADMIN_IP/api/storage/luns/${lunUuid}\""
 
-# The LUN ID integer is specific to the mapping, not to the LUN itself. 
-# This is used by the initiators in the igroup as the Logical Unit Number. Use this value for the initiator when accessing the storage. 
+# LUN ID is mapping-specific, used by initiators as Logical Unit Number 
 logMessage "Create a mapping from the LUN you created to the igroup you created"
 
 lunMapResult=$(curl -m $TIMEOUT -X POST -u "$ONTAP_USER":"$FSXN_PASSWORD" -k "https://$FSXN_ADMIN_IP/api/protocols/san/lun-maps" -d '{
@@ -258,7 +246,7 @@ fi
 
 addUndoCommand "curl -m $TIMEOUT -X DELETE -u \"$ONTAP_USER\":\"$FSXN_PASSWORD\" -k \"https://$FSXN_ADMIN_IP/api/protocols/san/lun-maps?lun.name=/vol/${VOLUME_NAME}/${LUN_NAME}&igroup.name=${groupName}&svm.name=${SVM_NAME}\""
 
-# The serial hex in needed for creating readable name for the block device.
+# Serial hex needed for readable block device name
 getLunSerialNumberResult=$(curl -m $TIMEOUT -X GET -u "$ONTAP_USER":"$FSXN_PASSWORD" -k "https://$FSXN_ADMIN_IP/api/storage/luns?fields=serial_number")
 serialNumber=$(echo "${getLunSerialNumberResult}" | jq -r '.records[] | select(.name == "'/vol/$VOLUME_NAME/$LUN_NAME'" ) | .serial_number')
 serialHex=$(echo -n "${serialNumber}" | xxd -p)
@@ -291,10 +279,9 @@ logMessage "Getting target initiator"
 targetInitiator=$(iscsiadm --mode discovery --op update --type sendtargets --portal $iscsi1IP | awk '{print $2}' | head -n 1)
 logMessage "Target initiator is: ${targetInitiator}"
 
-# update the number of sessions to 8 (optional step)
+# update sessions to 8 (optional)
 #iscsiadm --mode node -T $targetInitiator --op update -n node.session.nr_sessions -v 8
-
-# Log into the target initiators. Your iSCSI LUNs are presented as available disks
+# Login to target initiators - iSCSI LUNs presented as disks
 logMessage "Log into target initiator: ${targetInitiator}"
 iscsiadm --mode node -T $targetInitiator --login
 addUndoCommand "iscsiadm --mode node -T $targetInitiator --logout"
@@ -306,7 +293,7 @@ addUndoCommand "iscsiadm --mode node -T $targetInitiator --logout"
 #        alias ${VOLUME_NAME}
 #    }
 # }
-# Assign name to block device, this should be function that will get serial hex and device name
+# Assign block device name
 logMessage "Update /etc/multipath.conf file, Assign name to block device."
 cp /etc/multipath.conf /etc/multipath.conf_backup
 
@@ -325,7 +312,7 @@ fi
 fileContent="$(cat $CONF)"
 logMessage "Updated /etc/multipath.conf file content: $fileContent"
 
-commandDescription="Restart the multipathd service for the changes at: /etc/multipathd.conf will take effect."
+commandDescription="Restart multipathd for /etc/multipathd.conf changes"
 logMessage "${commandDescription}"
 systemctl restart multipathd.service
 checkCommand "${commandDescription}"
@@ -352,47 +339,64 @@ if [ ! -e "/dev/mapper/$VOLUME_NAME" ]; then
 fi
 
 # Partition the LUN
-# mount the LUN on the Linux client
-# Create a directory directory_path as the mount point for your file system.
+# mount the LUN on Linux client
+# Create mount point directory
 directory_path=mnt
 mount_point=$VOLUME_NAME
 
-commandDescription="Create a directory /${directory_path}/${mount_point} as the mount point for your file system"
+commandDescription="Create mount point /${directory_path}/${mount_point}"
 logMessage "${commandDescription}"
 mkdir /$directory_path/$mount_point
 checkCommand "${commandDescription}"
 addUndoCommand "rm -rf /$directory_path/$mount_point"
-
-# volume_name = the friendly device name as we set it in the multipath.conf file
-commandDescription="Creating the file system for the new partition: /dev/mapper/${ALIAS}"
+# volume_name = friendly device name from multipath.conf
+commandDescription="Create file system for /dev/mapper/${ALIAS}"
 logMessage "${commandDescription}"
 mkfs.ext4 /dev/mapper/$ALIAS
 checkCommand "${commandDescription}"
 
-commandDescription="Mount the file system using the following command."
+commandDescription="Mount the file system"
 logMessage "${commandDescription}"
 mount -t ext4 /dev/mapper/$ALIAS /$directory_path/$mount_point
 checkCommand "${commandDescription}"
 addUndoCommand "umount /$directory_path/$mount_point"
-
-# verify read write
-# example: echo "test mount iscsci" > /mnt/myIscsi/testIscsi.txt
-commandDescription="Verify read write on the mounted file system"
+# verify read/write access
+commandDescription="Verify read/write access"
 logMessage "${commandDescription}"
 echo "test mount iscsci" > /$directory_path/$mount_point/testIscsi.txt
 cat /$directory_path/$mount_point/testIscsi.txt
 checkCommand "${commandDescription}"
 rm /$directory_path/$mount_point/testIscsi.txt
 
-logMessage "Mounting the FSXn iSCSI volume was successful."
-
-# Add the mount entry to /etc/fstab
-commandDescription="Add the mount entry to /etc/fstab"
+logMessage "FSXn iSCSI volume mount successful."
+# Add mount to /etc/fstab
+commandDescription="Add mount to /etc/fstab"
 logMessage "${commandDescription}"
 echo "/dev/mapper/$ALIAS /$directory_path/$mount_point ext4 defaults,_netdev 0 0" >> /etc/fstab
 checkCommand "${commandDescription}"
 addUndoCommand "sed -i '/\/dev\/mapper\/$ALIAS \/mnt\/$mount_point ext4 defaults,_netdev 0 0/d' /etc/fstab"
-# End of script
+
+# Report usage
+logMessage "Report usage"
+logMessage "Attempting Lambda invoke"
+LAMBDA_PAYLOAD='{"ResourceProperties":{"Source":"Deploy_EC2_Wizard","Region":"'$AWS_REGION'"},"RequestType":"CLI"}'
+
+# Try Lambda invoke
+invokeLambda
+if [ $? -ne 0 ] && grep -q "initializing" /home/ec2-user/lambda_error.log 2>/dev/null; then
+    logMessage "Lambda initializing, retrying in 10s..."
+    sleep 10
+    invokeLambda
+fi
+
+# Check final result
+if [ $? -eq 0 ]; then
+    logMessage "Usage reporting completed successfully"
+else
+    logMessage "Usage reporting failed"
+fi
+
+# End
 logMessage "Script completed successfully."
 
 rm -f uninstall.sh
