@@ -21,12 +21,12 @@ Metadata:
       - Label:
           default: "FSxN Configuration"
         Parameters:
-          - SecretName
-          - AWSRegion
+          - SecretArn
           - ManagementEndpointIP
           - VolumeName
           - VolumeSize
           - SvmName
+          - Username
           - DriveLetter
       - Label:
           default: "Networking"
@@ -50,10 +50,8 @@ Metadata:
         default: "VPC ID"
       SubnetId:
         default: "Subnet ID"
-      SecretName:
-        default: "AWS Secret Name"
-      AWSRegion:
-        default: "AWS Region"
+      SecretArn:
+        default: "AWS Secret ARN"
       ManagementEndpointIP:
         default: "Management Endpoint IP"
       VolumeName:
@@ -62,6 +60,8 @@ Metadata:
         default: "Volume Size (GiB)"
       SvmName:
         default: "SVM Name"
+      Username:
+        default: "Username"
       DriveLetter:
         default: "Drive Letter (Windows Only)"
       CidrIp:
@@ -97,12 +97,9 @@ Parameters:
   SubnetId:
     Type: AWS::EC2::Subnet::Id
     Description: Subnet ID
-  SecretName:
+  SecretArn:
     Type: String
-    Description: Aws Secret name
-  AWSRegion:
-    Type: String
-    Description: AWS Secret region(in which you have yours secret)
+    Description: Full ARN of the AWS Secrets Manager secret containing FSxN credentials
   ManagementEndpointIP:
     Type: String
     Description: Management endpoint IP Address of your FSxN
@@ -116,6 +113,9 @@ Parameters:
     Type: String
     Default: fsx
     Description: SVM Name
+  Username:
+    Type: String
+    Description: Username to run under
   DriveLetter:
     Type: String
     Default: d
@@ -182,7 +182,7 @@ Resources:
                 Action:  
                   - "secretsManager:GetSecretValue"
                 Resource:  
-                  - !Sub "arn:aws:secretsmanager:${AWSRegion}:${AWS::AccountId}:secret:${SecretName}*"
+                  - !Ref SecretArn
 
   EC2InstanceProfile:
     Type: AWS::IAM::InstanceProfile
@@ -209,12 +209,12 @@ Resources:
             curl -o /tmp/userdata-script.sh ${LinuxUserDataUrl}
             chmod +x /tmp/userdata-script.sh
             # Pass parameters to the script
-            /tmp/userdata-script.sh "${SecretName}" "${AWSRegion}" "${ManagementEndpointIP }" "${VolumeName}" "${VolumeSize}" "${SvmName}"
+            /tmp/userdata-script.sh "${SecretArn}" "${ManagementEndpointIP }" "${VolumeName}" "${VolumeSize}" "${SvmName}" "${Username}"
         - Fn::Base64: !Sub |
             <powershell>
             Invoke-WebRequest -Uri ${WindowsUserDataUrl} -OutFile C:\userdata-script.ps1
             (Get-Content 'C:\userdata-script.ps1') | Where-Object { $_ -notmatch '^<powershell>$|^</powershell>$' } | Set-Content 'C:\userdata-script.ps1'
-            powershell.exe -ExecutionPolicy Bypass -File C:\userdata-script.ps1 -SecretIdParam "${SecretName}" -FSxNAdminIpParam "${ManagementEndpointIP }" -VolumeNameParam "${VolumeName}" -VolumeSizeParam "${VolumeSize}" -DriveLetterParam "${DriveLetter}" -SvmNameParam "${SvmName}"
+            powershell.exe -ExecutionPolicy Bypass -File C:\userdata-script.ps1 -SecretIdParam "${SecretArn}" -FSxNAdminIpParam "${ManagementEndpointIP }" -VolumeNameParam "${VolumeName}" -VolumeSizeParam "${VolumeSize}" -DriveLetterParam "${DriveLetter}" -SvmNameParam "${SvmName}" -UsernameParam "${Username}"
             </powershell>
 Outputs:
   InstanceId:
