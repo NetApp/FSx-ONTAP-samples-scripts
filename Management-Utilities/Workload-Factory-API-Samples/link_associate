@@ -27,7 +27,7 @@ Where: refresh_token - Is a refresh token used to obtain an access token needed
                         'list_credentials' to get a list of credentials you have access to
        aws_region - is the AWS region where the FSx file systems are located
        filesystem_ID - is the AWS file system ID of the FSx file system where the volume resides
-       link_ID - Is the id of the link you want to disassociate
+       link_ID - Is the id of the link you want to associate
 
 Instead of passing parameters on the command line, you can set the
 following environment variables:
