@@ -8,11 +8,16 @@
 /Ansible/fsx_inventory_report/ @kcantrel
 /Ansible/snapmirror_report/ @kcantrel
 /EKS/FSxN-as-PVC-for-EKS/ @mickeysh
+/EKS/Backup-EKS-Applications-with-Trident-Protect/ @kcantrel
+/EKS/PV-Migrate-with-Trident-Protect/ @kcantrel
+/Management-Utilities/FSxN-Report/ @kcantrel
 /Management-Utilities/auto_create_sm_relationships/ @kcantrel
 /Management-Utilities/auto_set_fsxn_auto_grow/ @kcantrel
+/Management-Utilities/ec2-user-data-iscsi-create-and-mount/ @benams1
 /Management-Utilities/fsx-ontap-aws-cli-scripts/ @kcantrel
 /Management-Utilities/fsxn-rotate-secret/ @kcantrel
 /Management-Utilities/warm_performance_tier/ @kcantrel
+/Management-Utilities/Workload-Factory-API-Samples/ @kcantrel
 /Monitoring/CloudWatch-FSx/ @LirazRom10
 /Monitoring/LUN-monitoring/ @LirazRom10
 /Monitoring/auto-add-cw-alarms/ @kcantrel
