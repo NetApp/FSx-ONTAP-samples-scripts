@@ -59,7 +59,7 @@ fi
 #
 # Process command line arguments.
 allRegions=false
-region=$(aws configure list | egrep '^.*egion ' | awk '{print $2}')
+region=$(aws configure get region)
 includeFsName=false
 excludeRoot=false
 filter=""
@@ -103,10 +103,6 @@ fi
 
 if [ ! -z "$fsid" -a -z "$fileSystemName" ]; then
   fileSystemName=$(aws fsx describe-file-systems --region $region --output=json 2> /dev/null | jq -r ".FileSystems[] | if(.FileSystemId == \"$fsid\") then (.Tags[] | select(.Key == \"Name\") .Value) else empty end" 2> /dev/null)
-  if [ -z "$fileSystemName" ]; then
-    echo "Error, failed to find the file system with the file system ID of '$fsid'." 1>&2
-    exit 1
-  fi
   filter='--filters [{"Name":"file-system-id","Values":["'$fsid'"]}]'
 fi
 

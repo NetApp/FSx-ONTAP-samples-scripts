@@ -46,7 +46,7 @@ else
 fi
 #
 # Set some defaults.
-region=$(aws configure list | egrep '^.*egion ' | awk '{print $2}')
+region=$(aws configure get region)
 waitForCompletion=false
 maxIterations=24
 sleepTime=5

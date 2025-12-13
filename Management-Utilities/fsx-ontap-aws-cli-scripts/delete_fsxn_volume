@@ -77,7 +77,7 @@ tmpout=/tmp/delete-volume.$$
 trap 'rm -f $tmpout' exit
 #
 # Set some defaults.
-region=$(aws configure list | egrep '^.*egion ' | awk '{print $2}')
+region=$(aws configure get region)
 skipBackup=true
 waitForCompletion=false
 quiet=false
