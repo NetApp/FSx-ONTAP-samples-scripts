@@ -58,7 +58,7 @@ fi
 allRegions=false
 includeFsName=false
 includeIp=false
-region=$(aws configure list | egrep '^.*egion ' | awk '{print $2}')
+region=$(aws configure get region)
 while getopts "hanr:i:f:p" option; do
   case "$option" in
     r) region="$OPTARG"

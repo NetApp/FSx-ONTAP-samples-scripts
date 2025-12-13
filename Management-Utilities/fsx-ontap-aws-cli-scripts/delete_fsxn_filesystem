@@ -83,7 +83,7 @@ for cmd in jq aws delete_fsxn_svm delete_fsxn_volume; do
 done
 #
 # Get the default region.
-region=$(aws configure list | egrep '^.*egion ' | awk '{print $2}')
+region=$(aws configure get region)
 enableBackup=false
 waitForCompletion=false
 #

@@ -94,7 +94,7 @@ if [ -z "$token" ]; then
   exit 1
 fi
 
-jq_query='.items[] | if(.type == "connector") then "\(.name);\(.id);\(.type);\(.state.status);N/A;N/A;N/A;\(.associatedTargets.items)" else "\(.name);\(.id);\(.type);\(.state.status);\(.region);\(.vpcId);\(.cloudResourceId | split(":") | .[6]);\(.associatedTargets.items)" end'
+jq_query='.items[] | if(.type == "connector") then "\(.name);\(.id);\(.type);\(.state.status);N/A;N/A;N/A;\(.associatedTargets.items)" else "\(.name);\(.id);\(.type);\(.state.status);\(.region);\(.vpcId);\(if(.cloudResourceId == null) then "N/A" else .cloudResourceId | split(":") | .[6] end);\(.associatedTargets.items)" end'
 
 run_curl GET "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/links/v1/links?include=associatedTargets,state,features" $tmpout $tmperr
 if jq -r "$jq_query" $tmpout > $tmpout2 2> $tmperr; then

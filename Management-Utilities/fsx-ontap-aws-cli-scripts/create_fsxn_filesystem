@@ -86,7 +86,7 @@ done
 # Set some defaults.
 size=1024
 throughput=128
-region=$(aws configure list | egrep '^.*egion ' | awk '{print $2}')
+region=$(aws configure get region)
 securityGroupOption=""
 endpointips=""
 availType=multi

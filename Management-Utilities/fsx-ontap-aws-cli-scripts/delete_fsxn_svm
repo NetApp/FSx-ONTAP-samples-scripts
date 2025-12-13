@@ -51,7 +51,7 @@ for cmd in aws jq delete_fsxn_volume; do
 done
 #
 # Set any defaults.
-region=$(aws configure list | egrep '^.*egion ' | awk '{print $2}')
+region=$(aws configure get region)
 waitForDelete=false
 noQuery=false
 enableBackup=false

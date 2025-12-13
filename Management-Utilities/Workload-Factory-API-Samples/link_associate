@@ -108,4 +108,4 @@ if [ -z "$token" ]; then
   exit 1
 fi
 
-run_curl "POST" "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/fsx/v2/credentials/${CREDENTIALS_ID}/regions/${AWS_REGION}/file-systems/${FILESYSTEM_ID}/links" $tmpout $tmperr '{"linkId":"'$LINK_ID'"}'
+run_curl "POST" "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/fsx/v2/credentials/${CREDENTIALS_ID}/regions/${AWS_REGION}/file-systems/${FILESYSTEM_ID}/links" $tmpout $tmperr '{"linkId":"'$LINK_ID'"}' application/json

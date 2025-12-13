@@ -52,7 +52,7 @@ intergerRegex='^[0-9]+$'
 #
 # Set some defaults.
 size=20
-region=$(aws configure list | egrep '^.*egion ' | awk '{print $2}')
+region=$(aws configure get region)
 waitForCompletion=false
 volumeStyle="flexvol"
 aggregateOption=""
