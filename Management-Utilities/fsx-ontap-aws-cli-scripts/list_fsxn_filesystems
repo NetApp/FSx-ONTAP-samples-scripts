@@ -79,7 +79,7 @@ contents=false
 showStatus=false
 showARN=false
 showBackup=false
-region=$(aws configure list | egrep '^.*egion ' | awk '{print $2}')
+region=$(aws configure get region)
 #
 # Process command line arguments.
 while getopts "bhcxsanr:i:f:" option; do
