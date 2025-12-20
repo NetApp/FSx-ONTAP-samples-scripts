@@ -51,8 +51,8 @@ for region in $regions; do
     printf "\nRegion: $region\n"
   fi
   if [ -z "$vpcId" ]; then
-    aws ec2 describe-subnets --region=$region | jq -r '.Subnets[] | .VpcId + "," + .SubnetId + "," + .CidrBlock + "," + (if(has("Tags")) then first(.Tags[] | select(.Key == "Name").Value) // "" else "" end)' | awk -F, 'BEGIN {formatStr="%21s  %24s  %18s  %s\n"; printf(formatStr, "VPC Id", "Subnet ID", "CIDR", "Name")} {printf(formatStr , $1, $2, $3, $4)}'
+    aws ec2 describe-subnets --region=$region --output=json | jq -r '.Subnets[] | .VpcId + "," + .SubnetId + "," + .CidrBlock + "," + (if(has("Tags")) then first(.Tags[] | select(.Key == "Name").Value) // "" else "" end)' | awk -F, 'BEGIN {formatStr="%21s  %24s  %18s  %s\n"; printf(formatStr, "VPC Id", "Subnet ID", "CIDR", "Name")} {printf(formatStr , $1, $2, $3, $4)}'
   else
-    aws ec2 describe-subnets --region=$region --filters '[{"Name": "vpc-id", "Values": ["'$vpcId'"]}]' | jq -r '.Subnets[] | .VpcId + "," + .SubnetId + "," + .CidrBlock + "," + (if(has("Tags")) then first(.Tags[] | select(.Key == "Name").Value) // "" else "" end)' | awk -F, 'BEGIN {formatStr="%21s  %24s  %18s  %s\n"; printf(formatStr, "VPC Id", "Subnet ID", "CIDR", "Name")} {printf(formatStr , $1, $2, $3, $4)}'
+    aws ec2 describe-subnets --region=$region --output=json --filters '[{"Name": "vpc-id", "Values": ["'$vpcId'"]}]' | jq -r '.Subnets[] | .VpcId + "," + .SubnetId + "," + .CidrBlock + "," + (if(has("Tags")) then first(.Tags[] | select(.Key == "Name").Value) // "" else "" end)' | awk -F, 'BEGIN {formatStr="%21s  %24s  %18s  %s\n"; printf(formatStr, "VPC Id", "Subnet ID", "CIDR", "Name")} {printf(formatStr , $1, $2, $3, $4)}'
   fi
 done
