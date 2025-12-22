@@ -16,8 +16,6 @@ Have a great idea? We'd love to hear it! Please email us at [ng-fsxn-github-samp
 
 ## Table of Contents
 
-* [AI](/AI)
-    * [GenAI ChatBot application sample](/AI/GenAI-ChatBot-application-sample)
 * [Anisble](/Ansible)
     * [FSx ONTAP inventory report](/Ansible/fsx_inventory_report)
     * [SnapMirror report](/Ansible/snapmirror_report)
