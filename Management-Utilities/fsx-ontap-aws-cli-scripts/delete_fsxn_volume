@@ -31,7 +31,8 @@ EOF
 }
 
 ################################################################################
-#  This function waits for the volume to be deleted.
+#  This function waits for the an s3 access point attached to a volume
+#  to be deleted.
 ################################################################################
 waitForS3ApDelete () {
 
@@ -47,7 +48,7 @@ waitForS3ApDelete () {
     if [ $? -eq 0 ]; then
       status=$(jq -r .S3AccessPointAttachments[0].Lifecycle $tmpout 2> /dev/null)
       if [ "$status" != "DELETING" -a "$status" != "PENDING" ]; then
-        printf "\nError, failed to delete volume S3 endpoint $s3ApName attached to volume ID '$volumeId'. Status = ${status}.\n" 1>&2
+        printf "\nError, failed to delete volume S3 Access Point $s3ApName attached to volume ID '$volumeId'. Status = ${status}.\n" 1>&2
         reason="$(jq -r '.S3AccessPointAttachments[0].LifecycleTransitionReason.Message' $tmpout 2> /dev/null)"
         if [ ! -z "$reason" ]; then
           echo "Reason: $reason" 1>&2
