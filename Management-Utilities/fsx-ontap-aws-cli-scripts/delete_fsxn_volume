@@ -35,7 +35,8 @@ EOF
 ################################################################################
 waitForS3ApDelete () {
 
-  local s3apName=$1
+  local s3ApName=$1
+  local volumeId=$2
   local MaxIterations=60
   local SleepTime=5
   #
@@ -46,7 +47,7 @@ waitForS3ApDelete () {
     if [ $? -eq 0 ]; then
       status=$(jq -r .S3AccessPointAttachments[0].Lifecycle $tmpout 2> /dev/null)
       if [ "$status" != "DELETING" -a "$status" != "PENDING" ]; then
-        printf "\nError, failed to delete volume with volume ID '$volumeId'. Status = ${status}.\n" 1>&2
+        printf "\nError, failed to delete volume S3 endpoint $s3ApName attached to volume ID '$volumeId'. Status = ${status}.\n" 1>&2
         reason="$(jq -r '.S3AccessPointAttachments[0].LifecycleTransitionReason.Message' $tmpout 2> /dev/null)"
         if [ ! -z "$reason" ]; then
           echo "Reason: $reason" 1>&2
@@ -156,14 +157,14 @@ fi
 aws fsx describe-s3-access-point-attachments --filter "Name=volume-id,Values=$volumeId" --region=$region --output=json > $tmpout 2>&1
 if [ "$(jq -r '.S3AccessPointAttachments | length' $tmpout 2>&1)" != "0" ]; then
   while read s3apName; do
-    [ $quiet != "true" ] && print "S3 Access Point '$s3apName' is being deleted." 1>&2
+    [ $quiet != "true" ] && printf "S3 Access Point '$s3apName' is being deleted." 1>&2
     aws fsx detach-and-delete-s3-access-point --name $s3apName --region=$region --output=json > $tmpout 2>&1
-    if waitForS3ApDelete $s3apName; then
+    if waitForS3ApDelete $s3apName $volumeId; then
       :
     else
       exit 1
     fi
-    [ $quiet != "true" ] && print "\n"
+    [ $quiet != "true" ] && printf "\n"
   done < <(jq -r '.S3AccessPointAttachments[] | .S3AccessPoint.ResourceARN | split("/")[1]' $tmpout 2>/dev/null)
 fi
 
