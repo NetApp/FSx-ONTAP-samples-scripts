@@ -59,7 +59,7 @@ fi
 #
 # Process command line arguments.
 allRegions=false
-region=$(aws configure list | egrep '^.*egion ' | awk '{print $2}')
+region=$(aws configure get region)
 includeFsName=false
 excludeRoot=false
 filter=""
