@@ -79,7 +79,7 @@ contents=false
 showStatus=false
 showARN=false
 showBackup=false
-region=$(aws configure list | egrep '^.*egion ' | awk '{print $2}')
+region=$(aws configure get region)
 #
 # Process command line arguments.
 while getopts "bhcxsanr:i:f:" option; do
@@ -250,14 +250,16 @@ for region in ${regions[*]}; do
       jq -r '.[] | if(.FileSystemType == "ONTAP") then .FileSystemId + "," + .ResourceARN + "," + .Name + "," + .Lifecycle + "," + .ManagementIp + "," + .VpcId + "," + .SubnetId + "," + if(.AutomaticBackupRetentionDays == null) then "Dissabled" else (.AutomaticBackupRetentionDays | tostring) end + "," + .DeploymentType + "," + (.DiskIopsConfiguration | tostring) + "," + (.ThroughputCapacity | tostring) + "," + (.StorageCapacity | tostring) else empty end' $fileSystemsFile > $tmpout
     fi
 
+    largestName=$(awk -F, 'BEGIN {max=0} {if(length($3) > max){max=length($3)}} END {print max}' < $tmpout)
+    nameFieldWidth=$((largestName + 4))
     if [ "$includeExtraInfo" == "true" ]; then
-      awk -F, -v region=$region 'BEGIN {first=1; formatStr="%12s %23s %35s %10s %15s %22s %25s %6s %12s %11s %6s\n"}; {if(first) {printf "\n"; printf formatStr, "Region", "FileSystem ID", "Name", "Status", "Management IP", "VPC ID", "Subnet ID", "Size", "Deployment", "Throughput", "Iops"; first=0}; printf formatStr, region, $1, "\"" $3 "\"", $4, $5, $6, $7, $(12), $9, $(11), $(10)}' < $tmpout
+      awk -F, -v region=$region 'BEGIN {first=1; formatStr="%12s %23s %'$nameFieldWidth's %14s %15s %22s %25s %6s %12s %11s %6s\n"}; {if(first) {printf "\n"; printf formatStr, "Region", "FileSystem ID", "Name", "Status", "Management IP", "VPC ID", "Subnet ID", "Size", "Deployment", "Throughput", "Iops"; first=0}; printf formatStr, region, $1, "\"" $3 "\"", $4, $5, $6, $7, $(12), $9, $(11), $(10)}' < $tmpout
     else
       if [ "$showARN" == "true" ]; then
-        awk -F, -v region=$region 'BEGIN {first=1; formatStr="%12s %23s %70s %35s %10s %15s\n"}; {if(first) {printf "\n"; printf formatStr, "Region", "FileSystem ID", "ARN", "Name", "Status", "Management IP"; first=0}; printf formatStr, region, $1, $2, "\"" $3 "\"", $4, $5}' < $tmpout
+        awk -F, -v region=$region 'BEGIN {first=1; formatStr="%12s %23s %70s %'$nameFieldWidth's %14s %15s\n"}; {if(first) {printf "\n"; printf formatStr, "Region", "FileSystem ID", "ARN", "Name", "Status", "Management IP"; first=0}; printf formatStr, region, $1, $2, "\"" $3 "\"", $4, $5}' < $tmpout
       else
-        formatStr='%12s %23s %35s %10s %15s\n'
-        [ "$showBackup" == "true" ] && formatStr='%12s %23s %35s %10s %15s %17s\n'
+        formatStr='%12s %23s %'$nameFieldWidth's %14s %15s\n'
+        [ "$showBackup" == "true" ] && formatStr='%12s %23s %'$nameFieldWidth's %14s %15s %17s\n'
         awk -F, -v region=$region 'BEGIN {first=1; formatStr="'"${formatStr}"'"}; {if(first) {printf "\n"; printf formatStr, "Region", "FileSystem ID", "Name", "Status", "Management IP", "Backup Retention"; first=0}; printf formatStr, region, $1, "\"" $3 "\"", $4, $5, $8}' < $tmpout
       fi
     fi
