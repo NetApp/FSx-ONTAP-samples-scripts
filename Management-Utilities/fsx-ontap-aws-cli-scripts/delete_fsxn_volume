@@ -31,6 +31,48 @@ EOF
 }
 
 ################################################################################
+#  This function waits for the an s3 access point attached to a volume
+#  to be deleted.
+################################################################################
+waitForS3ApDelete () {
+
+  local s3ApName=$1
+  local volumeId=$2
+  local MaxIterations=60
+  local SleepTime=5
+  #
+  # Wait for the s3ap to be deleted.
+  i=0
+  while [ $i -lt $MaxIterations ]; do
+    aws fsx describe-s3-access-point-attachments --names $s3ApName --output=json --region=$region > $tmpout 2>&1
+    if [ $? -eq 0 ]; then
+      status=$(jq -r .S3AccessPointAttachments[0].Lifecycle $tmpout 2> /dev/null)
+      if [ "$status" != "DELETING" -a "$status" != "PENDING" ]; then
+        printf "\nError, failed to delete volume S3 Access Point $s3ApName attached to volume ID '$volumeId'. Status = ${status}.\n" 1>&2
+        reason="$(jq -r '.S3AccessPointAttachments[0].LifecycleTransitionReason.Message' $tmpout 2> /dev/null)"
+        if [ ! -z "$reason" ]; then
+          echo "Reason: $reason" 1>&2
+        else
+          cat $tmpout 1>&2
+        fi
+        return 1
+      fi
+    else
+      # Assume if it failed, it is because the s3 AP was deleted and doesn't exist anymore.
+      break
+    fi
+    [ $quiet != "true" ] && printf "."
+    sleep $SleepTime
+    let i+=1
+  done
+  if [ $i -ge $MaxIterations ]; then
+    printf "\nFailed to delete volume with volume ID of '$volumeId'. Taking too long.\n" 1>&2
+    return 1
+  fi
+  return 0
+}
+
+################################################################################
 #  This function waits for the volume to be deleted.
 ################################################################################
 waitForVolumeDelete () {
@@ -113,7 +155,21 @@ if [ -z "$volumeId" ]; then
   usage
 fi
 
-aws fsx delete-volume --volume-id $volumeId --region=$region --output=json --ontap-configuration '{"SkipFinalBackup": '$skipBackup'}' > $tmpout 2>&1
+aws fsx describe-s3-access-point-attachments --filter "Name=volume-id,Values=$volumeId" --region=$region --output=json > $tmpout 2>&1
+if [ "$(jq -r '.S3AccessPointAttachments | length' $tmpout 2>&1)" != "0" ]; then
+  while read s3apName; do
+    [ $quiet != "true" ] && printf "S3 Access Point '$s3apName' is being deleted." 1>&2
+    aws fsx detach-and-delete-s3-access-point --name $s3apName --region=$region --output=json > $tmpout 2>&1
+    if waitForS3ApDelete $s3apName $volumeId; then
+      :
+    else
+      exit 1
+    fi
+    [ $quiet != "true" ] && printf "\n"
+  done < <(jq -r '.S3AccessPointAttachments[] | .S3AccessPoint.ResourceARN | split("/")[1]' $tmpout 2>/dev/null)
+fi
+
+aws fsx delete-volume --volume-id $volumeId --region=$region --output=json --ontap-configuration '{"SkipFinalBackup": '$skipBackup'}' --output=json > $tmpout 2>&1
 
 if [ $? != "0" ]; then
   echo "Failed to delete volume." 1>&2
