@@ -11,19 +11,17 @@ This folder provides a script that will create an CloudFormation template based 
 ## Running the script
 
 The script takes the following parameters:
-- `-f` fs-id: The ID of the FSxN file system you want to create the CloudFormation template for. This is a required parameter.
-- `-n` name: Is an optional name to be appended to all the volume, svm, NetBIOS names. This is so you could test the CloudFormation template while the original machine is still running.
+- `-f fs-id`: The ID of the FSxN file system you want to create the CloudFormation template for. This is a required parameter.
+- `-n name`: Is an optional name to be appended to all the volumes, svms and NetBIOS names. This is so you could test the CloudFormation template while the original machine is still running.
 
 The script will output the CloudFormation template in JSON format. You can redirect this output to a file if you want to save it.
 
-Note since you can't retrieve passwords the script will create parameters to allow you to provide an AWS Secrets
-Manager secret that should contain the password for the 'fsxadmin' account. It will also create a parameter
-to provide an AWS Secrets Manager Secret for credentials to use to join any SVMs that have Active Directory setup for them.
-When you create the CloudFormation stack you will be prompted to fill in these parameters.
-
-Note that the secret for the 'fsxadmin' account should have a key called 'password' that contains the password for the
-'fsxadmin' account. The secret for the Active Directory credentials should have keys called 'username' and
-'password' that contain the username and password of an account that has permissions to join machines to the Active Directory domain.
+Note that since you can't retrieve credentials from the FSxN configuration the script will create
+parameters that will allow you to provide an AWS Secrets Manager secret that should contain the credentials.
+There will be one parameter for the password of the 'fsxadmin' account. That secret will just need one 'key'
+named "password" with the desired fsxadmin password. There will also be a parameter for each SVMs that has an
+Active Directory configured for it so you can provide a secret that should have a 'username' and 'password' key
+that will be used to join the SVM to the domain.
 
 An example run:
 ```
@@ -37,15 +35,15 @@ Warning: Could not find root volume for SVM fsa. Setting the security style to U
 ```
 
 ## Notes
-- For multi availability zone deployments, the script will do the following in regards to the EndpointIpAddressRange;
-    - If the file system is in the 198.19.0.0/16 address range (the AWS default), the script will not provide an address, forcing AWS to just allocate a new address range from the 198.19.0.0/16 address range.
-    - If it isn't in the 198.19.0.0/16 address range, it will create a parameter so you can specify a new address range for testing purposes, with a default set to the current address range.
-- Since AWS requires you to provide a junction path when creating a volume, if the script finds a volume without a junction path it will set it to `/volume name`. A warning message will be printed if this happens you alert you.
-- Since AWS doesn't allow you to specify these parameters when creating a DP type volume, their current settings will be removed:
+- For multi availability zone deployments, the script will do the following in regards to the Endpoint IP Address Range:
+    - If the file system is in the 198.19.0.0/16 address range (the AWS default), the script will not provide an address range forcing AWS to just allocate a new address range from the 198.19.0.0/16 CIDR block.
+    - If it isn't in the 198.19.0.0/16 address range then it will create a parameter so you can specify a new address range for testing purposes, with a default set to the current address range.
+- Since AWS requires you to provide a junction path when creating a volume, if the script finds a volume without a junction path it will set it to `/volume_name`. A warning message will be outputed if this happens you alert you.
+- Since AWS doesn't allow you to specify these parameters when creating a DP type volume, their current settings will be removed from the CloudFormation template:
     - SecurityStyle
     - SnapshotPolicy
     - StorageEfficiencyEnabled
-- If, for some reason, the script can't find the attributes of the root volume of a SVM (unlikely but there are valid reasons how this can happen), it will set the security style to 'NTFS' if the SVM has a Active Directory configuration. Otherwise it will assume an 'UNIX' security style. A warning message will be printed if this happens to alert you.
+- If, for some reason, the script can't find the attributes of the root volume of a SVM (unlikely but there are reasons how this can happen), it will set the security style to 'NTFS' if the SVM has a Active Directory configuration, otherwise it will assume an 'UNIX' security style. A warning message will be printed if this happens to alert you.
 - While some testing was performed, hence the `-n` option, not for all possible FSxN configurations were tested. If you run into any issues with the script, or have suggestions for improvements, please open an [issue](https://github.com/NetApp/FSx-ONTAP-samples-scripts/issues) on GitHub.
 
 ## Author Information
