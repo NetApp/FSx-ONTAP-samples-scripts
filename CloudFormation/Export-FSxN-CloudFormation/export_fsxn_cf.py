@@ -17,7 +17,7 @@ parser.add_option('-n', dest='nameAppend', help='A string to append to the names
 opts, args = parser.parse_args()
 
 if opts.filesystemId is None:
-    print("Error: --filesystem-id is required", file=sys.stderr)
+    print("Error: -f option is required", file=sys.stderr)
     sys.exit(1)
 filesystemId = opts.filesystemId
 nameAppend = opts.nameAppend if opts.nameAppend is not None else ""
@@ -56,7 +56,7 @@ fsCfTemplate['Properties']['SecurityGroupIds'] = []
 securityGroups = {} # Use a dictionary to store the security groups to avoid duplicates.
 response = ec2Client.describe_network_interfaces(NetworkInterfaceIds=fileSystem['NetworkInterfaceIds'])
 for eni in response['NetworkInterfaces']:
-    for group in response['NetworkInterfaces'][0]['Groups']:
+    for group in eni['Groups']:
         securityGroups[group['GroupId']] = 1
 for group in securityGroups.keys():
     fsCfTemplate['Properties']['SecurityGroupIds'].append(group)
@@ -71,13 +71,13 @@ for prop in ['AutomaticBackupRetentionDays', 'DailyAutomaticBackupStartTime', 'D
 if fileSystem['OntapConfiguration']['DiskIopsConfiguration']['Mode'] == 'AUTOMATIC':
     fsCfTemplate['Properties']['OntapConfiguration']['DiskIopsConfiguration'] = {'Mode': 'AUTOMATIC'}
 else:
-    fsCfTemplate['Properties']['OntapConfiguration']['DiskIopsConfiguration'] = fileSystem['DiskIopsConfiguration']
+    fsCfTemplate['Properties']['OntapConfiguration']['DiskIopsConfiguration'] = fileSystem['OntapConfiguration']['DiskIopsConfiguration']
 #
 # If using the default endpoint IP address range, remove it from the
 # CloudFormation template since AWS will automatically use a new default
 # address range if the 'EndpointIpAddressRange' is not specified.
 if 'EndpointIpAddressRange' in fsCfTemplate['Properties']['OntapConfiguration']:
-    if fsCfTemplate['Properties']['OntapConfiguration']['EndpointIpAddressRange'].startswith("198.18"):
+    if fsCfTemplate['Properties']['OntapConfiguration']['EndpointIpAddressRange'].startswith("198.19"):
         del fsCfTemplate['Properties']['OntapConfiguration']['EndpointIpAddressRange']
     else:
         cfTemplate['Parameters']['endpointIpAddressRange'] = {
@@ -121,7 +121,7 @@ for volume in volumes:
                 del volumeCfTemplate['Properties']['OntapConfiguration'][prop]
     else:
         if 'JunctionPath' not in volumeCfTemplate['Properties']['OntapConfiguration']:
-            print(f"Warning: Volume {volume['Name']} does not have a junction path yet it is required for a Cloudformation template so setting it to /{volumeCfTemplate['Properties']['Name']}", file=sys.stderr)
+            print(f"Warning: Volume {volume['Name']} does not have a junction path yet it is required for a CloudFormation template so setting it to /{volumeCfTemplate['Properties']['Name']}", file=sys.stderr)
             volumeCfTemplate['Properties']['OntapConfiguration']['JunctionPath'] = "/" + volumeCfTemplate['Properties']['Name']
 
     cfTemplate['Resources'].update({volume['VolumeId'].replace("-", ""): volumeCfTemplate})
@@ -148,7 +148,7 @@ for svm in response['StorageVirtualMachines']:
                 #
                 # Since CF can only handle organizational unit distinguish names that have a
                 # parent of OU, we need to check if the parent of the organizational unit is
-                # OU and if not, we need to remove the organizational unit distinguish name
+                # OU and if not, we need to remove the organizational unit distinguish name (DN)
                 # from the CloudFormation template and print a warning message.
                 dnParent=svm['ActiveDirectoryConfiguration']['SelfManagedActiveDirectoryConfiguration']['OrganizationalUnitDistinguishedName'].split(",")[0]
                 dnParent = dnParent.split("=")[0]
@@ -164,7 +164,7 @@ for svm in response['StorageVirtualMachines']:
             secretParameterId = f'{svm["Name"].replace("-", "").replace("_", "")}AdminCredentials'
             cfTemplate['Parameters'][secretParameterId] = {
                 "Type": "String",
-                "Description": f"The AWS Secrets Manager secret that has the Active Directory credentials for the {svm['Name']} storage virtual machine. It should have two keys named 'username' and 'passowrd'."
+                "Description": f"The AWS Secrets Manager secret that has the Active Directory credentials for the {svm['Name']} storage virtual machine. It should have two keys named 'username' and 'password'."
             }
             svmCfTemplate['Properties']['ActiveDirectoryConfiguration']['SelfManagedActiveDirectoryConfiguration']['UserName'] = {"Fn::Sub": "{{resolve:secretsmanager:${" + secretParameterId + "}:SecretString:username}}"}
             svmCfTemplate['Properties']['ActiveDirectoryConfiguration']['SelfManagedActiveDirectoryConfiguration']['Password'] = {"Fn::Sub": "{{resolve:secretsmanager:${" + secretParameterId + "}:SecretString:password}}"}

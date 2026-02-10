@@ -1,10 +1,10 @@
 # Export NetApp FSxN to a CloudFormation Template
 
 ## Overview
-This folder provides a script that will create an CloudFormation template based on the current configuration of an existing FSx for ONTAP file system.
+This folder provides a script that will create a CloudFormation template based on the current configuration of an existing FSx for ONTAP file system.
 
 ## Prerequisites
-- An FSxN file system you want to create an CloudFormation template for.
+- An FSxN file system you want to create a CloudFormation template for.
 - An AWS account with permissions to "describe" the FSxN file system and its virtual storage machines, and volumes.
 - The AWS CLI installed and configured on your local machine. You can find instructions on how to do that [here](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html).
 
@@ -12,7 +12,7 @@ This folder provides a script that will create an CloudFormation template based 
 
 The script takes the following parameters:
 - `-f fs-id`: The ID of the FSxN file system you want to create the CloudFormation template for. This is a required parameter.
-- `-n name`: Is an optional name to be appended to all the volumes, svms and NetBIOS names. This is so you could test the CloudFormation template while the original machine is still running.
+- `-n name`: Is an optional name to be appended to all the volumes, svms and NetBIOS names. This is so you can test the CloudFormation template while the original machine is still running.
 
 The script will output the CloudFormation template in JSON format. You can redirect this output to a file if you want to save it.
 
@@ -38,12 +38,13 @@ Warning: Could not find root volume for SVM fsa. Setting the security style to U
 - For multi availability zone deployments, the script will do the following in regards to the Endpoint IP Address Range:
     - If the file system is in the 198.19.0.0/16 address range (the AWS default), the script will not provide an address range forcing AWS to just allocate a new address range from the 198.19.0.0/16 CIDR block.
     - If it isn't in the 198.19.0.0/16 address range then it will create a parameter so you can specify a new address range for testing purposes, with a default set to the current address range.
-- Since AWS requires you to provide a junction path when creating a volume, if the script finds a volume without a junction path it will set it to `/volume_name`. A warning message will be outputed if this happens you alert you.
+- Since AWS requires you to provide a junction path when creating a volume, if the script finds a volume without a junction path it will set it to `/volume_name`. A warning message will be outputted if this happens to alert you.
 - Since AWS doesn't allow you to specify these parameters when creating a DP type volume, their current settings will be removed from the CloudFormation template:
     - SecurityStyle
     - SnapshotPolicy
     - StorageEfficiencyEnabled
-- If, for some reason, the script can't find the attributes of the root volume of a SVM (unlikely but there are reasons how this can happen), it will set the security style to 'NTFS' if the SVM has a Active Directory configuration, otherwise it will assume an 'UNIX' security style. A warning message will be printed if this happens to alert you.
+- If, for some reason, the script can't find the attributes of the root volume of a SVM (unlikely but there are reasons how this can happen), it will set the security style of the SVM to 'NTFS' if the SVM has a Active Directory configuration, otherwise it will set it to a 'UNIX' security style. A warning message will be outputted if this happens to alert you.
+- Since AWS only allows an Active Directory Distinguished Name (DN) to start with "OU=", if the script finds a DN that doesn't start with "OU=" it will ignore it and will output a warning message to alert you. However the DN is set to "CN=Computers", which is the default DN that ONTAP will use when joining a domain to AD, it will not output an warning message with the assumption that by not providing a DN it will be set to "CN=Computers".
 - While some testing was performed, hence the `-n` option, not for all possible FSxN configurations were tested. If you run into any issues with the script, or have suggestions for improvements, please open an [issue](https://github.com/NetApp/FSx-ONTAP-samples-scripts/issues) on GitHub.
 
 ## Author Information
