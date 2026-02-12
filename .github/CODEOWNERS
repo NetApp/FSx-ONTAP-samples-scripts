@@ -17,8 +17,8 @@
 /Management-Utilities/fsxn-rotate-secret/ @kcantrel
 /Management-Utilities/warm_performance_tier/ @kcantrel
 /Management-Utilities/Workload-Factory-API-Samples/ @kcantrel
-/Monitoring/CloudWatch-FSx/ @LirazRom10
-/Monitoring/LUN-monitoring/ @LirazRom10
+/Monitoring/CloudWatch-FSx/ @kcantrel
+/Monitoring/LUN-monitoring/ @kcantrel
 /Monitoring/auto-add-cw-alarms/ @kcantrel
 /Monitoring/monitor-ontap-services/ @kcantrel
 /Monitoring/ingest_nas_audit_logs_into_cloudwatch/ @kcantrel
