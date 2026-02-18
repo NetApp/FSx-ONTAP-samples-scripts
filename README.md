@@ -8,7 +8,7 @@ built to maximize cost performance, resilience, and accessibility in business-cr
 This GitHub repository contains comprehensive code samples and automation scripts for FSx for Netapp ONTAP operations,
 promoting the use of Infrastructure as Code (IAC) tools and encouraging developers to extend the product's
 functionalities through code. The samples here go alongside the automation, management and monitoring that
-[BlueXP Workload Factory](https://console.workloads.netapp.com) provides.
+[Workload Factory](https://console.workloads.netapp.com) provides.
 
 We welcome contributions from the community! Please read our [contribution guidelines](CONTRIBUTING.md) before getting started.
 
@@ -16,12 +16,18 @@ Have a great idea? We'd love to hear it! Please email us at [ng-fsxn-github-samp
 
 ## Table of Contents
 
-* [Anisble](/Ansible)
-    * [FSx ONTAP inventory report](/Ansible/fsx_inventory_report)
-    * [SnapMirror report](/Ansible/snapmirror_report)
-* [CloudFormation](/CloudFormation)
-    * [NetApp-FSxN-Custom-Resources-Samples](/CloudFormation/NetApp-FSxN-Custom-Resources-Samples)
-    * [deploy-fsx-ontap](/CloudFormation/deploy-fsx-ontap)
+* [Infrastructure as Code](/Infrastructure_as_Code)
+    * [Anisble](Ansible)
+        * [FSx ONTAP inventory report](Ansible/fsx_inventory_report)
+        * [SnapMirror report](Ansible/snapmirror_report)
+    * [CloudFormation](CloudFormation)
+        * [NetApp-FSxN-Custom-Resources-Samples](CloudFormation/NetApp-FSxN-Custom-Resources-Samples)
+        * [deploy-fsx-ontap](CloudFormation/deploy-fsx-ontap)
+    * [Terraform](Terraform)
+        * [FSx ONTAP deployment using Terraform](Terraform/deploy-fsx-ontap)
+        * [FSx ONTAP Replication](Terraform/fsxn-replicate)
+        * [Deployment of SQL Server on EC2 with FSx ONTAP](Terraform/deploy-fsx-ontap-sqlserver)
+        * [Deployment of FSx ONTAP with VPN for File Share Access](Terraform/deploy-fsx-ontap-fileshare-access)
 * [EKS](/EKS)
     * [Backup-EKS-Applications-with-Trident-Protect](/EKS/Backup-EKS-Applications-with-Trident-Protect)
     * [FSx for NetApp ONTAP as persistent storage for EKS](/EKS/FSxN-as-PVC-for-EKS)
@@ -43,11 +49,6 @@ Have a great idea? We'd love to hear it! Please email us at [ng-fsxn-github-samp
     * [Monitor FSx for ONTAP with Harvest on EKS](/Monitoring/monitor_fsxn_with_harvest_on_eks)
 * [Solutions](/Solutions)
     * [k8s applications non-stdout logs collection into ELK](/Solutions/EKS-logs-to-ELK)
-* [Terraform](/Terraform)
-    * [FSx ONTAP deployment using Terraform](/Terraform/deploy-fsx-ontap)
-    * [FSx ONTAP Replication](/Terraform/fsxn-replicate)
-    * [Deployment of SQL Server on EC2 with FSx ONTAP](/Terraform/deploy-fsx-ontap-sqlserver)
-    * [Deployment of FSx ONTAP with VPN for File Share Access](/Terraform/deploy-fsx-ontap-fileshare-access)
 
 ## Author Information
 
