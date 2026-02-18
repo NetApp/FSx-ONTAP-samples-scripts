@@ -1,23 +1,23 @@
 # Workload Factory API Samples
 
 The idea behind this folder is to show examples of how to use the [Workload Factory APIs](https://console.workloads.netapp.com/api-doc).
-Not every API is covered, but the ones required to get you started (i.e. get a refresh token, get the BlueXP accountID,
+Not every API is covered, but the ones required to get you started (i.e. get a bearer token, get the BlueXP accountID,
 get BlueXP credentials ID) are included. Once you have the information provided from these APIs you are ready to start
 calling the others. While these examples are implemented as bash shell scripts you should be able to translate them
 to the programming language that you prefer, such as Python, Go, or JavaScript.
 
-You authenticate to the Workload Factory APIs with an "Bearer Token." You generate a bearer token
+You authenticate to the Workload Factory APIs with a "Bearer Token." You generate a bearer token
 by running a specific API using your "Refresh Token." Instructions on how to obtain your "Refresh Token" and generate an bearer token can be found
 in the [NetApp Console documentation](https://docs.netapp.com/us-en/bluexp-automation/platform/create_user_token.html#1-generate-a-netapp-refresh-token).
-Note that the bearer tokens expires after 24 hours whereas the Refresh Token does not expire until you revoke from the NetApp Console.
+Note that a bearer token expires after 24 hours whereas the Refresh Token does not expire until you revoke it from the NetApp Console.
 
 Also note that all these scripts depend on the [wf_utils](wf_utils) file that contains common functions used by all of them.
 So, if you copy just one of these scripts, make sure to also copy the `wf_utils` file as well.
 
 To make it easier to run the scripts, a `get_token()` function is included in the `wf_utils` file
-that retrieves an bearer token for you. So, you don't have to worry about manually generating an bearer token
+that retrieves a bearer token for you. So, you don't have to worry about manually generating a bearer token
 everyday instead, you just pass the "Refresh Token" to the scripts, they will call the `get_token()` function and
-generate an bearer token for you.
+generate a bearer token for you.
 
 ## Prerequisites
 To run these scripts, you need to have the following prerequisites:
@@ -33,7 +33,7 @@ you can set the `REFRESH_TOKEN` environment variable.
 
 - All scripts accept the `-h` option to display the help message, which includes the available options and their descriptions.
 
-Hopefully with these samples you'll be able to create your own scripts that use any the Workload Factory APIs.
+Hopefully with these samples you'll be able to create your own scripts that use any of the Workload Factory APIs.
 If you do create a new script, please consider contributing it back to this repository so that others can benefit from it.
 
 ## Available Scripts
