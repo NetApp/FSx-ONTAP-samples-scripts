@@ -2,7 +2,7 @@
 
 This folder contains code samples and automation scripts for FSx for NetApp ONTAP operations using the various Infrastructure as Code (IAC) tools.
 
-* [Anisble](Ansible)
+* [Ansible](Ansible)
     * [FSx ONTAP inventory report](Ansible/fsx_inventory_report)
     * [SnapMirror report](Ansible/snapmirror_report)
 * [CloudFormation](CloudFormation)
