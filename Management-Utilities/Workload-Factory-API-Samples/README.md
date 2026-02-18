@@ -1,25 +1,34 @@
 # Workload Factory API Samples
 
-The idea behind this folder is to show examples of how to use the [BlueXP Workload Factory APIs](https://console.workloads.netapp.com/api-doc).
-Not every API is covered, but the ones required to get you started (get a refresh token, get the BlueXP accountID,
-get BlueXP credentials ID) are included. Once you have the information provided from these APIs are ready to start
+The idea behind this folder is to show examples of how to use the [Workload Factory APIs](https://console.workloads.netapp.com/api-doc).
+Not every API is covered, but the ones required to get you started (i.e. get a refresh token, get the BlueXP accountID,
+get BlueXP credentials ID) are included. Once you have the information provided from these APIs you are ready to start
 calling the others. While these examples are implemented as bash shell scripts you should be able to translate them
 to the programming language that you prefer, such as Python, Go, or JavaScript.
 
-Note that all these scripts depend on the [wf_utils](wf_utils) file that contains common functions used by all the
-scripts. One function in particular, `get_token()`, is used to get an authentication token from the BlueXP Workload
-Factory API. So, if you copy just some of the files from this repository, make sure to copy the `wf_utils` file as well.
+You authenticate to the Workload Factory APIs with an "Bearer Token." You generate a bearer token
+by running a specific API using your "Refresh Token." Instructions on how to obtain your "Refresh Token" and generate an bearer token can be found
+in the [NetApp Console documentation](https://docs.netapp.com/us-en/bluexp-automation/platform/create_user_token.html#1-generate-a-netapp-refresh-token).
+Note that the bearer tokens expires after 24 hours whereas the Refresh Token does not expire until you revoke from the NetApp Console.
+
+Also note that all these scripts depend on the [wf_utils](wf_utils) file that contains common functions used by all of them.
+So, if you copy just one of these scripts, make sure to also copy the `wf_utils` file as well.
+
+To make it easier to run the scripts, a `get_token()` function is included in the `wf_utils` file
+that retrieves an bearer token for you. So, you don't have to worry about manually generating an bearer token
+everyday instead, you just pass the "Refresh Token" to the scripts, they will call the `get_token()` function and
+generate an bearer token for you.
 
 ## Prerequisites
 To run these scripts, you need to have the following prerequisites:
-- A bash shell.
+- A NetApp Console refresh token. You can generate one by visiting [Refresh Token Generator](https://services.cloud.netapp.com/refresh-token) page and following the instructions there.
+- A bash shell. If you want to run from a Windows environment, you can use the Windows Subsystem for Linux (WSL).
 - The `curl` command-line tool installed.
 - The `jq` command-line JSON processor installed. You can install it using your package manager, e.g., `apt-get install jq` on Debian/Ubuntu or `brew install jq` on macOS.
 
 ## Notes:
 - All scripts allow you to set environment variables to pass options instead of having to use the
-command line options. For example, instead of using the `-t` option to pass the
-[BlueXP Refresh Token](https://docs.netapp.com/us-en/bluexp-automation/platform/create_user_token.html#1-generate-a-netapp-refresh-token),
+command line options. For example, instead of using the `-t` option to pass the Refresh Token
 you can set the `REFRESH_TOKEN` environment variable.
 
 - All scripts accept the `-h` option to display the help message, which includes the available options and their descriptions.
