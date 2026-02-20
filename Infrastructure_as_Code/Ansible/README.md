@@ -8,6 +8,7 @@ Click here for more information on [Ansible](https://www.ansible.com/).
 | --- | --- |
 | [Inventory Report](./fsx_inventory_report) | Creates a report of all the FSxN file systems within an AWS account.|
 | [SnapMirror Report](./snapmirror_report) | Creates a report of all SnapMirror relationships within all the FSxN file systems within an AWS account.|
+| [Volume Management](./Volume_Management) | A collection of playbooks to manage volumes on FSxN file systems.|
 
 ## Author Information
 
