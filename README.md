@@ -20,6 +20,7 @@ Have a great idea? We'd love to hear it! Please email us at [ng-fsxn-github-samp
     * [Ansible](/Infrastructure_as_Code/Ansible)
         * [FSx ONTAP inventory report](/Infrastructure_as_Code/Ansible/fsx_inventory_report)
         * [SnapMirror report](/Infrastructure_as_Code/Ansible/snapmirror_report)
+        * [Volume Management](/Infrastructure_as_Code/Ansible/Volume_Management)
     * [CloudFormation](/Infrastructure_as_Code/CloudFormation)
         * [NetApp-FSxN-Custom-Resources-Samples](/Infrastructure_as_Code/CloudFormation/NetApp-FSxN-Custom-Resources-Samples)
         * [deploy-fsx-ontap](/Infrastructure_as_Code/CloudFormation/deploy-fsx-ontap)

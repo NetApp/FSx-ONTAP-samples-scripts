@@ -5,6 +5,7 @@ This folder contains code samples and automation scripts for FSx for NetApp ONTA
 * [Ansible](Ansible)
     * [FSx ONTAP inventory report](Ansible/fsx_inventory_report)
     * [SnapMirror report](Ansible/snapmirror_report)
+    * [Volume Management](Ansible/Volume_Management)
 * [CloudFormation](CloudFormation)
     * [NetApp-FSxN-Custom-Resources-Samples](CloudFormation/NetApp-FSxN-Custom-Resources-Samples)
     * [deploy-fsx-ontap](CloudFormation/deploy-fsx-ontap)
