@@ -19,7 +19,7 @@ the number before it represents the number of seconds. For example, 'P1DT2H3M4S'
 - NetApp ONTAP Ansible collection.
 - AWS Ansible collection.
 - AWS secret(s) with the credentials necessary to run SnapMirror ONTAP APIs against the FSx for ONTAP file systems. The required format of the secret is described below.
-- The `aws` cli installed and configured. Installation instructions can be found [here](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html).
+- The `aws` cli installed and configured. Installation instructions can be found [here](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html). This is required to get all the FSxNs within a region, since there isn't an AWS Ansible module that can do that.
 - A file with a list of the FSx for ONTAP file systems and their corresponding secrets. The format of the file is described below.
 
 ## Installation
