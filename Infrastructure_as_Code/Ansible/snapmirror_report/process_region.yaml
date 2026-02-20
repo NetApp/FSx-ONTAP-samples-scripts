@@ -17,7 +17,7 @@
 
 - name: Get all the FSxNs for the specified region.
   ansible.builtin.shell:
-    cmd:  aws fsx describe-file-systems --region {{ region }} --query 'FileSystems[*].{ID:FileSystemId,IP:OntapConfiguration.Endpoints.Management.IpAddresses[0]}' --output text | sed -e '/^$/d'
+    cmd: aws fsx describe-file-systems --region {{ region }} --query 'FileSystems[*].{ID:FileSystemId,IP:OntapConfiguration.Endpoints.Management.IpAddresses[0]}' --output text | sed -e '/^$/d'
   register: fsxn_ids_per_region
 
 - name: Get the SnapMirror relationships for each FSxN.
@@ -28,11 +28,11 @@
     hostname: "{{ item.split('\t')[1] }}"
     validate_certs: false
     fields:
-       - source
-       - destination
-       - healthy
-       - lag_time
-       - state
+      - source
+      - destination
+      - healthy
+      - lag_time
+      - state
     gather_subset:
       - snapmirror/relationships
   loop: "{{ fsxn_ids_per_region.stdout_lines }}"
