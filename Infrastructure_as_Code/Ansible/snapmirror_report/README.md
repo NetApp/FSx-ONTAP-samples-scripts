@@ -28,7 +28,7 @@ There are three files used to create the report:
 - `get_all_fsxn_regions.yaml`: A collection of tasks that retrieves all the regions, that are enabled for the account, where FSx for ONTAP is also available.
 - `processs_region.yaml`: A collection of tasks that will process all the FSxNs within a region.
 
-You will also need to create a file named (by default) `secrets_list.csv` that list the secret name for each FSx file systems.
+You will also need to create a file named (by default) `secrets.csv` that list the secret name for each FSx file systems.
 The format of the file should be:
 ```
 file_system_id,secret_name
@@ -71,4 +71,4 @@ Unless required by applicable law or agreed to in writing, software distributed 
 
 See the License for the specific language governing permissions and limitations under the License.
 
-© 2024 NetApp, Inc. All Rights Reserved.
+© 2026 NetApp, Inc. All Rights Reserved.
