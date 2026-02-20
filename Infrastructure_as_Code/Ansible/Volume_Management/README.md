@@ -28,7 +28,7 @@ Each playbook requires various variables to be set in order to run.
 | fsxn\_hostname| All | Yes | None | The hostname or IP address of the FSxN where the volume resides.|
 | lambda\_function\_name| All | No | None | The name of the Workload Factory Link to use when issuing API calls to the FSx for ONTAP file system.| 
 | aws\_region | All | No | None | The AWS region where the Link lambda function resides.|
-| secret\_name | Yes | All | The name of the AWS secret that contains the credentials to authenticate with the FSx for ONTAP file system.|
+| secret\_name | Yes | All | None | The name of the AWS secret that contains the credentials to authenticate with the FSx for ONTAP file system.|
 | snapshot\_name | create\_snapshot | Yes | None | The name of the snapshot to create.|
 | security\_style | create\_volume | No | UNIX | The security style to use when creating the volume. Valid options are UNIX or NTFS.|
 | aggr | create\_volume | No | aggr1 | The name of the aggregate to create the volume on.|
