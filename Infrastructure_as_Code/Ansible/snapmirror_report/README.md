@@ -23,8 +23,8 @@ the number before it represents the number of seconds. For example, 'P1DT2H3M4S'
 - A file with a list of the FSx for ONTAP file systems and their corresponding secrets. The format of the file is described below.
 
 ## Installation
-There are three files used to create the report:
-- `generate_report.yaml`: The main Ansible playbook that generates the report.
+There are three components to this playbook:
+- `generate_report.yaml`: The main Ansible playbook that calls the other files.
 - `get_all_fsxn_regions.yaml`: A collection of tasks that retrieves all the regions, that are enabled for the account, where FSx for ONTAP is also available.
 - `processs_region.yaml`: A collection of tasks that will process all the FSxNs within a region.
 
