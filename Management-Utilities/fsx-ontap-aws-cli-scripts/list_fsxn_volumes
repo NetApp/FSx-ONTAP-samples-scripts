@@ -46,8 +46,9 @@ EOF
 ################################################################################
 
 tmpout=/tmp/list_aws_vol-out.$$
-tmpout2=/tmp/list_aws_vol-out0.$$
-trap 'rm -f $tmpout $tmpout2' exit
+tmpout2=/tmp/list_aws_vol-out2.$$
+tmpout3=/tmp/list_aws_vol-out3.$$
+trap 'rm -f $tmpout $tmpout2 $tmpout3' exit
 #
 # Check that the required utilities are installed.
 if which aws jq > /dev/null 2>&1; then
@@ -129,29 +130,31 @@ else
 fi
 #
 # Loop on all the regions.
+fields='\(.FileSystemId),\(.Name),\(.VolumeId),\(.Lifecycle),\(.OntapConfiguration.StorageVirtualMachineId)'
 for region in ${regions[*]}; do
   #
   # Check that the fsx service is supported in thie region
   if [ ! -z "$(getent hosts fsx.$region.amazonaws.com)" ]; then
     if [ -z "$svmID" ]; then
       if [ "$excludeRoot" != "true" ]; then
-        aws fsx describe-volumes $filter --region=$region --output=json | jq -r '.Volumes[] | .FileSystemId + "," + .Name + "," + .VolumeId + "," + .Lifecycle' | sort > $tmpout
+        aws fsx describe-volumes $filter --region=$region --output=json | jq -r '.Volumes[] | "'$fields'"' | sort > $tmpout
       else
-        aws fsx describe-volumes $filter --region=$region --output=json | jq -r '.Volumes[] | if(.OntapConfiguration.StorageVirtualMachineRoot | not) then .FileSystemId + "," + .Name + "," + .VolumeId + "," + .Lifecycle else empty end' | sort > $tmpout
+        aws fsx describe-volumes $filter --region=$region --output=json | jq -r '.Volumes[] | if(.OntapConfiguration.StorageVirtualMachineRoot | not) then "'$fields'" else empty end' | sort > $tmpout
       fi
     else
       if [ "$excludeRoot" != "true" ]; then
-        aws fsx describe-volumes $filter --region=$region --output=json | jq -r '.Volumes[] | if(.OntapConfiguration.StorageVirtualMachineId == "'$svmID'") then .FileSystemId + "," + .Name + "," + .VolumeId + "," + .Lifecycle else empty end' | sort > $tmpout
+        aws fsx describe-volumes $filter --region=$region --output=json | jq -r '.Volumes[] | if(.OntapConfiguration.StorageVirtualMachineId == "'$svmID'") then "'$fields'" else empty end' | sort > $tmpout
       else
-        aws fsx describe-volumes $filter --region=$region --output=json | jq -r '.Volumes[] | if(.OntapConfiguration.StorageVirtualMachineId == "'$svmID'" and (.OntapConfiguration.StorageVirtualMachineRoot | not)) then .FileSystemId + "," + .Name + "," + .VolumeId + "," + .Lifecycle else empty end' | sort > $tmpout
+        aws fsx describe-volumes $filter --region=$region --output=json | jq -r '.Volumes[] | if(.OntapConfiguration.StorageVirtualMachineId == "'$svmID'" and (.OntapConfiguration.StorageVirtualMachineRoot | not)) then "'$fields'" else empty end' | sort > $tmpout
       fi
     fi
   
     if [ $includeFsName == "true" ]; then
       aws fsx describe-file-systems --region=$region --output=json | jq -r '.FileSystems[] | .FileSystemId + "," + (.Tags[] | select(.Key == "Name") .Value)' | fgrep "$fileSystemName" > $tmpout2
-      awk -F, -v region=$region 'BEGIN {first=1; maxNameLen=0; while(getline < "'$tmpout2'") {fss[$1]=$2; if(length($2) > maxNameLen) {maxNameLen=length($2)}}; maxNameLen +=2; formatStr="%12s %21s%-"maxNameLen"s %24s %10s %s\n"}; {if(first) {printf "\n"; printf formatStr, "Region", "FileSystem ID", "(Name)", "Volume ID", "State", "Volume Name"; first=0}; name="("fss[$1]")"; printf formatStr, region, $1, name, $3, $4, $2}' < $tmpout
+      aws fsx describe-storage-virtual-machines --region=$region --output=json | jq -r '.StorageVirtualMachines[] | "\(.StorageVirtualMachineId),\(.Name)"' > $tmpout3
+      awk -F, -v region=$region 'BEGIN {first=1; maxFsNameLen=0; while(getline < "'$tmpout2'") {fss[$1]=$2; if(length($2) > maxFsNameLen) {maxFsNameLen=length($2)}}; maxFsNameLen +=2; maxSvmNameLen=0; while(getline < "'$tmpout3'") {if(length($2) > maxSvmNameLen){maxSvmNameLen=length($2)}; svmNames[$1]=$2}; maxSvmNameLen+=2; formatStr="%12s %21s%-"maxFsNameLen"s %22s%-"maxSvmNameLen"s %24s %10s %s\n"}; {if(first) {printf "\n"; printf formatStr, "Region", "FileSystem ID", "(Name)", "Vserver", "(Name)", "Volume ID", "State", "Volume Name"; first=0}; fsName="("fss[$1]")"; svmName="("svmNames[$5]")"; printf formatStr, region, $1, fsName, $5, svmName, $3, $4, $2}' < $tmpout
     else
-      awk -F, -v region=$region 'BEGIN {first=1; formatStr="%12s %21s %24s %10s %s\n"}; {if(first) {printf "\n"; printf formatStr, "Region", "FileSystem ID", "Volume ID", "State", "Volume Name"; first=0}; printf formatStr, region, $1, $3, $4, $2}' < $tmpout
+      awk -F, -v region=$region 'BEGIN {first=1; formatStr="%12s %21s %22s %24s %10s %s\n"}; {if(first) {printf "\n"; printf formatStr, "Region", "FileSystem ID", "Vserver", "Volume ID", "State", "Volume Name"; first=0}; printf formatStr, region, $1, $5, $3, $4, $2}' < $tmpout
     fi
   else
     if [ $allRegions != "true" ]; then
