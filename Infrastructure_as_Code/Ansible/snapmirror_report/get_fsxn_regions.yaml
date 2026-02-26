@@ -1,7 +1,8 @@
-#
-# These tasks are used to set a variable named 'fsnx_regions' that contains a
-# list of regions that support FSxN and are opted-in.
 ################################################################################
+# This Ansiable playbook it used to return all of the regions that support FSxN
+# and are opted-in. It stores the list of regions in the fsxn_regions variable.
+################################################################################
+#
 - name: Get all the opted-in regions
   amazon.aws.aws_region_info:
   register: region_info

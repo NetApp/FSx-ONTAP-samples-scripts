@@ -1,0 +1,8 @@
+volume_name: "vol1"
+volume_size: 100
+vserver: "fsx"
+fsxn_hostname: "10.0.0.13"
+lambda_function_name: "lambda-8nlmlCR"
+aws_region: "us-west-2"
+secret_name: "fsxn/default"
+snapshot_name: "snapshot1"

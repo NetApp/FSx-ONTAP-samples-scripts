@@ -154,6 +154,7 @@ fi
 jqFields='\(.FileSystemId),\(.Name),\(.VolumeId),\(.Lifecycle),\(.OntapConfiguration.SizeInMegabytes),\(.OntapConfiguration.StorageVirtualMachineId)'
 #
 # Loop on all the regions.
+fields='\(.FileSystemId),\(.Name),\(.VolumeId),\(.Lifecycle),\(.OntapConfiguration.StorageVirtualMachineId)'
 for region in ${regions[*]}; do
   #
   # Check that the fsx service is supported in thie region

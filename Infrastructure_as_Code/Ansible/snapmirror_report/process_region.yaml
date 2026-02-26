@@ -1,0 +1,51 @@
+################################################################################
+# Since Ansible can't handle nested loops, this is a block of tasks that is run
+# for each region. It assumes that the calling playbook used 'region' as its
+# loop variable.
+#
+# It gathers all the snapmirror information for all the FSxNs with a region
+# that a secret is defined for in the secrets.csv file. Once it has gathered
+# all the information, it writes it to an output.csv file in the format:
+#
+#   source_cluster::source_path,destination_cluster::destination_path,state,healthy,lag_time
+#
+################################################################################
+---
+- name:
+  debug:
+    msg: "Processing region {{ region }}"
+
+- name: Get all the FSxNs for the specified region.
+  ansible.builtin.shell:
+    cmd: aws fsx describe-file-systems --region {{ region }} --query 'FileSystems[*].{ID:FileSystemId,IP:OntapConfiguration.Endpoints.Management.IpAddresses[0]}' --output text | sed -e '/^$/d'
+  register: fsxn_ids_per_region
+
+- name: Get the SnapMirror relationships for each FSxN.
+  when: secret != 'n/a'
+  netapp.ontap.na_ontap_rest_info:
+    username: "{{ lookup('amazon.aws.aws_secret', '{{ secret }}.username', region=secrets_region, nested=true, on_missing='skip') }}"
+    password: "{{ lookup('amazon.aws.aws_secret', '{{ secret }}.password', region=secrets_region, nested=true, on_missing='skip') }}"
+    hostname: "{{ item.split('\t')[1] }}"
+    validate_certs: false
+    fields:
+      - source
+      - destination
+      - healthy
+      - lag_time
+      - state
+    gather_subset:
+      - snapmirror/relationships
+  loop: "{{ fsxn_ids_per_region.stdout_lines }}"
+  register: snapmirror_relationships
+  vars:
+    secret: "{{ lookup('ansible.builtin.csvfile', item.split('\t')[0], file=secrets_list_file, delimiter=',', default='n/a') }}"
+
+- name: Write the SnapMirror relationship infor to a file.
+  ansible.builtin.lineinfile:
+    insertafter: EOF
+    path: output.csv
+    line: "{{ item.source.cluster.name }}::{{ item.source.path }},{{ item.destination.cluster.name }}::{{ item.destination.path }},{{ item.state }},{{ item.healthy }},{{ lag_time }}"
+  loop: "{{ snapmirror_relationships.results[0].ontap_info['snapmirror/relationships'].records }}"
+  when: snapmirror_relationships.results | length > 0 and snapmirror_relationships.results[0].ontap_info is defined
+  vars:
+    lag_time: "{{ item.lag_time if item.lag_time is defined else 'n/a' }}"
