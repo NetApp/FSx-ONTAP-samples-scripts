@@ -7,10 +7,10 @@ name: "Code Quality: Terraform"
 on:
   pull_request:
     paths:
-      - 'Terraform/**'
+      - 'Infrastructure_as_Code/Terraform/**'
   push:
     paths:
-      - 'Terraform/**'
+      - 'Infrastructure_as_Code/Terraform/**'
     branches:
       - main
 
@@ -21,8 +21,8 @@ jobs:
     strategy:
       matrix:
         directory:
-          - 'Terraform/deploy-fsx-ontap/module'
-          - 'Terraform/deploy-fsx-ontap/standalone-module'
+          - 'Infrastructure_as_Code/Terraform/deploy-fsx-ontap/module'
+          - 'Infrastructure_as_Code/Terraform/deploy-fsx-ontap/standalone-module'
     defaults:
       run:
         working-directory: ${{ matrix.directory }}

@@ -15,18 +15,20 @@ the number of hours. If the letter is 'M' then the number before it represents t
 the number before it represents the number of seconds. For example, 'P1DT2H3M4S' represents 1 day, 2 hours, 3 minutes, and 4 seconds.
 
 ## Requirements
-- jq - A lightweight and flexible command-line JSON processor. Installation instructions can be found [here](https://jqlang.github.io/jq/download/)
 - Ansible 2.9 or later. Installation instructions can be found [here](https://docs.ansible.com/ansible/latest/installation_guide/index.html)
-- AWS Ansible collection. This should be included with the base installation of Ansible.
+- NetApp ONTAP Ansible collection.
+- AWS Ansible collection.
 - AWS secret(s) with the credentials necessary to run SnapMirror ONTAP APIs against the FSx for ONTAP file systems. The required format of the secret is described below.
+- The `aws` cli installed and configured. Installation instructions can be found [here](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html). This is required to get all the FSxNs within a region, since there isn't an AWS Ansible module that can do that.
+- A file with a list of the FSx for ONTAP file systems and their corresponding secrets. The format of the file is described below.
 
 ## Installation
-There are three files used to create the report:
-- `generate_report.yaml`: The Ansible playbook that generates the report.
-- `processs_region.yaml`: A collection of tasks that will process all the FSxNs in a region.
-- `get_all_fsxn_regions.yaml`: A collection of tasks that retrieves all the regions, that are enabled for the account, where FSx for ONTAP is available.
+There are three components to this playbook:
+- `generate_report.yaml`: The main Ansible playbook that calls the other files.
+- `get_all_fsxn_regions.yaml`: A collection of tasks that retrieves all the regions, that are enabled for the account, where FSx for ONTAP is also available.
+- `processs_region.yaml`: A collection of tasks that will process all the FSxNs within a region.
 
-You will also need to create a file named (by default) `secrets_list.csv` that list the secret name for each FSx file systems.
+You will also need to create a file named (by default) `secrets.csv` that list the secret name for each FSx file systems.
 The format of the file should be:
 ```
 file_system_id,secret_name
@@ -69,4 +71,4 @@ Unless required by applicable law or agreed to in writing, software distributed 
 
 See the License for the specific language governing permissions and limitations under the License.
 
-© 2024 NetApp, Inc. All Rights Reserved.
+© 2026 NetApp, Inc. All Rights Reserved.
