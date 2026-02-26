@@ -49,7 +49,7 @@ Usage $(basename $0) [-r region] [-a] [-n] [-c] [-s] [-b] [-i fileSystemId] [-f 
          -c means to display a hierarchical view of each filesystem including svms and volumes.
          -i allows you to limit the display to the file system with the id provided.
          -f allows you to limit the display to the file system with the name provided.
-         -b means to display the backup retenion period. Not compoatible with the -x or -c options.
+         -b means to display the backup retenion period. Not compatible with the -x or -c options.
          -s means to display the current status of a volume. Only relative with the -c option.
          -n means to show the AWS ARN for the file system. Not compatible with -x or -c options.
          -x means include additional information: vpc, subnet, Size, Deployement Type, Throughput, provisioned IOPS, usage.
@@ -69,7 +69,7 @@ cloudwatchQueryFile=/tmp/list_fss-cloudwatch-query.$$
 fsCapacityFile=/tmp/list_fss-fscapacity.$$
 trap 'rm -f $tmpout $fileSystemsFile $svmsFile $volumesFile $cloudwatchOutputFile $cloudwatchQueryFile $fsCapacityFile' exit
 #
-# Ensure all the required ultilities are installed.
+# Ensure all the required utilities are installed.
 if which aws jq > /dev/null 2>&1; then
   :
 else
@@ -299,7 +299,7 @@ EOF
       aws cloudwatch get-metric-data --region=$region --metric-data-queries file://$cloudwatchQueryFile --start-time=$(date -u -d '5 minutes ago' +"%Y-%m-%dT%H:%M:%SZ") --end-time=$(date -u +"%Y-%m-%dT%H:%M:%SZ") --output=json > $cloudwatchOutputFile 2>&1
       for fsid in $fsxIds; do
         fsid2=$(echo $fsid | sed -e 's/-/_/g')
-        storageUsed=$(jq -r '.MetricDataResults[] | if(.Id == "'${fsid2}_StorageUsed'") then .Values[0] else empty end' $cloudwatchOutputFile)
+        storageUsed=$(jq -r '.MetricDataResults[] | if(.Id == "'${fsid2}_StorageUsed'") then .Values[0] // 0 else empty end' $cloudwatchOutputFile)
         echo "$fsid,$storageUsed" >> $fsCapacityFile
       done
 

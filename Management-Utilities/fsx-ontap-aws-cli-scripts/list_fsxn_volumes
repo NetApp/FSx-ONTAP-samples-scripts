@@ -17,13 +17,13 @@
 # It will list:
 #   o Region
 #   o File System ID
-#   o File System Name - optional with -n option
+#   o File System Name - optional. Comes with -n option
 #   o Storage Virtual Machine ID
-#   o Storage Virtual Machine Name - optional with -n option
+#   o Storage Virtual Machine Name - optional. Comes with -n option
 #   o Volume ID
 #   o Volume Status
-#   o Volume Size in MB - optional - optional with -x option
-#   o Volume Used in MB - optional - optional with -x option
+#   o Volume Size in MB - optional. Comes with -x option
+#   o Volume Used in MB - optional. Comes with -x option
 #   o Volume Name
 #
 ################################################################################
@@ -37,12 +37,12 @@ Usage $(basename $0) [-r region] [-a] [-o] [-f fileSystemName] [-i fileSystemId]
   Where: volume_pattern - Only volumes that match the egrep pattern will be included.
          -r region allows you to specify the region you want the list from.
          -a means all regions.
-         -n means include the file system ans SVM names. Not capable with the -x option.
+         -n means include the file system ans SVM names. Not compatible with the -x option.
          -f fileSystemName means to only include volumes that are under the named file system.
          -i fileSystemId means to only include volumes that are under the file system with the specified file system ID.
          -s svmID - Only show volumes that are under the specified SVM ID.
          -o means to exclude svm root volumes. Only works in conjunction with the -s option.
-         -x means to provide capacity information. Not capable with the -n option.
+         -x means to provide capacity information. Not compatible with the -n option.
 EOF
   exit 1
 }
@@ -105,8 +105,8 @@ if [ ! -z "$1" ]; then
   volumePattern="$1"
 fi
 
-if [ ! -z "$fileSystenName" -a ! -z "$fsid" ]; then
-  echo "Error, you can't provide both -f and -n options." 1>&2
+if [ ! -z "$fileSystemName" -a ! -z "$fsid" ]; then
+  echo "Error, you can't provide both -f and -i options." 1>&2
   exit 1
 fi
 
@@ -154,7 +154,6 @@ fi
 jqFields='\(.FileSystemId),\(.Name),\(.VolumeId),\(.Lifecycle),\(.OntapConfiguration.SizeInMegabytes),\(.OntapConfiguration.StorageVirtualMachineId)'
 #
 # Loop on all the regions.
-fields='\(.FileSystemId),\(.Name),\(.VolumeId),\(.Lifecycle),\(.OntapConfiguration.StorageVirtualMachineId)'
 for region in ${regions[*]}; do
   #
   # Check that the fsx service is supported in thie region
@@ -217,7 +216,7 @@ EOF
           aws cloudwatch get-metric-data --region $region --metric-data-queries file://$cloudwatchQueryFile --start-time=$(date -u -d '5 minutes ago' +"%Y-%m-%dT%H:%M:%SZ") --end-time=$(date -u +"%Y-%m-%dT%H:%M:%SZ") --output=json > $cloudwatchOutputFile 2>&1
           for volId in $volIds; do
             volId2=$(echo $volId | sed -e 's/-/_/g')
-            capacity=$(jq -r '.MetricDataResults[] | select(.Id == "m'$volId2'") | .Values[0]' < $cloudwatchOutputFile)
+            capacity=$(jq -r '.MetricDataResults[] | select(.Id == "m'$volId2'") | .Values[0] // 0' < $cloudwatchOutputFile)
             echo "$volId,$capacity" >> $volCapacityFile
           done
           awk -F, -v region=$region -v volCapacityFile=$volCapacityFile 'BEGIN {first=1; formatStr="%12s %21s %21s %24s %10s %16s %15s %s\n"; while (getline < volCapacityFile) {volidCapacities[$1]=sprintf("%10.0f",$2/1024/1024)}}; {if(first) {printf "\n"; printf formatStr, "Region", "FileSystem ID", "SVM", "Volume ID", "State", "Volume Size (MB)", "Used (MB)", "Volume Name"; first=0}; printf formatStr, region, $1, $6, $3, $4, $5, volidCapacities[$3], $2}' < $volumeList
