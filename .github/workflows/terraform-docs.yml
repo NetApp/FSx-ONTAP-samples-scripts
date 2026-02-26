@@ -7,10 +7,10 @@ name: "Documentation: terraform-docs"
 on:
   pull_request:
     paths:
-      - 'Terraform/**'
+      - 'Infrastructure_as_Code/Terraform/**'
   push:
     paths:
-      - 'Terraform/**'
+      - 'Infrastructure_as_Code/Terraform/**'
     branches:
       - main
 
@@ -20,8 +20,8 @@ jobs:
     strategy:
       matrix:
         directory:
-          - 'Terraform/deploy-fsx-ontap/module'
-          - 'Terraform/deploy-fsx-ontap/standalone-module'
+          - 'Infrastructure_as_Code/Terraform/deploy-fsx-ontap/module'
+          - 'Infrastructure_as_Code/Terraform/deploy-fsx-ontap/standalone-module'
     steps:
       - name: Checkout pull request  
         uses: actions/checkout@v3.5.0

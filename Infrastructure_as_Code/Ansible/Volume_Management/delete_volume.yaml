@@ -1,0 +1,70 @@
+# Title: delete_volume.yaml
+
+---
+- name: Playbook to delete a volume on an FSx for ONTAP file system.
+  hosts: localhost
+  collections:
+    - netapp.ontap
+    - amazon.aws
+  gather_facts: false
+  vars:
+    use_lambda: false
+  vars_files:
+    - variables.yaml
+
+  tasks:
+    - name: Ensure required variables are set.
+      fail:
+        msg: "Required variable {{item}} has not been provided."
+      when: vars[item] is undefined
+      loop:
+        - volume_name
+        - vserver
+        - fsxn_hostname
+        - secret_name
+    
+    - name: Set use_lambda to true if lambda_function_name is provided.
+      set_fact:
+        use_lambda: true
+      when: lambda_function_name is defined
+    
+    - name: Set aws_profile to its default value of 'default' if not provided.
+      set_fact:
+        aws_profile: "default"
+      when: aws_profile is not defined
+    
+    - name: Ensure that aws_region has been provided if use_lambda is true.
+      fail:
+        msg: "aws_region must be defined when use_lambda is true."
+      when: use_lambda and aws_region is not defined
+    
+    - name: Set aws_region to "" if not set at this point.
+      set_fact:
+        aws_region: ""
+      when: aws_region is not defined
+    
+    - name: Set lambda_function_name to "" if not set at this point.
+      set_fact:
+        lambda_function_name: ""
+      when: lambda_function_name is not defined
+
+    - name: Get username and password from AWS secret
+      set_fact:
+        username: "{{ lookup('amazon.aws.aws_secret', '{{ secret_name }}.username', nested=true) }}"
+        password: "{{ lookup('amazon.aws.aws_secret', '{{ secret_name }}.password', nested=true) }}"
+      no_log: true
+    
+    - name: Delete the volume
+      netapp.ontap.na_ontap_volume:
+        state: absent
+        name: "{{ volume_name }}"
+        vserver: "{{ vserver }}"
+        use_lambda: "{{ use_lambda }}"
+        lambda_config:
+          aws_profile: "{{ aws_profile }}"
+          aws_region: "{{ aws_region }}"
+          function_name: "{{ lambda_function_name }}"
+        hostname: "{{ fsxn_hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        validate_certs: false
