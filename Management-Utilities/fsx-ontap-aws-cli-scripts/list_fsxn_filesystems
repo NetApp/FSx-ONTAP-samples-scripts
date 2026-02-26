@@ -25,6 +25,8 @@
 #   o Subnet ID - optional
 #   o ARN - optional
 #   o Backup - The Backup retention period.
+#   o Capacity - Optional
+#   o Used Capacity - Optional
 #
 # In the case of the Management IP and Subnet ID, it will only show the first
 # one defined. Based on the potential output from the API call, there could
@@ -50,7 +52,7 @@ Usage $(basename $0) [-r region] [-a] [-n] [-c] [-s] [-b] [-i fileSystemId] [-f 
          -b means to display the backup retenion period. Not compoatible with the -x or -c options.
          -s means to display the current status of a volume. Only relative with the -c option.
          -n means to show the AWS ARN for the file system. Not compatible with -x or -c options.
-         -x means include additional information: vpc, subnet, Size, Deployement Type, Throughput, provisioned IOPS.
+         -x means include additional information: vpc, subnet, Size, Deployement Type, Throughput, provisioned IOPS, usage.
 EOF
   exit 1
 }
@@ -62,7 +64,10 @@ tmpout=/tmp/list_fss-out.$$
 fileSystemsFile=/tmp/list_fss-fss.$$
 svmsFile=/tmp/list_fss-svms.$$
 volumesFile=/tmp/list_fss-volumes.$$
-trap 'rm -f $tmpout $fileSystemsFile $svmsFile $volumesFile' exit
+cloudwatchOutputFile=/tmp/list_fss-cloudwatch-output.$$
+cloudwatchQueryFile=/tmp/list_fss-cloudwatch-query.$$
+fsCapacityFile=/tmp/list_fss-fscapacity.$$
+trap 'rm -f $tmpout $fileSystemsFile $svmsFile $volumesFile $cloudwatchOutputFile $cloudwatchQueryFile $fsCapacityFile' exit
 #
 # Ensure all the required ultilities are installed.
 if which aws jq > /dev/null 2>&1; then
@@ -253,7 +258,52 @@ for region in ${regions[*]}; do
     largestName=$(awk -F, 'BEGIN {max=0} {if(length($3) > max){max=length($3)}} END {print max}' < $tmpout)
     nameFieldWidth=$((largestName + 4))
     if [ "$includeExtraInfo" == "true" ]; then
-      awk -F, -v region=$region 'BEGIN {first=1; formatStr="%12s %23s %'$nameFieldWidth's %14s %15s %22s %25s %6s %12s %11s %6s\n"}; {if(first) {printf "\n"; printf formatStr, "Region", "FileSystem ID", "Name", "Status", "Management IP", "VPC ID", "Subnet ID", "Size", "Deployment", "Throughput", "Iops"; first=0}; printf formatStr, region, $1, "\"" $3 "\"", $4, $5, $6, $7, $(12), $9, $(11), $(10)}' < $tmpout
+      fsxIds=$(awk -F, '{print $1}' < $tmpout)
+      echo "[" > $cloudwatchQueryFile
+      first=true
+      for fsid in $fsxIds; do
+        fsid2=$(echo $fsid | sed -e 's/-/_/g')
+        if [ "$first" == "true" ]; then
+          first=false
+        else
+          echo "," >> $cloudwatchQueryFile
+        fi
+        cat <<EOF >> $cloudwatchQueryFile
+  {
+    "Id": "${fsid2}_StorageUsed",
+    "MetricStat": {
+      "Metric": {
+        "Namespace": "AWS/FSx",
+        "MetricName": "StorageUsed",
+        "Dimensions": [
+        {
+          "Name": "FileSystemId",
+          "Value": "${fsid}"
+        },
+        {
+          "Name": "StorageTier",
+          "Value": "SSD"
+        },
+        {
+          "Name": "DataType",
+            "Value": "All"
+        }]
+       },
+       "Period": 300,
+       "Stat": "Average"
+     }
+  }
+EOF
+      done
+      echo "]" >> $cloudwatchQueryFile
+      aws cloudwatch get-metric-data --region=$region --metric-data-queries file://$cloudwatchQueryFile --start-time=$(date -u -d '5 minutes ago' +"%Y-%m-%dT%H:%M:%SZ") --end-time=$(date -u +"%Y-%m-%dT%H:%M:%SZ") --output=json > $cloudwatchOutputFile 2>&1
+      for fsid in $fsxIds; do
+        fsid2=$(echo $fsid | sed -e 's/-/_/g')
+        storageUsed=$(jq -r '.MetricDataResults[] | if(.Id == "'${fsid2}_StorageUsed'") then .Values[0] else empty end' $cloudwatchOutputFile)
+        echo "$fsid,$storageUsed" >> $fsCapacityFile
+      done
+
+      awk -F, -v region=$region -v fsCapacityFile=$fsCapacityFile 'BEGIN {first=1; formatStr="%12s %23s %'$nameFieldWidth's %14s %15s %22s %25s %10s %10s %12s %11s %6s\n"; while (getline < fsCapacityFile) {fsidCapacities[$1]=sprintf("%10.0f",$2/1024/1024/1024)}}; {if(first) {printf "\n"; printf formatStr, "Region", "FileSystem ID", "Name", "Status", "Management IP", "VPC ID", "Subnet ID", "Size(GiB)", "Used(GiB)", "Deployment", "Throughput", "Iops"; first=0}; printf formatStr, region, $1, "\"" $3 "\"", $4, $5, $6, $7, $(12), fsidCapacities[$1], $9, $(11), $(10)}' < $tmpout
     else
       if [ "$showARN" == "true" ]; then
         awk -F, -v region=$region 'BEGIN {first=1; formatStr="%12s %23s %70s %'$nameFieldWidth's %14s %15s\n"}; {if(first) {printf "\n"; printf formatStr, "Region", "FileSystem ID", "ARN", "Name", "Status", "Management IP"; first=0}; printf formatStr, region, $1, $2, "\"" $3 "\"", $4, $5}' < $tmpout
