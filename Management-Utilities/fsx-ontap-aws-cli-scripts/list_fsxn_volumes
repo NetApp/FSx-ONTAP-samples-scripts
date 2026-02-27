@@ -37,7 +37,7 @@ Usage $(basename $0) [-r region] [-a] [-o] [-f fileSystemName] [-i fileSystemId]
   Where: volume_pattern - Only volumes that match the egrep pattern will be included.
          -r region allows you to specify the region you want the list from.
          -a means all regions.
-         -n means include the file system ans SVM names. Not compatible with the -x option.
+         -n means include the file system and SVM names. Not compatible with the -x option.
          -f fileSystemName means to only include volumes that are under the named file system.
          -i fileSystemId means to only include volumes that are under the file system with the specified file system ID.
          -s svmID - Only show volumes that are under the specified SVM ID.
