@@ -32,7 +32,7 @@ Have a great idea? We'd love to hear it! Please email us at [ng-fsxn-github-samp
 * [EKS](/EKS)
     * [Backup-EKS-Applications-with-Trident-Protect](/EKS/Backup-EKS-Applications-with-Trident-Protect)
     * [FSx for NetApp ONTAP as persistent storage for EKS](/EKS/FSxN-as-PVC-for-EKS)
-    * [k8s applications non-stdout logs collection into ELK](/Solutions/EKS-logs-to-ELK)
+    * [EKS applications non-stdout logs collection into ELK](/EKS/EKS-logs-to-ELK)
     * [PV-Migrate-with-Trident-Protect](/EKS/PV-Migrate-with-Trident-Protect)
 * [Management Utilities](/Management-Utilities)
     * [Auto Create SnapMirror Relationships](/Management-Utilities/auto_create_sm_relationships)
