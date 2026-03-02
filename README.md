@@ -31,6 +31,7 @@ Have a great idea? We'd love to hear it! Please email us at [ng-fsxn-github-samp
         * [Deployment of FSx ONTAP with VPN for File Share Access](/Infrastructure_as_Code/Terraform/deploy-fsx-ontap-fileshare-access)
 * [EKS](/EKS)
     * [Backup-EKS-Applications-with-Trident-Protect](/EKS/Backup-EKS-Applications-with-Trident-Protect)
+    * [EKS applications non-stdout logs collection into ELK](/EKS/EKS-logs-to-ELK)
     * [FSx for NetApp ONTAP as persistent storage for EKS](/EKS/FSxN-as-PVC-for-EKS)
     * [PV-Migrate-with-Trident-Protect](/EKS/PV-Migrate-with-Trident-Protect)
 * [Management Utilities](/Management-Utilities)
@@ -48,8 +49,6 @@ Have a great idea? We'd love to hear it! Please email us at [ng-fsxn-github-samp
     * [Ingest NAS audit logs into CloudWatch](/Monitoring/ingest_nas_audit_logs_into_cloudwatch)
     * [Monitor ONTAP metrics from FSx ONTAP using python Lambda function](/Monitoring/monitor-ontap-services)
     * [Monitor FSx for ONTAP with Harvest on EKS](/Monitoring/monitor_fsxn_with_harvest_on_eks)
-* [Solutions](/Solutions)
-    * [k8s applications non-stdout logs collection into ELK](/Solutions/EKS-logs-to-ELK)
 
 ## Author Information
 
@@ -66,4 +65,4 @@ is distributed on an _"AS IS"_ basis, without WARRANTIES or conditions of any ki
 
 See the License for the specific language governing permissions and limitations under the License.
 
-© 2024 NetApp, Inc. All Rights Reserved.
+© 2026 NetApp, Inc. All Rights Reserved.
