@@ -32,7 +32,7 @@ Where: refresh_token - Is a refresh token used to obtain an access token needed
        aws_region        - is the AWS region where the FSx file systems are located
        filesystem_id     - is the AWS file system ID of the FSx file system where the volume resides
        volume_ID         - is the AWS volume ID of the volume where you want to create the cifs share.
-       cifs_share_name  - is the name of the share to create
+       cifs_share_name   - is the name of the share to create. Only alphanumeric characters, underscores and dashes are allowed.
 
 Instead of passing parameters on the command line, you can set the
 following environment variables:
@@ -84,12 +84,12 @@ done
 #
 # Declare an array of required options and the error message to display if they are not set.
 declare -A required_options
-required_options["REFRESH_TOKEN"]='Error: A BlueXP refresh tokon is required to run this script. It can be obtain from this web page:
+required_options["REFRESH_TOKEN"]='Error: A BlueXP refresh token is required to run this script. It can be obtain from this web page:
   https://services.cloud.netapp.com/refresh-token\n\n'
 required_options["BLUEXP_ACCOUNT_ID"]='Error: A BlueXP account ID is required to run this script.
 You can get the list of accounts you have access to by running the "list_bluexp_accts" script
 found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
-required_options["CREDENTIALS_ID"]='Error: The ID of the credentials to delete is required.
+required_options["CREDENTIALS_ID"]='Error: A Worload Factory Credential ID is required to run this script.
 You can get a list of credentials by running the "list_credentials" script
 found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
 required_options["AWS_REGION"]='Error: The AWS region where the file system is located is required.\n\n'
@@ -120,6 +120,11 @@ run_curl GET "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUN
 cifsShares=$(jq -r '.cifsShares' $tmpout)
 #
 # Create a new share definition.
+# Check that the CIFS_SHARE_NAME only contains allowed characters (alphanumeric, underscores and dashes).
+if [[ ! "$CIFS_SHARE_NAME" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+  echo "Error: The CIFS share name can only contain alphanumeric characters, underscores and dashes." >&2
+  exit 1
+fi
 newShare='{"name":"'$CIFS_SHARE_NAME'","path":"'/$CIFS_SHARE_NAME'","acls":[{"userOrGroup":"Everyone","permission":"full_control","type":"windows"}]}'
 #
 # Add the new share to the existing ones.
