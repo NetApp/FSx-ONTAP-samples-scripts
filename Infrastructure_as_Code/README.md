@@ -8,6 +8,7 @@ This folder contains code samples and automation scripts for FSx for NetApp ONTA
     * [Volume Management](Ansible/Volume_Management)
 * [CloudFormation](CloudFormation)
     * [NetApp-FSxN-Custom-Resources-Samples](CloudFormation/NetApp-FSxN-Custom-Resources-Samples)
+    * [Export FSx for ONTAP Configuration to CloudFormation](CloudFormation/Export-FSxN-CloudFormation)
     * [deploy-fsx-ontap](CloudFormation/deploy-fsx-ontap)
 * [Terraform](Terraform)
     * [FSx ONTAP deployment using Terraform](Terraform/deploy-fsx-ontap)

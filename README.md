@@ -23,6 +23,7 @@ Have a great idea? We'd love to hear it! Please email us at [ng-fsxn-github-samp
         * [Volume Management](/Infrastructure_as_Code/Ansible/Volume_Management)
     * [CloudFormation](/Infrastructure_as_Code/CloudFormation)
         * [NetApp-FSxN-Custom-Resources-Samples](/Infrastructure_as_Code/CloudFormation/NetApp-FSxN-Custom-Resources-Samples)
+        * [Export FSx for ONTAP Configuration to CloudFormation](/Infrastructure_as_Code/CloudFormation/Export-FSxN-CloudFormation)
         * [deploy-fsx-ontap](/Infrastructure_as_Code/CloudFormation/deploy-fsx-ontap)
     * [Terraform](/Infrastructure_as_Code/Terraform)
         * [FSx ONTAP deployment using Terraform](/Infrastructure_as_Code/Terraform/deploy-fsx-ontap)
