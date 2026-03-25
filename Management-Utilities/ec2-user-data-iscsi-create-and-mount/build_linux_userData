@@ -1,0 +1,69 @@
+#!/bin/bash
+#
+# Since, for some reason, the maximum size of a EC2 User Data script is
+# 16KB we have to compress the real script, with some logic to uncompress
+# it on the EC2 instance when it is deployed, and then pass that as the
+# user data content.
+#
+# This script is used to create the linux_userData.sh script from the
+# linux_userdata_real.sh file.
+################################################################################
+
+cat <<'EOF' > linux_userData.sh
+#!/bin/bash
+#
+# Set the ARN of the secret that should contain just the password for the ONTAP admin user set below.
+SECRET_ARN=""
+#
+# Set the FSx admin IP.
+FSXN_ADMIN_IP=""
+#
+# Set the name of the volume to be created on the FSx for ONTAP file system. Note, volume names cannot have dashes in them.
+VOLUME_NAME=""
+#
+# Set the volume size in GB. It should just be a number, without the 'GB' suffix.
+VOLUME_SIZE=
+#
+# Set the SVM name. The default is 'fsx'.
+SVM_NAME="fsx"
+#
+# Set the ONTAP admin user. The default is fsxadmin.
+ONTAP_USER="fsxadmin"
+#
+################################################################################
+# ****  You should not need to edit anything below this line ****
+################################################################################
+#
+# When called from the CloudFormation template, the parameters are passsed as
+# arguments.
+SECRET_ARN="${SECRET_ARN:=$1}"
+FSXN_ADMIN_IP="${FSXN_ADMIN_IP:=$2}"
+VOLUME_NAME="${VOLUME_NAME:=$3}"
+VOLUME_SIZE="${VOLUME_SIZE:=$4}"
+SVM_NAME="${5:-$SVM_NAME}"
+ONTAP_USER="${6:-$ONTAP_USER}"
+#
+# Since AWS only allows up to 16KB for the user data script, the rest of this script
+# will be the compressed version of the linux_userData_real.sh file, which will be
+# uncompressed and executed on the EC2 instance when it is deployed.
+cat <<EOF2 > /tmp/linux_userData.sh
+#!/bin/bash
+export SECRET_ARN="$SECRET_ARN"
+export FSXN_ADMIN_IP="$FSXN_ADMIN_IP"
+export VOLUME_NAME="$VOLUME_NAME"
+export VOLUME_SIZE="$VOLUME_SIZE"
+export SVM_NAME="$SVM_NAME"
+export ONTAP_USER="$ONTAP_USER"
+EOF2
+
+cat <<EOF3 | base64 -d | gunzip >> /tmp/linux_userData.sh
+EOF
+
+cat linux_userData_real.sh | gzip -c | base64 >> linux_userData.sh
+
+cat <<EOF4 >> linux_userData.sh
+EOF3
+
+chmod +x /tmp/linux_userData.sh
+/tmp/linux_userData.sh
+EOF4

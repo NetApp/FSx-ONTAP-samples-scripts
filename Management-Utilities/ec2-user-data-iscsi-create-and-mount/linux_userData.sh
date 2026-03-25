@@ -1,402 +1,130 @@
 #!/bin/bash
-
-# user data
-# Set the secret name and region
-SECRET_NAME=
-AWS_REGION=
-# Set the FSx admin IP
-FSXN_ADMIN_IP=
-# Volume name
-VOLUME_NAME=
-# Volume size in GB
+#
+# Set the ARN of the secret that should contain just the password for the ONTAP admin user set below.
+SECRET_ARN=""
+#
+# Set the FSx admin IP.
+FSXN_ADMIN_IP=""
+#
+# Set the name of the volume to be created on the FSx for ONTAP file system. Note, volume names cannot have dashes in them.
+VOLUME_NAME=""
+#
+# Set the volume size in GB. It should just be a number, without the 'GB' suffix.
 VOLUME_SIZE=
-# SVM name (default: fsx)
-SVM_NAME=fsx
-# ONTAP admin user (default: fsxadmin)
-ONTAP_USER=fsxadmin
-# end - user data
-SECRET_NAME="${SECRET_NAME:=$1}"
-AWS_REGION="${AWS_REGION:=$2}"
-FSXN_ADMIN_IP="${FSXN_ADMIN_IP:=$3}"
-VOLUME_NAME="${VOLUME_NAME:=$4}"
-VOLUME_SIZE="${VOLUME_SIZE:=$5}"
-SVM_NAME="${6:-$SVM_NAME}"
+#
+# Set the SVM name. The default is 'fsx'.
+SVM_NAME="fsx"
+#
+# Set the ONTAP admin user. The default is fsxadmin.
+ONTAP_USER="fsxadmin"
+#
+################################################################################
+# ****  You should not need to edit anything below this line ****
+################################################################################
+#
+# When called from the CloudFormation template, the parameters are passsed as
+# arguments.
+SECRET_ARN="${SECRET_ARN:=$1}"
+FSXN_ADMIN_IP="${FSXN_ADMIN_IP:=$2}"
+VOLUME_NAME="${VOLUME_NAME:=$3}"
+VOLUME_SIZE="${VOLUME_SIZE:=$4}"
+SVM_NAME="${5:-$SVM_NAME}"
+ONTAP_USER="${6:-$ONTAP_USER}"
+#
+# Since AWS only allows up to 16KB for the user data script, the rest of this script
+# will be the compressed version of the linux_userData_real.sh file, which will be
+# uncompressed and executed on the EC2 instance when it is deployed.
+cat <<EOF2 > /tmp/linux_userData.sh
+#!/bin/bash
+export SECRET_ARN="$SECRET_ARN"
+export FSXN_ADMIN_IP="$FSXN_ADMIN_IP"
+export VOLUME_NAME="$VOLUME_NAME"
+export VOLUME_SIZE="$VOLUME_SIZE"
+export SVM_NAME="$SVM_NAME"
+export ONTAP_USER="$ONTAP_USER"
+EOF2
 
-min=100
-max=999
-LUN_NAME=${VOLUME_NAME}_$(($RANDOM%($max-$min+1)+$min))
-# defaults
-# Log file in ec2-user home
-LOG_FILE=/home/ec2-user/install.log
-TIMEOUT=5
+cat <<EOF3 | base64 -d | gunzip >> /tmp/linux_userData.sh
+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
+EOF3
 
-LUN_SIZE=$(bc -l <<< "0.90*$VOLUME_SIZE" )
-echo "# Uninstall file" >> uninstall.sh
-chmod u+x uninstall.sh
-
-function getSecretValue() {
-    secret_name=$1
-    aws_region=$2
-    SECRET_VALUE="$(aws secretsmanager get-secret-value \
-        --secret-id "$secret_name" \
-        --region "$aws_region" \
-        --query 'SecretString' \
-        --output text)"
-    
-    if [ $? -ne 0 ]; then
-        echo "Failed to retrieve the secret: $secret_name, Aborting."
-        exit 1
-    fi
-}
-logMessage() {
-    echo "$(date) - $1" >> $LOG_FILE
-}
-checkCommand() {
-    if [ $? -ne 0 ]; then
-        logMessage "$1 failed. Aborting."
-        ./uninstall.sh 
-        exit 1
-    fi
-}
-addUndoCommand() {
-    sed -i "1i$1" uninstall.sh
-}
-invokeLambda() {
-    aws lambda invoke \
-      --function-name "arn:aws:lambda:${AWS_REGION}:718273455463:function:reporting-monitoring-dashboard-usage" \
-      --payload "$LAMBDA_PAYLOAD" \
-      --cli-binary-format raw-in-base64-out \
-      /home/ec2-user/lambda_response.json 2>/home/ec2-user/lambda_error.log
-}
-logMessage "Get secret data"
-getSecretValue "${SECRET_NAME}" "${AWS_REGION}"
-FSXN_PASSWORD="${SECRET_VALUE}"
-logMessage "Secret data retrieved successfully"
-commandDescription="Install linux iSCSI packages"
-logMessage "${commandDescription}"
-yum install -y device-mapper-multipath iscsi-initiator-utils
-checkCommand "${commandDescription}"
-addUndoCommand "yum remove -y device-mapper-multipath iscsi-initiator-utils"
-commandDescription="Set multisession timeout from 120s to 5s"
-logMessage "${commandDescription}"
-sed -i 's/node.session.timeo.replacement_timeout = .*/node.session.timeo.replacement_timeout = 5/' /etc/iscsi/iscsid.conf; cat /etc/iscsi/iscsid.conf | grep node.session.timeo.replacement_timeout
-cat /etc/iscsi/iscsid.conf | grep "node.session.timeo.replacement_timeout = 5"
-checkCommand "${commandDescription}"
-addUndoCommand "sed -i 's/node.session.timeo.replacement_timeout = .*/node.session.timeo.replacement_timeout = 120/' /etc/iscsi/iscsid.conf;"
-commandDescription="Start iscsi service"
-logMessage "${commandDescription}"
-systemctl enable iscsid
-systemctl start iscsid
-checkCommand "${commandDescription}"
-# check service status
-isIscsciServiceRunning=$(systemctl is-active --quiet iscsid.service && echo "1" || echo "0")
-if [ "$isIscsciServiceRunning" -eq 1 ]; then
-    logMessage "iscsi service is running"
-    addUndoCommand "systemctl --now disable iscsid.service"
-else
-    logMessage "iscsi service is not running, aborting"
-    ./uninstall.sh
-fi
-commandDescription="Set multipath config for automatic failover"
-logMessage "${commandDescription}"
-mpathconf --enable --with_multipathd y
-checkCommand "${commandDescription}"
-addUndoCommand "mpathconf --disable"
-# set Linux host initiator name
-name=$(cat /etc/iscsi/initiatorname.iscsi)
-initiatorName="${name:14}"
-logMessage "initiatorName is: ${initiatorName}"
-# Test connection to ONTAP
-logMessage "Testing connection to ONTAP."
-versionResponse=$(curl -m $TIMEOUT -X GET -u "$ONTAP_USER":"$FSXN_PASSWORD" -k "https://$FSXN_ADMIN_IP/api/cluster?fields=version")
-if [[ "$versionResponse" == *"version"* ]]; then
-    logMessage "Connection to ONTAP is successful."
-else
-    logMessage "Connection to ONTAP failed, aborting."
-    ./uninstall.sh
-fi
-# group name = hostname
-groupName=$(hostname)
-iGroupResult=$(curl -m $TIMEOUT -X GET -u "$ONTAP_USER":"$FSXN_PASSWORD" -k "https://$FSXN_ADMIN_IP/api/protocols/san/igroups?svm.name=$SVM_NAME&name=$groupName&initiators.name=$initiatorName&protocol=iscsi&os_type=linux")
-initiatorExists=$(echo "${iGroupResult}" | jq '.num_records')
-if [ "$initiatorExists" -eq 0 ]; then
-    logMessage "Initiator ${initiatorName} with group ${groupName} does not exist, creating it."
-    logMessage "Create initiator group for vserver: ${SVM_NAME} group: ${groupName} initiator: ${initiatorName}"
-    createGroupResult=$(curl -m $TIMEOUT -X POST -u "$ONTAP_USER":"$FSXN_PASSWORD" -H "Content-Type: application/json" -k "https://$FSXN_ADMIN_IP/api/protocols/san/igroups" -d '{
-      "protocol": "iscsi",
-      "initiators": [
-        {
-          "name": "'$initiatorName'"
-        }
-      ],
-      "os_type": "linux",
-      "name": "'$groupName'",
-      "svm": {
-        "name": "'$SVM_NAME'"
-      }
-    }')
-    iGroupResult=$(curl -m $TIMEOUT -X GET -u "$ONTAP_USER":"$FSXN_PASSWORD" -k "https://$FSXN_ADMIN_IP/api/protocols/san/igroups?svm.name=$SVM_NAME&name=$groupName&initiators.name=$initiatorName&protocol=iscsi&os_type=linux")
-    iGroupUuid=$(echo ${iGroupResult} | jq -r '.records[] | select(.name == "'$groupName'" ) | .uuid')
-    # Check if iGroup was created successfully
-    if [ -n "$iGroupUuid" ]; then
-        logMessage "Initiator group ${groupName} was created successfully with UUID: ${iGroupUuid}"
-    else
-        logMessage "Initiator group ${groupName} was not created, aborting"
-        ./uninstall.sh
-    fi
-    # Add undo for iGroup
-    addUndoCommand "curl -m $TIMEOUT -X DELETE -u \"$ONTAP_USER\":\"$FSXN_PASSWORD\" -k \"https://$FSXN_ADMIN_IP/api/protocols/san/igroups/$iGroupUuid\""
-else
-    logMessage "Initiator ${initiatorName} with group ${groupName} already exists, skipping creation."
-fi
-
-instance_id=$(ec2-metadata -i | awk '{print $2}')
-if [ -z "$instance_id" ]; then
-  instance_id="unknown"
-fi
-
-logMessage "Create volume: ${SVM_NAME} vol: ${VOLUME_NAME} size: ${VOLUME_SIZE}g"
-createVolumeResult=$(curl -m $TIMEOUT -X POST -u "$ONTAP_USER":"$FSXN_PASSWORD" -k "https://$FSXN_ADMIN_IP/api/storage/volumes" -d '{
-  "name": "'$VOLUME_NAME'",
-  "size": "'$VOLUME_SIZE'g",
-  "state": "online",
-  "svm": {
-    "name": "'$SVM_NAME'"
-  },
-  "aggregates": [{
-    "name": "aggr1"
-  }],
-  "_tags": [
-    "instanceId:'$instance_id'",
-    "hostName:'$(hostname)'",
-    "mountPoint:'$VOLUME_NAME'"
-  ]
-}')
-sleep 10
-jobId=$(echo "${createVolumeResult}" | jq -r '.job.uuid')
-jobStatus=$(curl -X GET -u "$ONTAP_USER":"$FSXN_PASSWORD" -k "https://$FSXN_ADMIN_IP/api/cluster/jobs/$jobId")
-jobState=$(echo "$jobStatus" | jq -r '.state')
-if [ "$jobState" != "success" ]; then
-    logMessage "Volume creation job did not complete successfully, aborting"
-    jobError=$(echo "$jobStatus" | jq -r '.error')
-    logMessage "Error details: $jobError"
-    ./uninstall.sh
-fi
-
-# validate volume creation
-volumeResult=$(curl -m $TIMEOUT -X GET -u "$ONTAP_USER":"$FSXN_PASSWORD" -k "https://$FSXN_ADMIN_IP/api/storage/volumes?name=${VOLUME_NAME}&svm.name=${SVM_NAME}")
-volumeUUid=$(echo "${volumeResult}" | jq -r '.records[] | select(.name == "'$VOLUME_NAME'" ) | .uuid')
-if [ -n "$volumeUUid" ]; then
-    logMessage "Volume ${VOLUME_NAME} was created successfully with UUID: ${volumeUUid}"
-else
-    logMessage "Volume ${VOLUME_NAME} was not created, aborting"
-    ./uninstall.sh
-fi
-addUndoCommand "curl -m $TIMEOUT -X DELETE -u \"$ONTAP_USER\":\"$FSXN_PASSWORD\" -k \"https://$FSXN_ADMIN_IP/api/storage/volumes/${volumeUUid}\""
-
-logMessage "Create iscsi lun: ${SVM_NAME} vol: ${VOLUME_NAME} lun: ${LUN_NAME} size: ${LUN_SIZE}g (90% of volume)"
-createLunResult=$(curl -m $TIMEOUT -X POST -u "$ONTAP_USER":"$FSXN_PASSWORD" -k "https://$FSXN_ADMIN_IP/api/storage/luns" -d '{
-  "name": "'/vol/${VOLUME_NAME}/$LUN_NAME'",
-  "space": {
-    "size": "'$LUN_SIZE'GB",
-    "scsi_thin_provisioning_support_enabled": true
-  },
-  "svm": {
-    "name": "'$SVM_NAME'"
-  },
-  "os_type": "linux"
-}')
-lunResult=$(curl -X GET -u "$ONTAP_USER":"$FSXN_PASSWORD" -k "https://$FSXN_ADMIN_IP/api/storage/luns?fields=uuid&name=/vol/${VOLUME_NAME}/$LUN_NAME")
-# Validate LUN creation
-lunUuid=$(echo "${lunResult}" | jq -r '.records[] | select(.name == "'/vol/${VOLUME_NAME}/$LUN_NAME'" ) | .uuid')
-if [ -n "$lunUuid" ]; then
-    logMessage "LUN ${LUN_NAME} was created successfully with UUID: ${lunUuid}"
-else
-    logMessage "LUN ${LUN_NAME} was not created, aborting"
-    ./uninstall.sh
-fi
-
-addUndoCommand "curl -m $TIMEOUT -X DELETE -u \"$ONTAP_USER\":\"$FSXN_PASSWORD\" -k \"https://$FSXN_ADMIN_IP/api/storage/luns/${lunUuid}\""
-
-# LUN ID is mapping-specific, used by initiators as Logical Unit Number 
-logMessage "Create a mapping from the LUN you created to the igroup you created"
-
-lunMapResult=$(curl -m $TIMEOUT -X POST -u "$ONTAP_USER":"$FSXN_PASSWORD" -k "https://$FSXN_ADMIN_IP/api/protocols/san/lun-maps" -d '{
-  "lun": {
-    "name": "/vol/'${VOLUME_NAME}'/'${LUN_NAME}'"
-  },
-  "igroup": {
-    "name": "'${groupName}'"
-  },
-  "svm": {
-    "name": "'${SVM_NAME}'"
-  },
-  "logical_unit_number": 0
-}')
-logMessage "Validate the lun mapping was created"
-
-getLunMap=$(curl -m $TIMEOUT -X GET -u "$ONTAP_USER":"$FSXN_PASSWORD" -k "https://$FSXN_ADMIN_IP/api/protocols/san/lun-maps?lun.name=/vol/${VOLUME_NAME}/${LUN_NAME}&igroup.name=${groupName}&svm.name=${SVM_NAME}")
-lunGroupCreated=$(echo "${getLunMap}" | jq -r '.num_records')
-if [ "$lunGroupCreated" -eq 0 ]; then
-    logMessage "LUN mapping was not created, aborting"
-    ./uninstall.sh
-else
-    logMessage "LUN mapping was created successfully"
-fi
-
-addUndoCommand "curl -m $TIMEOUT -X DELETE -u \"$ONTAP_USER\":\"$FSXN_PASSWORD\" -k \"https://$FSXN_ADMIN_IP/api/protocols/san/lun-maps?lun.name=/vol/${VOLUME_NAME}/${LUN_NAME}&igroup.name=${groupName}&svm.name=${SVM_NAME}\""
-
-# Serial hex needed for readable block device name
-getLunSerialNumberResult=$(curl -m $TIMEOUT -X GET -u "$ONTAP_USER":"$FSXN_PASSWORD" -k "https://$FSXN_ADMIN_IP/api/storage/luns?fields=serial_number")
-serialNumber=$(echo "${getLunSerialNumberResult}" | jq -r '.records[] | select(.name == "'/vol/$VOLUME_NAME/$LUN_NAME'" ) | .serial_number')
-serialHex=$(echo -n "${serialNumber}" | xxd -p)
-if [ -z "$serialHex" ]; then
-    logMessage "Serial number for the LUN is not available, aborting"
-    ./uninstall.sh
-fi
-
-logMessage "Get the iscsi interface addresses for the svm ${SVM_NAME}"
-getInterfacesResult=$(curl -m $TIMEOUT -X GET -u "$ONTAP_USER":"$FSXN_PASSWORD" -k "https://$FSXN_ADMIN_IP/api/network/ip/interfaces?svm.name=$SVM_NAME&fields=ip")
-iscsi1IP=$(echo "$getInterfacesResult" | jq -r '.records[] | select(.name == "iscsi_1") | .ip.address')
-iscsi2IP=$(echo "$getInterfacesResult" | jq -r '.records[] | select(.name == "iscsi_2") | .ip.address')
-
-if [ -n "$iscsi1IP" ] && [ -n "$iscsi2IP" ]; then
-    iscsi1IP=$(echo ${iscsi1IP%/*})
-    iscsi2IP=$(echo ${iscsi2IP%/*})
-    logMessage "iscsi interface addresses for the svm ${SVM_NAME} are: ${iscsi1IP} and ${iscsi2IP}"
-else
-    logMessage "iscsi interface addresses for the svm ${SVM_NAME} are not available, aborting"
-    ./uninstall.sh
-fi
-
-logMessage "Discover the target iSCSI nodes, iscsi IP: ${iscsi1IP}"
-iscsiadm --mode discovery --op update --type sendtargets --portal $iscsi1IP
-checkCommand "${commandDescription}"
-addUndoCommand "iscsiadm --mode discovery --op delete --type sendtargets --portal ${iscsi1IP}"
-addUndoCommand "iscsiadm --mode discovery --op delete --type sendtargets --portal ${iscsi2IP}"
-
-logMessage "Getting target initiator"
-targetInitiator=$(iscsiadm --mode discovery --op update --type sendtargets --portal $iscsi1IP | awk '{print $2}' | head -n 1)
-logMessage "Target initiator is: ${targetInitiator}"
-
-# update sessions to 8 (optional)
-#iscsiadm --mode node -T $targetInitiator --op update -n node.session.nr_sessions -v 8
-# Login to target initiators - iSCSI LUNs presented as disks
-logMessage "Log into target initiator: ${targetInitiator}"
-iscsiadm --mode node -T $targetInitiator --login
-addUndoCommand "iscsiadm --mode node -T $targetInitiator --logout"
-
-# Add the following section to the /etc/multipath.conf file:
-# multipaths {
-#    multipath {
-#        wwid 3600a0980${serialHex}
-#        alias ${VOLUME_NAME}
-#    }
-# }
-# Assign block device name
-logMessage "Update /etc/multipath.conf file, Assign name to block device."
-cp /etc/multipath.conf /etc/multipath.conf_backup
-
-SERIAL_HEX=$serialHex
-ALIAS=$VOLUME_NAME
-CONF=/etc/multipath.conf
-chmod o+rw $CONF
-grep -q '^multipaths {' $CONF
-UNCOMMENTED=$?
-if [ $UNCOMMENTED -eq 0 ]; then
-    sed -i '/^multipaths {/a\\tmultipath {\n\t\twwid 3600a0980'"${SERIAL_HEX}"'\n\t\talias '"${ALIAS}"'\n\t}\n' $CONF
-else
-    printf "multipaths {\n\tmultipath {\n\t\twwid 3600a0980$SERIAL_HEX\n\t\talias $ALIAS\n\t}\n}" >> $CONF
-fi
-
-fileContent="$(cat $CONF)"
-logMessage "Updated /etc/multipath.conf file content: $fileContent"
-
-commandDescription="Restart multipathd for /etc/multipathd.conf changes"
-logMessage "${commandDescription}"
-systemctl restart multipathd.service
-checkCommand "${commandDescription}"
-addUndoCommand "cp /etc/multipath.conf_backup /etc/multipath.conf"
-addUndoCommand "systemctl restart multipathd.service"
-
-logMessage "Checking if the new partition exists."
-timeout=90
-interval=5
-elapsed=0
-
-while [ $elapsed -lt $timeout ]; do
-    if [ -e "/dev/mapper/$VOLUME_NAME" ]; then
-        logMessage "The device $VOLUME_NAME exists."
-        break
-    fi
-    sleep $interval
-    elapsed=$((elapsed + interval))
-done
-if [ ! -e "/dev/mapper/$VOLUME_NAME" ]; then
-    logMessage "The device $VOLUME_NAME does not exists. Exiting."
-    ./uninstall.sh 
-    exit 1
-fi
-
-# Partition the LUN
-# mount the LUN on Linux client
-# Create mount point directory
-directory_path=mnt
-mount_point=$VOLUME_NAME
-
-commandDescription="Create mount point /${directory_path}/${mount_point}"
-logMessage "${commandDescription}"
-mkdir /$directory_path/$mount_point
-checkCommand "${commandDescription}"
-addUndoCommand "rm -rf /$directory_path/$mount_point"
-# volume_name = friendly device name from multipath.conf
-commandDescription="Create file system for /dev/mapper/${ALIAS}"
-logMessage "${commandDescription}"
-mkfs.ext4 /dev/mapper/$ALIAS
-checkCommand "${commandDescription}"
-
-commandDescription="Mount the file system"
-logMessage "${commandDescription}"
-mount -t ext4 /dev/mapper/$ALIAS /$directory_path/$mount_point
-checkCommand "${commandDescription}"
-addUndoCommand "umount /$directory_path/$mount_point"
-# verify read/write access
-commandDescription="Verify read/write access"
-logMessage "${commandDescription}"
-echo "test mount iscsci" > /$directory_path/$mount_point/testIscsi.txt
-cat /$directory_path/$mount_point/testIscsi.txt
-checkCommand "${commandDescription}"
-rm /$directory_path/$mount_point/testIscsi.txt
-
-logMessage "FSXn iSCSI volume mount successful."
-# Add mount to /etc/fstab
-commandDescription="Add mount to /etc/fstab"
-logMessage "${commandDescription}"
-echo "/dev/mapper/$ALIAS /$directory_path/$mount_point ext4 defaults,_netdev 0 0" >> /etc/fstab
-checkCommand "${commandDescription}"
-addUndoCommand "sed -i '/\/dev\/mapper\/$ALIAS \/mnt\/$mount_point ext4 defaults,_netdev 0 0/d' /etc/fstab"
-
-# Report usage
-logMessage "Report usage"
-logMessage "Attempting Lambda invoke"
-LAMBDA_PAYLOAD='{"ResourceProperties":{"Source":"Deploy_EC2_Wizard","Region":"'$AWS_REGION'"},"RequestType":"CLI"}'
-
-# Try Lambda invoke
-invokeLambda
-if [ $? -ne 0 ] && grep -q "initializing" /home/ec2-user/lambda_error.log 2>/dev/null; then
-    logMessage "Lambda initializing, retrying in 10s..."
-    sleep 10
-    invokeLambda
-fi
-
-# Check final result
-if [ $? -eq 0 ]; then
-    logMessage "Usage reporting completed successfully"
-else
-    logMessage "Usage reporting failed"
-fi
-
-# End
-logMessage "Script completed successfully."
-
-rm -f uninstall.sh
+chmod +x /tmp/linux_userData.sh
+/tmp/linux_userData.sh

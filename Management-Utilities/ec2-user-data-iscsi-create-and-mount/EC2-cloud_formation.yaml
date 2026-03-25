@@ -61,7 +61,7 @@ Metadata:
       SvmName:
         default: "SVM Name"
       Username:
-        default: "Username"
+        default: "ONTAP Username"
       DriveLetter:
         default: "Drive Letter (Windows Only)"
       CidrIp:
@@ -115,14 +115,15 @@ Parameters:
     Description: SVM Name
   Username:
     Type: String
-    Description: Username to run under
+    Description: Username to run ONTAP APIs as.
+    Default: fsxadmin
   DriveLetter:
     Type: String
     Default: d
     Description: Drive Letter - valid for Windows only
   CidrIp:
     Type: String
-    Description: CIDR IP for SSH access to the instance
+    Description: CIDR IP for SSH or RDP access to the instance.
   LinuxUserDataUrl:
     Type: String
     Default: https://raw.githubusercontent.com/NetApp/FSx-ONTAP-samples-scripts/refs/heads/main/Management-Utilities/ec2-user-data-iscsi-create-and-mount/linux_userData.sh
