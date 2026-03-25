@@ -161,7 +161,7 @@ logMessage "InitiatorName is: ${InitiatorName}"
 
 logMessage "Testing connection to ONTAP."
 versionResponse=$(curl -sm $TIMEOUT -X GET -u "$ONTAP_USER":"$FSXN_PASSWORD" -k "https://$FSXN_ADMIN_IP/api/cluster?fields=version" | jq -r .version)
-if [ "$versionResponse" == "null" ]; then
+if [ "$versionResponse" == "null" -o -z "$versionResponse" ]; then
     logMessage "Connection to ONTAP failed, aborting."
     ./uninstall.sh
     exit 1
@@ -205,6 +205,8 @@ fi
 # Get the EC2 instanace ID.
 TOKEN=$(curl -sX PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
 instance_id=$(curl -sH "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/instance-id)
+AWS_REGION=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/placement/region)
+
 if [ -z "$instance_id" ]; then
   instance_id="unknown"
 fi
@@ -327,7 +329,8 @@ else
     exit 1
 fi
 
-logMessage "Discover the target iSCSI nodes, iscsi IP: ${iscsi1IP}"
+commandDescription="Discover the target iSCSI nodes, iscsi IP: ${iscsi1IP}"
+logMessage "${commandDescription}"
 iscsiadm --mode discovery --op update --type sendtargets --portal $iscsi1IP
 checkCommand "${commandDescription}"
 addUndoCommand "iscsiadm --mode discovery --op delete --type sendtargets --portal ${iscsi1IP}"
@@ -366,7 +369,7 @@ if egrep -q "alias\t*${ALIAS}$" $CONF; then
   exit 1
 fi
 cp $CONF ${CONF}_backup
-chmod o+rw $CONF
+chmod 644 $CONF
 
 if grep -q 'defaults' $CONF; then
     if grep -q 'user_friendly_names' $CONF; then

@@ -5,13 +5,13 @@ These sample scripts provide a way to launch an AWS EC2 instance with `user data
 volume and LUN, mount it to the instance, while installing all the needed libraries and resources.
 
 ## Notes
-- LUN size will be set to 90% of the volume size, the remain space is needed for the the LUN managment operation.
-  This means that usuable volume size is 90% of the requestd size.
-- The process might take several minutes to be compleetd.
+- LUN size will be set to 90% of the volume size, the remaining space is needed for the LUN management operation.
+  This means that usable volume size is 90% of the requested size.
+- The process might take several minutes to be complete.
 
-## Perperation
+## Preperation
 
-1. Create an AWS SecretsManager secret to hold the password of the account you plan to use to authenicate to the FSxN file system with.
+1. Create an AWS SecretsManager secret to hold the password of the account you plan to use to authenticate to the FSxN file system with.
 The secret should be of type `other` with value set to `Plain Text` that holds just the password.
 2. Create an AWS IAM role that has EC2 as the trusted entity and has permissions to read the secret value. Here is an example policy that will do that:
     ```json
@@ -34,7 +34,7 @@ The secret should be of type `other` with value set to `Plain Text` that holds j
 ## Deployment Options
 
 There are two ways to deploy an EC2 instance with the needed user data script:
-1. Copy the CloudFormation template found in the repo [EC2-cloud_formation.yaml](EC2-cloud_formation.yaml) to you local machine and deploy a CLoudFormation stack using it. CloudFormation will prmopt you for all the required parameters.
+1. Copy the CloudFormation template found in the repo [EC2-cloud_formation.yaml](EC2-cloud_formation.yaml) to you local machine and deploy a CloudFormation stack using it. CloudFormation will prompt you for all the required parameters.
 2. Follow the instruction below to deploy an EC2 instance from the AWS console.
 
 ## AWS console deployment
@@ -45,8 +45,8 @@ with `Amazon Linux 2023`, `Ubuntu 24.04`, `Red Hat Enterprise Linux 10` and `Deb
 while the Windows script is designed for `Windows Server 2025 Base`.
 
     Note that since AWS has a 16KB limit for the user data the linux_userData.sh script is made up of the variable
-    assignment noted below, and a compressed, based64 encoded version of the `linux_userData_real.sh` script. When the
-    `linux_userData.sh` script is run, it will decode and uncompress effecitively the `linux_userData_real.sh` script
+    assignment noted below, and a compressed, base64 encoded version of the `linux_userData_real.sh` script. When the
+    `linux_userData.sh` script is run, it will decode and uncompress what was the `linux_userData_real.sh` script
     and run it.
 
     Once you have downloaded the script, open it in a text editor and set the required values as noted below.
@@ -75,11 +75,11 @@ while the Windows script is designed for `Windows Server 2025 Base`.
   <li>Launch new instance
     <ol>
       <li>Fill in the server name.</li>
-      <li>Under the Quick Start tab select the Linux distribution of your choice. The supported disibutions are: `Amazon Linux 2023`, `Ubuntu 24.04`, `Red Hat Enterprise Linux 10` and `Debian 13`</li>
+      <li>Under the Quick Start tab select the Linux distribution of your choice. The supported distributions are: `Amazon Linux 2023`, `Ubuntu 24.04`, `Red Hat Enterprise Linux 10` and `Debian 13`</li>
       <li>Fill in the other settings based on your networking and business needs.</li>
       <li>Under 'Advanced details':
         <ol>
-          <li>Set the 'IAM instance profile' to the policy you created in the perperation step above.</li>
+          <li>Set the 'IAM instance profile' to the policy you created in the preperation step above.</li>
           <li>At the bottom, under the 'User data' section, press 'choose file' and select the script saved above.</li>
         </ol>
       </li>

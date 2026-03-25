@@ -6,7 +6,7 @@
 # user data content.
 #
 # This script is used to create the linux_userData.sh script from the
-# linux_userdata_real.sh file.
+# linux_userData_real.sh file.
 ################################################################################
 
 cat <<'EOF' > linux_userData.sh
