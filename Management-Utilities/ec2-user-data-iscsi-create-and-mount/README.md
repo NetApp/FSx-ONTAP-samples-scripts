@@ -40,15 +40,16 @@ There are two ways to deploy an EC2 instance with the needed user data script:
 ## AWS console deployment
 
 1. Download the needed script according to the instance type you want to run. Either [linux_userData.sh](linux_userData.sh)
-for a Linux distributuino or [windows_userData.ps1](windows_userData.ps1) for Windows. The Linux script has been tested
-with `Amazon Linux 2023 AMI`, `Ubuntu`, `Red Hat` and `Debian` distributions, while the Windows script is designed for `Windows Server 2025 Base`.
+for a Linux distribution or [windows_userData.ps1](windows_userData.ps1) for Windows. The Linux script has been tested
+with `Amazon Linux 2023`, `Ubuntu 24.04`, `Red Hat Enterprise Linux 10` and `Debian 13` distributions,
+while the Windows script is designed for `Windows Server 2025 Base`.
 
-Note that since AWS has a 16KB limit for the user data the linux_userData.sh script is made up of the variable
-assignment noted below, and a compressed, encoded version of the `linux_userData_real.sh` script. When the
-`linux_userData.sh` script is run, it will decode and decompress what was the `linux_userData_real.sh` script
-and then execute it.
+    Note that since AWS has a 16KB limit for the user data the linux_userData.sh script is made up of the variable
+    assignment noted below, and a compressed, based64 encoded version of the `linux_userData_real.sh` script. When the
+    `linux_userData.sh` script is run, it will decode and uncompress effecitively the `linux_userData_real.sh` script
+    and run it.
 
-Once you have downloaded the script, open it in a text editor and set the required values as noted below.
+    Once you have downloaded the script, open it in a text editor and set the required values as noted below.
 
     For the Linux version of the script, set the following values at the top of it:
     - SECRET_ARN - The ARN of the secret that has the password for the `ONTAP-USER`.
@@ -56,7 +57,7 @@ Once you have downloaded the script, open it in a text editor and set the requir
     - VOLUME_NAME - The name of the volume you want to create in your FSxN.
     - VOLUME_SIZE - The size of the volume you want to create in GB e.g [100]
     - SVM_NAME - The name of the SVM where the volume is to be created.
-    - ONTAP_USER - The ONTAP user id you wish to authenicate with.
+    - ONTAP_USER - The ONTAP user id you wish to authenticate with.
 	
     For the Windows version of the script, set the following values at the top of it:
     - $secretId - secret ARN that holds the password for the `$user`.
@@ -64,7 +65,7 @@ Once you have downloaded the script, open it in a text editor and set the requir
     - $volName - The name of the volume you want to create in your FSxN. 
     - $volSize - The size of the volume you want to create in GB e.g [100]
     - $drive_letter - The drive letter to assign to the volume.
-    - $user - The ONTAP user id you wish to authenicate with.
+    - $user - The ONTAP user id you wish to authenticate with.
     - $svm_name - The name of the SVM where the volume is to be created.
 	
 2. Save the script file.
@@ -74,12 +75,11 @@ Once you have downloaded the script, open it in a text editor and set the requir
   <li>Launch new instance
     <ol>
       <li>Fill in the server name.</li>
-      <li>Select 'Amazon Linux'.</li>
-      <li>Under Amazon Machine Image select the Linux distrubution of your choice. The supported disibutions are: `Amazon Linux 2023 AMI`, `Ubuntu`, `Red Hat` and `Debian`</li>
+      <li>Under the Quick Start tab select the Linux distribution of your choice. The supported disibutions are: `Amazon Linux 2023`, `Ubuntu 24.04`, `Red Hat Enterprise Linux 10` and `Debian 13`</li>
       <li>Fill in the other settings based on your networking and business needs.</li>
       <li>Under 'Advanced details':
         <ol>
-          <li>Set the 'IAM instance profile' to the policy you created in the steps above.</li>
+          <li>Set the 'IAM instance profile' to the policy you created in the perperation step above.</li>
           <li>At the bottom, under the 'User data' section, press 'choose file' and select the script saved above.</li>
         </ol>
       </li>
@@ -114,7 +114,7 @@ The installation log file can be found at: `C:\Users\Administrator\install.log`.
 If an error occurs while the installation is running, a message will be inserted into the
 installation log file, it will attempt to roll back any work that it preformed, finally the script will terminate.
 
-**Note:** It can take 10 to 15 minutes for the script to compplete. Check the installation log file to confirm it is done.
+**Note:** It can take 10 to 15 minutes for the script to complete. Check the installation log file to confirm it is done.
 The line `Uninstall script removed` should be at the bottom of the file when the script has finished.
 
 ## Author Information
