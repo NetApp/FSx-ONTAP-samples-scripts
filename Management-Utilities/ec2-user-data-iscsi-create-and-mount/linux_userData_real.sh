@@ -1,6 +1,8 @@
 #!/bin/bash
+#
+# Since if aws is installed it goes into /usr/local/bin.
+PATH=${PATH}:/usr/local/bin
 
-LUN_NAME=${VOLUME_NAME}_$(($RANDOM%(900)+100))
 LOG_FILE=/var/log/iscsi-install.log
 TIMEOUT=5
 #
@@ -15,10 +17,6 @@ case "$ID" in
     echo "Unknown OS type: '$ID'." >> $LOG_FILE
     exit 1;;
 esac
-
-LUN_SIZE=$(bc -l <<< "0.90*$VOLUME_SIZE" )
-echo "# Uninstall file" > uninstall.sh
-chmod u+x uninstall.sh
 
 getSecretValue() {
   secret_arn=$1
@@ -54,7 +52,7 @@ invokeLambda() {
     --cli-binary-format raw-in-base64-out \
     $LambdaResponseFile 2>$LambdaErrorFile
 }
-requiredCmds="curl unzip jq"
+requiredCmds="curl unzip jq bc xxd"
 if [ "$OS_TYPE" == "rhel" ]; then
   yum update -y
   checkCommand "yum update"
@@ -93,6 +91,12 @@ elif [ "$OS_TYPE" == "debian" ]; then
   ./aws/install
   rm -rf aws awscliv2.zip
 fi
+
+LUN_SIZE=$(bc -l <<< "0.90*$VOLUME_SIZE" )
+LUN_NAME=${VOLUME_NAME}_$(($RANDOM%(900)+100))
+
+echo "# Uninstall file" > uninstall.sh
+chmod u+x uninstall.sh
 
 logMessage "Get secret data"
 getSecretValue "${SECRET_ARN}"
@@ -340,6 +344,10 @@ iscsiadm --mode node -T $targetInitiator --login
 addUndoCommand "iscsiadm --mode node -T $targetInitiator --logout"
 #
 # Add the following section to the /etc/multipath.conf file:
+# defaults {
+#   user_friendly_names yes
+#   find_multipaths yes
+# }
 # multipaths {
 #    multipath {
 #        wwid 3600a0980${serialHex}
@@ -347,22 +355,41 @@ addUndoCommand "iscsiadm --mode node -T $targetInitiator --logout"
 #    }
 # }
 logMessage "Update /etc/multipath.conf file, Assign name to block device."
-cp /etc/multipath.conf /etc/multipath.conf_backup
 
 SERIAL_HEX=$serialHex
 ALIAS=$VOLUME_NAME
 CONF=/etc/multipath.conf
+
+if egrep -q "alias\t*${ALIAS}$" $CONF; then
+  echo "Error, there is already an alias in the multipath.conf file for the volume '$ALIAS'. Aborting."
+  ./uninstall.sh
+  exit 1
+fi
+cp $CONF ${CONF}_backup
 chmod o+rw $CONF
-grep -q '^multipaths {' $CONF
-UNCOMMENTED=$?
-if [ $UNCOMMENTED -eq 0 ]; then
-    sed -i '/^multipaths {/a\\tmultipath {\n\t\twwid 3600a0980'"${SERIAL_HEX}"'\n\t\talias '"${ALIAS}"'\n\t}\n' $CONF
+
+if grep -q 'defaults' $CONF; then
+    if grep -q 'user_friendly_names' $CONF; then
+      sed -i '/user_friendly_names/s/user_friendly_names.*/user_friendly_names yes/' $CONF
+    else
+      sed -i '/defaults/a\\tuser_friendly_names yes' $CONF
+    fi
+    if grep -q 'find_multipaths' $CONF; then
+      sed -i '/find_multipaths/s/find_multipaths.*/find_multipaths yes/' $CONF
+    else
+      sed -i '/defaults/a\\tfind_multipaths yes' $CONF
+    fi
 else
-    printf "multipaths {\n\tmultipath {\n\t\twwid 3600a0980$SERIAL_HEX\n\t\talias $ALIAS\n\t}\n}" >> $CONF
+    printf "\ndefaults {\n\tuser_friendly_names yes\n\tfind_multipaths yes\n}\n" >> $CONF
 fi
 
-fileContent="$(cat $CONF)"
-logMessage "Updated /etc/multipath.conf file content: $fileContent"
+if egrep -q '^multipaths {' $CONF; then
+    sed -i '/^multipaths {/a\\tmultipath {\n\t\twwid 3600a0980'"${SERIAL_HEX}"'\n\t\talias '"${ALIAS}"'\n\t}\n' $CONF
+else
+    printf "multipaths {\n\tmultipath {\n\t\twwid 3600a0980$SERIAL_HEX\n\t\talias $ALIAS\n\t}\n}\n" >> $CONF
+fi
+
+logMessage "Updated /etc/multipath.conf file content: $(cat $CONF)"
 
 commandDescription="Restart multipathd for /etc/multipathd.conf changes"
 logMessage "${commandDescription}"
