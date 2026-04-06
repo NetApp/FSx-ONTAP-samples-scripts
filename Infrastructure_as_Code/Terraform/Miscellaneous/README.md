@@ -3,7 +3,7 @@ This subfolder contains various examples of how you can use Terraform to manage 
 
 | Example | Description |
 | --- | --- |
-| [Create_CIFS Share](create_cifs_share.tf) | This sample shows how to create a volume and a CIFS share that points to it on an FSx for ONTAP file system. |
+| [Create CIFS Share](create_cifs_share.tf) | This sample shows how to create a volume and a CIFS share that points to it on an FSx for ONTAP file system. |
 
 ## Author Information
 

@@ -25,7 +25,7 @@
         - fsxn_hostname
     #
     # Give default values to optional variables if they are not defined
-    - name: Set security_style to unix if not provide.
+    - name: Set security_style to unix if not provided.
       set_fact:
         security_style: "unix"
       when: security_style is not defined
@@ -45,7 +45,7 @@
         use_lambda: true
       when: lambda_function_name is defined
     
-    - name: Set aws_provide to "default" if not provided.
+    - name: Set aws_profile to "default" if not provided.
       set_fact:
         aws_profile: "default"
       when: aws_profile is not defined
