@@ -5,8 +5,9 @@ This subfolder contains various examples of how you can use Terraform to deploy 
 | --- | --- |
 | [Deploy FSx ONTAP File Share](deploy-fsx-ontap-fileshare-access) | This sample shows how to deploy an FSx for ONTAP file system and access it from a remote system using OpenVPN. |
 | [Deploy FSx ONTAP SQL Server](deploy-fsx-ontap-sqlserver) | This sample shows how to deploy on FSx for ONTAP file system and use it as a shared storage for a SQL Server. |
-| [Deploy FSx ONTAP](deploy-fsx-ontap) | This sample shows how to deploy an FSx for ONTAP file system using Terraform. |
+| [FSx ONTAP deployment using Terraform](deploy-fsx-ontap) | This sample shows how to use Terraform to deploy an FSx for ONTAP file system. |
 | [FSx ONTAP Replicate](fsxn-replicate)| This sample shows how to use Terraform to replicate an FSx for ONTAP file system for disaster recovery purposes. |
+| [Miscellaneous](Miscellaneous) | This folder contains various Terraform samples.|
 
 ## Author Information
 
