@@ -1,7 +1,7 @@
-# Title: create_volume.yaml
+# Title: create_volume_and_share.yaml
 
 ---
-- name: Playbook to create a volumes on an FSx for ONTAP file system.
+- name: Playbook to create a volume and a CIFS share that points to it on an FSx for ONTAP file system.
   hosts: localhost
   collections:
     - netapp.ontap
@@ -24,9 +24,9 @@
         - secret_name
     #
     # Give default values to optional variables if they are not defined
-    - name: Set security_style to unix if not provide.
+    - name: Set security_style to ntfs if not provide.
       set_fact:
-        security_style: "unix"
+        security_style: "ntfs"
       when: security_style is not defined
     
     - name: Set aggr to 'aggr1' if not provided.
@@ -49,10 +49,15 @@
         aws_profile: "default"
       when: aws_profile is not defined
     
-    - name: Set junction path to "/<volume_name>" if not provided.
+    - name: Set junction_path to "/<volume_name>" if not provided.
       set_fact:
         junction_path: "/{{ volume_name }}"
       when: junction_path is not defined
+ 
+    - name: Set share_name to "<volume_name>" if not provided.
+      set_fact:
+        share_name: "{{ volume_name }}"
+      when: share_name is not defined
  
     - name: Ensure that aws_region has been provided if use_lambda is true.
       fail:
@@ -91,6 +96,22 @@
           function_name: "{{ lambda_function_name }}"
         type: "{{ volume_type }}"
         size_unit: "mb"
+        hostname: "{{ fsxn_hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        validate_certs: false
+
+    - name: Create CIFS Share
+      netapp.ontap.na_ontap_cifs:
+        state: present
+        name: "{{ share_name }}"
+        path: "{{ junction_path }}"
+        vserver: "{{ vserver }}"
+        use_lambda: "{{ use_lambda }}"
+        lambda_config:
+          aws_profile: "{{ aws_profile }}"
+          aws_region: "{{ aws_region }}"
+          function_name: "{{ lambda_function_name }}"
         hostname: "{{ fsxn_hostname }}"
         username: "{{ username }}"
         password: "{{ password }}"
