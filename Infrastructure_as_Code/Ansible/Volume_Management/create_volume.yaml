@@ -22,6 +22,7 @@
         - volume_size
         - vserver
         - secret_name
+        - fsxn_hostname
     #
     # Give default values to optional variables if they are not defined
     - name: Set security_style to unix if not provide.

@@ -1,7 +1,7 @@
-# Title: create_volume_and_share.yaml
+# Title: delete_volume_and_share.yaml
 
 ---
-- name: Playbook to create a volume and a CIFS share that points to it on an FSx for ONTAP file system.
+- name: Playbook to delete a volume and a CIFS share that points to it on an FSx for ONTAP file system.
   hosts: localhost
   collections:
     - netapp.ontap
@@ -19,9 +19,9 @@
       when: vars[item] is undefined
       loop:
         - volume_name
-        - volume_size
         - vserver
         - secret_name
+        - fsxn_hostname
     #
     # Give default values to optional variables if they are not defined
     - name: Set security_style to ntfs if not provide.
@@ -80,33 +80,28 @@
         password: "{{ lookup('amazon.aws.aws_secret', '{{ secret_name }}.password', nested=true) }}"
       no_log: true
 
-    - name: Create the volume
-      netapp.ontap.na_ontap_volume:
-        state: absent
-        name: "{{ volume_name }}"
-        size: "{{ volume_size }}"
-        vserver: "{{ vserver }}"
-        aggregate_name: "{{ aggr }}"
-        junction_path: "{{ junction_path }}"
-        volume_security_style: "{{ security_style }}"
-        use_lambda: "{{ use_lambda }}"
-        lambda_config:
-          aws_profile: "{{ aws_profile }}"
-          aws_region: "{{ aws_region }}"
-          function_name: "{{ lambda_function_name }}"
-        type: "{{ volume_type }}"
-        size_unit: "mb"
-        hostname: "{{ fsxn_hostname }}"
-        username: "{{ username }}"
-        password: "{{ password }}"
-        validate_certs: false
-
-    - name: Create CIFS Share
+    - name: Delete CIFS Share
       netapp.ontap.na_ontap_cifs:
         state: absent
         name: "{{ share_name }}"
         path: "{{ junction_path }}"
         vserver: "{{ vserver }}"
+        use_lambda: "{{ use_lambda }}"
+        lambda_config:
+          aws_profile: "{{ aws_profile }}"
+          aws_region: "{{ aws_region }}"
+          function_name: "{{ lambda_function_name }}"
+        hostname: "{{ fsxn_hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        validate_certs: false
+
+    - name: Delete the volume
+      netapp.ontap.na_ontap_volume:
+        state: absent
+        name: "{{ volume_name }}"
+        vserver: "{{ vserver }}"
+        aggregate_name: "{{ aggr }}"
         use_lambda: "{{ use_lambda }}"
         lambda_config:
           aws_profile: "{{ aws_profile }}"

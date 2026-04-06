@@ -122,9 +122,9 @@ resource "netapp-ontap_cifs_share" "cifs_share" {
    svm_name        = data.aws_fsx_ontap_storage_virtual_machine.svm.name
    acls            = [
      {
-       "permission": "full_control",
-       "user_or_group": "Everyone",
-       "type": "windows"
+       permission = "full_control"
+       user_or_group = "Everyone"
+       type = "windows"
      }
    ]
   depends_on = [
