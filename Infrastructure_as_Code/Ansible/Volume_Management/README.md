@@ -7,10 +7,12 @@ node to have network connectivity to the FSx for ONTAP file system. For more inf
 Workload Factory Link, please refer to the [NetApp Workload Factory documentation](https://docs.netapp.com/us-en/workload-fsx-ontap/links-overview.html).
 
 The list of playbooks included in this folder is as follows:
-- create\_volume.yaml
-- delete\_volume.yaml
 - create\_snapshot.yaml
 - delete\_snapshot.yaml
+- create\_volume.yaml
+- delete\_volume.yaml
+- create\_volume\_and\_share.yaml
+- delete\_volume\_and\_share.yaml
 
 ## Requirements
 - Ansible 2.9 or later. Installation instructions can be found [here](https://docs.ansible.com/ansible/latest/installation_guide/index.html)
@@ -28,11 +30,11 @@ Each playbook requires various variables to be set in order to run.
 | volume\_name| All | Yes | None | The name of the volume you want to act on.|
 | lambda\_function\_name| All | No | None | The name of the Workload Factory Link Lambda function to use when issuing API calls to the FSx for ONTAP file system.| 
 | aws\_region | All | No | None | The AWS region where the Lambda function resides.|
-| volume\_size| create\_volume | Yes | None | The size, in MiBs, of the volume to create.|
-| security\_style | create\_volume | No | UNIX | The security style to use when creating the volume. Valid options are UNIX or NTFS.|
-| aggr | create\_volume | No | aggr1 | The name of the aggregate to create the volume on.|
-| volume\_type | create\_volume | No | RW | The type of volume to create. Valid options are RW and DP.|
-| junction\_path | create\_volume | No | `/<volume_name>` | The junction path to use when creating the volume.|
+| volume\_size| create\_volume\* | Yes | None | The size, in MiBs, of the volume to create.|
+| security\_style | create\_volume\* | No | UNIX | The security style to use when creating the volume. Valid options are UNIX or NTFS.|
+| aggr | create\_volume\* | No | aggr1 | The name of the aggregate to create the volume on.|
+| volume\_type | create\_volume\* | No | RW | The type of volume to create. Valid options are RW and DP.|
+| junction\_path | create\_volume\* | No | `/<volume_name>` | The junction path to use when creating the volume.|
 | snapshot\_name | create\_snapshot | Yes | None | The name of the snapshot to create.|
 
 A convenient way to set all the required variable is to put them into a file named `variables.yaml`.

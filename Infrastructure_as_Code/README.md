@@ -7,14 +7,15 @@ This folder contains code samples and automation scripts for FSx for NetApp ONTA
     * [SnapMirror report](Ansible/snapmirror_report)
     * [Volume Management](Ansible/Volume_Management)
 * [CloudFormation](CloudFormation)
-    * [NetApp-FSxN-Custom-Resources-Samples](CloudFormation/NetApp-FSxN-Custom-Resources-Samples)
+    * [Deploy-fsx-ontap](CloudFormation/deploy-fsx-ontap)
     * [Export FSx for ONTAP Configuration to CloudFormation](CloudFormation/Export-FSxN-CloudFormation)
-    * [deploy-fsx-ontap](CloudFormation/deploy-fsx-ontap)
+    * [NetApp-FSxN-Custom-Resources-Samples](CloudFormation/NetApp-FSxN-Custom-Resources-Samples)
 * [Terraform](Terraform)
+    * [Deployment of FSx ONTAP with VPN for File Share Access](Terraform/deploy-fsx-ontap-fileshare-access)
+    * [Deployment of SQL Server on EC2 with FSx ONTAP](Terraform/deploy-fsx-ontap-sqlserver)
     * [FSx ONTAP deployment using Terraform](Terraform/deploy-fsx-ontap)
     * [FSx ONTAP Replication](Terraform/fsxn-replicate)
-    * [Deployment of SQL Server on EC2 with FSx ONTAP](Terraform/deploy-fsx-ontap-sqlserver)
-    * [Deployment of FSx ONTAP with VPN for File Share Access](Terraform/deploy-fsx-ontap-fileshare-access)
+    * [Miscellaneous FSx ONTAP operations using Terraform](Terraform/Miscellaneous)
 
 ## Author Information
 
@@ -31,4 +32,4 @@ is distributed on an _"AS IS"_ basis, without WARRANTIES or conditions of any ki
 
 See the License for the specific language governing permissions and limitations under the License.
 
-© 2024 NetApp, Inc. All Rights Reserved.
+© 2026 NetApp, Inc. All Rights Reserved.
