@@ -202,7 +202,7 @@ terraform apply
 | fsx_deploy_type | The file system deployment type. Supported values are 'MULTI_AZ_1', 'SINGLE_AZ_1', 'MULTI_AZ_2', and 'SINGLE_AZ_2'. MULTI_AZ_1 and SINGLE_AZ_1 are Gen 1. MULTI_AZ_2 and SINGLE_AZ_2 are Gen 2. | `string` | `"MULTI_AZ_1"` | no |
 | fsx_name | The name to assign to the FSxN file system. | `string` | `"terraform-fsxn"` | no |
 | fsx_region | The AWS region where the FSxN file system to be deployed. | `string` | `"us-west-2"` | no |
-| fsx_subnets | The primary subnet ID, and secondary subnet ID if you are deploying in a Multi AZ environment, file system will be accessible from. For MULTI_AZ deployment types both subnets are required. For SINGLE_AZ deployment type, only the primary subnet is used. | `map(any)` | <pre>{<br>  "primarysub": "subnet-22222222",<br>  "secondarysub": "subnet-33333333"<br>}</pre> | no |
+| fsx_subnets | The primary subnet ID, and secondary subnet ID if you are deploying in a Multi AZ environment, file system will be accessible from. For MULTI_AZ deployment types both subnets are required. For SINGLE_AZ deployment type, only the primary subnet is used. | `map(any)` | <pre>{<br/>  "primarysub": "subnet-22222222",<br/>  "secondarysub": "subnet-33333333"<br/>}</pre> | no |
 | fsx_tput_in_MBps | The throughput capacity (in MBps) for the file system. Valid values are 128, 256, 512, 1024, 2048, and 4096 for Gen 1, and 384, 768, 1536, 3072 and 6144 for Gen 2. | `string` | `"128"` | no |
 | ha_pairs | The number of HA pairs in the file system. Valid values are from 1 through 12. Only single AZ Gen 2 deployment type supports more than 1 HA pair. | `number` | `1` | no |
 | kms_key_id | ARN for the KMS Key to encrypt the file system at rest. Defaults to an AWS managed KMS Key. | `string` | `null` | no |
@@ -216,7 +216,7 @@ terraform apply
 | source_sg_id | The ID of the security group to allow access to the FSxN file system. Set to an empty string if you want to use the cidr_for_sg as the source. | `string` | `""` | no |
 | svm_name | The name of the Storage Virtual Machine | `string` | `"fsx"` | no |
 | tags | Tags to be applied to the FSxN file system. The format is '{Name1 = value, Name2 = value}' where value should be enclosed in double quotes. | `map(any)` | `{}` | no |
-| vol_info | Details for the volume creation | `map(any)` | <pre>{<br>  "cooling_period": 31,<br>  "copy_tags_to_backups": false,<br>  "efficiency": true,<br>  "junction_path": "/vol1",<br>  "sec_style": "UNIX",<br>  "size_mg": 2048000,<br>  "skip_final_backup": true,<br>  "snapshot_policy": "default",<br>  "tier_policy_name": "AUTO",<br>  "vol_name": "vol1"<br>}</pre> | no |
+| vol_info | Details for the volume creation | `map(any)` | <pre>{<br/>  "cooling_period": 31,<br/>  "copy_tags_to_backups": false,<br/>  "efficiency": true,<br/>  "junction_path": "/vol1",<br/>  "sec_style": "UNIX",<br/>  "size_mg": 2048000,<br/>  "skip_final_backup": true,<br/>  "snapshot_policy": "default",<br/>  "tier_policy_name": "AUTO",<br/>  "vol_name": "vol1"<br/>}</pre> | no |
 | vpc_id | The VPC ID where the security group will be created. | `string` | `""` | no |
 
 ### Outputs
@@ -245,7 +245,6 @@ You may obtain a copy of the License at [apache.org/licenses/LICENSE-2.0](http:/
 Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an _"AS IS"_ basis, without WARRANTIES or conditions of any kind, either express or implied.
 
 See the License for the specific language governing permissions and limitations under the License.
-
 <!-- END_TF_DOCS -->
 
 © 2024 NetApp, Inc. All Rights Reserved.

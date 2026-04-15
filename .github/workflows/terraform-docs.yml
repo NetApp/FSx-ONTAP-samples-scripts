@@ -23,13 +23,18 @@ jobs:
           - 'Infrastructure_as_Code/Terraform/deploy-fsx-ontap/module'
           - 'Infrastructure_as_Code/Terraform/deploy-fsx-ontap/standalone-module'
     steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@fa2e9d605c4eeb9fcad4c99c224cee0c6c7f3594 # v2.16.0
+        with:
+          egress-policy: audit
+
       - name: Checkout pull request  
-        uses: actions/checkout@v3.5.0
+        uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3 # v3.5.0
         with:
           ref: ${{ github.event.pull_request.head.ref }}
 
       - name: Render documentation and push changes back to branch
-        uses: terraform-docs/gh-actions@v1.0.0
+        uses: step-security/terraform-docs-action@863375b3d57d153d9cb47f73abcc2d4d3d00c101 # v1.4.5
         with:
           working-dir: ${{ matrix.directory }}
           config-file: ".terraform-docs.yml"

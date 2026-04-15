@@ -242,7 +242,7 @@ terraform apply
 | svm_name | name of the Storage Virtual Machine, (a.k.a. vserver). | `string` | `"fsx"` | no |
 | tags | A map defining tags to be applied to the FSxN file system. The format is '{Name1 = value, Name2 = value}'. | `map(any)` | `null` | no |
 | throughput_in_MBps | The throughput capacity (in MBps) for the file system. Valid values are 128, 256, 512, 1024, 2048, and 4096 for Gen 1, and 384, 768, 1536, 3072 and 6144 for Gen 2. | `string` | `"128"` | no |
-| vol_info | Details for the initial volume creation. | <pre>object({<br>    vol_name              = optional(string, "vol1")<br>    junction_path         = optional(string, "/vol1")<br>    size_mg               = optional(number,  2048000)<br>    efficiency            = optional(bool,    true)<br>    tier_policy_name      = optional(string, "AUTO")<br>    cooling_period        = optional(string,  31)<br>    vol_type              = optional(string, "RW")<br>    copy_tags_to_backups  = optional(bool,    false)<br>    sec_style             = optional(string, "UNIX")<br>    skip_final_backup     = optional(bool,    false)<br>    snapshot_policy       = optional(string, "default")<br>  })</pre> | `{}` | no |
+| vol_info | Details for the initial volume creation. | <pre>object({<br/>    vol_name              = optional(string, "vol1")<br/>    junction_path         = optional(string, "/vol1")<br/>    size_mg               = optional(number,  2048000)<br/>    efficiency            = optional(bool,    true)<br/>    tier_policy_name      = optional(string, "AUTO")<br/>    cooling_period        = optional(string,  31)<br/>    vol_type              = optional(string, "RW")<br/>    copy_tags_to_backups  = optional(bool,    false)<br/>    sec_style             = optional(string, "UNIX")<br/>    skip_final_backup     = optional(bool,    false)<br/>    snapshot_policy       = optional(string, "default")<br/>  })</pre> | `{}` | no |
 | vpc_id | The VPC ID where the security group will be created. | `string` | `""` | no |
 
 ### Outputs
@@ -273,7 +273,6 @@ You may obtain a copy of the License at [apache.org/licenses/LICENSE-2.0](http:/
 Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an _"AS IS"_ basis, without WARRANTIES or conditions of any kind, either express or implied.
 
 See the License for the specific language governing permissions and limitations under the License.
-
 <!-- END_TF_DOCS -->
 
 © 2024 NetApp, Inc. All Rights Reserved.
