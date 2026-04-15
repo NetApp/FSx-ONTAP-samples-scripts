@@ -129,7 +129,7 @@ run_curl () {
          -H "Authorization: Bearer $token" -o $output > $errorOutput
       exitCode=$?
       ;;
-    POST|PUT)
+    POST|PUT|PATCH)
       curl -X "$method" -sw "%{http_code},%{errormsg}" "$url" \
          -H "Accept: $accept" "${extraHeaders[@]}" \
          -H "Content-Type:application/json" \
