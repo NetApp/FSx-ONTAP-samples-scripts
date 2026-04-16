@@ -16,16 +16,13 @@ usage() {
   cat >&2 <<EOF
 This script is used to delete a EDA CI/CD clone.
 
-Usage: $(basename $0) -t refresh_token -a blueXP_account_ID -c credentials_id -p project_id -v clone_volume_id
+Usage: $(basename $0) -t refresh_token -a blueXP_account_ID -p project_id -v clone_volume_id
 
 Where: refresh_token - Is a refresh token used to obtain an access token needed
                        to run the Workload Factory APIs. You can obtain a refresh
                        token by going to https://services.cloud.netapp.com/refresh-token
        blueXP_account_ID - is the BlueXP account ID. Run 'list_bluexp_accts' to get a
                            list of accounts you have access to.
-       credentials_ID - is the Workload Factory credentials ID for the AWS account.
-                        Run 'list_credentials' to get a list of Workload Factory
-                        credentials you have access to.
        project_id - is the ID of the EDA CI/CD project to list clones for. Run 'list_cicd_projects' to get a
                     list of projects you have access to.
        clone_volume_id - is the ID of the volume that was created when the clone was provided that you want to delete.
@@ -36,7 +33,7 @@ following environment variables:
 
     export REFRESH_TOKEN=<refresh_token>
     export BLUEXP_ACCOUNT_ID=<blueXP_account_ID>
-    export CREDENTIALS_ID=<credentials_ID>
+    export PROJECT_ID=<project_id>
 EOF
   exit 1
 }
@@ -66,11 +63,10 @@ fi
 . "$wf_utils"
 #
 # Process command line arguments.
-while getopts "ht:a:c:p:v:" opt; do
+while getopts "ht:a:p:v:" opt; do
   case $opt in
     t) REFRESH_TOKEN="$OPTARG" ;;
     a) BLUEXP_ACCOUNT_ID="$OPTARG" ;;
-    c) CREDENTIALS_ID="$OPTARG" ;;
     p) PROJECT_ID="$OPTARG" ;;
     v) CLONE_VOLUME_ID="$OPTARG" ;;
     *) usage ;;
@@ -83,9 +79,6 @@ required_options["REFRESH_TOKEN"]='Error: A BlueXP refresh tokon is required to 
   https://services.cloud.netapp.com/refresh-token\n\n'
 required_options["BLUEXP_ACCOUNT_ID"]='Error: A BlueXP account ID is required to run this script.
 You can get the list of accounts you have access to by running the "list_bluexp_accts" script
-found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
-required_options["CREDENTIALS_ID"]='Error: The Workload Facotry credentials ID used to manage resources is required to run this script.
-You can get a list of credentials by running the "list_credentials" script
 found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
 required_options["PROJECT_ID"]='Error: The EDA CI/CD project ID is required to run this script.
 You can get a list of projects you have access to by running the "list_cicd_projects" script

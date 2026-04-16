@@ -16,16 +16,13 @@ usage() {
   cat >&2 <<EOF
 This script is used to delete a EDA CI/CD project.
 
-Usage: $(basename $0) -t refresh_token -a blueXP_account_ID -c credentials_id -p project_ID
+Usage: $(basename $0) -t refresh_token -a blueXP_account_ID -p project_ID
 
 Where: refresh_token - Is a refresh token used to obtain an access token needed
                        to run the Workload Factory APIs. You can obtain a refresh
                        token by going to https://services.cloud.netapp.com/refresh-token
        blueXP_account_ID - is the BlueXP account ID. Run 'list_bluexp_accts' to get a
                            list of accounts you have access to.
-       credentials_ID - is the Workload Factory credentials ID for the AWS account.
-                        Run 'list_credentials' to get a list of Workload Factory
-                        credentials you have access to.
        project_ID - is the ID of the EDA CI/CD project to delete. Run 'list_cicd_projects'
                     to get a list of EDA CI/CD projects you have access to.
 
@@ -34,7 +31,6 @@ following environment variables:
 
     export REFRESH_TOKEN=<refresh_token>
     export BLUEXP_ACCOUNT_ID=<blueXP_account_ID>
-    export CREDENTIALS_ID=<credentials_ID>
 EOF
   exit 1
 }
@@ -64,12 +60,10 @@ fi
 . "$wf_utils"
 #
 # Process command line arguments.
-raw=false
-while getopts "ht:a:c:p:" opt; do
+while getopts "ht:a:p:" opt; do
   case $opt in
     t) REFRESH_TOKEN="$OPTARG" ;;
     a) BLUEXP_ACCOUNT_ID="$OPTARG" ;;
-    c) CREDENTIALS_ID="$OPTARG" ;;
     p) projectId="$OPTARG" ;;
     *) usage ;;
   esac
@@ -82,11 +76,8 @@ required_options["REFRESH_TOKEN"]='Error: A BlueXP refresh token is required to 
 required_options["BLUEXP_ACCOUNT_ID"]='Error: A BlueXP account ID is required to run this script.
 You can get the list of accounts you have access to by running the "list_bluexp_accts" script
 found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
-required_options["CREDENTIALS_ID"]='Error: The Workload Factory credentials ID used to manage resources is required to run this script.
-You can get a list of credentials by running the "list_credentials" script
-found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
 required_options["projectId"]='Error: The ID of the project to delete is required.
-You can get a list of projects by running the "list_cicd_project" script
+You can get a list of projects by running the "list_cicd_projects" script
 found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
 
 check_required_options
@@ -103,12 +94,6 @@ token=$(get_token)
 if [ -z "$token" ]; then
   echo "Error: Failed to obtain an access token. Exiting." >&2
   exit 1
-fi
-
-if [ "$raw" = true ]; then
-  jq_query='.'
-else
-  jq_query='.items[] | "\(.projectName) \(.fileSystemId) \(.volumeName) \(.numberOfClones)"'
 fi
 
 URL="https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/builders/v1/projects/$projectId"
