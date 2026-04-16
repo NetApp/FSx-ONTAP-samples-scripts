@@ -118,7 +118,7 @@ if [ -z "$token" ]; then
 fi
 body='{
   "cloneName": "'$CLONE_NAME'",
-  '$snapshot_name'
+  '$SNAPSHOT_NAME'
   "parentVolumeId": "'$VOLUME_ID'"
 }'
 

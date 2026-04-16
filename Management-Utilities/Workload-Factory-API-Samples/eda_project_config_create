@@ -28,9 +28,9 @@ Where: refresh_token - Is a refresh token used to obtain an access token needed
                         credentials you have access to.
        -g tag1[,tag2,...] - is a comma separated list of tags to use in the filter.
        -y single|multiselect,single|multiselect,... - is a comma separated list of filter types
-                                                        corresponding to the tags specified with the -a option.
-                                                        The filter type can be either 'single' or 'multiselect'.
-                                                        If not provided, multiselect will be used for all tags.
+                                                      corresponding to the tags specified with the -a option.
+                                                      The filter type can be either 'single' or 'multiselect'.
+                                                      If not provided, multiselect will be used for all tags.
 
 Instead of passing parameters on the command line, you can set the
 following environment variables:
@@ -145,12 +145,6 @@ body+='], "resourceProps": [ {
       ] } ],
   "status": "active" }'
 
-echo "body: $body"
-exit 0
 URL="https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/builders/v1/configure"
 run_curl POST "$token" "$URL" $tmpout $tmperr "$body"
-
-echo "output"
-cat $tmpout
-echo "error"
-cat $tmperr
+echo "Project filter created."
