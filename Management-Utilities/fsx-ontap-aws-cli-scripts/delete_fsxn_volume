@@ -20,12 +20,13 @@
 ################################################################################
 usage () {
 cat 1>&2 <<EOF
-Usage: $(basename $0) -i volumeID [-r region] [-b] [-w]
+Usage: $(basename $0) -i volumeID [-r region] [-b] [-w] [-e endpoint_url]
 where
   volumeID: is the ID of the volume to delete.
   region: is the AWS region where the FSxN filesystem resides.
   -b: enable final backup. Otherwise it is skipped.
   -w: wait for the volume to be deleted before returning.
+  endpoint_url: Is the endpoint url to use when connecting to the AWS API.
 EOF
   exit 1
 }
@@ -44,7 +45,7 @@ waitForS3ApDelete () {
   # Wait for the s3ap to be deleted.
   i=0
   while [ $i -lt $MaxIterations ]; do
-    aws fsx describe-s3-access-point-attachments --names $s3ApName --output=json --region=$region > $tmpout 2>&1
+    aws fsx describe-s3-access-point-attachments $endpoint_url --names $s3ApName --output=json --region=$region > $tmpout 2>&1
     if [ $? -eq 0 ]; then
       status=$(jq -r .S3AccessPointAttachments[0].Lifecycle $tmpout 2> /dev/null)
       if [ "$status" != "DELETING" -a "$status" != "PENDING" ]; then
@@ -84,7 +85,7 @@ waitForVolumeDelete () {
   # Wait for the volume to be deleted.
   i=0
   while [ $i -lt $MaxIterations ]; do
-    aws fsx describe-volumes --volume-ids $volumeId --output=json --region=$region > $tmpout 2>&1
+    aws fsx describe-volumes $endpoint_url --volume-ids $volumeId --output=json --region=$region > $tmpout 2>&1
     if [ $? -eq 0 ]; then
       status=$(jq -r .Volumes[0].Lifecycle $tmpout 2> /dev/null)
       if [ "$status" != "DELETING" -a "$status" != "PENDING" ]; then
@@ -125,7 +126,7 @@ waitForCompletion=false
 quiet=false
 #
 # Process command line arguments.
-while getopts "qhwbi:r:" option; do
+while getopts "qhwbi:r:e:" option; do
   case $option in
     r) region="$OPTARG"
       ;;
@@ -136,6 +137,8 @@ while getopts "qhwbi:r:" option; do
     w) waitForCompletion=true
       ;;
     q) quiet=true
+      ;;
+    e) endpoint_url="--endpoint-url $OPTARG"
       ;;
     *) usage
       ;;
@@ -155,11 +158,11 @@ if [ -z "$volumeId" ]; then
   usage
 fi
 
-aws fsx describe-s3-access-point-attachments --filter "Name=volume-id,Values=$volumeId" --region=$region --output=json > $tmpout 2>&1
+aws fsx describe-s3-access-point-attachments $endpoint_url --filter "Name=volume-id,Values=$volumeId" --region=$region --output=json > $tmpout 2>&1
 if [ "$(jq -r '.S3AccessPointAttachments | length' $tmpout 2>&1)" != "0" ]; then
   while read s3apName; do
     [ $quiet != "true" ] && printf "S3 Access Point '$s3apName' is being deleted." 1>&2
-    aws fsx detach-and-delete-s3-access-point --name $s3apName --region=$region --output=json > $tmpout 2>&1
+    aws fsx detach-and-delete-s3-access-point $endpoint_url --name $s3apName --region=$region --output=json > $tmpout 2>&1
     if waitForS3ApDelete $s3apName $volumeId; then
       :
     else
@@ -169,7 +172,7 @@ if [ "$(jq -r '.S3AccessPointAttachments | length' $tmpout 2>&1)" != "0" ]; then
   done < <(jq -r '.S3AccessPointAttachments[] | .S3AccessPoint.ResourceARN | split("/")[1]' $tmpout 2>/dev/null)
 fi
 
-aws fsx delete-volume --volume-id $volumeId --region=$region --output=json --ontap-configuration '{"SkipFinalBackup": '$skipBackup'}' --output=json > $tmpout 2>&1
+aws fsx delete-volume $endpoint_url --volume-id $volumeId --region=$region --output=json --ontap-configuration '{"SkipFinalBackup": '$skipBackup'}' --output=json > $tmpout 2>&1
 
 if [ $? != "0" ]; then
   echo "Failed to delete volume." 1>&2

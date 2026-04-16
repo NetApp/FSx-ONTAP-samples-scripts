@@ -24,9 +24,9 @@ Usage: $(basename $0) -name fileSystemName -subnetID1 subnetID1 -subnetID2 subne
 where
   fileSystemName: Is the name you want to assign the file system.
   subnetID1: Is the subnet ID of the preferred subnet you want the file system to be accessible from.
-  subnetID2: Is the subnet ID of the standby subnet you want the file system to be accessible from. Only allowed for multi availability zone deployments.
+  subnetID2: Is the subnet ID of the standby subnet you want the file system to be accessible from. Only allowed for multi-availability zone deployments.
   security-group-id: Is the security ID that you want applied to the ENIs that are assigned to the file system.
-  route_table_ids: is a comma separated list of route table ids you want updated with the floating IPs from the file system. Only useful for multi available zone deployments.
+  route_table_ids: is a comma separated list of route table ids you want updated with the floating IPs from the file system. Only useful for multi-availability zone deployments.
   region: Is the AWS region where the FSxN file system will reside.
   availability: Specifies whether the HA pair should be spread across 'single' or 'multiple' availability zones. Valid settings are 'single' or 'multi' (default).
   size: Is size, in gigabytes, you want the file system to be. Minimum is 1024 per number of HA pairs. Default is 1024.
@@ -121,7 +121,7 @@ while [ ! -z "$1" ]; do
     -security-group-id|--security-group-id) securityGroupOption="--security-group-ids $2"
       shift
       ;;
-    -route-tables|--route-tables) routeTables='"RouteTableIds":"'$2'",'
+    -route-tables|--route-tables) routeTables='"RouteTableIds":["'$(echo "$2" | sed -e 's/,/","/g')'"],'
       shift
       ;;
     -type|--type)
