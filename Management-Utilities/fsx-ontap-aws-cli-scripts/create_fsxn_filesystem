@@ -20,12 +20,13 @@
 ################################################################################
 usage () {
 cat 1>&2 <<EOF
-Usage: $(basename $0) -name fileSystemName -subnetID1 subnetID1 -subnetID2 subnetID2 [-region region] [-type availability] [-size size] [-security-group-id securityGroupID] [-throughput throughput] [-numberPairs numberPairs] [-endpointIPrange CIDR] [-wait]
+Usage: $(basename $0) -name fileSystemName -subnetID1 subnetID1 -subnetID2 subnetID2 [-region region] [-type availability] [-size size] [-security-group-id securityGroupID] [-route-tables route_table_ids] [-throughput throughput] [-numberPairs numberPairs] [-endpointIPrange CIDR] [-wait] [-endpoint_url endpoint_url]
 where
   fileSystemName: Is the name you want to assign the file system.
   subnetID1: Is the subnet ID of the preferred subnet you want the file system to be accessible from.
   subnetID2: Is the subnet ID of the standby subnet you want the file system to be accessible from. Only allowed for multi availability zone deployments.
   security-group-id: Is the security ID that you want applied to the ENIs that are assigned to the file system.
+  route_table_ids: is a comma separated list of route table ids you want updated with the floating IPs from the file system. Only useful for multi available zone deployments.
   region: Is the AWS region where the FSxN file system will reside.
   availability: Specifies whether the HA pair should be spread across 'single' or 'multiple' availability zones. Valid settings are 'single' or 'multi' (default).
   size: Is size, in gigabytes, you want the file system to be. Minimum is 1024 per number of HA pairs. Default is 1024.
@@ -33,6 +34,7 @@ where
   numberPairs: Is the number of HA pairs you want the file system to have. Can only be greater than 1 with throupghput numbers of 1536, 3072, and 6144. Default is 1.
   CIDR: Is an address range that the system management, and data access, IPs will be allocated from. It is only allowed for multi availability zone deployments.
   -wait: Forces the script to wait until the file system is created before returning.
+  endpoint_url: allows you to specify an alternate AWS endpoint to use.
 EOF
   exit 1
 }
@@ -89,6 +91,7 @@ throughput=128
 region=$(aws configure get region)
 securityGroupOption=""
 endpointips=""
+routeTables=""
 availType=multi
 numPairs=1
 waitForCompletion=false
@@ -118,6 +121,9 @@ while [ ! -z "$1" ]; do
     -security-group-id|--security-group-id) securityGroupOption="--security-group-ids $2"
       shift
       ;;
+    -route-tables|--route-tables) routeTables='"RouteTableIds":"'$2'",'
+      shfit
+      ;;
     -type|--type)
       availType=$2
       if [ $availType != "single" -a $availType != "multi" ]; then
@@ -146,6 +152,10 @@ while [ ! -z "$1" ]; do
       ;;
     -wait|--wait)
       waitForCompletion=true
+      ;;
+    -endpoint_url)
+      endpoint_url="--endpoint-url $2"
+      shift
       ;;
     -h|-help|--help)
       usage
@@ -221,10 +231,11 @@ if [ $size -lt $minSize ]; then
   usage
 fi
 
-aws fsx create-file-system --output=json --file-system-type ONTAP --storage-capacity $size --subnet-ids $subnetID1 $subnetID2 --storage-type SSD --tags "Key=Name,Value=$fileSystemName" $securityGroupOption --ontap-configuration '{
+aws fsx create-file-system $endpoint_url --output=json --file-system-type ONTAP --storage-capacity $size --subnet-ids $subnetID1 $subnetID2 --storage-type SSD --tags "Key=Name,Value=$fileSystemName" $securityGroupOption --ontap-configuration '{
   "PreferredSubnetId": "'$subnetID1'",
   '$endpointips'
   "DeploymentType": "'$azType'",
+  '$routeTables'
   "HAPairs": '$numPairs',
   "ThroughputCapacityPerHAPair": '$throughput'}' --region=$region > $tmpout 2>&1
 
@@ -240,7 +251,7 @@ else
     if [ $waitForCompletion == "true" ]; then
       i=0
       while [ $i -lt $MaxIterations ]; do
-        aws fsx describe-file-systems --file-system-ids $fsid --output=json --region=$region > $tmpout 2>&1
+        aws fsx describe-file-systems $endpoint_url --file-system-ids $fsid --output=json --region=$region > $tmpout 2>&1
         if [ $? -eq 0 ]; then
           status=$(jq -r '.FileSystems[0].Lifecycle' $tmpout 2> /dev/null)
           if [ "$status" == "AVAILABLE" ]; then
