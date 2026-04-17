@@ -16,7 +16,7 @@ usage() {
   cat >&2 <<EOF
 This script is used to create a EDA CI/CD clone.
 
-Usage: $(basename $0) -t refresh_token -a blueXP_account_ID -p project_id -n clone_name -v volume_id [-s snapshot_name]
+Usage: $(basename $0) -t refresh_token -a blueXP_account_ID -p project_id -n clone_name [-s snapshot_name]
 
 Where: refresh_token - Is a refresh token used to obtain an access token needed
                        to run the Workload Factory APIs. You can obtain a refresh
@@ -26,10 +26,9 @@ Where: refresh_token - Is a refresh token used to obtain an access token needed
        project_id - is the ID of the EDA CI/CD project to list clones for. Run 'list_cicd_projects' to get a
                     list of projects you have access to.
        clone_name - is the the name you want to assign to the clone.
-       volume_id - is the ID of the volume you want to clone. Run 'list_volumes' to get a
-                   list of volumes for a specific file system.
        snapshot_name - is the name of the snapshot to use as the source for the clone.
                        If not specified, the clone will be created from the volume's current state.
+                       You can get a list of snapshots for the volume by running the 'list_snapshotst' script.
 
 Instead of passing parameters on the command line, you can set the
 following environment variables:
@@ -73,7 +72,6 @@ while getopts "ht:a:p:v:n:s:" opt; do
     a) BLUEXP_ACCOUNT_ID="$OPTARG" ;;
     p) PROJECT_ID="$OPTARG" ;;
     n) CLONE_NAME="$OPTARG" ;;
-    v) VOLUME_ID="$OPTARG" ;;
     s) SNAPSHOT_NAME='"snapshotName": "'$OPTARG'",' ;;
     *) usage ;;
   esac
@@ -90,9 +88,6 @@ required_options["PROJECT_ID"]='Error: The EDA CI/CD project ID is required to r
 You can get a list of projects you have access to by running the "list_cicd_projects" script
 found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
 required_options["CLONE_NAME"]='Error: The name of the clone to create is required to run this script.\n\n'
-required_options["VOLUME_ID"]='Error: The ID of the volume to clone is required to run this script.
-You can get a list of volumes for a specific file system by running the "list_volumes" script
-found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
 
 check_required_options
 #
@@ -109,6 +104,15 @@ if [ -z "$token" ]; then
   echo "Error: Failed to obtain an access token. Exiting." >&2
   exit 1
 fi
+
+URL="https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/builders/v1/projects"
+run_curl GET "$token" "$URL" $tmpout $tmperr
+VOLUME_ID=$(jq -r '.items[] | select(.projectId == "'$PROJECT_ID'") | .volumeId' $tmpout)
+if [ -z "$VOLUME_ID" ]; then
+  echo "Error: Failed to obtain the volume ID for the project. Exiting." >&2
+  exit 1
+fi
+
 body='{
   "cloneName": "'$CLONE_NAME'",
   '$SNAPSHOT_NAME'
