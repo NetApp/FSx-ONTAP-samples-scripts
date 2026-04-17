@@ -96,7 +96,7 @@ fi
 if [ "$raw" = true ]; then
   jq_query='.'
 else
-  jq_query='.items[] | "\(.projectName) \(.projectId) \(.fileSystemId) \(.volumeName) \(.numberOfClones)"'
+  jq_query='.items[] | "\(.projectName) \(.projectId) \(.fileSystemId) \(.volumeName) \(.volumeId) \(.numberOfClones)"'
 fi
 
 URL="https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/builders/v1/projects"
@@ -125,5 +125,5 @@ done
 if [ "$raw" = true ]; then
   cat $tmpout2
 else
-  sort -f $tmpout2 | column -t -N "Name,Project ID,File System,Volume Name,Number of Clones"
+  sort -f $tmpout2 | column -t -N "Name,Project ID,File System,Volume Name,Volume ID,Number of Clones"
 fi
