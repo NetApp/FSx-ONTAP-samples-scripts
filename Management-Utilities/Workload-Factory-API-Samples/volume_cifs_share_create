@@ -27,7 +27,7 @@ unless you specify a specific path with the -p option. Note that the path
 must exist. It will give it full control for everyone permissions to the
 share.
 
-If a share with the same name already exists, nothing will change.
+If a share with the same name already exists the script will display an error and exit.
 
 Usage: $(basename $0) -t refresh_token -a blueXP_account_ID -c credentials_ID -r aws_region -f filesystem_ID -v volume_ID -n cifs_share_name [-p share_path]
 
@@ -141,7 +141,7 @@ if [ "$alreadExist" -gt 0 ]; then
   exit 1
 fi
 junctionPath=$(jq -r '.junctionPath' $tmpout)
-if [ -z "$junctionPath" ]; then
+if [ -z "$junctionPath" -o "$junctionPath" == "null" ]; then
   echo "Error: The volume doesn't have a junction path." >&2
   exit 1
 fi

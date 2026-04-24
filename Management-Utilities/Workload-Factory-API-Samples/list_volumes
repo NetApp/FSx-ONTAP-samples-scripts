@@ -30,7 +30,7 @@ Where: refresh_token - Is a refresh token used to obtain an access token needed
                         credentials you have access to.
        aws_region - is the AWS region where the file system resides.
        filesystem_id - is the ID of the FSx file system to list SVMs for
-       j - If specified, the output will be in JSON format instead of a table.
+       -j - If specified, the output will be in JSON format instead of a table.
 
 Instead of passing parameters on the command line, you can set the
 following environment variables:

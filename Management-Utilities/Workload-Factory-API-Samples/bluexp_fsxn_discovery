@@ -6,7 +6,7 @@
 # The username field is optional and defaults to fsxadmin if not present.
 #
 ################################################################################
-# Display usage information then exists the script.
+# Display usage information then exits the script.
 ################################################################################
 usage () {
   cat 1>&2 <<EOF

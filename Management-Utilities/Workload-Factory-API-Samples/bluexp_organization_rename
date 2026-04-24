@@ -1,9 +1,9 @@
 #!/bin/bash
 #
-# This script renamees an BlueXP organization.
+# This script renamees a BlueXP organization.
 #
 ################################################################################
-# Display usage information then exists the script.
+# Display usage information then exits the script.
 ################################################################################
 usage () {
   cat 1>&2 <<EOF
@@ -63,7 +63,7 @@ required_options["REFRESH_TOKEN"]='Error: A BlueXP refresh token is required to 
 required_options["ORGANIZATION_ID"]='Error: You must provide the name of the organization you want to delete.
 You can get the list of organization you have access to by running the "list_bluexp_accts" script
 found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
-requiredd_options["NEW_NAME"]='Error: You must provide the new name of the organization.\n\n'
+required_options["NEW_NAME"]='Error: You must provide the new name of the organization.\n\n'
 
 check_required_options
 #

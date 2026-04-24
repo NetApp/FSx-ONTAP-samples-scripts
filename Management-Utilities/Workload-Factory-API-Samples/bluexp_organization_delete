@@ -3,7 +3,7 @@
 # This script deletes an organization from a BlueXP account.
 #
 ################################################################################
-# Display usage information then exists the script.
+# Display usage information then exits the script.
 ################################################################################
 usage () {
   cat 1>&2 <<EOF

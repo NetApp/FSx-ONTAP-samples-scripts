@@ -29,7 +29,7 @@ Where: refresh_token - Is a refresh token used to obtain an access token needed
                            'list_credentials' to get a list of credentials you have access to
        aws_region        - is the AWS region where the FSx file systems are located
        filesystem_id     - is the AWS file system ID of the FSx file system where the volume resides
-       volume_ID         - is the AWS volume ID of the volume where you want to create the cifs share.
+       volume_ID         - is the AWS volume ID of the volume where you want to delete the cifs share from.
        cifs_share_name   - is the name of the share to delete.
 
 Instead of passing parameters on the command line, you can set the
@@ -87,7 +87,7 @@ required_options["REFRESH_TOKEN"]='Error: A BlueXP refresh token is required to 
 required_options["BLUEXP_ACCOUNT_ID"]='Error: A BlueXP account ID is required to run this script.
 You can get the list of accounts you have access to by running the "list_bluexp_accts" script
 found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
-required_options["CREDENTIALS_ID"]='Error: A Worload Factory Credential ID is required to run this script.
+required_options["CREDENTIALS_ID"]='Error: A Workload Factory Credential ID is required to run this script.
 You can get a list of credentials by running the "list_credentials" script
 found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
 required_options["AWS_REGION"]='Error: The AWS region where the file system is located is required.\n\n'
@@ -117,7 +117,7 @@ fi
 run_curl GET "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/fsx/v2/credentials/${CREDENTIALS_ID}/regions/${AWS_REGION}/file-systems/${FILESYSTEM_ID}/volumes/${VOLUME_ID}?include=cifsShares" $tmpout $tmperr
 cifsShares=$(jq -r '.cifsShares' $tmpout)
 #
-# Add the new share to the existing ones.
+# Remove the specified share from the existing ones.
 cifsShares=$(echo "$cifsShares" | jq -r 'map(select(.name != "'$CIFS_SHARE_NAME'"))')
 cifsShares="{\"cifsShares\": $cifsShares}"
 run_curl PATCH "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/fsx/v2/credentials/${CREDENTIALS_ID}/regions/${AWS_REGION}/file-systems/${FILESYSTEM_ID}/volumes/${VOLUME_ID}" $tmpout $tmperr "$cifsShares"
