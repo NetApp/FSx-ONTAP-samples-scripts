@@ -42,6 +42,7 @@ If you do create a new script, please consider contributing it back to this repo
 | [bluexp_fsxn_discovery](bluexp_fsxn_discovery) | This discovers FSx for ONTAP file systems for the giving bluexp account and workspace. |
 | [bluexp_organization_add](bluexp_organization_add) | This adds a new BlueXP organization (a.k.a. account). |
 | [bluexp_organization_delete](bluexp_organization_delete) | This deletes a BlueXP organization (a.k.a. account). |
+| [bluexp_organization_rename](bluexp_organization_rename) | This renames a BlueXP organization (a.k.a. account). |
 | [credentials_delete](credentials_delete) | This deletes a Workload Factory credential. |
 | [fsxn_credentials_set](fsxn_credentials_set) | This sets the credentials for a specified FSx for ONTAP file system. |
 | [link_associate](link_associate) | This associates a Workload Factory Link with a specified FSx for ONTAP file system. |
@@ -58,6 +59,7 @@ If you do create a new script, please consider contributing it back to this repo
 | [list_snapmirrors](list_snapmirrors) | This lists all the SnapMirror relationships that are associated with the specified file system. |
 | [list_svms](list_svms) | This lists all the SVMs that are associated with the specified file system. |
 | [list_volumes](list_volumes) | This lists all the volumes that are associated with the specified file system. |
+| [list_volume_cifs_shares](list_volume_cifs_shares) | This lists cifs shares associated with a volume in the specified file system. |
 | [show_fsxn_credentials](show_fsxn_credentials) | This shows the credentials that Workload Factory has stored for the specified FSx for ONTAP file system. |
 | [snapmirror_break](snapmirror_break) | This breaks the SnapMirror relationship for the specified relationship. |
 | [snapmirror_create](snapmirror_create) | This creates a SnapMirror relationship between the specified source volume and destination SVM. |
@@ -67,6 +69,8 @@ If you do create a new script, please consider contributing it back to this repo
 | [snapmirror_update](snapmirror_update) | This updates the SnapMirror relationship for the specified relationship. |
 | [snapshot_create](snapshot_create) | This creates a snapshot of the specified volume. |
 | [volume_clone](volume_clone) | This clones the specified volume. |
+| [volume_cifs_share_create](volume_cifs_share_create) | This will create a CIFS share in a volume. |
+| [volume_cifs_share_delete](volume_cifs_share_delete) | This will delete a CIFS share from a volume. |
 | [volume_delete](volume_delete) | This deletes the specified volume. |
 | [wf_utils](wf_utils) | This file contains common functions used by all the scripts. It includes the `get_token()` function that retrieves an access token from the Workload Factory API. |
 
