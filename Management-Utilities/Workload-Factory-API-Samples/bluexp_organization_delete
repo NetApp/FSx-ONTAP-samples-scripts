@@ -3,7 +3,7 @@
 # This script deletes an organization from a BlueXP account.
 #
 ################################################################################
-# Display usage information then exists the script.
+# Display usage information then exits the script.
 ################################################################################
 usage () {
   cat 1>&2 <<EOF
@@ -79,7 +79,6 @@ if [ -z "$token" ]; then
   exit 1
 fi
 #
-# Add the organization to the BlueXP workspace.
 echo -n "Deleting organization ${ORGANIZATION_ID}..."
 run_curl "DELETE" "$token" "https://api.bluexp.netapp.com/v1/management/organizations/$ORGANIZATION_ID" $tmpout $tmperr
 echo "Done."

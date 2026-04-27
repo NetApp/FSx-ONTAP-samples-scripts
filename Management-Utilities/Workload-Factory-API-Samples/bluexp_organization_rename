@@ -1,18 +1,19 @@
 #!/bin/bash
 #
-# This script adds an organization to a BlueXP account.
+# This script renamees a BlueXP organization.
 #
 ################################################################################
 # Display usage information then exits the script.
 ################################################################################
 usage () {
   cat 1>&2 <<EOF
-Usage: $(basename $0) -t REFRESH_TOKEN -o ORGANIZATION_NAME
+Usage: $(basename $0) -t REFRESH_TOKEN -o ORGANIZATION_ID -n NEW_NAME
 
 Where: REFRESH_TOKEN - Is a refresh token used to obtain an access token needed
                        to run the Workload Factory APIs. You can obtain a refresh
                        token by going to https://services.cloud.netapp.com/refresh-token
-       ORGANIZATION_NAME - Is the name of the organization to create.
+       ORGANIZATION_ID - Is the Id of the organization to delete.
+       NEW_NAME - The new name of the organization.
 
 Instead of passing parameters on the command line, you can set the following
 environment variables:
@@ -25,8 +26,8 @@ EOF
 ################################################################################
 # Main logic starts here.
 ################################################################################
-tmpout=$(mktemp /tmp/add_organization_to_bluexp-out.XXXXXX)
-tmperr=$(mktemp /tmp/add_organization_to_bluexp-err.XXXXXX)
+tmpout=$(mktemp /tmp/delete_organization_to_bluexp-out.XXXXXX)
+tmperr=$(mktemp /tmp/delete_organization_to_bluexp-err.XXXXXX)
 trap 'rm -f $tmpout $tmperr' exit
 #
 # Source the wf_utils file.
@@ -46,10 +47,11 @@ fi
 . "$wf_utils"
 #
 # Parse the command line options.
-while getopts "ht:o:" opt; do
+while getopts "ht:o:n:" opt; do
   case ${opt} in
     t) REFRESH_TOKEN=$OPTARG ;;
-    o) ORGANIZATION_NAME=$OPTARG ;;
+    o) ORGANIZATION_ID=$OPTARG ;;
+    n) NEW_NAME=$OPTARG ;;
     *) usage ;;
   esac
 done
@@ -58,7 +60,10 @@ done
 declare -A required_options
 required_options["REFRESH_TOKEN"]='Error: A BlueXP refresh token is required to run this script. It can be obtained from this web page:
   https://services.cloud.netapp.com/refresh-token\n\n'
-required_options["ORGANIZATION_NAME"]='Error: You must provide the name of the organization you want to create.\n\n'
+required_options["ORGANIZATION_ID"]='Error: You must provide the name of the organization you want to delete.
+You can get the list of organization you have access to by running the "list_bluexp_accts" script
+found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
+required_options["NEW_NAME"]='Error: You must provide the new name of the organization.\n\n'
 
 check_required_options
 #
@@ -77,7 +82,10 @@ if [ -z "$token" ]; then
   exit 1
 fi
 #
-# Add the organization to the BlueXP workspace.
-echo -n "Creating organization ${ORGANIZATION_NAME}..."
-run_curl "POST" "$token" "https://api.bluexp.netapp.com/tenancy/account/$ORGANIZATION_NAME" $tmpout $tmperr '{"name": "'$ORGANIZATION_NAME'", "resourceType": "organization", "type": "application/vnd.netapp.bxp.resource", "version": "1.0"}' 'application/json'
-echo "Done."
+# Get the type and version.
+run_curl "GET" "$token" "https://api.bluexp.netapp.com/v1/management/organizations/$ORGANIZATION_ID" $tmpout $tmperr
+org_type=$(jq -r '.type' $tmpout)
+org_version=$(jq -r '.version' $tmpout)
+#
+# Set the new name of the organization.
+run_curl "PATCH" "$token" "https://api.bluexp.netapp.com/v1/management/organizations/$ORGANIZATION_ID" $tmpout $tmperr '{"name":"'$NEW_NAME'","type":"'$org_type'","version":"'$org_version'"}' 

@@ -18,7 +18,7 @@ usage() {
 This script will list all volumes assoicated with the specified FSx for ONTAP
 file system.
 
-Usage: $(basename $0) -t refresh_token -a blueXP_account_ID -c credentials_id -r aws_region -f filesystem_id
+Usage: $(basename $0) -t refresh_token -a blueXP_account_ID -c credentials_id -r aws_region -f filesystem_id [-j]
 
 Where: refresh_token - Is a refresh token used to obtain an access token needed
                        to run the Workload Factory APIs. You can obtain a refresh
@@ -30,6 +30,7 @@ Where: refresh_token - Is a refresh token used to obtain an access token needed
                         credentials you have access to.
        aws_region - is the AWS region where the file system resides.
        filesystem_id - is the ID of the FSx file system to list SVMs for
+       -j - If specified, the output will be in JSON format instead of a table.
 
 Instead of passing parameters on the command line, you can set the
 following environment variables:
@@ -67,13 +68,15 @@ fi
 . "$wf_utils"
 #
 # Process command line arguments.
-while getopts "ht:a:c:r:f:" opt; do
+JSON_OUTPUT=false
+while getopts "ht:a:c:r:f:j" opt; do
   case $opt in
     t) REFRESH_TOKEN="$OPTARG" ;;
     a) BLUEXP_ACCOUNT_ID="$OPTARG" ;;
     c) CREDENTIALS_ID="$OPTARG" ;;
     r) AWS_REGION="$OPTARG" ;;
     f) FILESYSTEM_ID="$OPTARG" ;;
+    j) JSON_OUTPUT=true ;;
     *) usage ;;
   esac
 done
@@ -85,7 +88,7 @@ required_options["REFRESH_TOKEN"]='Error: A BlueXP refresh tokon is required to 
 required_options["BLUEXP_ACCOUNT_ID"]='Error: A BlueXP account ID is required to run this script.
 You can get the list of accounts you have access to by running the "list_bluexp_accts" script
 found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
-required_options["CREDENTIALS_ID"]='Error: The ID of the credentials to delete is required.
+required_options["CREDENTIALS_ID"]='Error: The Workload Factory credentials ID used to list resources is required to run this script.
 You can get a list of credentials by running the "list_credentials" script
 found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
 required_options["AWS_REGION"]='Error: The AWS region where the file system is located is required.\n\n'
@@ -107,7 +110,11 @@ if [ -z "$token" ]; then
   exit 1
 fi
 
-jq_query='.items[] | "\(.name) \(.id) \(.svmId) \(.lifecycle)"'
+if [ "$JSON_OUTPUT" == true ]; then
+  jq_query='.'
+else
+  jq_query='.items[] | "\(.name) \(.id) \(.svmId) \(.lifecycle)"'
+fi
 
 run_curl GET "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/fsx/v2/credentials/${CREDENTIALS_ID}/regions/${AWS_REGION}/file-systems/${FILESYSTEM_ID}/volumes" $tmpout $tmperr
 if jq -r "$jq_query" $tmpout  > $tmpout2 2> $tmperr; then
@@ -131,4 +138,9 @@ while [ "$nextToken" != "null" ]; do
   fi
   nextToken=$(jq -r '.nextToken' $tmpout)
 done
-sort -f $tmpout2 | column -t -N "Name,Volume ID,SVM ID,Status"
+
+if [ "$JSON_OUTPUT" == true ]; then
+  cat $tmpout2
+else
+  sort -f $tmpout2 | column -t -N "Name,Volume ID,SVM ID,Status"
+fi

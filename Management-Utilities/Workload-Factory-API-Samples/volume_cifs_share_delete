@@ -1,40 +1,36 @@
 #!/bin/bash
 #
 ################################################################################
-# This script is used to set the credentials for an FSxN file system.
+# This script is used to delete a cifs share from a volume in a FSx for
+# ONTAP file system.
 #
 # It is dependent on the 'wf_utils' file that is included in this repo. That
 # file contains the 'get_token' function that is used to obtain a valid
 # access token that is needed to run the Workload Factory APIs. The file needs
 # to either be in the command search path or in the current directory.
 ################################################################################
-#
+
 ################################################################################
-# This function displays the usage of this script and exits.
+# This function just prints the usage of this script and exits the program.
 ################################################################################
 usage() {
   cat >&2 <<EOF
+This script is used to delete a cifs share from a volume in a FSx for
+ONTAP file system.
 
-This script is used to set the credentials for an FSxN file system.
-
-usage: $(basename $0) -t refresh_token -a blueXP_account_ID -c credentials_ID -r aws_region -f filesystem_ID -u user_ID -p password -s secret_arn
+Usage: $(basename $0) -t refresh_token -a blueXP_account_ID -c credentials_ID -r aws_region -f filesystem_ID -v volume_ID -n cifs_share_name
 
 Where: refresh_token - Is a refresh token used to obtain an access token needed
                        to run the Workload Factory APIs. You can obtain a refresh
                        token by going to https://services.cloud.netapp.com/refresh-token
-       blueXP_account_ID - Is the BlueXP account ID. Run 'list_bluexp_accts' to get a
-                           list of accounts you have access to.
-       credentials_ID - Is the Workload Factory credentials ID for the AWS account.
-                        Run 'list_credentials' to get a list of Workload Factory
-                        credentials you have access to.
-       aws_region - Is the AWS region where the file system is located.
-       filesystem_ID - Is the ID of the FSxN file system.
-       user_ID* - Is the user ID to set for the FSxN file system.
-       password* - Is the password to set for the FSxN file system.
-       secret_arn* - Is the ARN of the Secrets Manager secret that contains the
-                    credentials for the FSxN file system.
-
-*NOTE: Only user_id and password OR secret_arn can be be provided at the same time.
+       blueXP_account_ID - is the BlueXP account ID. Run 'list_bluexp_accts' to get a
+                           list of accounts you have access to
+       credentials_ID    - is the Workload Factory credentials ID for the AWS account. Run
+                           'list_credentials' to get a list of credentials you have access to
+       aws_region        - is the AWS region where the FSx file systems are located
+       filesystem_id     - is the AWS file system ID of the FSx file system where the volume resides
+       volume_ID         - is the AWS volume ID of the volume where you want to delete the cifs share from.
+       cifs_share_name   - is the name of the share to delete.
 
 Instead of passing parameters on the command line, you can set the
 following environment variables:
@@ -43,9 +39,6 @@ following environment variables:
     export BLUEXP_ACCOUNT_ID=<blueXP_account_ID>
     export CREDENTIALS_ID=<credentials_ID>
     export AWS_REGION=<aws_region>
-    export FILESYSTEM_ID=<filesystem_ID>
-    export USER_ID=<user_ID>
-    export PASSWORD=<password>
 EOF
   exit 1
 }
@@ -53,9 +46,8 @@ EOF
 ################################################################################
 # Main logic starts here.
 ################################################################################
-
-tmpout=$(mktemp /tmp/fsxn_credentials_set-out.XXXXXX)
-tmperr=$(mktemp /tmp/fsxn_credentials_set-err.XXXXXX)
+tmpout=$(mktemp /tmp/create_share-out.XXXXXX)
+tmperr=$(mktemp /tmp/create_share-err.XXXXXX)
 trap 'rm -f $tmpout $tmperr' exit
 #
 # Source the wf_utils file.
@@ -75,60 +67,57 @@ fi
 . "$wf_utils"
 #
 # Process command line options.
-while getopts "ht:a:c:r:f:u:p:s:" opt; do
+while getopts "ht:a:c:r:f:v:n:" opt; do
   case $opt in
     t) REFRESH_TOKEN="$OPTARG" ;;
     a) BLUEXP_ACCOUNT_ID="$OPTARG" ;;
     c) CREDENTIALS_ID="$OPTARG" ;;
     r) AWS_REGION="$OPTARG" ;;
     f) FILESYSTEM_ID="$OPTARG" ;;
-    u) USER_ID="$OPTARG" ;;
-    p) PASSWORD="$OPTARG" ;;
-    s) SECRET_ARN="$OPTARG" ;;
+    v) VOLUME_ID="$OPTARG" ;;
+    n) CIFS_SHARE_NAME="$OPTARG" ;;
     *) usage ;;
   esac
 done
 #
 # Declare an array of required options and the error message to display if they are not set.
 declare -A required_options
-required_options["REFRESH_TOKEN"]='Error: A BlueXP refresh tokon is required to run this script. It can be obtain from this web page:
+required_options["REFRESH_TOKEN"]='Error: A BlueXP refresh token is required to run this script. It can be obtain from this web page:
   https://services.cloud.netapp.com/refresh-token\n\n'
 required_options["BLUEXP_ACCOUNT_ID"]='Error: A BlueXP account ID is required to run this script.
 You can get the list of accounts you have access to by running the "list_bluexp_accts" script
 found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
-required_options["CREDENTIALS_ID"]='Error: The Workload Factory credentials ID used to manage resources is required to run this script.
+required_options["CREDENTIALS_ID"]='Error: A Workload Factory Credential ID is required to run this script.
 You can get a list of credentials by running the "list_credentials" script
 found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
 required_options["AWS_REGION"]='Error: The AWS region where the file system is located is required.\n\n'
 required_options["FILESYSTEM_ID"]='Error: The ID of the FSxN file system is required.\n\n'
+required_options["VOLUME_ID"]='Error: An AWS Volume ID is required to run this script.
+You can get the list of file systems you have access to by running the "list_volumes" script
+found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
+required_options["CIFS_SHARE_NAME"]='Error: The name of the cifs share is required.\n\n'
 
 check_required_options
-
-if [ -n "$USER_ID" -a -n "$PASSWORD" -a -n "$SECRET_ARN" ]; then
-  echo "Error: You can only provide either user_id and password OR secret_arn at the same time." >&2
-  usage
-elif [ -z "$USER_ID" -a -z "$PASSWORD" -a -z "$SECRET_ARN" ]; then
-  echo "Error: You must provide either user_id and password OR secret_arn." >&2
-  usage
-fi
 #
-# Check that the required commands are available.
+# Check if the required commands are available.
 for cmd in jq curl; do
   if ! command -v $cmd &> /dev/null; then
     echo "Error: The required command '$cmd' was not found. Please install it." >&2
     exit 1
   fi
 done
-#
-# Get the token to use for the API call.
+
 token=$(get_token)
 if [ -z "$token" ]; then
   echo "Error: Failed to obtain an access token. Exiting." >&2
   exit 1
 fi
-
-if [ -n "$SECRET_ARN" ]; then
-  run_curl POST "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/fsx/v2/credentials/${CREDENTIALS_ID}/regions/${AWS_REGION}/file-systems/${FILESYSTEM_ID}/ontap-credentials" "$tmpout" "$tmperr" '{"secret":"'${SECRET_ARN}'"}'
-else
-  run_curl POST "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/fsx/v2/credentials/${CREDENTIALS_ID}/regions/${AWS_REGION}/file-systems/${FILESYSTEM_ID}/ontap-credentials" "$tmpout" "$tmperr" '{"user":"'${USER_ID}'","password":"'${PASSWORD}'","resetFsxAdminPassword":false}'
-fi
+#
+# Get the existing shares and the junction path
+run_curl GET "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/fsx/v2/credentials/${CREDENTIALS_ID}/regions/${AWS_REGION}/file-systems/${FILESYSTEM_ID}/volumes/${VOLUME_ID}?include=cifsShares" $tmpout $tmperr
+cifsShares=$(jq -r '.cifsShares' $tmpout)
+#
+# Remove the specified share from the existing ones.
+cifsShares=$(echo "$cifsShares" | jq -r 'map(select(.name != "'$CIFS_SHARE_NAME'"))')
+cifsShares="{\"cifsShares\": $cifsShares}"
+run_curl PATCH "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/fsx/v2/credentials/${CREDENTIALS_ID}/regions/${AWS_REGION}/file-systems/${FILESYSTEM_ID}/volumes/${VOLUME_ID}" $tmpout $tmperr "$cifsShares"

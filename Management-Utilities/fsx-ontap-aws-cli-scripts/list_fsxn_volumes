@@ -33,7 +33,7 @@
 ################################################################################
 usage () {
   cat 1>&2 <<EOF
-Usage $(basename $0) [-r region] [-a] [-o] [-f fileSystemName] [-i fileSystemId] [-n] [-s svmID] [-x] [volume_pattern]
+Usage $(basename $0) [-r region] [-a] [-o] [-f fileSystemName] [-i fileSystemId] [-n] [-s svmID] [-x] [volume_pattern] [-e endpoint_url]
   Where: volume_pattern - Only volumes that match the egrep pattern will be included.
          -r region allows you to specify the region you want the list from.
          -a means all regions.
@@ -43,6 +43,7 @@ Usage $(basename $0) [-r region] [-a] [-o] [-f fileSystemName] [-i fileSystemId]
          -s svmID - Only show volumes that are under the specified SVM ID.
          -o means to exclude svm root volumes. Only works in conjunction with the -s option.
          -x means to provide capacity information. Not compatible with the -n option.
+         -e endpoint_url: Is the endpoint url to use when connecting to the AWS API.
 EOF
   exit 1
 }
@@ -77,7 +78,7 @@ fsid=""
 fileSystemName=""
 extraInfo=false
 volumePattern="*"
-while getopts "hr:af:i:nos:x" option; do
+while getopts "hr:af:i:nos:xe:" option; do
   case "$option" in
     r) region="$OPTARG"
       ;;
@@ -95,6 +96,8 @@ while getopts "hr:af:i:nos:x" option; do
     s) svmID="$OPTARG"
       ;;
     x) extraInfo=true
+      ;;
+    e) endpoint_url="--endpoint-url $OPTARG"
       ;;
     *) usage
       ;;
@@ -116,7 +119,7 @@ if [ "$extraInfo" != "false" -a "$includeFsName" != "false" ]; then
 fi
 
 if [ ! -z "$fileSystemName" ]; then
-  fsid=$(aws fsx describe-file-systems --region $region --output=json 2> /dev/null | jq -r ".FileSystems[] | if((.Tags[] | select(.Key == \"Name\") .Value) == \"${fileSystemName}\") then .FileSystemId else empty end" 2> /dev/null)
+  fsid=$(aws fsx describe-file-systems $endpoint_url --region $region --output=json 2> /dev/null | jq -r ".FileSystems[] | if((.Tags[] | select(.Key == \"Name\") .Value) == \"${fileSystemName}\") then .FileSystemId else empty end" 2> /dev/null)
   if [ -z "$fsid" ]; then
     echo "Error, failed to find the file system with the file system name of '$fileSystemName'." 1>&2
     exit 1
@@ -125,7 +128,7 @@ if [ ! -z "$fileSystemName" ]; then
 fi
 
 if [ ! -z "$fsid" -a -z "$fileSystemName" ]; then
-  fileSystemName=$(aws fsx describe-file-systems --region $region --output=json 2> /dev/null | jq -r ".FileSystems[] | if(.FileSystemId == \"$fsid\") then (.Tags[] | select(.Key == \"Name\") .Value) else empty end" 2> /dev/null)
+  fileSystemName=$(aws fsx describe-file-systems $endpoint_url --region $region --output=json 2> /dev/null | jq -r ".FileSystems[] | if(.FileSystemId == \"$fsid\") then (.Tags[] | select(.Key == \"Name\") .Value) else empty end" 2> /dev/null)
   filter='--filters [{"Name":"file-system-id","Values":["'$fsid'"]}]'
 fi
 
@@ -160,67 +163,76 @@ for region in ${regions[*]}; do
   if [ ! -z "$(getent hosts fsx.$region.amazonaws.com)" ]; then
     if [ -z "$svmID" ]; then
       if [ "$excludeRoot" != "true" ]; then
-        aws fsx describe-volumes $filter --region=$region --output=json | jq -r '.Volumes[] | "'$jqFields'"' | egrep ",$volumePattern," | sort > $volumeList
+        aws fsx describe-volumes $filter $endpoint_url --region=$region --output=json | jq -r '.Volumes[] | "'$jqFields'"' | egrep ",$volumePattern," | sort > $volumeList
       else
-        aws fsx describe-volumes $filter --region=$region --output=json | jq -r '.Volumes[] | if(.OntapConfiguration.StorageVirtualMachineRoot | not) then "'$jqFields'" else empty end' | egrep ",$volumePattern," | sort > $volumeList
+        aws fsx describe-volumes $filter $endpoint_url --region=$region --output=json | jq -r '.Volumes[] | if(.OntapConfiguration.StorageVirtualMachineRoot | not) then "'$jqFields'" else empty end' | egrep ",$volumePattern," | sort > $volumeList
       fi
     else
       if [ "$excludeRoot" != "true" ]; then
-        aws fsx describe-volumes $filter --region=$region --output=json | jq -r '.Volumes[] | if(.OntapConfiguration.StorageVirtualMachineId == "'$svmID'") then "'$jqFields'" else empty end' | egrep ",$volumePattern," | sort > $volumeList
+        aws fsx describe-volumes $filter $endpoint_url --region=$region --output=json | jq -r '.Volumes[] | if(.OntapConfiguration.StorageVirtualMachineId == "'$svmID'") then "'$jqFields'" else empty end' | egrep ",$volumePattern," | sort > $volumeList
       else
-        aws fsx describe-volumes $filter --region=$region --output=json | jq -r '.Volumes[] | if(.OntapConfiguration.StorageVirtualMachineId == "'$svmID'" and (.OntapConfiguration.StorageVirtualMachineRoot | not)) then "'$jqFields'" else empty end' | egrep ",$volumePattern," | sort > $volumeList
+        aws fsx describe-volumes $filter $endpoint_url --region=$region --output=json | jq -r '.Volumes[] | if(.OntapConfiguration.StorageVirtualMachineId == "'$svmID'" and (.OntapConfiguration.StorageVirtualMachineRoot | not)) then "'$jqFields'" else empty end' | egrep ",$volumePattern," | sort > $volumeList
       fi
     fi
   
     if [ $includeFsName == "true" ]; then
-      aws fsx describe-file-systems --region=$region --output=json | jq -r '.FileSystems[] | .FileSystemId + "," + (.Tags[] | select(.Key == "Name") .Value)' > $fsNames
-      aws fsx describe-storage-virtual-machines --region=$region --output=json | jq -r '.StorageVirtualMachines[] | "\(.StorageVirtualMachineId),\(.Name)"' > $svmNames
+      aws fsx describe-file-systems $endpoint_url --region=$region --output=json | jq -r '.FileSystems[] | .FileSystemId + "," + (.Tags[] | select(.Key == "Name") .Value)' > $fsNames
+      aws fsx describe-storage-virtual-machines $endpoint_url --region=$region --output=json | jq -r '.StorageVirtualMachines[] | "\(.StorageVirtualMachineId),\(.Name)"' > $svmNames
       awk -F, -v region=$region 'BEGIN {first=1; maxFsNameLen=0; maxSvmNameLen=0; while(getline < "'$fsNames'") {fss[$1]=$2; if(length($2) > maxFsNameLen) {maxFsNameLen=length($2)}}; maxFsNameLen +=2; while(getline < "'$svmNames'") {svm[$1]=$2; if(length($2) > maxSvmNameLen) {maxSvmNameLen=length($2)}}; maxSvmNameLen +=2; formatStr="%12s %21s%-"maxFsNameLen"s %21s-%-"maxSvmNameLen"s %24s %10s %s\n"}; {if(first) {printf "\n"; printf formatStr, "Region", "FileSystem ID", "(Name)", "SVM", "(Name)", "Volume ID", "State", "Volume Name"; first=0}; fsName="("fss[$1]")"; svmName="("svm[$6]")"; printf formatStr, region, $1, fsName, $6, svmName, $3, $4, $2}' < $volumeList
     else
       if [ $extraInfo == "true" ]; then
-        volIds=$(awk -F, '{print $3}' < $volumeList)
-        if [ ! -z "$volIds" ]; then
-          echo "[" > $cloudwatchQueryFile
-          first=true
-          for volId in $volIds; do
-            volId2=$(echo $volId | sed -e 's/-/_/g')
-            if [ "$first" = "true" ]; then
-              first=false
-            else
-              echo "," >> $cloudwatchQueryFile
-            fi
-            cat <<EOF >> $cloudwatchQueryFile
-    {
-      "Id": "m$volId2",
-      "MetricStat": {
-        "Metric": {
-          "Namespace": "AWS/FSx",
-          "MetricName": "StorageUsed",
-          "Dimensions": [
-          {
-            "Name": "VolumeId",
-            "Value": "$volId"
+        if [ $(wc -l $volumeList | awk '{print $1}') -gt 500 ]; then
+          echo "Sorry, too many volumes to get CloudWatch statistics for."
+        else
+          volIds=$(awk -F, '{print $3}' < $volumeList)
+          if [ ! -z "$volIds" ]; then
+            echo "[" > $cloudwatchQueryFile
+            first=true
+            for volId in $volIds; do
+              volId2=$(echo $volId | sed -e 's/-/_/g')
+              if [ "$first" = "true" ]; then
+                first=false
+              else
+                echo "," >> $cloudwatchQueryFile
+              fi
+              cat <<EOF >> $cloudwatchQueryFile
+      {
+        "Id": "m$volId2",
+        "MetricStat": {
+          "Metric": {
+            "Namespace": "AWS/FSx",
+            "MetricName": "StorageUsed",
+            "Dimensions": [
+            {
+              "Name": "VolumeId",
+              "Value": "$volId"
+            },
+            {
+              "Name": "FileSystemId",
+              "Value": "$(awk -F, -v volId=$volId '$3 == volId {print $1}' < $volumeList)"
+            }]
           },
-          {
-            "Name": "FileSystemId",
-            "Value": "$(awk -F, -v volId=$volId '$3 == volId {print $1}' < $volumeList)"
-          }]
-        },
-        "Period": 300,
-        "Stat": "Average"
+          "Period": 300,
+          "Stat": "Average"
+        }
       }
-    }
 EOF
-          done
-          echo "]" >> $cloudwatchQueryFile
-          aws cloudwatch get-metric-data --region $region --metric-data-queries file://$cloudwatchQueryFile --start-time=$(date -u -d '5 minutes ago' +"%Y-%m-%dT%H:%M:%SZ") --end-time=$(date -u +"%Y-%m-%dT%H:%M:%SZ") --output=json > $cloudwatchOutputFile 2>&1
-          for volId in $volIds; do
-            volId2=$(echo $volId | sed -e 's/-/_/g')
-            capacity=$(jq -r '.MetricDataResults[] | select(.Id == "m'$volId2'") | .Values[0] // 0' < $cloudwatchOutputFile)
-            echo "$volId,$capacity" >> $volCapacityFile
-          done
-          awk -F, -v region=$region -v volCapacityFile=$volCapacityFile 'BEGIN {first=1; formatStr="%12s %21s %21s %24s %10s %16s %15s %s\n"; while (getline < volCapacityFile) {volidCapacities[$1]=sprintf("%10.0f",$2/1024/1024)}}; {if(first) {printf "\n"; printf formatStr, "Region", "FileSystem ID", "SVM", "Volume ID", "State", "Volume Size (MB)", "Used (MB)", "Volume Name"; first=0}; printf formatStr, region, $1, $6, $3, $4, $5, volidCapacities[$3], $2}' < $volumeList
-        fi
+            done
+            echo "]" >> $cloudwatchQueryFile
+            aws cloudwatch get-metric-data --region $region --metric-data-queries file://$cloudwatchQueryFile --start-time=$(date -u -d '5 minutes ago' +"%Y-%m-%dT%H:%M:%SZ") --end-time=$(date -u +"%Y-%m-%dT%H:%M:%SZ") --output=json > $cloudwatchOutputFile
+            if [ $? -ne 0 ]; then
+              cat $cloudwatchOutputFile 1>&2
+              echo "Error, failed to get CloudWatch metrics." 1>&2
+              exit 1
+            fi
+            for volId in $volIds; do
+              volId2=$(echo $volId | sed -e 's/-/_/g')
+              capacity=$(jq -r '.MetricDataResults[] | select(.Id == "m'$volId2'") | .Values[0] // 0' < $cloudwatchOutputFile)
+              echo "$volId,$capacity" >> $volCapacityFile
+            done
+            awk -F, -v region=$region -v volCapacityFile=$volCapacityFile 'BEGIN {first=1; formatStr="%12s %21s %21s %24s %10s %16s %15s %s\n"; while (getline < volCapacityFile) {volidCapacities[$1]=sprintf("%10.0f",$2/1024/1024)}}; {if(first) {printf "\n"; printf formatStr, "Region", "FileSystem ID", "SVM", "Volume ID", "State", "Volume Size (MB)", "Used (MB)", "Volume Name"; first=0}; printf formatStr, region, $1, $6, $3, $4, $5, volidCapacities[$3], $2}' < $volumeList
+          fi
+	fi
       else
         awk -F, -v region=$region 'BEGIN {first=1; formatStr="%12s %21s %21s %24s %10s %s\n"}; {if(first) {printf "\n"; printf formatStr, "Region", "FileSystem ID", "SVM", "Volume ID", "State", "Volume Name"; first=0}; printf formatStr, region, $1, $6, $3, $4, $2}' < $volumeList
       fi
