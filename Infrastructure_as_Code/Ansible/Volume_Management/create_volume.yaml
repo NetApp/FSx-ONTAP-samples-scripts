@@ -25,21 +25,6 @@
         - fsxn_hostname
     #
     # Give default values to optional variables if they are not defined
-    - name: Set security_style to unix if not provided.
-      set_fact:
-        security_style: "unix"
-      when: security_style is not defined
-    
-    - name: Set aggr to 'aggr1' if not provided.
-      set_fact:
-        aggr: "aggr1"
-      when: aggr is not defined
-    
-    - name: Set volume_type to "rw" if not provided.
-      set_fact:
-        volume_type: "rw"
-      when: volume_type is not defined
-    
     - name: Set use_lambda to true if lambda_function_name is provided.
       set_fact:
         use_lambda: true
@@ -50,11 +35,6 @@
         aws_profile: "default"
       when: aws_profile is not defined
     
-    - name: Set junction path to "/<volume_name>" if not provided.
-      set_fact:
-        junction_path: "/{{ volume_name }}"
-      when: junction_path is not defined
- 
     - name: Ensure that aws_region has been provided if use_lambda is true.
       fail:
         msg: "aws_region must be defined when use_lambda is true."
@@ -75,6 +55,26 @@
         username: "{{ lookup('amazon.aws.aws_secret', '{{ secret_name }}.username', nested=true) }}"
         password: "{{ lookup('amazon.aws.aws_secret', '{{ secret_name }}.password', nested=true) }}"
       no_log: true
+
+    - name: Set security_style to unix if not provide.
+      set_fact:
+        security_style: "unix"
+      when: security_style is not defined
+
+    - name: Set aggr to 'aggr1' if not provided.
+      set_fact:
+        aggr: "aggr1"
+      when: aggr is not defined
+
+    - name: Set volume_type to "rw" if not provided.
+      set_fact:
+        volume_type: "rw"
+      when: volume_type is not defined
+
+    - name: Set junction path to "/<volume_name>" if not provided.
+      set_fact:
+        junction_path: "/{{ volume_name }}"
+      when: junction_path is not defined
 
     - name: Create the volume
       netapp.ontap.na_ontap_volume:

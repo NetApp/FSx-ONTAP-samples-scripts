@@ -1,8 +1,9 @@
-volume_name: "vol1"
-volume_size: 100
-vserver: "fsx"
-fsxn_hostname: "10.0.0.13"
-lambda_function_name: "lambda-8nlmlCR"
+volume_name: "keith_test_ansible"
+volume_size: 1024
+vserver: "smb_svm"
+fsxn_hostname: "10.100.13.122"
+lambda_function_name: "demo-vpc-wf-link"
 aws_region: "us-west-2"
-secret_name: "fsxn/default"
-snapshot_name: "snapshot1"
+secret_name: "keith/fsxn/default"
+snapshot_name: "test_snapshot_from_ansible"
+autosize_mode: "grow"

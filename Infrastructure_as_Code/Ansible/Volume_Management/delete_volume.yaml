@@ -18,7 +18,7 @@
         msg: "Required variable {{item}} has not been provided."
       when: vars[item] is undefined
       loop:
-        - volume_name
+        - delete_volume_name
         - vserver
         - fsxn_hostname
         - secret_name
@@ -57,7 +57,7 @@
     - name: Delete the volume
       netapp.ontap.na_ontap_volume:
         state: absent
-        name: "{{ volume_name }}"
+        name: "{{ delete_volume_name }}"
         vserver: "{{ vserver }}"
         use_lambda: "{{ use_lambda }}"
         lambda_config:
