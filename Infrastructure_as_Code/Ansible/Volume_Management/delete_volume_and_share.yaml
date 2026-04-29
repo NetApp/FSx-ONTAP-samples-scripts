@@ -1,7 +1,7 @@
 # Title: delete_volume_and_share.yaml
 
 ---
-- name: Playbook to delete a volume and a CIFS share that points to it on an FSx for ONTAP file system.
+- name: Playbook to delete a volume and the CIFS share that points to it.
   hosts: localhost
   collections:
     - netapp.ontap
@@ -19,26 +19,12 @@
       when: vars[item] is undefined
       loop:
         - volume_name
+        - volume_size
         - vserver
         - secret_name
         - fsxn_hostname
     #
     # Give default values to optional variables if they are not defined
-    - name: Set security_style to ntfs if not provide.
-      set_fact:
-        security_style: "ntfs"
-      when: security_style is not defined
-    
-    - name: Set aggr to 'aggr1' if not provided.
-      set_fact:
-        aggr: "aggr1"
-      when: aggr is not defined
-    
-    - name: Set volume_type to "rw" if not provided.
-      set_fact:
-        volume_type: "rw"
-      when: volume_type is not defined
-    
     - name: Set use_lambda to true if lambda_function_name is provided.
       set_fact:
         use_lambda: true
@@ -48,17 +34,7 @@
       set_fact:
         aws_profile: "default"
       when: aws_profile is not defined
-    
-    - name: Set junction_path to "/<volume_name>" if not provided.
-      set_fact:
-        junction_path: "/{{ volume_name }}"
-      when: junction_path is not defined
- 
-    - name: Set share_name to "<volume_name>" if not provided.
-      set_fact:
-        share_name: "{{ volume_name }}"
-      when: share_name is not defined
- 
+
     - name: Ensure that aws_region has been provided if use_lambda is true.
       fail:
         msg: "aws_region must be defined when use_lambda is true."
@@ -79,6 +55,16 @@
         username: "{{ lookup('amazon.aws.aws_secret', '{{ secret_name }}.username', nested=true) }}"
         password: "{{ lookup('amazon.aws.aws_secret', '{{ secret_name }}.password', nested=true) }}"
       no_log: true
+
+    - name: Set junction_path to "/<volume_name>" if not provided.
+      set_fact:
+        junction_path: "/{{ volume_name }}"
+      when: junction_path is not defined
+
+    - name: Set share_name to "<volume_name>" if not provided.
+      set_fact:
+        share_name: "{{ volume_name }}"
+      when: share_name is not defined
 
     - name: Delete CIFS Share
       netapp.ontap.na_ontap_cifs:
@@ -101,7 +87,6 @@
         state: absent
         name: "{{ volume_name }}"
         vserver: "{{ vserver }}"
-        aggregate_name: "{{ aggr }}"
         use_lambda: "{{ use_lambda }}"
         lambda_config:
           aws_profile: "{{ aws_profile }}"
