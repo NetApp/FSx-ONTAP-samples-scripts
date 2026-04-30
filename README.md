@@ -18,9 +18,8 @@ automation, management, and monitoring that **[NetApp Workload Factory](https://
 | Track | Focus | Samples |
 |:------|:------|:-------:|
 | [Infrastructure as Code](/Infrastructure_as_Code) | Terraform, CloudFormation & Ansible templates for provisioning and configuring FSx ONTAP resources | 11 |
-| [EKS](/EKS) | Persistent storage for Kubernetes with Trident Protect, PV migration & log collection | 4 |
-| [Management Utilities](/Management-Utilities) | Day-2 operations — SnapMirror, secrets rotation, auto-grow, iSCSI, reporting & more | 9 |
-| [Monitoring](/Monitoring) | CloudWatch dashboards, alarms, LUN metrics, Harvest/Grafana & ONTAP service health | 7 |
+| [EKS](/EKS) | Samples of how to use FSxN with your EKS deployments leveraging Trident and Trident Protect | 4 |
+| [Management Utilities](/Management-Utilities) | Day-2 operations - Auto manage SnapMirror relationships, Auto rotate FSxN credentials, sample scripts leveraging APIs, and more | 9 |
 
 ---
 
@@ -38,7 +37,7 @@ Have a great idea? We'd love to hear it! Email us at [ng-fsxn-github-samples@net
 
 ---
 
-## Sample Catalog
+## Samples Catalog
 
 ### Infrastructure as Code
 
@@ -51,9 +50,9 @@ Provision, configure, and replicate FSx ONTAP resources using industry-standard 
 * **[CloudFormation](/Infrastructure_as_Code/CloudFormation)**
     * [Deploy FSx ONTAP](/Infrastructure_as_Code/CloudFormation/deploy-fsx-ontap) — One-click FSx ONTAP deployment stack
     * [Export FSx ONTAP Configuration to CloudFormation](/Infrastructure_as_Code/CloudFormation/Export-FSxN-CloudFormation) — Reverse-engineer existing resources into templates
-    * [Custom Resources Samples](/Infrastructure_as_Code/CloudFormation/NetApp-FSxN-Custom-Resources-Samples) — Lambda-backed custom resources for advanced provisioning
+    * [Custom Resources Samples](/Infrastructure_as_Code/CloudFormation/NetApp-FSxN-Custom-Resources-Samples) — Examples of using the NetApp's CloudFormation extensions for advanced provisioning
 * **[Terraform](/Infrastructure_as_Code/Terraform)**
-    * [FSx ONTAP deployment](/Infrastructure_as_Code/Terraform/deploy-fsx-ontap) — Core Terraform module for FSx ONTAP
+    * [FSx ONTAP deployment](/Infrastructure_as_Code/Terraform/deploy-fsx-ontap) — Comprehensive Terraform template (stand alone and module) to deploy an FSx for ONTAP
     * [FSx ONTAP with VPN for File Share Access](/Infrastructure_as_Code/Terraform/deploy-fsx-ontap-fileshare-access) — Secure file share access over VPN
     * [SQL Server on EC2 with FSx ONTAP](/Infrastructure_as_Code/Terraform/deploy-fsx-ontap-sqlserver) — End-to-end SQL Server deployment with FSx ONTAP storage
     * [FSx ONTAP Replication](/Infrastructure_as_Code/Terraform/fsxn-replicate) — SnapMirror replication via Terraform
@@ -65,7 +64,7 @@ Run stateful Kubernetes workloads on Amazon EKS with FSx ONTAP persistent volume
 
 * [Backup EKS Applications with Trident Protect](/EKS/Backup-EKS-Applications-with-Trident-Protect) — Backup and restore PVCs using Trident Protect
 * [EKS non-stdout logs collection into ELK](/EKS/EKS-logs-to-ELK) — Shared FSx ONTAP storage for non-standard log collection
-* [FSx for NetApp ONTAP as persistent storage for EKS](/EKS/FSxN-as-PVC-for-EKS) — Sandbox environment for FSx ONTAP PVC integration
+* [FSx for NetApp ONTAP as persistent storage for EKS](/EKS/FSxN-as-PVC-for-EKS) — End to end EKS environment with FSx for ONTAP as the persistent storage
 * [PV Migrate with Trident Protect](/EKS/PV-Migrate-with-Trident-Protect) — Migrate persistent volumes between clusters
 
 ### Management Utilities
@@ -74,27 +73,13 @@ Day-2 operational tools for managing FSx ONTAP file systems at scale.
 
 * [Auto Create SnapMirror Relationships](/Management-Utilities/auto_create_sm_relationships) — Automatically create SnapMirror relationships between file systems
 * [Auto Set FSxN Auto Grow](/Management-Utilities/auto_set_fsxn_auto_grow) — Automatically enable volume auto-grow
-* [AWS CLI Management Scripts](/Management-Utilities/fsx-ontap-aws-cli-scripts) — Collection of AWS CLI scripts for FSx ONTAP operations
+* [AWS CLI Management Scripts](/Management-Utilities/fsx-ontap-aws-cli-scripts) — Collection of scripts for managing AWS FSx for ONTAP
 * [EC2 User Data iSCSI Create & Mount](/Management-Utilities/ec2-user-data-iscsi-create-and-mount) — Launch EC2 instances with auto-provisioned iSCSI volumes
 * [FSxN Report](/Management-Utilities/FSxN-Report) — Generate reports of all FSx ONTAP file systems, volumes, and SVMs
 * [iSCSI Volume Creation for Windows](/Management-Utilities/iscsi-vol-create-and-mount) — Create iSCSI volumes and mount to Windows EC2 instances
 * [Rotate AWS Secrets Manager Secret](/Management-Utilities/fsxn-rotate-secret) — Lambda function for FSx ONTAP admin password rotation
 * [Warm Performance Tier](/Management-Utilities/warm_performance_tier) — Warm up the performance tier of an FSx ONTAP volume
 * [Workload Factory API Samples](/Management-Utilities/Workload-Factory-API-Samples) — Bash scripts demonstrating Workload Factory API usage
-
-### Monitoring
-
-> [!NOTE]
-> Active monitoring development has moved to **[NetApp/FSx-ONTAP-monitoring](https://github.com/NetApp/FSx-ONTAP-monitoring)**.
-> The samples below remain functional but new features land in the dedicated monitoring repository.
-
-* [Automatically Add CloudWatch Alarms](/Monitoring/auto-add-cw-alarms) — Auto-create alarms for storage, CPU, and volume utilization
-* [CloudWatch Dashboard for FSx ONTAP](/Monitoring/CloudWatch-FSx) — Pre-built CloudWatch dashboard for FSx ONTAP metrics
-* [Export LUN Metrics to CloudWatch](/Monitoring/LUN-monitoring) — Push LUN metrics to CloudWatch with a dashboard
-* [Ingest NAS Audit Logs into CloudWatch](/Monitoring/ingest_nas_audit_logs_into_cloudwatch) — Stream NAS audit logs to CloudWatch
-* [Monitor FSx ONTAP with Harvest on EC2](/Monitoring/monitor_fsxn_with_harvest_on_ec2) — Harvest + Prometheus + Grafana on EC2
-* [Monitor FSx ONTAP with Harvest on EKS](/Monitoring/monitor_fsxn_with_harvest_on_eks) — Harvest + Prometheus + Grafana on EKS
-* [Monitor ONTAP Services](/Monitoring/monitor-ontap-services) — Lambda-based monitoring with SNS alerts for EMS, SnapMirror, quotas & health
 
 ---
 
@@ -105,7 +90,7 @@ Day-2 operational tools for managing FSx ONTAP file systems at scale.
 | AWS FSx for NetApp ONTAP documentation | [docs.aws.amazon.com](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/what-is-fsx-ontap.html) |
 | NetApp Workload Factory | [console.workloads.netapp.com](https://console.workloads.netapp.com) |
 | FSx ONTAP Monitoring (dedicated repo) | [NetApp/FSx-ONTAP-monitoring](https://github.com/NetApp/FSx-ONTAP-monitoring) |
-| NetApp BlueXP | [bluexp.netapp.com](https://bluexp.netapp.com) |
+| Console | [console.netapp.com](https://console.netapp.com) |
 
 ---
 
