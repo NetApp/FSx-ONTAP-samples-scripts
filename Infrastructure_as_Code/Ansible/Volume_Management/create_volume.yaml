@@ -56,7 +56,7 @@
         password: "{{ lookup('amazon.aws.aws_secret', '{{ secret_name }}.password', nested=true) }}"
       no_log: true
 
-    - name: Set security_style to unix if not provide.
+    - name: Set security_style to unix if not provided.
       set_fact:
         security_style: "unix"
       when: security_style is not defined

@@ -49,6 +49,11 @@
         lambda_function_name: ""
       when: lambda_function_name is not defined
 
+    - name: Ensure autosize_mode is valid.
+      fail:
+        msg: "autosize_mode must be either 'grow', 'grow_shrink', or 'off'."
+      when: autosize_mode not in ['grow', 'off', 'grow_shrink']
+
     - name: Get username and password from AWS secret
       set_fact:
         username: "{{ lookup('amazon.aws.aws_secret', '{{ secret_name }}.username', nested=true) }}"

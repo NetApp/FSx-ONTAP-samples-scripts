@@ -61,7 +61,7 @@
         junction_path: "/{{ volume_name }}"
       when: junction_path is not defined
 
-    - name: Set security_style to ntfs if not provide.
+    - name: Set security_style to ntfs if not provided.
       set_fact:
         security_style: "ntfs"
       when: security_style is not defined
@@ -81,7 +81,7 @@
         share_name: "{{ volume_name }}"
       when: share_name is not defined
 
-    - name: Give efficiency_mode a default if it hasn't already set.
+    - name: Give efficiency_mode a default if it hasn't already been set.
       set_fact:
         efficiency_mode: "enabled"
       when: efficiency_mode is not defined
@@ -127,8 +127,8 @@
           aws_region: "{{ aws_region }}"
           function_name: "{{ lambda_function_name }}"
         mode: "{{ autosize_mode }}"
-        maximum_size: "{{ autosize_maximum_size | default(omit) }}"
-        minimum_size: "{{ autosize_minimum_size | default(omit) }}"
+        maximum_size: "{{ autosize_max_size | default(omit) }}"
+        minimum_size: "{{ autosize_min_size | default(omit) }}"
         hostname: "{{ fsxn_hostname }}"
         username: "{{ username }}"
         password: "{{ password }}"

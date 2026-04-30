@@ -1,7 +1,7 @@
 # Title: clone_volume.yaml
 
 ---
-- name: Playbook to clones a volume in an FSx for ONTAP file system.
+- name: Playbook to clone a volume in an FSx for ONTAP file system.
   hosts: localhost
   collections:
     - netapp.ontap
@@ -30,7 +30,7 @@
         use_lambda: true
       when: lambda_function_name is defined
     
-    - name: Set aws_provide to "default" if not provided.
+    - name: Set aws_profile to "default" if not provided.
       set_fact:
         aws_profile: "default"
       when: aws_profile is not defined

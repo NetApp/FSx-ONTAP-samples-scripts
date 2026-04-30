@@ -32,7 +32,7 @@
         use_lambda: true
       when: lambda_function_name is defined
     
-    - name: Set aws_provide to "default" if not provided.
+    - name: Set aws_profile to "default" if not provided.
       set_fact:
         aws_profile: "default"
       when: aws_profile is not defined

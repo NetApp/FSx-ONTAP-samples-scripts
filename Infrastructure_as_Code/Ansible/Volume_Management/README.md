@@ -8,12 +8,13 @@ Workload Factory Link, please refer to the [NetApp Workload Factory documentatio
 
 The list of playbooks included in this folder is as follows:
 | Playbook Name | Description |
+|:-----|:------|
 | clone_volume.yaml | Clones an existing volume.|
 | create_cifs_share.yaml | Creates a new CIFS share on an existing volume.|
 | create_cifs_unix_symlink_mapping.yaml | Creates a CIFS symlink mapping. |
 | create_snapshot.yaml | Creates a snapshot of an existing volume.|
 | create_volume.yaml | Creates a new volume.|
-| create_volume_and_share.yaml | Creates a new volume with a CIFS share that points to it. It also sets autosize to grow and enables ONTAP efficiencies.|
+| create_volume_and_share.yaml | Creates a new volume with a CIFS share that points to it. It also enables ONTAP efficiencies and potentially sets the autosize mode.|
 | delete_cifs_share.yaml | Deletes an existing CIFS share.|
 | delete_snapshot.yaml | Deletes an existing snapshot.|
 | delete_volume.yaml | Deletes an existing volume.|
@@ -90,7 +91,7 @@ ok: [localhost]
 TASK [Set use_lambda to true if lambda_function_name is provided.] *********************************************************
 ok: [localhost]
 
-TASK [Set aws_provide to "default" if not provided.] ***********************************************************************
+TASK [Set aws_profile to "default" if not provided.] ***********************************************************************
 ok: [localhost]
 
 TASK [Set junction path to "/<volume_name>" if not provided.] **************************************************************

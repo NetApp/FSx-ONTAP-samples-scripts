@@ -1,4 +1,4 @@
-# Title: delete_a_cifs_share
+# Title: delete_cifs_share.yaml
 
 ---
 - name: Playbook to delete a CIFS share
@@ -29,7 +29,7 @@
         use_lambda: true
       when: lambda_function_name is defined
     
-    - name: Set aws_provide to "default" if not provided.
+    - name: Set aws_profile to "default" if not provided.
       set_fact:
         aws_profile: "default"
       when: aws_profile is not defined
@@ -55,7 +55,7 @@
         password: "{{ lookup('amazon.aws.aws_secret', '{{ secret_name }}.password', nested=true) }}"
       no_log: true
 
-    - name: Create CIFS Share
+    - name: Delete CIFS Share
       netapp.ontap.na_ontap_cifs:
         state: absent
         name: "{{ delete_share_name }}"

@@ -1,7 +1,7 @@
-# Title: set_volume_efficiencies.yaml
+# Title: set_volume_efficiency.yaml
 
 ---
-- name: Playbook to set a volumes efficiencies of a volume.
+- name: Playbook to set a volumes efficiencies.
   hosts: localhost
   collections:
     - netapp.ontap

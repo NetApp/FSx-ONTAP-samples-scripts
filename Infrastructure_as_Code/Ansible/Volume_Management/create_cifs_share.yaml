@@ -1,4 +1,4 @@
-# Title: create_a_cifs_share
+# Title: create_cifs_share.yaml
 
 ---
 - name: Playbook to create a CIFS share
@@ -30,7 +30,7 @@
         use_lambda: true
       when: lambda_function_name is defined
     
-    - name: Set aws_provide to "default" if not provided.
+    - name: Set aws_profile to "default" if not provided.
       set_fact:
         aws_profile: "default"
       when: aws_profile is not defined
