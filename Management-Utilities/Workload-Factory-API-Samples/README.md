@@ -44,6 +44,7 @@ If you do create a new script, please consider contributing it back to this repo
 | [bluexp_organization_delete](bluexp_organization_delete) | This deletes a BlueXP organization (a.k.a. account). |
 | [bluexp_organization_rename](bluexp_organization_rename) | This renames a BlueXP organization (a.k.a. account). |
 | [credentials_delete](credentials_delete) | This deletes a Workload Factory credential. |
+| [credentials_create](credentials_create) | This create a Workload Factory credential. |
 | [fsxn_credentials_set](fsxn_credentials_set) | This sets the credentials for a specified FSx for ONTAP file system. |
 | [get_latency_details](get_latency_details) | Get the specific details of a latency event. |
 | [link_associate](link_associate) | This associates a Workload Factory Link with a specified FSx for ONTAP file system. |
@@ -70,9 +71,10 @@ If you do create a new script, please consider contributing it back to this repo
 | [snapmirror_reverse](snapmirror_reverse) | This reverses the SnapMirror relationship for the specified relationship. |
 | [snapmirror_update](snapmirror_update) | This updates the SnapMirror relationship for the specified relationship. |
 | [snapshot_create](snapshot_create) | This creates a snapshot of the specified volume. |
-| [volume_clone](volume_clone) | This clones the specified volume. |
 | [volume_cifs_share_create](volume_cifs_share_create) | This will create a CIFS share in a volume. |
 | [volume_cifs_share_delete](volume_cifs_share_delete) | This will delete a CIFS share from a volume. |
+| [volume_clone](volume_clone) | This clones the specified volume. |
+| [volume_create](volume_create) | This a volume with the specified name, size, and SVM. |
 | [volume_delete](volume_delete) | This deletes the specified volume. |
 | [wf_utils](wf_utils) | This file contains common functions used by all the scripts. It includes the `get_token()` function that retrieves an access token from the Workload Factory API. |
 
