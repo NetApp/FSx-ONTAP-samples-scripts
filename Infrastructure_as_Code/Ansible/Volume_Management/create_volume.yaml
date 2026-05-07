@@ -23,53 +23,22 @@
         - vserver
         - secret_name
         - fsxn_hostname
-    #
-    # Give default values to optional variables if they are not defined
+
     - name: Set use_lambda to true if lambda_function_name is provided.
       set_fact:
         use_lambda: true
       when: lambda_function_name is defined
-    
-    - name: Set aws_profile to "default" if not provided.
-      set_fact:
-        aws_profile: "default"
-      when: aws_profile is not defined
     
     - name: Ensure that aws_region has been provided if use_lambda is true.
       fail:
         msg: "aws_region must be defined when use_lambda is true."
       when: use_lambda and aws_region is not defined
     
-    - name: Set aws_region to "" if not set at this point.
-      set_fact:
-        aws_region: ""
-      when: aws_region is not defined
-    
-    - name: Set lambda_function_name to "" if not set at this point.
-      set_fact:
-        lambda_function_name: ""
-      when: lambda_function_name is not defined
-    
     - name: Get username and password from AWS secret.
       set_fact:
         username: "{{ lookup('amazon.aws.aws_secret', '{{ secret_name }}.username', nested=true) }}"
         password: "{{ lookup('amazon.aws.aws_secret', '{{ secret_name }}.password', nested=true) }}"
       no_log: true
-
-    - name: Set security_style to unix if not provided.
-      set_fact:
-        security_style: "unix"
-      when: security_style is not defined
-
-    - name: Set aggr to 'aggr1' if not provided.
-      set_fact:
-        aggr: "aggr1"
-      when: aggr is not defined
-
-    - name: Set volume_type to "rw" if not provided.
-      set_fact:
-        volume_type: "rw"
-      when: volume_type is not defined
 
     - name: Set junction path to "/<volume_name>" if not provided.
       set_fact:
@@ -79,20 +48,21 @@
     - name: Create the volume
       netapp.ontap.na_ontap_volume:
         state: present
-        name: "{{ volume_name }}"
-        size: "{{ volume_size }}"
-        vserver: "{{ vserver }}"
-        aggregate_name: "{{ aggr }}"
-        junction_path: "{{ junction_path }}"
-        volume_security_style: "{{ security_style }}"
-        use_lambda: "{{ use_lambda }}"
-        lambda_config:
-          aws_profile: "{{ aws_profile }}"
-          aws_region: "{{ aws_region }}"
-          function_name: "{{ lambda_function_name }}"
-        type: "{{ volume_type }}"
-        size_unit: "mb"
         hostname: "{{ fsxn_hostname }}"
+        vserver: "{{ vserver }}"
         username: "{{ username }}"
         password: "{{ password }}"
         validate_certs: false
+        use_lambda: "{{ use_lambda }}"
+        lambda_config:
+          aws_profile: "{{ aws_profile | default('default') }}"
+          aws_region: "{{ aws_region | default('') }}"
+          function_name: "{{ lambda_function_name | default('') }}"
+
+        name: "{{ volume_name }}"
+        size: "{{ volume_size }}"
+        aggregate_name: "{{ aggr | default('aggr1')}}"
+        junction_path: "{{ junction_path }}"
+        volume_security_style: "{{ security_style | default('unix') }}"
+        type: "{{ volume_type | default('rw') }}"
+        size_unit: "mb"

@@ -25,32 +25,16 @@
         - vserver
         - secret_name
         - fsxn_hostname
-    #
-    # Give default values to optional variables if they are not defined
+
     - name: Set use_lambda to true if lambda_function_name is provided.
       set_fact:
         use_lambda: true
       when: lambda_function_name is defined
     
-    - name: Set aws_profile to "default" if not provided.
-      set_fact:
-        aws_profile: "default"
-      when: aws_profile is not defined
-    
     - name: Ensure that aws_region has been provided if use_lambda is true.
       fail:
         msg: "aws_region must be defined when use_lambda is true."
       when: use_lambda and aws_region is not defined
-    
-    - name: Set aws_region to "" if not set at this point.
-      set_fact:
-        aws_region: ""
-      when: aws_region is not defined
-    
-    - name: Set lambda_function_name to "" if not set at this point.
-      set_fact:
-        lambda_function_name: ""
-      when: lambda_function_name is not defined
     
     - name: Get username and password from AWS secret.
       set_fact:
@@ -61,18 +45,19 @@
     - name: Create the CIFS unix symlink mapping.
       netapp.ontap.na_ontap_cifs_unix_symlink_mapping:
         state: present
+        hostname: "{{ fsxn_hostname }}"
         vserver: "{{ vserver }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        validate_certs: false
+        use_lambda: "{{ use_lambda }}"
+        lambda_config:
+          aws_profile: "{{ aws_profile | default('default') }}"
+          aws_region: "{{ aws_region | default('') }}"
+          function_name: "{{ lambda_function_name | default('') }}"
+
         unix_path: "{{ unix_path }}"
         share_name: "{{ share_name }}"
         cifs_path: "{{ cifs_path }}"
         cifs_server: "{{ cifs_server }}"
-        locality: "{{ locality if locality is defined else 'local'}}"
-        use_lambda: "{{ use_lambda }}"
-        lambda_config:
-          aws_profile: "{{ aws_profile }}"
-          aws_region: "{{ aws_region }}"
-          function_name: "{{ lambda_function_name }}"
-        hostname: "{{ fsxn_hostname }}"
-        username: "{{ username }}"
-        password: "{{ password }}"
-        validate_certs: false
+        locality: "{{ locality | default('local') }}"
