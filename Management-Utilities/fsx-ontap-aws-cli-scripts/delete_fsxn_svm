@@ -23,13 +23,14 @@
 ################################################################################
 usage () {
 cat 1>&2 <<EOF
-Usage: $(basename $0) -i svmID [-r region] [-w] [-n] [-b]
+Usage: $(basename $0) -i svmID [-r region] [-w] [-n] [-b] [-e endpoint_url]
 Where:
   svmID: Is the ID of the storage virtual machine you want to delete.
   region: Is the AWS region where the SVM resides.
   -w: Wait for the delete to complete before returning.
   -n: No query. Do not ask for confirmation before deleting the SVM.
   -b: Enable final backup of the volumes before deleting the volumes. Otherwise, the volumes are deleted without a backup.
+  endpoint_url: Is the endpoint url to use when connecting to the AWS API.
 EOF
   exit 1
 }
@@ -57,7 +58,7 @@ noQuery=false
 enableBackup=false
 #
 # Process command line arguments.
-while getopts "hbi:wnr:" option; do
+while getopts "hbi:wnr:e:" option; do
   case $option in
     i) svmID=$OPTARG
       ;;
@@ -68,6 +69,9 @@ while getopts "hbi:wnr:" option; do
     n) noQuery=true
       ;;
     b) enableBackup=true
+      ;;
+    e) endpoint_url="--endpoint-url $OPTARG"
+       endpoint_arg="-e $OPTARG"
       ;;
     *) usage
       ;;
@@ -98,7 +102,7 @@ MaxIterations=120
 SleepTime=5
 #
 # Get the list of volumes associated with the SVM.
-aws fsx describe-volumes --region=$region --output=json --filters Name=storage-virtual-machine-id,Values=$svmID > $volumesFile 2>&1
+aws fsx describe-volumes $endpoint_url --region=$region --output=json --filters Name=storage-virtual-machine-id,Values=$svmID > $volumesFile 2>&1
 if [ $? -ne 0 ]; then
   echo "Error, failed to get the list of volumes for SVM: $svmID." 1>&2
   cat $volumesFile 1>&2
@@ -144,7 +148,7 @@ if [ ! -z "${volumes[*]}" ]; then
   maxNumRunning=1  # Only do one initially, if it completes successfully, then do the rest concurrently.
   printf "\nDeleting all the volumes associated with ${svmID}.\n"
   while [ $i -lt $numVolumes ]; do
-    delete_fsxn_volume -r $region -w -q -i ${volumes[$i]} $enableBackup &
+    delete_fsxn_volume -r $region -w -q -i ${volumes[$i]} $enableBackup $endpoint_arg &
     let i+=1
     let numRunning+=1
     printf "\rTotal number of volumes to delete: ${numVolumes}. Number of deletes currently running: ${numRunning}. Number waiting to be started: $((numVolumes-i)).     "
@@ -189,7 +193,7 @@ if [ ! -z "${volumes[*]}" ]; then
 fi
 #
 # Now that all the volumes have been deleted, delete the storage virtual machine.
-aws fsx delete-storage-virtual-machine --region=$region --storage-virtual-machine-id $svmID > $tmpout 2>&1
+aws fsx delete-storage-virtual-machine $endpoint_url --region=$region --storage-virtual-machine-id $svmID > $tmpout 2>&1
 
 if [ $? != "0" ]; then
   echo "Failed to delete storage virtual machine." 1>&2
@@ -204,7 +208,7 @@ else
     if [ $waitForDelete == "true" ]; then
       i=0
       while [ $i -lt $MaxIterations ]; do
-        aws fsx describe-storage-virtual-machines --storage-virtual-machine-ids $svmID --output=json --region=$region > $tmpout 2>&1
+        aws fsx describe-storage-virtual-machines $endpoint_url --storage-virtual-machine-ids $svmID --output=json --region=$region > $tmpout 2>&1
         if [ $? -eq 0 ]; then
           status=$(jq -r '.StorageVirtualMachines[0].Lifecycle' $tmpout 2> /dev/null)
           if [ "$status" != "DELETING" -a "$status" != "PENDING" ]; then

@@ -39,7 +39,7 @@ destinationAggregate="aggr1"
 template=""
 #
 # Get the default region from the AWS CLI configuration
-region=$(aws configure list | awk '/region/{print $2}')
+region=$(aws configure get region)
 #
 # Parse the command line arguments
 while [ ! -z "$1" ]; do
