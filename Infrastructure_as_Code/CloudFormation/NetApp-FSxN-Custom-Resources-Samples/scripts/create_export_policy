@@ -30,7 +30,7 @@ protocols="any"
 matchCidr="0.0.0.0/0"
 template=""
 
-region=$(aws configure list | awk '/region/{print $2}')
+region=$(aws configure get region)
 
 while getopts "hr:l:s:k:f:v:n:p:c:t:" opt; do
   case $opt in
