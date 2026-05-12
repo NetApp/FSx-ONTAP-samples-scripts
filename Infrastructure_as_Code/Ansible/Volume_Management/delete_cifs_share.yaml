@@ -1,7 +1,7 @@
-# Title: delete_snapshot.yaml
+# Title: delete_cifs_share.yaml
 
 ---
-- name: Playbook to delete a snapshot from a volume on an FSx for ONTAP file system.
+- name: Playbook to delete a CIFS share
   hosts: localhost
   collections:
     - netapp.ontap
@@ -15,15 +15,14 @@
   tasks:
     - name: Ensure required variables are set.
       fail:
-        msg: "Required variable '{{ item }}' has not been provided."
+        msg: "Required variable {{item}} has not been provided."
       when: vars[item] is undefined
       loop:
-        - volume_name
-        - delete_snapshot_name
+        - delete_share_name
         - vserver
-        - fsxn_hostname
         - secret_name
-    
+        - fsxn_hostname
+
     - name: Set use_lambda to true if lambda_function_name is provided.
       set_fact:
         use_lambda: true
@@ -34,14 +33,14 @@
         msg: "aws_region must be defined when use_lambda is true."
       when: use_lambda and aws_region is not defined
     
-    - name: Get username and password from AWS secret
+    - name: Get username and password from AWS secret.
       set_fact:
         username: "{{ lookup('amazon.aws.aws_secret', '{{ secret_name }}.username', nested=true) }}"
         password: "{{ lookup('amazon.aws.aws_secret', '{{ secret_name }}.password', nested=true) }}"
       no_log: true
-    
-    - name: Default snapshot on volume
-      netapp.ontap.na_ontap_snapshot:
+
+    - name: Delete CIFS Share
+      netapp.ontap.na_ontap_cifs:
         state: absent
         hostname: "{{ fsxn_hostname }}"
         vserver: "{{ vserver }}"
@@ -54,5 +53,4 @@
           aws_region: "{{ aws_region | default('') }}"
           function_name: "{{ lambda_function_name | default('') }}"
 
-        volume: "{{ volume_name }}"
-        snapshot: "{{ delete_snapshot_name }}"
+        name: "{{ delete_share_name }}"

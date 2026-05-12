@@ -7,16 +7,24 @@ node to have network connectivity to the FSx for ONTAP file system. For more inf
 Workload Factory Link, please refer to the [NetApp Workload Factory documentation](https://docs.netapp.com/us-en/workload-fsx-ontap/links-overview.html).
 
 The list of playbooks included in this folder is as follows:
-- create\_snapshot.yaml
-- delete\_snapshot.yaml
-- create\_volume.yaml
-- delete\_volume.yaml
-- create\_volume\_and\_share.yaml
-- delete\_volume\_and\_share.yaml
+| Playbook Name | Description |
+|:-----|:------|
+| clone_volume.yaml | Clones an existing volume.|
+| create_cifs_share.yaml | Creates a new CIFS share on an existing volume.|
+| create_cifs_unix_symlink_mapping.yaml | Creates a CIFS symlink mapping. |
+| create_snapshot.yaml | Creates a snapshot of an existing volume.|
+| create_volume.yaml | Creates a new volume.|
+| create_volume_and_share.yaml | Creates a new volume with a CIFS share that points to it. It also enables ONTAP efficiencies and potentially sets the autosize mode.|
+| delete_cifs_share.yaml | Deletes an existing CIFS share.|
+| delete_snapshot.yaml | Deletes an existing snapshot.|
+| delete_volume.yaml | Deletes an existing volume.|
+| delete_volume_and_share.yaml | Deletes an existing volume and its associated CIFS share.|
+| set_volume_autosize.yaml | Sets the autosize policy on an existing volume.|
+| set_volume_efficiency.yaml | Enables or disables ONTAP efficiencies on an existing volume.|
 
 ## Requirements
 - Ansible 2.9 or later. Installation instructions can be found [here](https://docs.ansible.com/ansible/latest/installation_guide/index.html)
-- NetApp ONTAP Ansible collection.
+- NetApp ONTAP Ansible collection. Version 2.17.14 or later.
 - AWS Ansible collection.
 - An AWS secret with the credentials necessary to run the required volume APIs against the FSx for ONTAP file system. The required format of the secret is described below.
 
@@ -83,7 +91,7 @@ ok: [localhost]
 TASK [Set use_lambda to true if lambda_function_name is provided.] *********************************************************
 ok: [localhost]
 
-TASK [Set aws_provide to "default" if not provided.] ***********************************************************************
+TASK [Set aws_profile to "default" if not provided.] ***********************************************************************
 ok: [localhost]
 
 TASK [Set junction path to "/<volume_name>" if not provided.] **************************************************************

@@ -35,14 +35,18 @@ following environment variables:
 Legend:
   Timestamp - The time the metrics were collected.
   Volume ID - The ID of the volume these metrics are for.
-  Network - The network latency in milliseconds.
-  Cluster - The cluster interconnect latency in milliseconds.
-  Data - The CPU latency in milliseconds.
-  Disk - The disk latency in milliseconds.
-  QoS - The QoS latency in milliseconds.
-  NVRAM - The NVRAM synchronization latency in milliseconds.
-  Cloud - The tiering latency in milliseconds.
-  Details - Any details about the latency analysis.
+  Network - The network latency.
+  Cluster - The cluster interconnect latency.
+  Data - The CPU latency.
+  Disk - The disk latency.
+  QoS Max - The latency caused by a QoS Maximum settings.
+  QoS Min - The latency caused by a QoS Minimum settings.
+  NVRAM - The NVRAM synchronization latency.
+  Cloud - The tiering latency.
+  FlexCache - The latency caused by retrieving data from a FlexCache source.
+  SM Sync - The latency caused by a SnapMirror synchronous operations.
+  VA - The latency caused by volume activation (VA) operations.
+  Details - Any details about the latency event.
 EOF
   exit 1
 }
@@ -111,7 +115,7 @@ fi
 if [ "$JSON_OUTPUT" == true ]; then
   jq_query='.'
 else
-  jq_query='.items[] | "\(.createdAt / 1000 | todate),\(.volumeId),\(if(.latencyAnalysis.Network) then .latencyAnalysis.Network else 0 end),\(if(.latencyAnalysis.Cluster) then .latencyAnalysis.Cluster else 0 end),\(if(.latencyAnalysis.Data) then .latencyAnalysis.Data else 0 end),\(if(.latencyAnalysis.Disk) then .latencyAnalysis.Disk else 0 end),\(if(.latencyAnalysiss.QoS) then .latencyAnalysis.QoS else 0 end),\(if(.latencyAnalysis.NVRAM) then .latencyAnalysis.NVRAM else 0 end),\(if(.latencyAnalysis.Cloud) then .latencyAnalysis.Cloud else 0 end),\(.details)"'
+  jq_query='.items[] | "\(.createdAt),\(.volumeId),\(if(.latencyAnalysis.Network) then .latencyAnalysis.Network else 0 end),\(if(.latencyAnalysis.Cluster) then .latencyAnalysis.Cluster else 0 end),\(if(.latencyAnalysis.Data) then .latencyAnalysis.Data else 0 end),\(if(.latencyAnalysis.Disk) then .latencyAnalysis.Disk else 0 end),\(if(.latencyAnalysis."QoS Max") then .latencyAnalysis."QoS Max" else 0 end),\(if(.latencyAnalysis.NVRAM) then .latencyAnalysis.NVRAM else 0 end),\(if(.latencyAnalysis.Cloud) then .latencyAnalysis.Cloud else 0 end),\(if(.latencyAnalysis.FlexCache) then .latencyFlexCache else 0 end),\(.details)"'
 fi
 
 URL="https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/builders/v1/latency/analysis/${VOLUME_ID}/history"
@@ -141,5 +145,5 @@ done
 if [ "$JSON_OUTPUT" == true ]; then
   cat $tmpout2
 else
-  sort -f $tmpout2 | column -s, -t -R 3,4,5,6,7,8,9 -N "Timestamp,Volume ID,Network,Cluster Inter,Data (CPU),Disk,QoS,NVRAM Sync,Cloud Tiering,Details"
+  sort -f $tmpout2 | column -s, -t -R 3,4,5,6,7,8,9,10 -N "Timestamp,Volume ID,Network,Cluster Inter,Data (CPU),Disk,QoS,NVRAM Sync,Cloud Tiering,Flex Cache,Details"
 fi

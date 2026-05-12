@@ -1,7 +1,7 @@
 # Title: create_volume_and_share.yaml
 
 ---
-- name: Playbook to create a volume and a CIFS share that points to it on an FSx for ONTAP file system.
+- name: Playbook to create a volume and a CIFS share that points to it. This playbook will also set the autosize mode and enable efficiencies.
   hosts: localhost
   collections:
     - netapp.ontap
@@ -11,6 +11,17 @@
     - variables.yaml
   vars:
     use_lambda: false
+
+  module_defaults:
+    group/netapp.ontap.netapp_ontap:
+      hostname: "{{ fsxn_hostname }}"
+      vserver: "{{ vserver }}"
+      validate_certs: false
+      use_lambda: "{{ use_lambda | default('true') }}"
+      lambda_config:
+        aws_profile: "{{ aws_profile | default('default') }}"
+        aws_region: "{{ aws_region | default('') }}"
+        function_name: "{{ lambda_function_name | default('') }}"
 
   tasks:
     - name: Ensure required variables are set.
@@ -23,97 +34,84 @@
         - vserver
         - secret_name
         - fsxn_hostname
-    #
-    # Give default values to optional variables if they are not defined
-    - name: Set security_style to ntfs if not provided.
-      set_fact:
-        security_style: "ntfs"
-      when: security_style is not defined
-    
-    - name: Set aggr to 'aggr1' if not provided.
-      set_fact:
-        aggr: "aggr1"
-      when: aggr is not defined
-    
-    - name: Set volume_type to "rw" if not provided.
-      set_fact:
-        volume_type: "rw"
-      when: volume_type is not defined
-    
+
     - name: Set use_lambda to true if lambda_function_name is provided.
       set_fact:
         use_lambda: true
       when: lambda_function_name is defined
-    
-    - name: Set aws_profile to "default" if not provided.
-      set_fact:
-        aws_profile: "default"
-      when: aws_profile is not defined
-    
-    - name: Set junction_path to "/<volume_name>" if not provided.
-      set_fact:
-        junction_path: "/{{ volume_name }}"
-      when: junction_path is not defined
- 
-    - name: Set share_name to "<volume_name>" if not provided.
-      set_fact:
-        share_name: "{{ volume_name }}"
-      when: share_name is not defined
- 
+
     - name: Ensure that aws_region has been provided if use_lambda is true.
       fail:
         msg: "aws_region must be defined when use_lambda is true."
       when: use_lambda and aws_region is not defined
-    
-    - name: Set aws_region to "" if not set at this point.
-      set_fact:
-        aws_region: ""
-      when: aws_region is not defined
-    
-    - name: Set lambda_function_name to "" if not set at this point.
-      set_fact:
-        lambda_function_name: ""
-      when: lambda_function_name is not defined
-    
+
     - name: Get username and password from AWS secret.
       set_fact:
         username: "{{ lookup('amazon.aws.aws_secret', '{{ secret_name }}.username', nested=true) }}"
         password: "{{ lookup('amazon.aws.aws_secret', '{{ secret_name }}.password', nested=true) }}"
       no_log: true
 
+    - name: Set junction_path to "/<volume_name>" if not provided.
+      set_fact:
+        junction_path: "/{{ volume_name }}"
+      when: junction_path is not defined
+
+    - name: Give efficiency_mode a default if it hasn't already been set.
+      set_fact:
+        efficiency_mode: "enabled"
+      when: efficiency_mode is not defined
+
+    - name: Ensure efficiency_mode is either 'enabled' or 'disabled'
+      fail:
+        msg: "efficiency_mode must be either 'enabled' or 'disabled'."
+      when: efficiency_mode not in ['enabled', 'disabled']
+
+    - name: Ensure autosize_mode is valid if it is defined.
+      fail:
+        msg: "autosize_mode must be either 'grow', 'grow_shrink', or 'off'."
+      when: autosize_mode is defined and autosize_mode not in ['grow', 'off', 'grow_shrink']
+
     - name: Create the volume
       netapp.ontap.na_ontap_volume:
         state: present
-        name: "{{ volume_name }}"
-        size: "{{ volume_size }}"
-        vserver: "{{ vserver }}"
-        aggregate_name: "{{ aggr }}"
-        junction_path: "{{ junction_path }}"
-        volume_security_style: "{{ security_style }}"
-        use_lambda: "{{ use_lambda }}"
-        lambda_config:
-          aws_profile: "{{ aws_profile }}"
-          aws_region: "{{ aws_region }}"
-          function_name: "{{ lambda_function_name }}"
-        type: "{{ volume_type }}"
-        size_unit: "mb"
-        hostname: "{{ fsxn_hostname }}"
         username: "{{ username }}"
         password: "{{ password }}"
-        validate_certs: false
+
+        name: "{{ volume_name }}"
+        size: "{{ volume_size }}"
+        aggregate_name: "{{ aggr | default('aggr1')}}"
+        junction_path: "{{ junction_path }}"
+        volume_security_style: "{{ security_style | default('ntfs') }}"
+        type: "{{ volume_type | default('rw')}}"
+        size_unit: "mb"
+
+    - name: Set Autosize
+      netapp.ontap.na_ontap_volume_autosize:
+        username: "{{ username }}"
+        password: "{{ password }}"
+
+        volume: "{{ volume_name }}"
+        mode: "{{ autosize_mode }}"
+        maximum_size: "{{ autosize_max_size | default(omit) }}"
+        minimum_size: "{{ autosize_min_size | default(omit) }}"
+      when: autosize_mode is defined
+
+    - name: Set efficiency of the volume based on the value of efficiency_mode variable.
+      netapp.ontap.na_ontap_volume_efficiency:
+        state: "{{ 'present' if efficiency_mode == 'enabled' else 'absent' }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+
+        volume_name: "{{ volume_name }}"
+        enable_data_compaction: "{{ 'true' if efficiency_mode == 'enabled' else 'false' }}"
+        enable_inline_compression: "{{ 'true' if efficiency_mode == 'enabled' else 'false' }}"
+        enable_inline_dedupe: "{{ 'true' if efficiency_mode == 'enabled' else 'false' }}"
 
     - name: Create CIFS Share
       netapp.ontap.na_ontap_cifs:
         state: present
-        name: "{{ share_name }}"
-        path: "{{ junction_path }}"
-        vserver: "{{ vserver }}"
-        use_lambda: "{{ use_lambda }}"
-        lambda_config:
-          aws_profile: "{{ aws_profile }}"
-          aws_region: "{{ aws_region }}"
-          function_name: "{{ lambda_function_name }}"
-        hostname: "{{ fsxn_hostname }}"
         username: "{{ username }}"
         password: "{{ password }}"
-        validate_certs: false
+
+        name: "{{ share_name | default(volume_name)}}"
+        path: "{{ junction_path }}"
