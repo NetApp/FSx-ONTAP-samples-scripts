@@ -1,18 +1,26 @@
 #!/bin/bash
 #
-# This script deletes an organization from a BlueXP account.
+# This script deletes an BlueXP organization.
 #
 ################################################################################
 # Display usage information then exits the script.
 ################################################################################
 usage () {
   cat 1>&2 <<EOF
-Usage: $(basename $0) -t REFRESH_TOKEN -o ORGANIZATION_ID
+This script deletes an BlueXP organization.
+
+Usage: $(basename $0) -t REFRESH_TOKEN -o ORGANIZATION_ID [-e ENDPOINT] [-b BEARER_TOKEN]
 
 Where: REFRESH_TOKEN - Is a refresh token used to obtain an access token needed
                        to run the Workload Factory APIs. You can obtain a refresh
                        token by going to https://services.cloud.netapp.com/refresh-token
-       ORGANIZATION_ID - Is the Id of the organization to delete.
+       ORGANIZATION_ID - Is the BlueXP Acct ID of the organization to delete.
+                         You can get a list of organizations you have access to by running
+                         the "list_bluexp_accts" script
+       ENDPOINT       - The BlueXP API endpoint to use. Default is api.bluexp.netapp.com
+       BEARER_TOKEN   - An optional access token that can be used instead of a refresh token.
+                       If this parameter is provided, the script will use it directly instead of
+                       trying to obtain an access token using the refresh token.
 
 Instead of passing parameters on the command line, you can set the following
 environment variables:
@@ -46,23 +54,31 @@ fi
 . "$wf_utils"
 #
 # Parse the command line options.
-while getopts "ht:o:" opt; do
+: "${ENDPOINT:=api.bluexp.netapp.com}"
+while getopts "ht:o:b:e:" opt; do
   case ${opt} in
     t) REFRESH_TOKEN=$OPTARG ;;
     o) ORGANIZATION_ID=$OPTARG ;;
+    e) ENDPOINT=$OPTARG ;;
+    b) BEARER_TOKEN=$OPTARG ;;
     *) usage ;;
   esac
 done
 #
 # Declare an array of required options and the error message to display if they are not set.
 declare -A required_options
-required_options["REFRESH_TOKEN"]='Error: A BlueXP refresh token is required to run this script. It can be obtained from this web page:
-  https://services.cloud.netapp.com/refresh-token\n\n'
+#required_options["REFRESH_TOKEN"]='Error: A BlueXP refresh token is required to run this script. It can be obtained from this web page:
+#  https://services.cloud.netapp.com/refresh-token\n\n'
 required_options["ORGANIZATION_ID"]='Error: You must provide the name of the organization you want to delete.
 You can get the list of organization you have access to by running the "list_bluexp_accts" script
 found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
 
 check_required_options
+
+if [ -z "$REFRESH_TOKEN" -a -z "$BEARER_TOKEN" ]; then
+  echo "Error: You must provide either a refresh token or a bearer token to run this script." >&2
+  usage
+fi
 #
 # Check that the required commands are available.
 for cmd in jq curl; do
@@ -73,12 +89,17 @@ for cmd in jq curl; do
 done
 #
 # Get an access token.
-token=$(get_token)
+if [ -z "$BEARER_TOKEN" ]; then
+  token=$(get_token)
+else
+  token="$BEARER_TOKEN"
+fi
+
 if [ -z "$token" ]; then
   echo "Failed to get a token."
   exit 1
 fi
 #
 echo -n "Deleting organization ${ORGANIZATION_ID}..."
-run_curl "DELETE" "$token" "https://api.bluexp.netapp.com/v1/management/organizations/$ORGANIZATION_ID" $tmpout $tmperr
+run_curl "DELETE" "$token" "https://$ENDPOINT/tenancy/account/$ORGANIZATION_ID" $tmpout $tmperr
 echo "Done."

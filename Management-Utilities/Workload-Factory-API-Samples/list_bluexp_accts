@@ -17,11 +17,14 @@ usage () {
 This script is used to list all the BlueXP accounts (a.k.a. organizations)
 that you have access to.
 
-Usage is: $(basename $0) -t refresh_token 
+Usage is: $(basename $0) -t refresh_token  [-j] [-e ENDPOINT] [-b BEARER_TOKEN]
 
 Where: refresh_token - Is a refresh token used to obtain an access token needed
                        to run the Workload Factory APIs. You can obtain a refresh
                        token by going to https://services.cloud.netapp.com/refresh-token
+      j - Output the raw JSON response from the API instead of a formatted table.
+      ENDPOINT - The BlueXP API endpoint to use. Default is api.bluexp.netapp.com.
+      BEARER_TOKEN - A valid Bearer token that can be used instead of a refresh token.
 
 Note, instead of passing parameters on the command line, you can set the
 following environment variables instead:
@@ -52,9 +55,14 @@ fi
 . "$wf_utils"
 #
 # Parse the command line options.
-while getopts ht: opt; do
+raw=false
+: "${ENDPOINT:=api.bluexp.netapp.com}"
+while getopts ht:je:b: opt; do
   case $opt in
     t) REFRESH_TOKEN="$OPTARG" ;;
+    b) BEARER_TOKEN="$OPTARG" ;;
+    j) raw=true ;;
+    e) ENDPOINT="$OPTARG" ;;
     *) usage ;;
   esac
 done
@@ -74,15 +82,27 @@ for cmd in jq curl; do
   fi
 done
 
-token=$(get_token)
+if [ -z "$BEARER_TOKEN" ]; then
+  token=$(get_token)
+else
+  token="$BEARER_TOKEN"
+fi
+
 if [ -z "$token" ]; then
   echo "Error: Failed to obtain an access token. Exiting." >&2
   exit 1
 fi
+#
+# /tenancy/account doesn't provide both the ID and UUID.
+#run_curl GET "$token" https://$ENDPOINT/tenancy/account $tmpout $tmperr
+run_curl GET "$token" https://$ENDPOINT/v1/management/organizations $tmpout $tmperr
+if [ "$raw" = true ]; then
+  cat $tmpout
+  exit 0
+fi
 
-run_curl GET "$token" https://api.bluexp.netapp.com/v1/management/organizations $tmpout $tmperr
-if jq -r '.items[] | "\(.name) \(.legacyId) \(.id)"' $tmpout > $tmperr; then
-  cat $tmperr | column -t -N Name,ID,UUID
+if jq -r '.items[] | "\(.name) \(.legacyId) \(.id) " + ((.tags[] | select (".internal:bxp:gov") | if(."internal:bxp:gov") then ."internal:bxp:gov" else empty end) | tostring) + " " + ((.tags[] | select (".internal:bxp:saas") | if(."internal:bxp:saas") then ."internal:bxp:saas" else empty end) | tostring)' $tmpout > $tmperr; then
+  cat $tmperr | column -t -N "Name,ID,Organization ID,GovCloud,SaaS Enabled"
 else
   echo "Error: Failed to parse the response from the API." >&2
   exit 1
