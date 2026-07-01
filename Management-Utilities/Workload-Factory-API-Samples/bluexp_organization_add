@@ -7,12 +7,17 @@
 ################################################################################
 usage () {
   cat 1>&2 <<EOF
-Usage: $(basename $0) -t REFRESH_TOKEN -o ORGANIZATION_NAME
+Usage: $(basename $0) -t REFRESH_TOKEN -o ORGANIZATION_NAME [-e ENDPOINT] [-b BEARER_TOKEN] [-g]
 
 Where: REFRESH_TOKEN - Is a refresh token used to obtain an access token needed
                        to run the Workload Factory APIs. You can obtain a refresh
                        token by going to https://services.cloud.netapp.com/refresh-token
        ORGANIZATION_NAME - Is the name of the organization to create.
+       ENDPOINT - Is the BlueXP API endpoint to use. The default is api.bluexp.netapp.com.
+       BEARER_TOKEN - Is an access token that can be used instead of a refresh token. If you
+                      provide a bearer token, the script will not attempt to obtain a new
+                      access token using the refresh token.
+      -g - If specified the account will be created in the GovCloud region.
 
 Instead of passing parameters on the command line, you can set the following
 environment variables:
@@ -46,21 +51,29 @@ fi
 . "$wf_utils"
 #
 # Parse the command line options.
-while getopts "ht:o:" opt; do
+: "${ENDPOINT:=api.bluexp.netapp.com}"
+GovCloud=false
+while getopts "ht:o:e:b:g" opt; do
   case ${opt} in
     t) REFRESH_TOKEN=$OPTARG ;;
     o) ORGANIZATION_NAME=$OPTARG ;;
+    e) ENDPOINT="$OPTARG" ;;
+    b) BEARER_TOKEN="$OPTARG" ;;
+    g) GovCloud=true ;;
     *) usage ;;
   esac
 done
 #
 # Declare an array of required options and the error message to display if they are not set.
 declare -A required_options
-required_options["REFRESH_TOKEN"]='Error: A BlueXP refresh token is required to run this script. It can be obtained from this web page:
-  https://services.cloud.netapp.com/refresh-token\n\n'
 required_options["ORGANIZATION_NAME"]='Error: You must provide the name of the organization you want to create.\n\n'
 
 check_required_options
+
+if [ -z "$REFRESH_TOKEN" -a -z "$BEATER_TOKEN" ]; then
+  echo "Error: You must provide either a refresh token or a bearer token." >&2
+  usage
+fi
 #
 # Check that the required commands are available.
 for cmd in jq curl; do
@@ -71,7 +84,12 @@ for cmd in jq curl; do
 done
 #
 # Get an access token.
-token=$(get_token)
+if [ -z "$BEARER_TOKEN" ]; then
+  token=$(get_token)
+else
+  token=$BEARER_TOKEN
+fi
+
 if [ -z "$token" ]; then
   echo "Failed to get a token."
   exit 1
@@ -79,5 +97,6 @@ fi
 #
 # Add the organization to the BlueXP workspace.
 echo -n "Creating organization ${ORGANIZATION_NAME}..."
-run_curl "POST" "$token" "https://api.bluexp.netapp.com/tenancy/account/$ORGANIZATION_NAME" $tmpout $tmperr '{"name": "'$ORGANIZATION_NAME'", "resourceType": "organization", "type": "application/vnd.netapp.bxp.resource", "version": "1.0"}' 'application/json'
+#run_curl "POST" "$token" "https://$ENDPOINT/tenancy/account/$ORGANIZATION_NAME" $tmpout $tmperr '{"name": "'$ORGANIZATION_NAME'", "resourceType": "organization", "type": "application/vnd.netapp.bxp.resource", "version": "1.0"}' 'application/json'
+run_curl "POST" "$token" "https://$ENDPOINT/tenancy/account/$ORGANIZATION_NAME" $tmpout $tmperr '{"isSaasDisabled": '$GovCloud'}' 'application/json'
 echo "Done."
