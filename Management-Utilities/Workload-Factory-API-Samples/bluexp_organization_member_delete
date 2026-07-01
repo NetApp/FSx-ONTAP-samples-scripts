@@ -1,22 +1,22 @@
 #!/bin/bash
 #
-# This script deletes a user from an BlueXP organization (a.k.a BlueXP account).
+# This script deletes a user from an BlueXP organization.
 #
 ################################################################################
 # Display usage information then exits the script.
 ################################################################################
 usage () {
   cat 1>&2 <<EOF
-This script adds a user to an BlueXP organization (a.k.a BlueXP account).
+This script deletes a user from an BlueXP organization.
 
 Usage: $(basename $0) -t REFRESH_TOKEN -o ORGANIZATION_ID -u USER_ID [-e ENDPOINT] [-b BEARER_TOKEN]
 
 Where: REFRESH_TOKEN - Is a refresh token used to obtain an access token needed
                        to run the Workload Factory APIs. You can obtain a refresh
                        token by going to https://services.cloud.netapp.com/refresh-token
-       ORGANIZATION_ID - Is the ID of the organization to add the user to. You can get
+       ORGANIZATION_ID - Is the ID of the organization to delete the user from. You can get
                          a list of organizations by running the list_bluexp_acct script.
-       USER_ID - Is the ID of the user to add to the organization. You can get a list of users
+       USER_ID - Is the ID of the user to delete from the organization. You can get a list of users
                  by running the list_bluexp_organization_users script.
        ENDPOINT - Is the BlueXP API endpoint to use. The default is api.bluexp.netapp.com.
        BEARER_TOKEN - Is an access token that can be used instead of a refresh token. If you
@@ -75,7 +75,7 @@ required_options["USER_ID"]='Error: You must provide the ID of the user you want
 
 check_required_options
 
-if [ -z "$REFRESH_TOKEN" -a -z "$BEATER_TOKEN" ]; then
+if [ -z "$REFRESH_TOKEN" -a -z "$BEARER_TOKEN" ]; then
   echo "Error: You must provide either a refresh token or a bearer token." >&2
   usage
 fi

@@ -66,13 +66,11 @@ while getopts ht:je:b: opt; do
     *) usage ;;
   esac
 done
-#
-# Declare an array of required options and the error message to display if they are not set.
-declare -A required_options
-required_options["REFRESH_TOKEN"]='Error: A BlueXP refresh tokon is required to run this script. It can be obtain from this web page:
-  https://services.cloud.netapp.com/refresh-token\n\n'
 
-check_required_options
+if [ -z "$REFRESH_TOKEN" -a -z "$BEARER_TOKEN" ]; then
+  echo "Error: You must provide either a refresh token or a bearer token." >&2
+  usage
+fi
 #
 # Check that the required commands are available.
 for cmd in jq curl; do

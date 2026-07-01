@@ -62,7 +62,7 @@ If you do create a new script, please consider contributing it back to this repo
 | [link_register](link_register) | This registers a Lambda function as a Workload Factory Link. |
 | [list_bluexp_accts](list_bluexp_accts) | This list all the BlueXP accounts (a.k.a. organizations) that you have access to. |
 | [list_bluexp_connectors](list_bluexp_connectors) | This list all the BlueXP connectors that you have access to. |
-| [list_bluexp_organization_members](list_organization_members) | This list all members of a provided BlueXP organization. |
+| [list_bluexp_organization_members](list_bluexp_organization_members) | This list all members of a provided BlueXP organization. |
 | [list_bluexp_roles](list_bluexp_roles) | This list all the BlueXP roles that you have access to. |
 | [list_bluexp_workspaces](list_bluexp_workspaces) | This list all the BlueXP workspaces that you have access to. |
 | [list_cicd_clones](list_cicd_clones) | This lists all the clones that you have access to in the specified CI/CD project. |

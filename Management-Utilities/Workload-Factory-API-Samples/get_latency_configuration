@@ -98,16 +98,12 @@ if [ -z "$token" ]; then
   echo "Error: Failed to obtain an access token. Exiting." >&2
   exit 1
 fi
-
+#
+# According to the documentation and some testing, this API doesn't support
+# pagination, probably because it didn't used to return volume specific
+# configurations.
 URL="https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/builders/v1/alarm/configure"
 run_curl GET "$token" "$URL" $tmpout $tmperr
-nextToken=$(jq -r '.nextToken' $tmpout)
-while [ "$nextToken" != "null" -a ! -z "$nextToken" ]; do
-  run_curl GET "$token" "${URL}?nextToken=$nextToken" $tmpout2 $tmperr
-  cat $tmpout2 >> $tmpout
-  nextToken=$(jq -r '.nextToken' $tmpout2)
-done
-
 if [ "$JSON_OUTPUT" == true ]; then
   if jq -r . $tmpout; then
     :

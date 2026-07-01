@@ -78,7 +78,7 @@ required_options["emailAddress"]='Error: You must provide the email address of t
 
 check_required_options
 
-if [ -z "$REFRESH_TOKEN" -a -z "$BEATER_TOKEN" ]; then
+if [ -z "$REFRESH_TOKEN" -a -z "$BEARER_TOKEN" ]; then
   echo "Error: You must provide either a refresh token or a bearer token." >&2
   usage
 fi

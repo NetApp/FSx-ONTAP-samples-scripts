@@ -70,7 +70,7 @@ required_options["ORGANIZATION_NAME"]='Error: You must provide the name of the o
 
 check_required_options
 
-if [ -z "$REFRESH_TOKEN" -a -z "$BEATER_TOKEN" ]; then
+if [ -z "$REFRESH_TOKEN" -a -z "$BEARER_TOKEN" ]; then
   echo "Error: You must provide either a refresh token or a bearer token." >&2
   usage
 fi

@@ -15,7 +15,7 @@ usage () {
   cat >&2 <<EOF
 This script is used to list all the members assigned to a BlueXP organization.
 
-Usage is: $(basename $0) -t refresh_token -o Organizaion_ID [-j] [-e ENDPOINT] [-b BEARER_TOKEN]
+Usage is: $(basename $0) -t refresh_token -o Organization_ID [-j] [-e ENDPOINT] [-b BEARER_TOKEN]
 
 Where: refresh_token - Is a refresh token used to obtain an access token needed
                        to run the Workload Factory APIs. You can obtain a refresh
@@ -38,7 +38,7 @@ EOF
 tmpout=/tmp/list_bluexp_user-out.$$
 tmpout2=/tmp/list_bluexp_user-out2.$$
 tmperr=/tmp/list_bluexp_user-err.$$
-trap 'rm -f $tmpout $tmperr' exit
+trap 'rm -f $tmpout $tmpout2 $tmperr' exit
 #
 # Source the wf_utils file.
 wf_utils=$(command -v wf_utils)
@@ -72,12 +72,15 @@ done
 #
 # Declare an array of required options and the error message to display if they are not set.
 declare -A required_options
-required_options["REFRESH_TOKEN"]='Error: A BlueXP refresh tokon is required to run this script. It can be obtain from this web page:
-  https://services.cloud.netapp.com/refresh-token\n\n'
 required_options["ORGANIZATION_ID"]='Error: The ID of the organization is required to run this script.
 You can list a list of account by running the list_bluexp_accts script found in this repo.\n\n'
 
 check_required_options
+
+if [ -z "${REFRESH_TOKEN}" -a -z "${BEARER_TOKEN}" ]; then
+  echo "Error: Either a refresh token or a bearer token is required to run this script." >&2
+  usage
+fi
 #
 # Check that the required commands are available.
 for cmd in jq curl; do

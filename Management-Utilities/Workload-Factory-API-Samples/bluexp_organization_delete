@@ -69,7 +69,7 @@ done
 declare -A required_options
 #required_options["REFRESH_TOKEN"]='Error: A BlueXP refresh token is required to run this script. It can be obtained from this web page:
 #  https://services.cloud.netapp.com/refresh-token\n\n'
-required_options["ORGANIZATION_ID"]='Error: You must provide the name of the organization you want to delete.
+required_options["ORGANIZATION_ID"]='Error: You must provide the ID of the organization you want to delete.
 You can get the list of organization you have access to by running the "list_bluexp_accts" script
 found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
 

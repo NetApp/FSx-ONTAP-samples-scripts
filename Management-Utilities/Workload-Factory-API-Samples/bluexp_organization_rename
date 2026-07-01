@@ -1,20 +1,20 @@
 #!/bin/bash
 #
-# This script renamees a BlueXP organization.
+# This script renames a BlueXP organization.
 #
 ################################################################################
 # Display usage information then exits the script.
 ################################################################################
 usage () {
   cat 1>&2 <<EOF
-This script renamees a BlueXP organization.
+This script renames a BlueXP organization.
 
 Usage: $(basename $0) -t REFRESH_TOKEN -o ORGANIZATION_ID -n NEW_NAME
 
 Where: REFRESH_TOKEN - Is a refresh token used to obtain an access token needed
                        to run the Workload Factory APIs. You can obtain a refresh
                        token by going to https://services.cloud.netapp.com/refresh-token
-       ORGANIZATION_ID - Is the Id of the organization to delete.
+       ORGANIZATION_ID - Is the Id of the organization to rename.
                          You can get a list of organizations you have access to
                          by running the "list_bluexp_accts" script
        NEW_NAME - The new name of the organization.

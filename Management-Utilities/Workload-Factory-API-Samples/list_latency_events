@@ -132,5 +132,5 @@ else
     echo "No latency events were found."
     exit 0
   fi
-  sort -f $tmpout2 | column -s, -t -N "Timestamnp,File System Name,Volume Name,Volume ID,Region,Alert Type,Event Type,Latency,Median Latency,IOPS,Median Over Percent"
+  sort -f $tmpout2 | column -s, -t -N "Timestamp,File System Name,Volume Name,Volume ID,Region,Alert Type,Event Type,Latency,Median Latency,IOPS,Median Over Percent"
 fi
