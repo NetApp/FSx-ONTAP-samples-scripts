@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 ################################################################################
-# This script is used to create a EDA CI/CD project.
+# This script is used to create an EDA CI/CD project.
 #
 # It is dependent on the 'wf_utils' file that is included in this repo. That
 # file contains the 'get_token' function that is used to obtain a valid
@@ -14,7 +14,7 @@
 ################################################################################
 usage() {
   cat >&2 <<EOF
-This script is used to create a EDA CI/CD project.
+This script is used to create an EDA CI/CD project.
 
 Usage: $(basename $0) -t refresh_token -a blueXP_account_ID -c credentials_id -n project_name -r aws_region -f filesystem_id -v volume_id
 

@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 ################################################################################
-# This script is used to delete a EDA CI/CD clone.
+# This script is used to delete an EDA CI/CD clone.
 #
 # It is dependent on the 'wf_utils' file that is included in this repo. That
 # file contains the 'get_token' function that is used to obtain a valid
@@ -14,7 +14,7 @@
 ################################################################################
 usage() {
   cat >&2 <<EOF
-This script is used to delete a EDA CI/CD clone.
+This script is used to delete an EDA CI/CD clone.
 
 Usage: $(basename $0) -t refresh_token -a blueXP_account_ID -p project_id -v clone_volume_id
 
