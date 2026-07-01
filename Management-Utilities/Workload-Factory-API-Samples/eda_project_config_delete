@@ -16,13 +16,16 @@ usage() {
   cat >&2 <<EOF
 This script is used to delete the EDA Project filter user has access to.
 
-Usage: $(basename $0) -t refresh_token -a blueXP_account_ID
+Usage: $(basename $0) -t refresh_token -a blueXP_account_ID [-b bearer_token] [-e endpoint]
 
 Where: refresh_token - Is a refresh token used to obtain an access token needed
                        to run the Workload Factory APIs. You can obtain a refresh
                        token by going to https://services.cloud.netapp.com/refresh-token
+       bearer_token - A bearer token to use. If not provided, the refresh token will
+                      be used to create one.
        blueXP_account_ID - is the BlueXP account ID. Run 'list_bluexp_accts' to get a
                            list of accounts you have access to.
+       endpoint - is the API endpoint to use. If not provided api.workloads.netapp.com will be used.
 
 Instead of passing parameters on the command line, you can set the
 following environment variables:
@@ -57,23 +60,29 @@ fi
 . "$wf_utils"
 #
 # Process command line arguments.
-while getopts "ht:a:" opt; do
+: ${ENDPOINT:="api.workloads.netapp.com"}
+while getopts "ht:a:e:b:" opt; do
   case $opt in
     t) REFRESH_TOKEN="$OPTARG" ;;
+    b) BEARER_TOKEN="$OPTARG" ;;
     a) BLUEXP_ACCOUNT_ID="$OPTARG" ;;
+    e) ENDPOINT="$OPTARG" ;;
     *) usage ;;
   esac
 done
 #
 # Declare an array of required options and the error message to display if they are not set.
 declare -A required_options
-required_options["REFRESH_TOKEN"]='Error: A BlueXP refresh tokon is required to run this script. It can be obtain from this web page:
-  https://services.cloud.netapp.com/refresh-token\n\n'
 required_options["BLUEXP_ACCOUNT_ID"]='Error: A BlueXP account ID is required to run this script.
 You can get the list of accounts you have access to by running the "list_bluexp_accts" script
 found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
 
 check_required_options
+
+if [ -z "$BEARER_TOKEN" -a -z "$REFRESH_TOKEN" ]; then
+  echo "Error: Either a refresh token or a bearer token is required to run this script. Exiting." >&2
+  exit 1
+fi
 #
 # Check that the required commands are available.
 for cmd in jq curl; do
@@ -83,12 +92,16 @@ for cmd in jq curl; do
   fi
 done
 
-token=$(get_token)
+if [ -z "$BEARER_TOKEN" ]; then
+  token=$(get_token)
+else
+  token=$BEARER_TOKEN
+fi
 if [ -z "$token" ]; then
   echo "Error: Failed to obtain an access token. Exiting." >&2
   exit 1
 fi
 
-URL="https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/builders/v1/configure"
+URL="https://$ENDPOINT/accounts/${BLUEXP_ACCOUNT_ID}/builders/v1/configure"
 run_curl DELETE "$token" "$URL" $tmpout $tmperr
 echo "EDA Project filter deleted successfully."
