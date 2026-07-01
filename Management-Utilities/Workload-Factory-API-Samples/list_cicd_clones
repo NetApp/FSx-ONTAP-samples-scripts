@@ -103,7 +103,7 @@ fi
 if [ "$raw" = true ]; then
   jq_query='.'
 else
-  jq_query='.items[] | "\(.name) \(.size/1024/1024/1024) \(.daysLeft) \(.volumeUuid) \(.status)"'
+  jq_query='.items[] | .name + " " + if(.size) then .size/1024/1024/1024 | tostring else "N/A" end + " " + if(.daysLeft) then .daysLeft | tostring else "N/A" end + " " + .volumeUuid + " " + .status'
 fi
 
 URL="https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/builders/v1/projects/${PROJECT_ID}/operations/clones"
