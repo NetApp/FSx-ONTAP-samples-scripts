@@ -109,53 +109,57 @@ while [ "$nextToken" != "null" -a ! -z "$nextToken" ]; do
 done
 
 if [ "$JSON_OUTPUT" == true ]; then
-  cat $tmpout $tmperr
+  if jq -r . $tmpout; then
+    :
+  else
+    cat $tmpout $tmperr
+  fi
+  exit
+fi
+#
+# First get the default latency configuration.
+jq_query='"\(.accountId),\(.createdBy),\(.status),\(.config.warning.readLatency.latencyThresholdMs),\(.config.warning.writeLatency.latencyThresholdMs),\(.config.critical.readLatency.latencyThresholdMs),\(.config.critical.writeLatency.latencyThresholdMs)"'
+if jq -r "$jq_query" $tmpout > $tmpout2 2> $tmperr; then
+  :
+else
+  echo "Error: Failed to parse the output from the API." >&2
+  cat $tmperr >&2
+  exit 1
+fi
+echo "Default Latency Configuration:"
+sort -f $tmpout2 | column -s, -t -R 4,5,6,7 -N "Account ID,Created By,Status,Warning Read Threshold,Warning Write Threshold,Critical Read Threshold,Critical Write Threshold"
+#
+# Now get the latency configuration for each volume.
+jq_query='.config.filesystems | to_entries | .[] | .key + " " + (.value | to_entries | .[] | .key + " " + (.value.warning.readLatency.latencyThresholdMs | tostring) + " " + (.value.warning.writeLatency.latencyThresholdMs | tostring) + " " + (.value.critical.readLatency.latencyThresholdMs | tostring) + " " + (.value.critical.writeLatency.latencyThresholdMs | tostring) + " ")'
+if jq -r "$jq_query" $tmpout > $tmpout2 2> $tmperr; then
+  :
+else
+  echo "Error: Failed to parse the output from the API." >&2
+  cat $tmperr >&2
+  exit 1
+fi
+if [ "$INCLUDE_NAMES" == false ]; then
+  printf "\nVolume specific Latency Configuration:\n"
+  sort -f $tmpout2 | column -s' ' -t -R 3,4,5,6 -N "File System ID,Volume ID,Warning Read Threshold,Warning Write Threshold,Critical Read Threshold,Critical Write Threshold"
 else
   #
-  # First get the default latency configuration.
-  jq_query='"\(.accountId),\(.createdBy),\(.status),\(.config.warning.readLatency.latencyThresholdMs),\(.config.warning.writeLatency.latencyThresholdMs),\(.config.critical.readLatency.latencyThresholdMs),\(.config.critical.writeLatency.latencyThresholdMs)"'
-  if jq -r "$jq_query" $tmpout > $tmpout2 2> $tmperr; then
-    :
-  else
-    echo "Error: Failed to parse the output from the API." >&2
-    cat $tmperr >&2
-    exit 1
-  fi
-  echo "Default Latency Configuration:"
-  sort -f $tmpout2 | column -s, -t -R 4,5,6,7 -N "Account ID,Created By,Status,Warning Read Threshold,Warning Write Threshold,Critical Read Threshold,Critical Write Threshold"
+  # Get all the unique file systems:
+  awk '{print $1}' $tmpout2 | sort -u > $tmpout
   #
-  # Now get the latency configuration for each volume.
-  jq_query='.config.filesystems | to_entries | .[] | .key + " " + (.value | to_entries | .[] | .key + " " + (.value.warning.readLatency.latencyThresholdMs | tostring) + " " + (.value.warning.writeLatency.latencyThresholdMs | tostring) + " " + (.value.critical.readLatency.latencyThresholdMs | tostring) + " " + (.value.critical.writeLatency.latencyThresholdMs | tostring) + " ")'
-  if jq -r "$jq_query" $tmpout > $tmpout2 2> $tmperr; then
-    :
-  else
-    echo "Error: Failed to parse the output from the API." >&2
-    cat $tmperr >&2
-    exit 1
-  fi
-  if [ "$INCLUDE_NAMES" == false ]; then
-    printf "\nVolume specific Latency Configuration:\n"
-    sort -f $tmpout2 | column -s' ' -t -R 3,4,5,6 -N "File System ID,Volume ID,Warning Read Threshold,Warning Write Threshold,Critical Read Threshold,Critical Write Threshold"
-  else
-    #
-    # Get all the unique file systems:
-    awk '{print $1}' $tmpout2 | sort -u > $tmpout
-    #
-    # Create a lookup table of file system to volume mapping.
-    > $tmpout3
-    for fs in $(cat $tmpout); do
-      list_volumes -f $fs >> $tmpout3
-    done
-  
-    > $tmpout
-    while read fsId volId wrt wwr crt cwt; do
-      volumeName=$(grep $volId $tmpout3 | awk '{print $1}')
-      if [ -z "$volumeName" ]; then
-        volumeName="N/A"
-      fi
-      echo "$fsId,$volId,$volumeName,$wrt,$wwr,$crt,$cwt," >> $tmpout
-    done < $tmpout2
-    printf "\nVolume specific Latency Configuration:\n"
-    sort -f $tmpout | column -s, -t -R 4,5,6,7 -N "File System ID,Volume ID,Volume Name,Warning Read Threshold,Warning Write Threshold,Critical Read Threshold,Critical Write Threshold"
-  fi
+  # Create a lookup table of file system to volume mapping.
+  > $tmpout3
+  for fs in $(cat $tmpout); do
+    list_volumes -f $fs >> $tmpout3
+  done
+
+  > $tmpout
+  while read fsId volId wrt wwr crt cwt; do
+    volumeName=$(grep $volId $tmpout3 | awk '{print $1}')
+    if [ -z "$volumeName" ]; then
+      volumeName="N/A"
+    fi
+    echo "$fsId,$volId,$volumeName,$wrt,$wwr,$crt,$cwt," >> $tmpout
+  done < $tmpout2
+  printf "\nVolume specific Latency Configuration:\n"
+  sort -f $tmpout | column -s, -t -R 4,5,6,7 -N "File System ID,Volume ID,Volume Name,Warning Read Threshold,Warning Write Threshold,Critical Read Threshold,Critical Write Threshold"
 fi

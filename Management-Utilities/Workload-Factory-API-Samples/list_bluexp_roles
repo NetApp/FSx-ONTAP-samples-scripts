@@ -93,8 +93,12 @@ if [ -z "$token" ]; then
 fi
 filter="$(urlencode isUserRole eq \"true\" and category eq \"IAM\")"
 run_curl GET "$token" "https://$ENDPOINT/v1/management/roles?filter=$filter" $tmpout $tmperr
-if [ "$raw" = true ]; then
-  cat $tmpout
+if [ "$raw" == true ]; then
+  if jq -r . $tmpout; then
+    :
+  else
+    cat $tmpout $tmperr
+  fi
   exit 0
 fi
 

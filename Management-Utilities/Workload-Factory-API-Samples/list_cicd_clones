@@ -129,7 +129,8 @@ while [ "$nextToken" != "null" ]; do
   fi
   nextToken=$(jq -r '.nextToken' $tmpout)
 done
-if [ "$raw" = true ]; then
+
+if [ "$raw" == true ]; then
   cat $tmpout2
 else
   sort -f $tmpout2 | column -t -N "Name,Size (GB),Days Left,Volume UUID,Status"

@@ -111,7 +111,12 @@ while [ $total -lt $count ]; do
   let total+=numPerPage
 
   if [ "$raw" == true ]; then
-    jq -r . $tmpout
+    if jq -r . $tmpout; then
+      :
+    else
+      cat $tmpout $tmperr
+      exit
+    fi
   else
     jq_query='.items[] | "\(.id),\(.name)," + if(.email != null) then .email else "N/A" end + ",\(.userType)"'
     if jq -r "$jq_query" $tmpout >> $tmpout2 2> $tmperr; then

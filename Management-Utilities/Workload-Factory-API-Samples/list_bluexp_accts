@@ -97,7 +97,11 @@ fi
 #run_curl GET "$token" https://$ENDPOINT/tenancy/account $tmpout $tmperr
 run_curl GET "$token" https://$ENDPOINT/v1/management/organizations $tmpout $tmperr
 if [ "$raw" = true ]; then
-  cat $tmpout
+  if jq -r . $tmpout; then
+    :
+  else
+    cat $tmpout $tmperr
+  fi
   exit 0
 fi
 
