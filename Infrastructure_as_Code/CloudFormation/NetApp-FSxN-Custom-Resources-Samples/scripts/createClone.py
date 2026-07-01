@@ -127,7 +127,7 @@ except getopt.error as err:
     sys.exit(2)
 #
 # Check that all the required parameters are present.
-if secretArn == "" or secretKey == "" or linkArn == "" or fsxId == "" or svmName == "" or parentVolumeName == "" or cloneVolumeName == "":
+if secretArn == "" or secretKey == "" or linkArn == "" or fsxId == "" or svmName == "" or parentVolumeName == "" or cloneVolumeName == "" or region == "":
     print("Missing required parameters.")
     usage()
     sys.exit(1)

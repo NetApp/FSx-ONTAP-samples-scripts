@@ -27,13 +27,14 @@
 ################################################################################
 usage () {
 cat 1>&2 <<EOF
-Usage: $(basename $0) [-f fileSystemName] [-r region] [-i fileSystemID] [-b] [-w]
+Usage: $(basename $0) [-f fileSystemName] [-r region] [-i fileSystemID] [-b] [-w] [-e endpoint_url]
 Where:
   fileSystemName: Is the name of the file system you want to delete. This option is mutually exclusive to the -i option.
   fileSystemID: Is the file system id of the file system you want to delete. This option is mutually exclusive to the -f option.
   region: Is the AWS region where the FSxN filesystem resides.
   -b: enable final backup. Otherwise, it is skipped.
   -w: Wait for the file system to be deleted before returning.
+  endpoint_url: Is the endpoint url to use when connecting to the AWS API.
 EOF
   exit 1
 }
@@ -88,7 +89,7 @@ enableBackup=false
 waitForCompletion=false
 #
 # Process command line arguments.
-while getopts "hwbr:f:i:" option; do
+while getopts "hwbr:f:i:e:" option; do
   case $option in
     f) fileSystemName=$OPTARG
       ;;
@@ -99,6 +100,9 @@ while getopts "hwbr:f:i:" option; do
     b) enableBackup=true
       ;;
     w) waitForCompletion=true
+      ;;
+    e) endpoint_url="--endpoint-url $OPTARG"
+       endpoint_arg="-e $OPTARG"
       ;;
     *) usage
       ;;
@@ -124,7 +128,7 @@ fi
 #
 # Get the file system id based on the name.
 if [ -z "$fsid" ]; then
-  fsid=($(aws fsx describe-file-systems --region=$region --output=json 2> $tmpout | jq -r '.FileSystems[] | if((.Tags[] | select(.Key == "Name") .Value) == "'"${fileSystemName}"'") then .FileSystemId else empty end' 2> /dev/null))
+  fsid=($(aws fsx describe-file-systems $endpoint_url --region=$region --output=json 2> $tmpout | jq -r '.FileSystems[] | if((.Tags[] | select(.Key == "Name") .Value) == "'"${fileSystemName}"'") then .FileSystemId else empty end' 2> /dev/null))
 
   if [ ${#fsid[*]} -gt 1 ]; then
     echo "Error, more than one file system matched the file system name '$fileSystemName'." 1>&2
@@ -140,7 +144,7 @@ if [ -z "$fsid" ]; then
 else
   #
   # Get the file system name based on the fsid.
-  aws fsx describe-file-systems --file-system-ids $fsid --region=$region --output=json > $tmpout 2>&1
+  aws fsx describe-file-systems $endpoint_url --file-system-ids $fsid --region=$region --output=json > $tmpout 2>&1
   if [ $? -ne 0 ]; then
     echo "Error, failed to get the file system name based on the ID ($fsid)." 1>&2
     cat $tmpout 1>&2
@@ -155,7 +159,7 @@ else
 fi
 #
 # Create a JSON file with all the SVMs associated with the file system.
-aws fsx describe-storage-virtual-machines --region=$region --output=json --filters Name=file-system-id,Values=$fsid > $svmsFile 2>&1
+aws fsx describe-storage-virtual-machines $endpoint_url --region=$region --output=json --filters Name=file-system-id,Values=$fsid > $svmsFile 2>&1
 if [ $? -ne 0 ]; then
   echo "Error, failed to get the list of SVMs." 1>&2
   cat $svmsFile 1>&2
@@ -163,7 +167,7 @@ if [ $? -ne 0 ]; then
 fi
 #
 # Create a JSON file with all the FSXN volumes associated with the file system.
-aws fsx describe-volumes --region=$region --output=json --filters Name=file-system-id,Values=$fsid > $volumesFile 2>&1
+aws fsx describe-volumes --region=$region $endpoint_url --output=json --filters Name=file-system-id,Values=$fsid > $volumesFile 2>&1
 if [ $? -ne 0 ]; then
   echo "Error, failed to get the list of volumes." 1>&2
   cat $volumesFile 1>&2
@@ -188,7 +192,7 @@ svms=($(jq -r '.StorageVirtualMachines[] | select(.FileSystemId == "'$fsId'") | 
 #
 # First delete all the SVMs. The 'delete_fsxn_svm' script will delete all the volumes associated with the SVM.
 for svmId in ${svms[*]}; do
-  delete_fsxn_svm -n -w $enableBackup -i $svmId -r $region
+  delete_fsxn_svm -n -w $enableBackup -i $svmId -r $region $endpoint_arg
   if [ $? -ne 0 ]; then
     echo "Error, failed to delete the SVM with SVM ID '$svmId'." 1>&2
     exit 1
@@ -196,7 +200,7 @@ for svmId in ${svms[*]}; do
 done
 #
 # Now that all the volumes and all the SVMs have been deleted, we can delete the filesystem.
-aws fsx delete-file-system --file-system-id $fsid --output=json --region=$region > $tmpout 2>&1
+aws fsx delete-file-system $endpoint_url --file-system-id $fsid --output=json --region=$region > $tmpout 2>&1
 if [ $? != "0" ]; then
   printf "\nError, failed to delete file system.\n" 1>&2
   cat $tmpout 1>&2
@@ -208,7 +212,7 @@ else
     if [ $waitForCompletion == "true" ]; then
       i=0
       while [ $i -lt $MaxIterations ]; do
-        aws fsx describe-file-systems --file-system-ids $fsid --output=json --region=$region > $tmpout 2>&1
+        aws fsx describe-file-systems $endpoint_url --file-system-ids $fsid --output=json --region=$region > $tmpout 2>&1
         if [ $? -eq 0 ]; then
           status=$(jq -r '.FileSystems[0].Lifecycle' $tmpout 2> /dev/null)
           if [ "$status" != "DELETING" -a "$status" != "PENDING" ]; then

@@ -29,7 +29,7 @@ svmName=""
 size="$((20*1024*1024))"
 aggregates="aggr1"
 
-region=$(aws configure list | awk '/region/{print $2}')
+region=$(aws configure get region)
 
 while getopts "hr:l:s:k:f:v:n:z:a:t:" opt; do
   case $opt in

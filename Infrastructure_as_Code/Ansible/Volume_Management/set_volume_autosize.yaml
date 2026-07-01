@@ -1,0 +1,64 @@
+# Title: set_volume_autosize.yaml
+
+---
+- name: Playbook to create set the autosize of a volume on an FSx for ONTAP file system.
+  hosts: localhost
+  collections:
+    - netapp.ontap
+    - amazon.aws
+  gather_facts: false
+  vars_files:
+    - variables.yaml
+  vars:
+    use_lambda: false
+
+  tasks:
+    - name: Ensure required variables are set.
+      fail:
+        msg: "Required variable '{{ item }}' has not been provided."
+      when: vars[item] is undefined
+      loop:
+        - volume_name
+        - vserver
+        - fsxn_hostname
+        - secret_name
+        - autosize_mode
+    
+    - name: Set use_lambda to true if lambda_function_name is provided.
+      set_fact:
+        use_lambda: true
+      when: lambda_function_name is defined
+    
+    - name: Ensure that aws_region has been provided if use_lambda is true.
+      fail:
+        msg: "aws_region must be defined when use_lambda is true."
+      when: use_lambda and aws_region is not defined
+    
+    - name: Ensure autosize_mode is valid.
+      fail:
+        msg: "autosize_mode must be either 'grow', 'grow_shrink', or 'off'."
+      when: autosize_mode not in ['grow', 'off', 'grow_shrink']
+
+    - name: Get username and password from AWS secret
+      set_fact:
+        username: "{{ lookup('amazon.aws.aws_secret', '{{ secret_name }}.username', nested=true) }}"
+        password: "{{ lookup('amazon.aws.aws_secret', '{{ secret_name }}.password', nested=true) }}"
+      no_log: true
+   
+    - name: Set autosize 
+      netapp.ontap.na_ontap_volume_autosize:
+        hostname: "{{ fsxn_hostname }}"
+        vserver: "{{ vserver }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        validate_certs: false
+        use_lambda: "{{ use_lambda }}"
+        lambda_config:
+          aws_profile: "{{ aws_profile | default('default') }}"
+          aws_region: "{{ aws_region | default('') }}"
+          function_name: "{{ lambda_function_name | default('') }}"
+
+        volume: "{{ volume_name }}"
+        mode: "{{ autosize_mode }}"
+        minimum_size: "{{ autosize_min_size | default(omit) }}"
+        maximum_size: "{{ autosize_max_size | default(omit) }}"

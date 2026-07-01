@@ -21,7 +21,7 @@
 ################################################################################
 usage () {
 cat 1>&2 <<EOF
-Usage: $(basename $0) -i svmID -n volumeName [-r region] [-s size] [-v volumeStyle] [-a aggregate] [-w]
+Usage: $(basename $0) -i svmID -n volumeName [-r region] [-s size] [-v volumeStyle] [-a aggregate] [-w] [-e endpoint_url]
 where
   svmID: is the SVM ID in the filesystem you want to create the volume.
   volumeName: is the name you want to assign the volume.
@@ -30,6 +30,7 @@ where
   volumeStyle: Is the style of the volume. Either FlexVol or FlexGroup. Default is flexvol.
   aggregate: is the name of the aggregate you want the volume put on. Required for FlexVol volumes on Scale-Out deployments. Default is aggr1.
   -w : wait for the volume to be created before returning.
+  endpoint_url: Is the endpoint url to use when connecting to the AWS API.
 EOF
   exit 1
 }
@@ -58,28 +59,22 @@ volumeStyle="flexvol"
 aggregateOption=""
 #
 # Process command line arguments.
-while getopts "ha:i:n:r:s:v:w" option; do
+while getopts "ha:i:n:r:s:v:we:" option; do
   case $option in
-    i) svmId=$OPTARG
-      ;;
-    n) volumeName=$OPTARG
-      ;;
-    r) region=$OPTARG
-      ;;
+    i) svmId=$OPTARG ;;
+    n) volumeName=$OPTARG ;;
+    r) region=$OPTARG ;;
+    e) endpoint_url="--endpoint-url $OPTARG" ;;
     s) size=$OPTARG
       if ! [[ $size =~ $intergerRegex ]]; then
         echo "Error, size must be an integer." 1>&2
         usage
       fi
       ;;
-    v) volumeStyle=$OPTARG
-      ;;
-    a) aggregateOption='"AggregateConfiguration":{"Aggregates":["'$OPTARG'"]},'
-      ;;
-    w) waitForCompletion=true
-      ;;
-    *) usage
-      ;;
+    v) volumeStyle=$OPTARG ;;
+    a) aggregateOption='"AggregateConfiguration":{"Aggregates":["'$OPTARG'"]},' ;;
+    w) waitForCompletion=true ;;
+    *) usage ;;
   esac
 done
 #
@@ -95,7 +90,7 @@ if [ $volumeStyle != "FLEXVOL" -a $volumeStyle != "FLEXGROUP" ]; then
   usage
 fi
 
-aws fsx create-volume --volume-type ONTAP --name $volumeName --ontap-configuration '{
+aws fsx create-volume --volume-type ONTAP $endpoint_url --name $volumeName --ontap-configuration '{
   "JunctionPath": "/'$volumeName'",
   "SecurityStyle": "UNIX",
   "SizeInMegabytes" : '$size',
@@ -119,7 +114,7 @@ else
     if [ "$waitForCompletion" == "true" ]; then
       i=0
       while [ $i -lt $maxIterations ]; do
-        aws fsx describe-volumes --volume-ids $volumeId --region=$region --output=json > $tmpout 2>&1
+        aws fsx describe-volumes $endpoint_url --volume-ids $volumeId --region=$region --output=json > $tmpout 2>&1
         status=$(jq -r .Volumes[0].Lifecycle $tmpout 2> /dev/null)
         if [ $status == "CREATED" ]; then
           printf "\nVolume '$volumeName'($volumeId) has been created.\n"

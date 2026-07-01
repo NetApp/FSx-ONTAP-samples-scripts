@@ -1,0 +1,65 @@
+# Title: set_volume_efficiency.yaml
+
+---
+- name: Playbook to set a volumes efficiencies.
+  hosts: localhost
+  collections:
+    - netapp.ontap
+    - amazon.aws
+  gather_facts: false
+  vars_files:
+    - variables.yaml
+  vars:
+    use_lambda: false
+
+  tasks:
+    - name: Ensure required variables are set.
+      fail:
+        msg: "Required variable '{{ item }}' has not been provided."
+      when: vars[item] is undefined
+      loop:
+        - volume_name
+        - vserver
+        - fsxn_hostname
+        - secret_name
+        - efficiency_mode
+    
+    - name: Set use_lambda to true if lambda_function_name is provided.
+      set_fact:
+        use_lambda: true
+      when: lambda_function_name is defined
+    
+    - name: Ensure that aws_region has been provided if use_lambda is true.
+      fail:
+        msg: "aws_region must be defined when use_lambda is true."
+      when: use_lambda and aws_region is not defined
+    
+    - name: Get username and password from AWS secret
+      set_fact:
+        username: "{{ lookup('amazon.aws.aws_secret', '{{ secret_name }}.username', nested=true) }}"
+        password: "{{ lookup('amazon.aws.aws_secret', '{{ secret_name }}.password', nested=true) }}"
+      no_log: true
+
+    - name: Ensure efficiency_mode is either 'enabled' or 'disabled'
+      fail:
+        msg: "efficiency_mode must be either 'enabled' or 'disabled'."
+      when: efficiency_mode not in ['enabled', 'disabled']
+
+    - name: Set efficiency of the volume based on the value of efficiency_mode variable.
+      netapp.ontap.na_ontap_volume_efficiency:
+        state: "{{ 'present' if efficiency_mode == 'enabled' else 'absent' }}"
+        hostname: "{{ fsxn_hostname }}"
+        vserver: "{{ vserver }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        validate_certs: false
+        use_lambda: "{{ use_lambda }}"
+        lambda_config:
+          aws_profile: "{{ aws_profile | default('default') }}"
+          aws_region: "{{ aws_region  | default('') }}"
+          function_name: "{{ lambda_function_name | default('') }}"
+
+        volume_name: "{{ volume_name }}"
+        enable_data_compaction: "{{ 'true' if efficiency_mode == 'enabled' else 'false' }}"
+        enable_inline_compression: "{{ 'true' if efficiency_mode == 'enabled' else 'false' }}"
+        enable_inline_dedupe: "{{ 'true' if efficiency_mode == 'enabled' else 'false' }}"

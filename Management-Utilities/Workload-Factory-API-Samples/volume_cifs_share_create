@@ -1,9 +1,14 @@
 #!/bin/bash
 #
 ################################################################################
-# This script is used to create a cifs share in a volume in a FSx for ONTAP
-# file system. It will assume that the path is /cifs_share_name and will give
-# it full control permissions for everyone.
+# This script is used to create a cifs share in a volume in a FSx for
+# ONTAP file system. It will assume that the path is /volume_junction_path
+# unless you specify a specific path with the -p option. Note that the path
+# must exist. The permissions it will assign to the share will be full
+# control to everyone.
+#
+# Note that if a share with the same name already exists, the script will
+# display an error and exit.
 #
 # It is dependent on the 'wf_utils' file that is included in this repo. That
 # file contains the 'get_token' function that is used to obtain a valid
@@ -16,11 +21,15 @@
 ################################################################################
 usage() {
   cat >&2 <<EOF
-This script is used to create a cifs share in a volume in a FSx for ONTAP
-file system. It will assume that the path is /cifs_share_name and will give
-it full control permissions for everyone.
+This script is used to create a cifs share in a volume in a FSx for
+ONTAP file system. It will assume that the path is /volume_junction_path
+unless you specify a specific path with the -p option. Note that the path
+must exist. It will give it full control for everyone permissions to the
+share.
 
-Usage: $(basename $0) -t refresh_token -a blueXP_account_ID -c credentials_ID -r aws_region -f filesystem_ID -v volume_ID -s cifs_share_name
+If a share with the same name already exists the script will display an error and exit.
+
+Usage: $(basename $0) -t refresh_token -a blueXP_account_ID -c credentials_ID -r aws_region -f filesystem_ID -v volume_ID -n cifs_share_name [-p share_path]
 
 Where: refresh_token - Is a refresh token used to obtain an access token needed
                        to run the Workload Factory APIs. You can obtain a refresh
@@ -33,6 +42,7 @@ Where: refresh_token - Is a refresh token used to obtain an access token needed
        filesystem_id     - is the AWS file system ID of the FSx file system where the volume resides
        volume_ID         - is the AWS volume ID of the volume where you want to create the cifs share.
        cifs_share_name   - is the name of the share to create. Only alphanumeric characters, underscores and dashes are allowed.
+       share_path        - is the path of the share within the volume. The volume's junction path will be to the share path. If not specified, it will default to /volume_junction_path. Note the path must exist in the volume.
 
 Instead of passing parameters on the command line, you can set the
 following environment variables:
@@ -69,7 +79,7 @@ fi
 . "$wf_utils"
 #
 # Process command line options.
-while getopts "ht:a:c:r:f:v:s:" opt; do
+while getopts "ht:a:c:r:f:v:n:p:" opt; do
   case $opt in
     t) REFRESH_TOKEN="$OPTARG" ;;
     a) BLUEXP_ACCOUNT_ID="$OPTARG" ;;
@@ -77,7 +87,8 @@ while getopts "ht:a:c:r:f:v:s:" opt; do
     r) AWS_REGION="$OPTARG" ;;
     f) FILESYSTEM_ID="$OPTARG" ;;
     v) VOLUME_ID="$OPTARG" ;;
-    s) CIFS_SHARE_NAME="$OPTARG" ;;
+    n) CIFS_SHARE_NAME="$OPTARG" ;;
+    p) SHARE_PATH="$OPTARG" ;;
     *) usage ;;
   esac
 done
@@ -101,6 +112,12 @@ required_options["CIFS_SHARE_NAME"]='Error: The name of the cifs share is requir
 
 check_required_options
 #
+# Check that the CIFS_SHARE_NAME only contains allowed characters (alphanumeric, underscores and dashes).
+if [[ ! "$CIFS_SHARE_NAME" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+  echo "Error: The CIFS share name can only contain alphanumeric characters, underscores and dashes." >&2
+  exit 1
+fi
+#
 # Check if the required commands are available.
 for cmd in jq curl; do
   if ! command -v $cmd &> /dev/null; then
@@ -115,17 +132,31 @@ if [ -z "$token" ]; then
   exit 1
 fi
 #
-# Get the existing shares.
+# Get the existing shares and the junction path
 run_curl GET "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/fsx/v2/credentials/${CREDENTIALS_ID}/regions/${AWS_REGION}/file-systems/${FILESYSTEM_ID}/volumes/${VOLUME_ID}?include=cifsShares" $tmpout $tmperr
 cifsShares=$(jq -r '.cifsShares' $tmpout)
-#
-# Create a new share definition.
-# Check that the CIFS_SHARE_NAME only contains allowed characters (alphanumeric, underscores and dashes).
-if [[ ! "$CIFS_SHARE_NAME" =~ ^[a-zA-Z0-9_-]+$ ]]; then
-  echo "Error: The CIFS share name can only contain alphanumeric characters, underscores and dashes." >&2
+alreadExist=$(echo "$cifsShares" | jq -r 'map(select(.name == "'$CIFS_SHARE_NAME'")) | length')
+if [ "$alreadExist" -gt 0 ]; then
+  echo "A share with the name '$CIFS_SHARE_NAME' already exists. No changes will be made." >&2
   exit 1
 fi
-newShare='{"name":"'$CIFS_SHARE_NAME'","path":"'/$CIFS_SHARE_NAME'","acls":[{"userOrGroup":"Everyone","permission":"full_control","type":"windows"}]}'
+junctionPath=$(jq -r '.junctionPath' $tmpout)
+if [ -z "$junctionPath" -o "$junctionPath" == "null" ]; then
+  echo "Error: The volume doesn't have a junction path." >&2
+  exit 1
+fi
+
+if [ -z "$SHARE_PATH" ]; then
+  SHARE_PATH="$junctionPath"
+else
+  # Remove leading slash if it exists
+  SHARE_PATH="${SHARE_PATH#/}"
+  SHARE_PATH="$junctionPath/$SHARE_PATH"
+fi
+#
+# Create a new share definition.
+newShare='{"name":"'$CIFS_SHARE_NAME'","path":"'$SHARE_PATH'","acls":[{"userOrGroup":"Everyone","permission":"full_control","type":"windows"}]}'
+echo "Creating share named '$CIFS_SHARE_NAME' with path '$SHARE_PATH'."
 #
 # Add the new share to the existing ones.
 cifsShares=$(echo "$cifsShares" | jq -r '. += ['$newShare']')
