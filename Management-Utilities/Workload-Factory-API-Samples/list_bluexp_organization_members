@@ -1,7 +1,6 @@
 #!/bin/bash
 #
-# This script is used to list all the BlueXP accounts that a user has
-# access to. 
+# This script is used to list all the members assigned to a BlueXP organization.
 #
 # It is dependent on the 'wf_utils' file that is included in this repo. That
 # file contains the 'get_token' function that is used to obtain a valid
@@ -14,14 +13,15 @@
 ################################################################################
 usage () {
   cat >&2 <<EOF
-This script is used to list all the BlueXP accounts (a.k.a. organizations)
-that you have access to.
+This script is used to list all the members assigned to a BlueXP organization.
 
-Usage is: $(basename $0) -t refresh_token  [-j] [-e ENDPOINT] [-b BEARER_TOKEN]
+Usage is: $(basename $0) -t refresh_token -o Organization_ID [-j] [-e ENDPOINT] [-b BEARER_TOKEN]
 
 Where: refresh_token - Is a refresh token used to obtain an access token needed
                        to run the Workload Factory APIs. You can obtain a refresh
                        token by going to https://services.cloud.netapp.com/refresh-token
+      Organization_ID - The BlueXP account UUID to list the users for. You can
+                        get that from the list_bluexp_accts script found in this repo.
       j - Output the raw JSON response from the API instead of a formatted table.
       ENDPOINT - The BlueXP API endpoint to use. Default is api.bluexp.netapp.com.
       BEARER_TOKEN - A valid Bearer token that can be used instead of a refresh token.
@@ -30,13 +30,15 @@ Note, instead of passing parameters on the command line, you can set the
 following environment variables instead:
 
     export REFRESH_TOKEN=<refresh_token>
+    export ORGANIZATION_ID=<organization_id>
 EOF
   exit 1
 }
 
-tmpout=/tmp/list_accounts-out.$$
-tmperr=/tmp/list_accounts-err.$$
-trap 'rm -f $tmpout $tmperr' exit
+tmpout=/tmp/list_bluexp_user-out.$$
+tmpout2=/tmp/list_bluexp_user-out2.$$
+tmperr=/tmp/list_bluexp_user-err.$$
+trap 'rm -f $tmpout $tmpout2 $tmperr' exit
 #
 # Source the wf_utils file.
 wf_utils=$(command -v wf_utils)
@@ -57,18 +59,26 @@ fi
 # Parse the command line options.
 raw=false
 : "${ENDPOINT:=api.bluexp.netapp.com}"
-while getopts ht:je:b: opt; do
+while getopts ht:je:b:o: opt; do
   case $opt in
     t) REFRESH_TOKEN="$OPTARG" ;;
+    o) ORGANIZATION_ID="$OPTARG" ;;
     b) BEARER_TOKEN="$OPTARG" ;;
     j) raw=true ;;
     e) ENDPOINT="$OPTARG" ;;
     *) usage ;;
   esac
 done
+#
+# Declare an array of required options and the error message to display if they are not set.
+declare -A required_options
+required_options["ORGANIZATION_ID"]='Error: The ID of the organization is required to run this script.
+You can list a list of account by running the list_bluexp_accts script found in this repo.\n\n'
 
-if [ -z "$REFRESH_TOKEN" -a -z "$BEARER_TOKEN" ]; then
-  echo "Error: You must provide either a refresh token or a bearer token." >&2
+check_required_options
+
+if [ -z "${REFRESH_TOKEN}" -a -z "${BEARER_TOKEN}" ]; then
+  echo "Error: Either a refresh token or a bearer token is required to run this script." >&2
   usage
 fi
 #
@@ -90,22 +100,39 @@ if [ -z "$token" ]; then
   echo "Error: Failed to obtain an access token. Exiting." >&2
   exit 1
 fi
-#
-# /tenancy/account doesn't provide both the ID and UUID.
-#run_curl GET "$token" https://$ENDPOINT/tenancy/account $tmpout $tmperr
-run_curl GET "$token" https://$ENDPOINT/v1/management/organizations $tmpout $tmperr
-if [ "$raw" = true ]; then
-  if jq -r . $tmpout; then
-    :
-  else
-    cat $tmpout $tmperr
+filter="$(urlencode userType ne \"agent\")"
+numPerPage=100
+count=1  # Just give it an initial value to enter the loop
+total=0
+while [ $total -lt $count ]; do
+  run_curl GET "$token" "https://$ENDPOINT/v1/management/organizations/$ORGANIZATION_ID/users?limit=${numPerPage}&skip=${total}&filter=$filter" $tmpout $tmperr '' 'application/vnd.netapp.bxp.users.extended+json'
+  count="$(jq -r '.count' $tmpout 2> /dev/null)"
+  if [ "$count" == 0 ]; then
+    echo "No members found for the specified organization: $ORGANIZATION_ID." >&2
+    exit 0
   fi
+  let total+=numPerPage
+
+  if [ "$raw" == true ]; then
+    if jq -r . $tmpout; then
+      :
+    else
+      cat $tmpout $tmperr
+      exit
+    fi
+  else
+    jq_query='.items[] | "\(.id),\(.name)," + if(.email != null) then .email else "N/A" end + ",\(.userType)"'
+    if jq -r "$jq_query" $tmpout >> $tmpout2 2> $tmperr; then
+      :
+    else
+      echo "Error: Failed to parse the response from the API." >&2
+      cat $tmperr >&2
+      exit 1
+    fi
+  fi
+done
+
+if [ "$raw" == true ]; then
   exit 0
 fi
-
-if jq -r '.items[] | "\(.name) \(.legacyId) \(.id) " + ((.tags[] | select (".internal:bxp:gov") | if(."internal:bxp:gov") then ."internal:bxp:gov" else empty end) | tostring) + " " + ((.tags[] | select (".internal:bxp:saas") | if(."internal:bxp:saas") then ."internal:bxp:saas" else empty end) | tostring)' $tmpout > $tmperr; then
-  cat $tmperr | column -t -N "Name,ID,Organization ID,GovCloud,SaaS Enabled"
-else
-  echo "Error: Failed to parse the response from the API." >&2
-  exit 1
-fi
+sort -f -t, -k 4,4r -k 2,2 $tmpout2 | column -s, -t -N "ID,Name,Email,Type"
