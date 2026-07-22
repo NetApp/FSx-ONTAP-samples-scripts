@@ -54,7 +54,6 @@ If you do create a new script, please consider contributing it back to this repo
 | [eda_project_config_create](eda_project_config_create) | This creates a new EDA project configuration. |
 | [eda_project_config_delete](eda_project_config_delete) | This deletes a EDA project configuration. |
 | [fsxn_credentials_set](fsxn_credentials_set) | This sets the credentials for a specified FSx for ONTAP file system. |
-| [get_latency_configuration](get_latency_configuration) | Get the latency configuration for the BlueXP account. |
 | [get_latency_metrics](get_latency_metrics) | Get the specific details of a latency event. |
 | [link_associate](link_associate) | This associates a Workload Factory Link with a specified FSx for ONTAP file system. |
 | [link_delete](link_delete) | This deletes a Workload Factory Link. |
@@ -68,9 +67,10 @@ If you do create a new script, please consider contributing it back to this repo
 | [list_cicd_clones](list_cicd_clones) | This lists all the clones that you have access to in the specified CI/CD project. |
 | [list_cicd_projects](list_cicd_projects) | This lists all the CI/CD projects that you have access to. |
 | [list_credentials](list_credentials) | This lists all the Workload Factory credentials that you have access to. |
+| [list_eda_latency_config](list_eda_latency_config) | Get the latency configuration for the BlueXP account. |
 | [list_eda_project_config](list_eda_project_config) | This lists the EDA project configuration. |
 | [list_filesystems](list_filesystems) | This lists all the FSx for ONTAP file systems that you have access to in the specified AWS region. |
-| [list_latency_events](list_latency_events) | This lists all the latnecy events associated with the BlueXP account. |
+| [list_eda_latency_events](list_eda_latency_events) | This lists all the latency events associated with the BlueXP account. |
 | [list_links](list_links) | This lists all the Workload Factory Links that you have access to. |
 | [list_snapmirrors](list_snapmirrors) | This lists all the SnapMirror relationships that are associated with the specified file system. |
 | [list_snapshots](list_snapshots) | This lists all the snapshots that are associated with the specified volumes. |
