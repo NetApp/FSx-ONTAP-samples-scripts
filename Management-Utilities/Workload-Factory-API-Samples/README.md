@@ -70,7 +70,7 @@ If you do create a new script, please consider contributing it back to this repo
 | [list_eda_latency_config](list_eda_latency_config) | Get the latency configuration for the BlueXP account. |
 | [list_eda_project_config](list_eda_project_config) | This lists the EDA project configuration. |
 | [list_filesystems](list_filesystems) | This lists all the FSx for ONTAP file systems that you have access to in the specified AWS region. |
-| [list_eda_latency_events](list_eda_latency_events) | This lists all the latnecy events associated with the BlueXP account. |
+| [list_eda_latency_events](list_eda_latency_events) | This lists all the latency events associated with the BlueXP account. |
 | [list_links](list_links) | This lists all the Workload Factory Links that you have access to. |
 | [list_snapmirrors](list_snapmirrors) | This lists all the SnapMirror relationships that are associated with the specified file system. |
 | [list_snapshots](list_snapshots) | This lists all the snapshots that are associated with the specified volumes. |
