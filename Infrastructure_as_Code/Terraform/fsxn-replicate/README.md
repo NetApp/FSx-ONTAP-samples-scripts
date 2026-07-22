@@ -79,7 +79,7 @@ git clone https://github.com/NetApp/FSx-ONTAP-samples-scripts
 #### 2. Navigate to the directory
 
 ```shell
-cd FSx-ONTAP-samples-scripts/Terraform/fsxn-replicate
+cd FSx-ONTAP-samples-scripts/Infrastructure_as_Code/Terraform/fsxn-replicate
 ```
 
 #### 3. Initialize Terraform

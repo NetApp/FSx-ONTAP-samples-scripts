@@ -42,149 +42,63 @@
 ################################################################################
 usage () {
   cat 1>&2 <<EOF
-Usage $(basename $0) [-r region] [-a] [-n] [-c] [-s] [-b] [-i fileSystemId] [-f fileSystemName] [-x] [pattern] [-e endpoint_url]
+Usage $(basename $0) [-r region] [-a] [-X excludeRegions] [-n] [-c] [-s] [-b] [-i fileSystemId] [-f fileSystemName] [-x] [-t seconds] [-e endpoint_url] [pattern]
   Where: pattern - means to only show file systems whos name match the pattern.
          -r region allows you to specify the region you want the list from.
          -a means all regions.
+         -X excludeRegions allows you to specify a comma separated list of regions to exclude from the -a option.
          -c means to display a hierarchical view of each filesystem including svms and volumes.
+         -s means to display the current status of a volume. Only relative with the -c option.
          -i allows you to limit the display to the file system with the id provided.
          -f allows you to limit the display to the file system with the name provided.
          -b means to display the backup retenion period. Not compatible with the -x or -c options.
-         -s means to display the current status of a volume. Only relative with the -c option.
          -n means to show the AWS ARN for the file system. Not compatible with -x or -c options.
          -x means include additional information: vpc, subnet, Size, Deployement Type, Throughput, provisioned IOPS, usage.
+         -t timeout: The number of seconds to wait for a response from the AWS API before timing out. Default is 20 seconds.
          -e endpoint_url: Is the endpoint url to use when connecting to the AWS API.
 EOF
   exit 1
 }
 
 ################################################################################
-# Main logic starts here.
+# This function is used to kill a process, who's ID is passed as the first
+# argument, that is running longger than the time specified as the second
+# argurment.
 ################################################################################
-tmpout=/tmp/list_fss-out.$$
-fileSystemsFile=/tmp/list_fss-fss.$$
-svmsFile=/tmp/list_fss-svms.$$
-volumesFile=/tmp/list_fss-volumes.$$
-cloudwatchOutputFile=/tmp/list_fss-cloudwatch-output.$$
-cloudwatchQueryFile=/tmp/list_fss-cloudwatch-query.$$
-fsCapacityFile=/tmp/list_fss-fscapacity.$$
-trap 'rm -f $tmpout $fileSystemsFile $svmsFile $volumesFile $cloudwatchOutputFile $cloudwatchQueryFile $fsCapacityFile' exit
-#
-# Ensure all the required utilities are installed.
-if which aws jq > /dev/null 2>&1; then
-  :
-else
-  echo "Error, both the 'aws' and 'jq' commands are required to run this script." 1>&2
-  exit 1
-fi
-#
-# Set defaults.
-allRegions=false
-includeExtraInfo=false
-contents=false
-showStatus=false
-showARN=false
-showBackup=false
-region=$(aws configure get region)
-#
-# Process command line arguments.
-while getopts "bhcxsanr:i:f:e:" option; do
-  case "$option" in
-    r) region="$OPTARG"
-      ;;
-    a) allRegions=true
-      ;;
-    b) showBackup=true
-      ;;
-    x) includeExtraInfo=true
-      ;;
-    c) contents=true
-      ;;
-    i) fsid=$OPTARG
-      ;;
-    f) fileSystemName="$OPTARG"
-      ;;
-    s) showStatus=true
-      ;;
-    n) showARN=true
-      ;;
-    e) endpoint_url="--endpoint-url $OPTARG"
-      ;;
-    *) usage
-      ;;
-  esac
-done
-shift $((OPTIND-1))
-#
-# Check for invalid options.
-if [ "$showBackup" == "true" -a \( "$contents" == "true" -o "$includeExtraInfo" == "true" \) ]; then
-  echo "Error, the -b option is not compatiable with the -c or -x options." 1>&2
-  echo ""
-  usage
-fi
+start_watchdog () {
 
-if [ "$showARN" == "true" -a \( "$contents" == "true" -o "$includeExtraInfo" == "true" \) ]; then
-  echo "Error, the -n option is not compatiable with the -c or -x options." 1>&2
-  echo ""
-  usage
-fi
+  pid=$1
+  maxTime=$2
+  region=$3
 
-if [ "$showStatus" == "true" -a "$contents" != "true" ]; then
-  echo "Error, the -s option is only compatiable with the -c option." 1>&2
-  echo ""
-  usage
-fi
-
-declare -a regions
-if [ "$allRegions" == "true" ]; then
-  #
-  # Generate a list of all the valid regions the user can search. That is the
-  # intersection of all the regions they have enabled, and the regions that
-  # support FSxN
-  allEndabledRegions=$(aws ec2 describe-regions --query "Regions[].RegionName" --output=json | jq -r '.[]')
-  allFsxnRegions=$(curl -s https://api.regional-table.region-services.aws.a2z.com/index.json | jq -r '.prices[] | select(.attributes."aws:serviceName" == "Amazon FSx for NetApp ONTAP") .attributes."aws:region"')
-  for reg in $allEndabledRegions; do
-    for fsxnReg in $allFsxnRegions; do
-      if [ $reg == $fsxnReg ]; then
-        regions+=($reg)
-      fi
-    done
-  done
-  if [ -z "$regions" ]; then
-    echo "Error, failed to get the list of regions that support FSxN" 1>&2
-    exit 1
+  sleep $maxTime
+  if ps -p $pid > /dev/null; then
+    printf "\nWarning, timed out while getting the list of FSxNs from the $region region.\nConsider excluding it with the -X option or raising the timeout with the -t option.\n" 1>&2
+    pkill -P $pid
+    kill $pid
   fi
-else
-  regions=($region)
-fi
+}
 
-if [ ! -z "$fsid" -a ! -z "$fileSystemName" ]; then
-  echo "Error, you can't specify both a file system ID and file system name." 1>&2
-  exit 1
-fi
-#
-# Get the regions that support the FSxN for ONTAP service.
-#
-# Define the query string that is used to get only the fields needed to generate the output.
-# It also makes the 'jq' commands below easily, since it flattens the JSON structure.
-queryString="FileSystems[*].{
-  FileSystemType: FileSystemType,
-  FileSystemId: FileSystemId,
-  Lifecycle:Lifecycle,
-  Name:Tags[?Key=='Name']|[0].Value,
-  ManagementIp: OntapConfiguration.Endpoints.Management.IpAddresses[0],
-  VpcId: VpcId,
-  SubnetId: SubnetIds[0],
-  ResourceARN: ResourceARN,
-  AutomaticBackupRetentionDays: OntapConfiguration.AutomaticBackupRetentionDays,
-  DeploymentType: OntapConfiguration.DeploymentType,
-  DiskIopsConfiguration: OntapConfiguration.DiskIopsConfiguration.Iops,
-  ThroughputCapacity: OntapConfiguration.ThroughputCapacity,
-  StorageCapacity: StorageCapacity
-}"
-#
-# Loop on all the requested regions.
-for region in ${regions[*]}; do
+################################################################################
+# This function is used to get the list of file systems for the region passed
+# as the first argument.
+################################################################################
+get_filesystems () {
+
+  local region=$1
+  local pattern=$2
+
+  mkdir $tmpdir/$region
+  local tmpdir=$tmpdir/$region
+
+  tmpout=$(mktemp -p $tmpdir list_fss-output.XXX)
+  fileSystemsFile=$(mktemp -p $tmpdir list_fss-filesystems.XXX)
+  svmsFile=$(mktemp -p $tmpdir list_fss-svms.XXX)
+  volumesFile=$(mktemp -p $tmpdir list_fss-volumes.XXX)
+  cloudwatchOutputFile=$(mktemp -p $tmpdir list_fss-cloudwatch-output.XXX)
+  cloudwatchQueryFile=$(mktemp -p $tmpdir list_fss-cloudwatch-query.XXX)
+  fsCapacityFile=$(mktemp -p $tmpdir list_fss-fs-capacity.XXX)
+
   if [ ! -z "$fileSystemName" ]; then
     fsid=$(aws fsx describe-file-systems $endpoint_url --region=$region --output=json 2> /dev/null | jq -r '.FileSystems[] | if((.Tags[] | select(.Key == "Name") .Value) == "'"${fileSystemName}"'") then .FileSystemId else empty end' 2> /dev/null)
     if [ ! -z "$fsid" ]; then
@@ -202,28 +116,32 @@ for region in ${regions[*]}; do
   fi
 
   if [ $? -ne 0 ]; then
-    echo "Error, failed to get the list of file systems." 1>&2
+    echo "Error, failed to get the list of file systems for the $region region." 1>&2
     cat $fileSystemsFile 1>&2
-    exit 1
+    return 1
   fi
 
   if [ $contents == "true" ]; then
     aws fsx describe-storage-virtual-machines $endpoint_url --region=$region --output=json > $svmsFile 2>&1
     if [ $? -ne 0 ]; then
-      echo "Error, failed to get the list of SVMs." 1>&2
+      echo "Error, failed to get the list of SVMs for the $region region." 1>&2
       cat $svmsFile 1>&2
-      exit 1
+      return 1
     fi
 
     aws fsx describe-volumes $endpoint_url --region=$region --output=json > $volumesFile 2>&1
     if [ $? -ne 0 ]; then
-      echo "Error, failed to get the list of volumes." 1>&2
+      echo "Error, failed to get the list of volumes for the $region region." 1>&2
       cat $volumesFile 1>&2
-      exit 1
+      return 1
     fi
 
-    printf "$region\n"
+    first=true
     jq -r '.[] | if(.FileSystemType != "ONTAP") then empty else .FileSystemId + " " + .Lifecycle + " =" + .Name + "=" end' $fileSystemsFile | while read fs fsStatus fsName; do
+      if [ "$first" == "true" ]; then
+        first=false
+        printf "\n$region:\n"
+      fi
       x="${fsName#=}"
       fsName="${x%=}"
       [ "$showStatus" == "true" ] && printf "\t$fs($fsStatus) - '$fsName'\n"
@@ -252,8 +170,8 @@ for region in ${regions[*]}; do
     # 10 = iops
     # 11 = throughput
     # 12 = size
-    if [ ! -z "$1" ]; then
-      jq -r '.[] | if(.FileSystemType == "ONTAP") then .FileSystemId + "," + .ResourceARN + "," + (if((.Name | tostring) | test("'$1'")) then .Name else empty end) + "," + .Lifecycle + "," + .ManagementIp + "," + .VpcId + "," + .SubnetId + "," + (if(.AutomaticBackupRetentionDays == null) then "Dissabled" else (.AutomaticBackupRetentionDays | tostring) end) + "," + .DeploymentType + "," + (.DiskIopsConfiguration | tostring) + "," + (.ThroughputCapacity | tostring) + "," + (.StorageCapacity | tostring) else empty end' $fileSystemsFile > $tmpout
+    if [ ! -z "$pattern" ]; then
+      jq -r '.[] | if(.FileSystemType == "ONTAP") then .FileSystemId + "," + .ResourceARN + "," + (if((.Name | tostring) | test("'$pattern'")) then .Name else empty end) + "," + .Lifecycle + "," + .ManagementIp + "," + .VpcId + "," + .SubnetId + "," + (if(.AutomaticBackupRetentionDays == null) then "Dissabled" else (.AutomaticBackupRetentionDays | tostring) end) + "," + .DeploymentType + "," + (.DiskIopsConfiguration | tostring) + "," + (.ThroughputCapacity | tostring) + "," + (.StorageCapacity | tostring) else empty end' $fileSystemsFile > $tmpout
     else
       jq -r '.[] | if(.FileSystemType == "ONTAP") then .FileSystemId + "," + .ResourceARN + "," + .Name + "," + .Lifecycle + "," + .ManagementIp + "," + .VpcId + "," + .SubnetId + "," + if(.AutomaticBackupRetentionDays == null) then "Dissabled" else (.AutomaticBackupRetentionDays | tostring) end + "," + .DeploymentType + "," + (.DiskIopsConfiguration | tostring) + "," + (.ThroughputCapacity | tostring) + "," + (.StorageCapacity | tostring) else empty end' $fileSystemsFile > $tmpout
     fi
@@ -316,5 +234,150 @@ EOF
         awk -F, -v region=$region 'BEGIN {first=1; formatStr="'"${formatStr}"'"}; {if(first) {printf "\n"; printf formatStr, "Region", "FileSystem ID", "Name", "Status", "Management IP", "Backup Retention"; first=0}; printf formatStr, region, $1, "\"" $3 "\"", $4, $5, $8}' < $tmpout
       fi
     fi
+  fi
+}
+
+################################################################################
+# Main logic starts here.
+################################################################################
+export tmpdir=$(mktemp -d /tmp/list_fsxn_filesystems.XXXXXX)
+trap 'rm -fr $tmpdir' EXIT
+#
+# Ensure all the required utilities are installed.
+if which aws jq > /dev/null 2>&1; then
+  :
+else
+  echo "Error, both the 'aws' and 'jq' commands are required to run this script." 1>&2
+  exit 1
+fi
+#
+# Set defaults.
+allRegions=false
+includeExtraInfo=false
+contents=false
+showStatus=false
+showARN=false
+showBackup=false
+region=$(aws configure get region)
+excludeRegions="none"
+maxTime=20
+#
+# Process command line arguments.
+while getopts "bhcxsaX:nr:i:f:e:t:" option; do
+  case "$option" in
+    r) region="$OPTARG"
+      ;;
+    a) allRegions=true
+      ;;
+    X) excludeRegions="$(echo $OPTARG | sed -e 's/,/|/g' | sed -e 's/ //g')"
+      ;;
+    b) showBackup=true
+      ;;
+    x) includeExtraInfo=true
+      ;;
+    c) contents=true
+      ;;
+    i) fsid=$OPTARG
+      ;;
+    f) fileSystemName="$OPTARG"
+      ;;
+    s) showStatus=true
+      ;;
+    n) showARN=true
+      ;;
+    e) endpoint_url="--endpoint-url $OPTARG"
+      ;;
+    t) maxTime="$OPTARG"
+      ;;
+    *) usage
+      ;;
+  esac
+done
+shift $((OPTIND-1))
+#
+# Check for invalid options.
+if [ "$showBackup" == "true" -a \( "$contents" == "true" -o "$includeExtraInfo" == "true" \) ]; then
+  echo "Error, the -b option is not compatiable with the -c or -x options." 1>&2
+  echo ""
+  usage
+fi
+
+if [ "$showARN" == "true" -a \( "$contents" == "true" -o "$includeExtraInfo" == "true" \) ]; then
+  echo "Error, the -n option is not compatiable with the -c or -x options." 1>&2
+  echo ""
+  usage
+fi
+
+if [ "$showStatus" == "true" -a "$contents" != "true" ]; then
+  echo "Error, the -s option is only compatiable with the -c option." 1>&2
+  echo ""
+  usage
+fi
+
+declare -a regions
+if [ "$allRegions" == "true" ]; then
+  #
+  # Generate a list of all the valid regions the user can search. That is the
+  # intersection of all the regions they have enabled, and the regions that
+  # support FSxN
+  allEndabledRegions=$(aws ec2 describe-regions --query "Regions[].RegionName" --output=json | jq -r '.[]')
+  allFsxnRegions=$(curl -s https://api.regional-table.region-services.aws.a2z.com/index.json | jq -r '.prices[] | select(.attributes."aws:serviceName" == "Amazon FSx for NetApp ONTAP") .attributes."aws:region"' | egrep -v "$excludeRegions")
+#  allFsxnRegions=$(curl -s https://api.regional-table.region-services.aws.a2z.com/index.json | jq -r '.prices[] | select(.attributes."aws:serviceName" == "Amazon FSx for NetApp ONTAP") .attributes."aws:region"')
+  for reg in $allEndabledRegions; do
+    for fsxnReg in $allFsxnRegions; do
+      if [ $reg == $fsxnReg ]; then
+        regions+=($reg)
+      fi
+    done
+  done
+  if [ -z "$regions" ]; then
+    echo "Error, failed to get the list of regions that support FSxN" 1>&2
+    exit 1
+  fi
+else
+  regions=($region)
+fi
+
+if [ ! -z "$fsid" -a ! -z "$fileSystemName" ]; then
+  echo "Error, you can't specify both a file system ID and file system name." 1>&2
+  exit 1
+fi
+#
+# Get the regions that support the FSxN for ONTAP service.
+#
+# Define the query string that is used to get only the fields needed to generate the output.
+# It also makes the 'jq' commands below easily, since it flattens the JSON structure.
+queryString="FileSystems[*].{
+  FileSystemType: FileSystemType,
+  FileSystemId: FileSystemId,
+  Lifecycle:Lifecycle,
+  Name:Tags[?Key=='Name']|[0].Value,
+  ManagementIp: OntapConfiguration.Endpoints.Management.IpAddresses[0],
+  VpcId: VpcId,
+  SubnetId: SubnetIds[0],
+  ResourceARN: ResourceARN,
+  AutomaticBackupRetentionDays: OntapConfiguration.AutomaticBackupRetentionDays,
+  DeploymentType: OntapConfiguration.DeploymentType,
+  DiskIopsConfiguration: OntapConfiguration.DiskIopsConfiguration.Iops,
+  ThroughputCapacity: OntapConfiguration.ThroughputCapacity,
+  StorageCapacity: StorageCapacity
+}"
+#
+# Loop on all the requested regions.
+declare -A pids
+for region in ${regions[*]}; do
+  get_filesystems $region "$1" > $tmpdir/$region.out &
+  pids[$!]=$region
+  start_watchdog $! $maxTime $region &
+done
+
+while [ ${#pids[@]} -gt 0 ]; do
+  wait -n -p pid "${!pids[@]}"
+  if [ $? -ne 127 ]; then
+    cat $tmpdir/${pids[$pid]}.out
+    unset pids[$pid]
+  else
+    echo "Error, waiting for an non-existent process. This should never happen." 1>&2
+    exit 1
   fi
 done

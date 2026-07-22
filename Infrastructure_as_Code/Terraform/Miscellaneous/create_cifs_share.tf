@@ -109,6 +109,7 @@ data "aws_fsx_ontap_storage_virtual_machine" "svm" {
 }
 #
 # This ephemeral resources is used to get the fsxn password.
+# tflint-ignore: unsupported_block_type
 ephemeral "aws_secretsmanager_secret_version" "fsxn_secret" {
   secret_id     = var.secretId
 }
