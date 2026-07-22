@@ -33,7 +33,7 @@
 ################################################################################
 usage () {
   cat 1>&2 <<EOF
-Usage $(basename $0) [-r region] [-a] [-X excludeRegions] [-o] [-f fileSystemName] [-i fileSystemId] [-n] [-s svmID] [-x] [-e endpoint_url] [volume_pattern]
+Usage $(basename $0) [-r region] [-a] [-X excludeRegions] [-o] [-f fileSystemName] [-i fileSystemId] [-n] [-s svmID] [-x] [-t seconds] [-e endpoint_url] [volume_pattern]
   Where: volume_pattern - Only volumes that match the egrep pattern will be included.
                           An assumed '^' and '$' is added to the beginning and end of the pattern respectively.
          -r region allows you to specify the region you want the list from.
@@ -45,6 +45,7 @@ Usage $(basename $0) [-r region] [-a] [-X excludeRegions] [-o] [-f fileSystemNam
          -s svmID - Only show volumes that are under the specified SVM ID.
          -o means to exclude svm root volumes. Only works in conjunction with the -s option.
          -x means to provide capacity information. Not compatible with the -n option.
+         -t means to specify the number of seconds to wait for a response from AWS before timing out. Default is 30 seconds.
          -e endpoint_url: Is the endpoint url to use when connecting to the AWS API.
 EOF
   exit 1
@@ -62,7 +63,7 @@ start_watchdog () {
   region=$3
   sleep $maxTime
   if ps -p $pid > /dev/null; then
-    printf "\nWarning, timed out while getting the list of SVMs from the $region region.\nConsider excluding it with the -X option.\n" 1>&2
+    printf "\nWarning, timed out while getting the list of SVMs from the $region region.\nConsider excluding it with the -X option or raising the timeout with the -t option.\n" 1>&2
     pkill -P $pid
     kill $pid
   fi
@@ -210,7 +211,8 @@ fsid=""
 fileSystemName=""
 extraInfo=false
 volumePattern="*"
-while getopts "hr:aX:f:i:nos:xe:" option; do
+maxTime=30
+while getopts "hr:aX:f:i:nos:xe:t:" option; do
   case "$option" in
     r) region="$OPTARG"
       ;;
@@ -232,6 +234,8 @@ while getopts "hr:aX:f:i:nos:xe:" option; do
     x) extraInfo=true
       ;;
     e) endpoint_url="--endpoint-url $OPTARG"
+      ;;
+    t) maxTime="$OPTARG"
       ;;
     *) usage
       ;;
@@ -279,7 +283,7 @@ declare -A pids
 for region in ${regions[*]}; do
   get_volumes $region > $tmpdir/$region.out &
   pids[$!]=$region
-  start_watchdog $! 20 $region &
+  start_watchdog $! $maxTime $region &
 done
 
 while [ ${#pids[@]} -gt 0 ]; do

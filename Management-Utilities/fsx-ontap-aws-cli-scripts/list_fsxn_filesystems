@@ -42,7 +42,7 @@
 ################################################################################
 usage () {
   cat 1>&2 <<EOF
-Usage $(basename $0) [-r region] [-a] [-X excludeRegions] [-n] [-c] [-s] [-b] [-i fileSystemId] [-f fileSystemName] [-x] [-e endpoint_url] [pattern]
+Usage $(basename $0) [-r region] [-a] [-X excludeRegions] [-n] [-c] [-s] [-b] [-i fileSystemId] [-f fileSystemName] [-x] [-t seconds] [-e endpoint_url] [pattern]
   Where: pattern - means to only show file systems whos name match the pattern.
          -r region allows you to specify the region you want the list from.
          -a means all regions.
@@ -54,6 +54,7 @@ Usage $(basename $0) [-r region] [-a] [-X excludeRegions] [-n] [-c] [-s] [-b] [-
          -b means to display the backup retenion period. Not compatible with the -x or -c options.
          -n means to show the AWS ARN for the file system. Not compatible with -x or -c options.
          -x means include additional information: vpc, subnet, Size, Deployement Type, Throughput, provisioned IOPS, usage.
+         -t timeout: The number of seconds to wait for a response from the AWS API before timing out. Default is 20 seconds.
          -e endpoint_url: Is the endpoint url to use when connecting to the AWS API.
 EOF
   exit 1
@@ -72,7 +73,7 @@ start_watchdog () {
 
   sleep $maxTime
   if ps -p $pid > /dev/null; then
-    printf "\nWarning, timed out while getting the list of FSxNs from the $region region.\nConsider excluding it with the -X option.\n" 1>&2
+    printf "\nWarning, timed out while getting the list of FSxNs from the $region region.\nConsider excluding it with the -X option or raising the timeout with the -t option.\n" 1>&2
     pkill -P $pid
     kill $pid
   fi
@@ -259,9 +260,10 @@ showARN=false
 showBackup=false
 region=$(aws configure get region)
 excludeRegions="none"
+maxTime=20
 #
 # Process command line arguments.
-while getopts "bhcxsaX:nr:i:f:e:" option; do
+while getopts "bhcxsaX:nr:i:f:e:t:" option; do
   case "$option" in
     r) region="$OPTARG"
       ;;
@@ -284,6 +286,8 @@ while getopts "bhcxsaX:nr:i:f:e:" option; do
     n) showARN=true
       ;;
     e) endpoint_url="--endpoint-url $OPTARG"
+      ;;
+    t) maxTime="$OPTARG"
       ;;
     *) usage
       ;;
@@ -364,7 +368,7 @@ declare -A pids
 for region in ${regions[*]}; do
   get_filesystems $region "$1" > $tmpdir/$region.out &
   pids[$!]=$region
-  start_watchdog $! 20 $region &
+  start_watchdog $! $maxTime $region &
 done
 
 while [ ${#pids[@]} -gt 0 ]; do

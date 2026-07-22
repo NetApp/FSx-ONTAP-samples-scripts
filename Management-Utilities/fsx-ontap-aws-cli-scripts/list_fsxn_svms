@@ -28,13 +28,14 @@
 ################################################################################
 usage () {
   cat 1>&2 <<EOF
-Usage $(basename $0) [-r region] [-a] [-X excludeRegiosn] [-n] [-p] [-i fileSystemID] [-f fileSystemName] [-e endpoint_url]
+Usage $(basename $0) [-r region] [-a] [-X excludeRegiosn] [-n] [-p] [-i fileSystemID] [-f fileSystemName] [-t seonds] [-e endpoint_url]
   Where: -a means all regions.
          -X means to exclude the specified regions (comma separated list) from the -a option.
          -n means to include file systems name.
          -p means to include the management and NAS IP address.
          -i means to only include SVMs that reside under the FSxN file system with the fileSystemID.
          -f means to only include SVMs that reside under the FSxN file system with the file system name.
+         -t means to specify the number of seconds to wait for a response from the AWS API before timing out. The default is 20 seonds.
          -e endpoint_url: Is the endpoint url to use when connecting to the AWS API.
 EOF
   exit 1
@@ -52,7 +53,7 @@ start_watchdog () {
   region=$3
   sleep $maxTime
   if ps -p $pid > /dev/null; then
-    printf "\nWarning, timed out while getting the list of SVMs from the $region region.\nConsider excluding it with the -X option.\n" 1>&2
+    printf "\nWarning, timed out while getting the list of SVMs from the $region region.\nConsider excluding it with the -X option or raising the timeout with the -t option.\n" 1>&2
     pkill -P $pid
     kill $pid
   fi
@@ -125,7 +126,8 @@ includeFsName=false
 includeIp=false
 region=$(aws configure get region)
 excludeRegions="none"
-while getopts "haX:nr:i:f:pe:" option; do
+maxTime=20
+while getopts "haX:nr:i:f:pe:t:" option; do
   case "$option" in
     r) region="$OPTARG"
       ;;
@@ -142,6 +144,8 @@ while getopts "haX:nr:i:f:pe:" option; do
     f) fileSystemName="$OPTARG"
       ;;
     e) endpoint_url="--endpoint-url $OPTARG"
+      ;;
+    t) maxTime="$OPTARG"
       ;;
     *) usage
       ;;
@@ -180,7 +184,7 @@ declare -A pids
 for region in ${regions[*]}; do
   get_svms $region > $tmpdir/$region.out &
   pids[$!]=$region
-  start_watchdog $! 20 $region &
+  start_watchdog $! $maxTime $region &
 done
 
 while [ ${#pids[@]} -gt 0 ]; do
