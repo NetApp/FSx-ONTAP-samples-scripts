@@ -188,7 +188,7 @@ for region in ${regions[*]}; do
 done
 
 while [ ${#pids[@]} -gt 0 ]; do
-  wait -n -p pid ${!pids[@]}
+  wait -n -p pid "${!pids[@]}"
   if [ $? -ne 127 ]; then
     cat $tmpdir/${pids[$pid]}.out
     unset pids[$pid]
