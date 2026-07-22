@@ -20,10 +20,18 @@
 # if it is, it will just return the contents of the file. If it is older than
 # 24 hours, it will create a new token, output it to standard out and
 # store it in the file.
+#
+# It will store the checksum of the refresh token used to create the access
+# token in a file named ".blueXP_token_checksum" in the account's home
+# directory. If the checksum of the current refresh token is different than
+# the one stored in the file, it will create a new token and update the
+# checksum file.
+#
 ################################################################################
 get_token() {
 
   tokenFile="$HOME/.blueXP_token"
+  tokenCksumFile="$HOME/.blueXP_token_checksum"
   
   if [ -z "$REFRESH_TOKEN" ]; then
     echo "Error: The REFRESH_TOKEN environment variable has not been set." >&2
@@ -31,7 +39,7 @@ get_token() {
   fi
   #
   # Ensure all the required commands are available.
-  for cmd in curl; do
+  for cmd in curl cksum; do
     if ! command -v $cmd &> /dev/null; then
       echo "Error: $cmd is required but not installed." >&2
       exit 1
@@ -44,6 +52,17 @@ get_token() {
   
   createToken=false
   if [ -r $tokenFile ]; then
+    cksum=$(echo -n "$REFRESH_TOKEN" | cksum | awk '{print $1}')
+    if [ -r $tokenCksumFile ]; then
+      old_cksum=$(cat $tokenCksumFile)
+      if [ "$cksum" != "$old_cksum" ]; then
+        createToken=true
+        echo -n "$cksum" > $tokenCksumFile
+      fi
+    else
+      echo "$cksum" > $tokenCksumFile
+      createToken=true
+    fi
     let diff="$(date +%s) - $(date -r $tokenFile +%s)"
     if [ $diff -gt $token_valid ]; then
       createToken=true

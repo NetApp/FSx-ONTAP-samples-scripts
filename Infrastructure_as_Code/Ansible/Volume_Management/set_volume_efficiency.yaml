@@ -1,7 +1,7 @@
-# Title: delete_snapshot.yaml
+# Title: set_volume_efficiency.yaml
 
 ---
-- name: Playbook to delete a snapshot from a volume on an FSx for ONTAP file system.
+- name: Playbook to set a volumes efficiencies.
   hosts: localhost
   collections:
     - netapp.ontap
@@ -19,10 +19,10 @@
       when: vars[item] is undefined
       loop:
         - volume_name
-        - delete_snapshot_name
         - vserver
         - fsxn_hostname
         - secret_name
+        - efficiency_mode
     
     - name: Set use_lambda to true if lambda_function_name is provided.
       set_fact:
@@ -39,10 +39,15 @@
         username: "{{ lookup('amazon.aws.aws_secret', '{{ secret_name }}.username', nested=true) }}"
         password: "{{ lookup('amazon.aws.aws_secret', '{{ secret_name }}.password', nested=true) }}"
       no_log: true
-    
-    - name: Default snapshot on volume
-      netapp.ontap.na_ontap_snapshot:
-        state: absent
+
+    - name: Ensure efficiency_mode is either 'enabled' or 'disabled'
+      fail:
+        msg: "efficiency_mode must be either 'enabled' or 'disabled'."
+      when: efficiency_mode not in ['enabled', 'disabled']
+
+    - name: Set efficiency of the volume based on the value of efficiency_mode variable.
+      netapp.ontap.na_ontap_volume_efficiency:
+        state: "{{ 'present' if efficiency_mode == 'enabled' else 'absent' }}"
         hostname: "{{ fsxn_hostname }}"
         vserver: "{{ vserver }}"
         username: "{{ username }}"
@@ -51,8 +56,10 @@
         use_lambda: "{{ use_lambda }}"
         lambda_config:
           aws_profile: "{{ aws_profile | default('default') }}"
-          aws_region: "{{ aws_region | default('') }}"
+          aws_region: "{{ aws_region  | default('') }}"
           function_name: "{{ lambda_function_name | default('') }}"
 
-        volume: "{{ volume_name }}"
-        snapshot: "{{ delete_snapshot_name }}"
+        volume_name: "{{ volume_name }}"
+        enable_data_compaction: "{{ 'true' if efficiency_mode == 'enabled' else 'false' }}"
+        enable_inline_compression: "{{ 'true' if efficiency_mode == 'enabled' else 'false' }}"
+        enable_inline_dedupe: "{{ 'true' if efficiency_mode == 'enabled' else 'false' }}"

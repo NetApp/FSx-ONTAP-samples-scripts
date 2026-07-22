@@ -43,25 +43,40 @@ If you do create a new script, please consider contributing it back to this repo
 | [bluexp_organization_add](bluexp_organization_add) | This adds a new BlueXP organization (a.k.a. account). |
 | [bluexp_organization_delete](bluexp_organization_delete) | This deletes a BlueXP organization (a.k.a. account). |
 | [bluexp_organization_rename](bluexp_organization_rename) | This renames a BlueXP organization (a.k.a. account). |
+| [bluexp_organization_member_add](bluexp_organization_member_add) | This adds a member to a BlueXP organization (a.k.a. account). |
+| [bluexp_organization_member_delete](bluexp_organization_member_delete) | This deletes a member from a BlueXP organization (a.k.a. account). |
+| [cicd_clones_create](cicd_clones_create) | This creates a clone in the specified CI/CD project. |
+| [cicd_clones_delete](cicd_clones_delete) | This deletes a clone in the specified CI/CD project. |
+| [cicd_project_create](cicd_project_create) | This creates a new CI/CD project. |
+| [cicd_project_delete](cicd_project_delete) | This deletes a CI/CD project. |
+| [credentials_create](credentials_create) | This create a Workload Factory credential. |
 | [credentials_delete](credentials_delete) | This deletes a Workload Factory credential. |
+| [eda_project_config_create](eda_project_config_create) | This creates a new EDA project configuration. |
+| [eda_project_config_delete](eda_project_config_delete) | This deletes a EDA project configuration. |
 | [fsxn_credentials_set](fsxn_credentials_set) | This sets the credentials for a specified FSx for ONTAP file system. |
-| [get_latency_details](get_latency_details) | Get the specific details of a latency event. |
+| [get_latency_configuration](get_latency_configuration) | Get the latency configuration for the BlueXP account. |
+| [get_latency_metrics](get_latency_metrics) | Get the specific details of a latency event. |
 | [link_associate](link_associate) | This associates a Workload Factory Link with a specified FSx for ONTAP file system. |
 | [link_delete](link_delete) | This deletes a Workload Factory Link. |
 | [link_disassociate](link_disassociate) | This disassociates a Workload Factory Link with a specified FSx for ONTAP file system. |
 | [link_register](link_register) | This registers a Lambda function as a Workload Factory Link. |
 | [list_bluexp_accts](list_bluexp_accts) | This list all the BlueXP accounts (a.k.a. organizations) that you have access to. |
 | [list_bluexp_connectors](list_bluexp_connectors) | This list all the BlueXP connectors that you have access to. |
-| [list_bluexp_members](list_bluexp_members) | This list all members of a provided BlueXP account. |
+| [list_bluexp_organization_members](list_bluexp_organization_members) | This list all members of a provided BlueXP organization. |
+| [list_bluexp_roles](list_bluexp_roles) | This list all the BlueXP roles that you have access to. |
 | [list_bluexp_workspaces](list_bluexp_workspaces) | This list all the BlueXP workspaces that you have access to. |
+| [list_cicd_clones](list_cicd_clones) | This lists all the clones that you have access to in the specified CI/CD project. |
+| [list_cicd_projects](list_cicd_projects) | This lists all the CI/CD projects that you have access to. |
 | [list_credentials](list_credentials) | This lists all the Workload Factory credentials that you have access to. |
+| [list_eda_project_config](list_eda_project_config) | This lists the EDA project configuration. |
 | [list_filesystems](list_filesystems) | This lists all the FSx for ONTAP file systems that you have access to in the specified AWS region. |
 | [list_latency_events](list_latency_events) | This lists all the latnecy events associated with the BlueXP account. |
 | [list_links](list_links) | This lists all the Workload Factory Links that you have access to. |
 | [list_snapmirrors](list_snapmirrors) | This lists all the SnapMirror relationships that are associated with the specified file system. |
+| [list_snapshots](list_snapshots) | This lists all the snapshots that are associated with the specified volumes. |
 | [list_svms](list_svms) | This lists all the SVMs that are associated with the specified file system. |
-| [list_volumes](list_volumes) | This lists all the volumes that are associated with the specified file system. |
 | [list_volume_cifs_shares](list_volume_cifs_shares) | This lists cifs shares associated with a volume in the specified file system. |
+| [list_volumes](list_volumes) | This lists all the volumes that are associated with the specified file system. |
 | [show_fsxn_credentials](show_fsxn_credentials) | This shows the credentials that Workload Factory has stored for the specified FSx for ONTAP file system. |
 | [snapmirror_break](snapmirror_break) | This breaks the SnapMirror relationship for the specified relationship. |
 | [snapmirror_create](snapmirror_create) | This creates a SnapMirror relationship between the specified source volume and destination SVM. |
@@ -70,9 +85,10 @@ If you do create a new script, please consider contributing it back to this repo
 | [snapmirror_reverse](snapmirror_reverse) | This reverses the SnapMirror relationship for the specified relationship. |
 | [snapmirror_update](snapmirror_update) | This updates the SnapMirror relationship for the specified relationship. |
 | [snapshot_create](snapshot_create) | This creates a snapshot of the specified volume. |
-| [volume_clone](volume_clone) | This clones the specified volume. |
 | [volume_cifs_share_create](volume_cifs_share_create) | This will create a CIFS share in a volume. |
 | [volume_cifs_share_delete](volume_cifs_share_delete) | This will delete a CIFS share from a volume. |
+| [volume_clone](volume_clone) | This clones the specified volume. |
+| [volume_create](volume_create) | This a volume with the specified name, size, and SVM. |
 | [volume_delete](volume_delete) | This deletes the specified volume. |
 | [wf_utils](wf_utils) | This file contains common functions used by all the scripts. It includes the `get_token()` function that retrieves an access token from the Workload Factory API. |
 
