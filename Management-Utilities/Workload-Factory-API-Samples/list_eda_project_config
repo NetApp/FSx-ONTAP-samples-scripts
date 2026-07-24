@@ -16,13 +16,15 @@ usage() {
   cat >&2 <<EOF
 This script is used to list the EDA Project filter user has access to.
 
-Usage: $(basename $0) -t refresh_token -a blueXP_account_ID [-j]
+Usage: $(basename $0) -t refresh_token -a blueXP_account_ID [-j] [-b bearer_token] [-e endpoint]
 
 Where: refresh_token - Is a refresh token used to obtain an access token needed
                        to run the Workload Factory APIs. You can obtain a refresh
                        token by going to https://services.cloud.netapp.com/refresh-token
+       bearer_token - Instead of passing a refresh token, you can pass a bearer token
+                      directly.
        blueXP_account_ID - is the BlueXP account ID. Run 'list_bluexp_accts' to get a
-                           list of accounts you have access to.
+       endpoint - The API endpoint to use. By default, it will api.workloads.netapp.com.
        -j - Outputs the raw JSON returned by the API instead of a formatted table.
 
 Instead of passing parameters on the command line, you can set the
@@ -60,10 +62,13 @@ fi
 #
 # Process command line arguments.
 raw=false
-while getopts "ht:a:j" opt; do
+: ${ENDPOINT:="api.workloads.netapp.com"}
+while getopts "ht:a:jb:e:" opt; do
   case $opt in
     t) REFRESH_TOKEN="$OPTARG" ;;
+    b) BEARER_TOKEN="$OPTARG" ;;
     a) BLUEXP_ACCOUNT_ID="$OPTARG" ;;
+    e) ENDPOINT="$OPTARG" ;;
     j) raw=true ;;
     *) usage ;;
   esac
@@ -71,13 +76,16 @@ done
 #
 # Declare an array of required options and the error message to display if they are not set.
 declare -A required_options
-required_options["REFRESH_TOKEN"]='Error: A BlueXP refresh tokon is required to run this script. It can be obtain from this web page:
-  https://services.cloud.netapp.com/refresh-token\n\n'
 required_options["BLUEXP_ACCOUNT_ID"]='Error: A BlueXP account ID is required to run this script.
 You can get the list of accounts you have access to by running the "list_bluexp_accts" script
 found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
 
 check_required_options
+
+if [ -z "$REFRESH_TOKEN" -a -z "$BEARER_TOKEN" ]; then
+  echo "Error: Either a refresh token or a bearer token must be provided to run this script."
+  exit 1
+fi
 #
 # Check that the required commands are available.
 for cmd in jq curl; do
@@ -87,7 +95,11 @@ for cmd in jq curl; do
   fi
 done
 
-token=$(get_token)
+if [ -z "$BEARER_TOKEN" ]; then
+  token=$(get_token)
+else
+  token=$BEARER_TOKEN
+fi
 if [ -z "$token" ]; then
   echo "Error: Failed to obtain an access token. Exiting." >&2
   exit 1
@@ -99,7 +111,7 @@ else
   jq_query='.createdBy as $cb | (.items[] | select(.target == "tag") | "\(.label) \(.key) " + $cb)'
 fi
 
-URL="https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/builders/v1/configure"
+URL="https://$ENDPOINT/accounts/${BLUEXP_ACCOUNT_ID}/builders/v1/configure"
 run_curl GET "$token" "$URL" $tmpout $tmperr
 if jq -r "$jq_query" $tmpout  > $tmpout2 2> $tmperr; then
   :

@@ -1,28 +1,33 @@
 #!/bin/bash
 #
-# This script renames a BlueXP organization.
+# This script deletes a user from an BlueXP organization.
 #
 ################################################################################
 # Display usage information then exits the script.
 ################################################################################
 usage () {
   cat 1>&2 <<EOF
-This script renames a BlueXP organization.
+This script deletes a user from an BlueXP organization.
 
-Usage: $(basename $0) -t REFRESH_TOKEN -o ORGANIZATION_ID -n NEW_NAME
+Usage: $(basename $0) -t REFRESH_TOKEN -o ORGANIZATION_ID -u USER_ID [-e ENDPOINT] [-b BEARER_TOKEN]
 
 Where: REFRESH_TOKEN - Is a refresh token used to obtain an access token needed
                        to run the Workload Factory APIs. You can obtain a refresh
                        token by going to https://services.cloud.netapp.com/refresh-token
-       ORGANIZATION_ID - Is the Id of the organization to rename.
-                         You can get a list of organizations you have access to
-                         by running the "list_bluexp_accts" script
-       NEW_NAME - The new name of the organization.
+       ORGANIZATION_ID - Is the ID of the organization to delete the user from. You can get
+                         a list of organizations by running the list_bluexp_acct script.
+       USER_ID - Is the ID of the user to delete from the organization. You can get a list of users
+                 by running the list_bluexp_organization_users script.
+       ENDPOINT - Is the BlueXP API endpoint to use. The default is api.bluexp.netapp.com.
+       BEARER_TOKEN - Is an access token that can be used instead of a refresh token. If you
+                      provide a bearer token, the script will not attempt to obtain a new
+                      access token using the refresh token.
 
 Instead of passing parameters on the command line, you can set the following
 environment variables:
 
     export REFRESH_TOKEN=<REFRESH_TOKEN>
+    ORGANIZATION_ID=<ORGANIZATION_ID>
 EOF
   exit 1
 }
@@ -30,8 +35,8 @@ EOF
 ################################################################################
 # Main logic starts here.
 ################################################################################
-tmpout=$(mktemp /tmp/delete_organization_to_bluexp-out.XXXXXX)
-tmperr=$(mktemp /tmp/delete_organization_to_bluexp-err.XXXXXX)
+tmpout=$(mktemp /tmp/add_organization_to_bluexp-out.XXXXXX)
+tmperr=$(mktemp /tmp/add_organization_to_bluexp-err.XXXXXX)
 trap 'rm -f $tmpout $tmperr' exit
 #
 # Source the wf_utils file.
@@ -51,25 +56,29 @@ fi
 . "$wf_utils"
 #
 # Parse the command line options.
-while getopts "ht:o:n:" opt; do
+: "${ENDPOINT:=api.bluexp.netapp.com}"
+while getopts "ht:o:e:b:E:u:" opt; do
   case ${opt} in
     t) REFRESH_TOKEN=$OPTARG ;;
     o) ORGANIZATION_ID=$OPTARG ;;
-    n) NEW_NAME=$OPTARG ;;
+    u) USER_ID=$OPTARG ;;
+    e) ENDPOINT="$OPTARG" ;;
+    b) BEARER_TOKEN="$OPTARG" ;;
     *) usage ;;
   esac
 done
 #
 # Declare an array of required options and the error message to display if they are not set.
 declare -A required_options
-required_options["REFRESH_TOKEN"]='Error: A BlueXP refresh token is required to run this script. It can be obtained from this web page:
-  https://services.cloud.netapp.com/refresh-token\n\n'
-required_options["ORGANIZATION_ID"]='Error: You must provide the ID of organization you want to rename.
-You can get the list of organization you have access to by running the "list_bluexp_accts" script
-found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
-required_options["NEW_NAME"]='Error: You must provide the new name of the organization.\n\n'
+required_options["ORGANIZATION_ID"]='Error: You must provide the ID of the organization you want to add the user to.\n\n'
+required_options["USER_ID"]='Error: You must provide the ID of the user you want to delete from the organization.\n\n'
 
 check_required_options
+
+if [ -z "$REFRESH_TOKEN" -a -z "$BEARER_TOKEN" ]; then
+  echo "Error: You must provide either a refresh token or a bearer token." >&2
+  usage
+fi
 #
 # Check that the required commands are available.
 for cmd in jq curl; do
@@ -80,12 +89,17 @@ for cmd in jq curl; do
 done
 #
 # Get an access token.
-token=$(get_token)
+if [ -z "$BEARER_TOKEN" ]; then
+  token=$(get_token)
+else
+  token=$BEARER_TOKEN
+fi
+
 if [ -z "$token" ]; then
   echo "Failed to get a token."
   exit 1
 fi
 #
-# Set the new name of the organization.
-run_curl "POST" "$token" "https://api.bluexp.netapp.com/tenancy/account/$ORGANIZATION_ID/rename/$NEW_NAME" $tmpout $tmperr
-echo "Done"
+# This uses the same API that the console uses.
+run_curl "DELETE" "$token" "https://$ENDPOINT/v1/management/organizations/$ORGANIZATION_ID/users/$USER_ID" $tmpout $tmperr
+echo "Done."

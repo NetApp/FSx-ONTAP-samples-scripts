@@ -1,28 +1,34 @@
 #!/bin/bash
 #
-# This script adds an organization to a BlueXP account.
+# This script adds a user to an BlueXP organization.
 #
 ################################################################################
 # Display usage information then exits the script.
 ################################################################################
 usage () {
   cat 1>&2 <<EOF
-Usage: $(basename $0) -t REFRESH_TOKEN -o ORGANIZATION_NAME [-e ENDPOINT] [-b BEARER_TOKEN] [-g]
+This script adds a user to an BlueXP organization.
+
+Usage: $(basename $0) -t REFRESH_TOKEN -o ORGANIZATION_ID -r ROLE_ID -E email_address [-e ENDPOINT] [-b BEARER_TOKEN]
 
 Where: REFRESH_TOKEN - Is a refresh token used to obtain an access token needed
                        to run the Workload Factory APIs. You can obtain a refresh
                        token by going to https://services.cloud.netapp.com/refresh-token
-       ORGANIZATION_NAME - Is the name of the organization to create.
+       ORGANIZATION_ID - Is the ID of the organization to add the user to. You can get
+                         a list of organizations by running the list_bluexp_acct script.
+       ROLE_ID - Is the ID of the role to assign to the user. You can get a list of
+                 roles by running the list_bluexp_roles script.
+       email_address - Is the email address of the user to add to the organization.
        ENDPOINT - Is the BlueXP API endpoint to use. The default is api.bluexp.netapp.com.
        BEARER_TOKEN - Is an access token that can be used instead of a refresh token. If you
                       provide a bearer token, the script will not attempt to obtain a new
                       access token using the refresh token.
-      -g - If specified the account will be created in the GovCloud region.
 
 Instead of passing parameters on the command line, you can set the following
 environment variables:
 
     export REFRESH_TOKEN=<REFRESH_TOKEN>
+    ORGANIZATION_ID=<ORGANIZATION_ID>
 EOF
   exit 1
 }
@@ -52,21 +58,23 @@ fi
 #
 # Parse the command line options.
 : "${ENDPOINT:=api.bluexp.netapp.com}"
-GovCloud=false
-while getopts "ht:o:e:b:g" opt; do
+while getopts "ht:o:e:b:r:E:" opt; do
   case ${opt} in
     t) REFRESH_TOKEN=$OPTARG ;;
-    o) ORGANIZATION_NAME=$OPTARG ;;
+    o) ORGANIZATION_ID=$OPTARG ;;
+    r) ROLE_ID=$OPTARG ;;
+    E) emailAddress=$OPTARG ;;
     e) ENDPOINT="$OPTARG" ;;
     b) BEARER_TOKEN="$OPTARG" ;;
-    g) GovCloud=true ;;
     *) usage ;;
   esac
 done
 #
 # Declare an array of required options and the error message to display if they are not set.
 declare -A required_options
-required_options["ORGANIZATION_NAME"]='Error: You must provide the name of the organization you want to create.\n\n'
+required_options["ORGANIZATION_ID"]='Error: You must provide the ID of the organization you want to add the user to.\n\n'
+required_options["ROLE_ID"]='Error: You must provide the ID of the role you want to assign to the user.\n\n'
+required_options["emailAddress"]='Error: You must provide the email address of the user you want to add.\n\n'
 
 check_required_options
 
@@ -95,8 +103,6 @@ if [ -z "$token" ]; then
   exit 1
 fi
 #
-# Add the organization to the BlueXP workspace.
-echo -n "Creating organization ${ORGANIZATION_NAME}..."
-#run_curl "POST" "$token" "https://$ENDPOINT/tenancy/account/$ORGANIZATION_NAME" $tmpout $tmperr '{"name": "'$ORGANIZATION_NAME'", "resourceType": "organization", "type": "application/vnd.netapp.bxp.resource", "version": "1.0"}' 'application/json'
-run_curl "POST" "$token" "https://$ENDPOINT/tenancy/account/$ORGANIZATION_NAME" $tmpout $tmperr '{"isSaasDisabled": '$GovCloud'}' 'application/json'
+# This uses the same API that the console uses.
+run_curl "POST" "$token" "https://$ENDPOINT/v1/management/organizations/$ORGANIZATION_ID/roles/$ROLE_ID/users" $tmpout $tmperr '{"type":"application/vnd.netapp.bxp.userbulk","users":[{"emailId": "'$emailAddress'"}], "version":"1.0"}' 'application/json'
 echo "Done."

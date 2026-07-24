@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# This script is used to list all the BlueXP accounts that a user has
+# This script is used to list all the BlueXP user roles that a user has
 # access to. 
 #
 # It is dependent on the 'wf_utils' file that is included in this repo. That
@@ -14,10 +14,9 @@
 ################################################################################
 usage () {
   cat >&2 <<EOF
-This script is used to list all the BlueXP accounts (a.k.a. organizations)
-that you have access to.
+This script is used to list all the BlueXP user roles that you have access to.
 
-Usage is: $(basename $0) -t refresh_token  [-j] [-e ENDPOINT] [-b BEARER_TOKEN]
+Usage is: $(basename $0) -t refresh_token [-j] [-e ENDPOINT] [-b BEARER_TOKEN]
 
 Where: refresh_token - Is a refresh token used to obtain an access token needed
                        to run the Workload Factory APIs. You can obtain a refresh
@@ -34,8 +33,8 @@ EOF
   exit 1
 }
 
-tmpout=/tmp/list_accounts-out.$$
-tmperr=/tmp/list_accounts-err.$$
+tmpout=/tmp/list_roles-out.$$
+tmperr=/tmp/list_roles-err.$$
 trap 'rm -f $tmpout $tmperr' exit
 #
 # Source the wf_utils file.
@@ -66,9 +65,10 @@ while getopts ht:je:b: opt; do
     *) usage ;;
   esac
 done
-
+#
+# Check the required parameters.
 if [ -z "$REFRESH_TOKEN" -a -z "$BEARER_TOKEN" ]; then
-  echo "Error: You must provide either a refresh token or a bearer token." >&2
+  echo "Error: Either a BlueXP refresh token or a Bearer token is required to run this script." >&2
   usage
 fi
 #
@@ -90,11 +90,9 @@ if [ -z "$token" ]; then
   echo "Error: Failed to obtain an access token. Exiting." >&2
   exit 1
 fi
-#
-# /tenancy/account doesn't provide both the ID and UUID.
-#run_curl GET "$token" https://$ENDPOINT/tenancy/account $tmpout $tmperr
-run_curl GET "$token" https://$ENDPOINT/v1/management/organizations $tmpout $tmperr
-if [ "$raw" = true ]; then
+filter="$(urlencode isUserRole eq \"true\" and category eq \"IAM\")"
+run_curl GET "$token" "https://$ENDPOINT/v1/management/roles?filter=$filter" $tmpout $tmperr
+if [ "$raw" == true ]; then
   if jq -r . $tmpout; then
     :
   else
@@ -103,8 +101,8 @@ if [ "$raw" = true ]; then
   exit 0
 fi
 
-if jq -r '.items[] | "\(.name) \(.legacyId) \(.id) " + ((.tags[] | select (".internal:bxp:gov") | if(."internal:bxp:gov") then ."internal:bxp:gov" else empty end) | tostring) + " " + ((.tags[] | select (".internal:bxp:saas") | if(."internal:bxp:saas") then ."internal:bxp:saas" else empty end) | tostring)' $tmpout > $tmperr; then
-  cat $tmperr | column -t -N "Name,ID,Organization ID,GovCloud,SaaS Enabled"
+if jq -r '.items[] | "\(.id),\(.name)"' $tmpout > $tmperr; then
+  cat $tmperr | column -s, -t -N ID,Name
 else
   echo "Error: Failed to parse the response from the API." >&2
   exit 1

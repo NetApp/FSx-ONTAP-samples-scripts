@@ -1,8 +1,7 @@
 #!/bin/bash
 #
 ################################################################################
-# This script is used to list all the Workload Factory Latency Events for
-# the account passed it.
+# This script is used to get the base EDA -> Latency configuration.
 #
 # It is dependent on the 'wf_utils' file that is included in this repo. That
 # file contains the 'get_token' function that is used to obtain a valid
@@ -15,10 +14,11 @@
 ################################################################################
 usage() {
   cat >&2 <<EOF
-This script will list all volumes assoicated with the specified FSx for ONTAP
-file system.
+This script is used to get the base EDA -> Latency configuration. It will not
+report on the latency configuration for individual volumes. To see them use
+the -j option.
 
-Usage: $(basename $0) -t refresh_token -a blueXP_account_ID [-j]
+Usage: $(basename $0) -t refresh_token -a blueXP_account_ID [-j] [-n]
 
 Where: refresh_token - Is a refresh token used to obtain an access token needed
                        to run the Workload Factory APIs. You can obtain a refresh
@@ -26,6 +26,7 @@ Where: refresh_token - Is a refresh token used to obtain an access token needed
        blueXP_account_ID - is the BlueXP account ID. Run 'list_bluexp_accts' to get a
                            list of accounts you have access to.
        -j - If specified, the output will be in JSON format instead of a table.
+       -n - If specified, the volume name will be included. Note, this will take extra time to run.
 
 Instead of passing parameters on the command line, you can set the
 following environment variables:
@@ -41,8 +42,9 @@ EOF
 ################################################################################
 tmpout=$(mktemp /tmp/list_volumes-out.XXXXXX)
 tmpout2=$(mktemp /tmp/list_volumes-out2.XXXXXX)
+tmpout3=$(mktemp /tmp/list_volumes-out3.XXXXXX)
 tmperr=$(mktemp /tmp/list_volumes-err.XXXXXX)
-trap 'rm -f $tmpout $tmpout2 $tmperr' exit
+trap 'rm -f $tmpout $tmpout2 $tmpout3 $tmperr' exit
 #
 # Source the wf_utils file.
 wf_utils=$(command -v wf_utils)
@@ -62,11 +64,13 @@ fi
 #
 # Process command line arguments.
 JSON_OUTPUT=false
-while getopts "ht:a:j" opt; do
+INCLUDE_NAMES=false
+while getopts "ht:a:jn" opt; do
   case $opt in
     t) REFRESH_TOKEN="$OPTARG" ;;
     a) BLUEXP_ACCOUNT_ID="$OPTARG" ;;
     j) JSON_OUTPUT=true ;;
+    n) INCLUDE_NAMES=true ;;
     *) usage ;;
   esac
 done
@@ -94,43 +98,64 @@ if [ -z "$token" ]; then
   echo "Error: Failed to obtain an access token. Exiting." >&2
   exit 1
 fi
-
+#
+# According to the documentation and some testing, this API doesn't support
+# pagination, probably because it didn't used to return volume specific
+# configurations.
+URL="https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/builders/v1/alarm/configure"
+run_curl GET "$token" "$URL" $tmpout $tmperr
 if [ "$JSON_OUTPUT" == true ]; then
-  jq_query='.'
-else
-  jq_query='.items[] | "\(.createdAt),\(.fileSystemName),\(.volumeName),\(.volumeId),\(.region),\(.alertType),\(.eventType),\(.metrics.latency),\(.metrics.medianLatency),\(.metrics.iops),\(.metrics.medianOverPct)"'
+  if jq -r . $tmpout; then
+    :
+  else
+    cat $tmpout $tmperr
+  fi
+  exit
 fi
-
-run_curl GET "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/builders/v1/alarm/volumes" $tmpout $tmperr
-if jq -r "$jq_query" $tmpout  > $tmpout2 2> $tmperr; then
+#
+# First get the default latency configuration.
+jq_query='"\(.accountId),\(.createdBy),\(.status),\(.config.warning.readLatency.latencyThresholdMs),\(.config.warning.writeLatency.latencyThresholdMs),\(.config.critical.readLatency.latencyThresholdMs),\(.config.critical.writeLatency.latencyThresholdMs)"'
+if jq -r "$jq_query" $tmpout > $tmpout2 2> $tmperr; then
   :
 else
   echo "Error: Failed to parse the output from the API." >&2
   cat $tmperr >&2
   exit 1
 fi
+echo "Default Latency Configuration:"
+sort -f $tmpout2 | column -s, -t -R 4,5,6,7 -N "Account ID,Created By,Status,Warning Read Threshold,Warning Write Threshold,Critical Read Threshold,Critical Write Threshold"
 #
-# Check to see if there are more.
-nextToken=$(jq -r '.nextToken' $tmpout)
-while [ "$nextToken" != "null" ]; do
-  run_curl GET "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/builders/v1/alarm/volumes?nextToken=$nextToken" $tmpout $tmperr
-  if jq -r "$jq_query" $tmpout >> $tmpout2 2> $tmperr; then
-    :
-  else
-    echo "Error: Failed to parse the output from the API." >&2
-    cat $tmperr >&2
-    exit 1
-  fi
-  nextToken=$(jq -r '.nextToken' $tmpout)
-done
-
-if [ "$JSON_OUTPUT" == true ]; then
-  cat $tmpout2
+# Now get the latency configuration for each volume.
+jq_query='.config.filesystems | to_entries | .[] | .key + " " + (.value | to_entries | .[] | .key + " " + (.value.warning.readLatency.latencyThresholdMs | tostring) + " " + (.value.warning.writeLatency.latencyThresholdMs | tostring) + " " + (.value.critical.readLatency.latencyThresholdMs | tostring) + " " + (.value.critical.writeLatency.latencyThresholdMs | tostring) + " ")'
+if jq -r "$jq_query" $tmpout > $tmpout2 2> $tmperr; then
+  :
 else
-  count=$(jq -r '.count' $tmpout)
-  if [ "$count" == "0" ]; then
-    echo "No latency events were found."
-    exit 0
-  fi
-  sort -f $tmpout2 | column -s, -t -N "Timestamp,File System Name,Volume Name,Volume ID,Region,Alert Type,Event Type,Latency,Median Latency,IOPS,Median Over Percent"
+  echo "Error: Failed to parse the output from the API." >&2
+  cat $tmperr >&2
+  exit 1
+fi
+if [ "$INCLUDE_NAMES" == false ]; then
+  printf "\nVolume specific Latency Configuration:\n"
+  sort -f $tmpout2 | column -s' ' -t -R 3,4,5,6 -N "File System ID,Volume ID,Warning Read Threshold,Warning Write Threshold,Critical Read Threshold,Critical Write Threshold"
+else
+  #
+  # Get all the unique file systems:
+  awk '{print $1}' $tmpout2 | sort -u > $tmpout
+  #
+  # Create a lookup table of file system to volume mapping.
+  > $tmpout3
+  for fs in $(cat $tmpout); do
+    list_volumes -f $fs >> $tmpout3
+  done
+
+  > $tmpout
+  while read fsId volId wrt wwr crt cwt; do
+    volumeName=$(grep $volId $tmpout3 | awk '{print $1}')
+    if [ -z "$volumeName" ]; then
+      volumeName="N/A"
+    fi
+    echo "$fsId,$volId,$volumeName,$wrt,$wwr,$crt,$cwt," >> $tmpout
+  done < $tmpout2
+  printf "\nVolume specific Latency Configuration:\n"
+  sort -f $tmpout | column -s, -t -R 4,5,6,7 -N "File System ID,Volume ID,Volume Name,Warning Read Threshold,Warning Write Threshold,Critical Read Threshold,Critical Write Threshold"
 fi
