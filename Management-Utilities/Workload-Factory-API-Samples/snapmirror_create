@@ -17,9 +17,9 @@ usage() {
   cat >&2 <<EOF
 This script is used to create a SnapMirror relationship on a FSx for ONTAP file systems.
 
-Usage: $(basename $0) -t refresh_token -a blueXP_account_ID [-l throttle] [-s schedule] \\
-    -C source_credentials_id -R source_aws_region -F source_fs_id [-Y source_type] -M source_svm_ID -N source_svm_name -V source_volume \\
-    -c destination_credentials_id -r destination_aws_region -f destination_fs_id [-y destination_type] -m destination_svm_ID -n destination_svm_name
+Usage: $(basename $0) -t refresh_token -a blueXP_account_ID [-l throttle] [-s schedule] [-x] \\
+    -C source_credentials_id [-R source_aws_region] -F source_fs_id [-Y source_type] -M source_svm_ID -N source_svm_name -V source_volume \\
+    -c destination_credentials_id -r destination_aws_region -f destination_fs_id [-y destination_type] [-m destination_svm_ID] [-n destination_svm_name] [-v destination_volume]
 
 Where: refresh_token - Is a refresh token used to obtain an access token needed
                        to run the Workload Factory APIs. You can obtain a refresh
@@ -28,24 +28,30 @@ Where: refresh_token - Is a refresh token used to obtain an access token needed
                            list of accounts you have access to
        throttle - is the network throughput limit during transfers (optional, defaults to 100 MiB/s. 0 means unlimited)
        schedule - is the schedule to use for the SnapMirror relationship (optional, defaults to "hourly")
+       -x - This option means to also replicate the source VM's configuration.
 
-       source_credentials_ID - is the Workload Factory credentials ID for the AWS account. Run
-                              'list_credentials' to get a list of credentials you have access to.
+       source_credentials_ID - For an FSx type file system it is the Workload Factory credentials ID for the AWS assumed role.
+                               For an on-perm file system it is the ONTAP credentials.
+                               Run 'list_credentials -o' to get a list of credentials you have access to.
        source_aws_region - is the AWS region of the source file system. Not required if the source is on-prem.
-       source_fs_ID - is the file system ID of the file system that is the source of the SnapMirror relationship. Run
-                      'list_filesystems' to get a list of file systems you have access to.
-       source_svm_ID - is the SVM ID on the source file system where you want the volume replicated from
+       source_fs_ID - is the file system ID of the file system that is the source of the SnapMirror relationship.
+                      Run 'list_filesystems' to get a list of file systems you have access to.
+       source_svm_ID - is the SVM ID on the source file system where you want the volume replicated from.
+                       For on-prem file systems, this is the UUID of the SVM.
        source_svm_name - is the name of the SVM on the source file system where you want the volume replicated from
-       source_type - is the file system type of the source cluster. Either 'FSx' or 'on-prem' (optional, defaults to "FSx")
+       source_type - is the file system type of the source cluster. Either 'FSx' or 'on-prem'. Optional, defaults to "FSx"
        source_volume - is the name of the source volume to be mirrored
 
-       destination_credentials_ID - is the Workload Factory credentials ID for the AWS account. Run
-                                    'list_credentials' to get a list of credentials you have access to
-       destination_aws_region - is the AWS region where the destination file system is located
-       destination_fs_ID - is the AWS file system ID of the file system that is the destination of the relationship relationship
-       destination_svm_ID - is the SVM ID of the within destination file system where you want the volume replicated to
-       destination_svm_name - is the name of the SVM on the destination file system where you want the volume replicated to
-       destination_type - is the type of the destination file system. Either 'FSx' or 'on-prem' (optional, defaults to "FSx")
+       destination_credentials_ID - For an FSx type file system it is the Workload Factory credentials ID for the AWS assumed role.
+                                    For an on-perm file system it is the ONTAP credentials.
+                                    Run 'list_credentials -o' to get a list of credentials you have access to.
+       destination_aws_region - is the AWS region where the destination file system is located. Not required if the destination is on-prem.
+       destination_fs_ID - is the file system ID of the file system that is the destination of the relationship relationship
+       destination_type - is the type of the destination file system. Either 'FSx' or 'on-prem'. Optional, defaults to "FSx".
+       destination_svm_ID - is the SVM ID of the within destination file system where you want the volume replicated to. Ignored if using the -x option.
+                            For on-prem file systems, this is the UUID of the SVM.
+       destination_svm_name - is the name of the SVM on the destination file system where you want the volume replicated to. Ignored if using the -x option.
+       destination_volume - is the name of the destination volume to be created. Optional, default to source_volume_copy. Not considered if using the -x option.
 
 Instead of passing parameters on the command line, you can set the
 following environment variables:
@@ -86,18 +92,21 @@ SOURCE_TYPE="FSx"
 DESTINATION_TYPE="FSx"
 THROTTLE=102400 # 100 MiB/s
 SCHEDULE="hourly"
-while getopts "ht:a:l:s:C:R:F:Y:M:N:V:c:r:f:y:m:n:" opt; do
+SVMDR="false"
+while getopts "ht:a:l:xs:C:R:F:Y:M:N:V:c:r:f:y:m:n:v:" opt; do
   case $opt in
     t) REFRESH_TOKEN="$OPTARG" ;;
     a) BLUEXP_ACCOUNT_ID="$OPTARG" ;;
     l) THROTTLE="$OPTARG" ;;
     s) SCHEDULE="$OPTARG" ;;
+    x) SVMDR='true' ;;
     c) DESTINATION_CREDENTIALS_ID="$OPTARG" ;;
     r) DESTINATION_AWS_REGION="$OPTARG" ;;
     f) DESTINATION_FS_ID="$OPTARG" ;;
     y) DESTINATION_TYPE="$OPTARG" ;;
     m) DESTINATION_SVM_ID="$OPTARG" ;;
     n) DESTINATION_SVM_NAME="$OPTARG" ;;
+    v) DESTINATION_VOLUME="$OPTARG" ;;
     F) SOURCE_FS_ID="$OPTARG" ;;
     C) SOURCE_CREDENTIALS_ID="$OPTARG" ;;
     R) SOURCE_AWS_REGION="$OPTARG" ;;
@@ -123,20 +132,13 @@ required_options["SOURCE_CREDENTIALS_ID"]='Error: The Workload Factory credentia
 You can get the list of credentials you have access to by running the "list_credentials" script
 found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
 required_options["DESTINATION_AWS_REGION"]='Error: The AWS region where the destination of the SnapMirror is located is required to run this script.\n\n'
-required_options["SOURCE_AWS_REGION"]='Error: The AWS region where the source of the SnapMirror relationship is located is required to run this script.\n\n'
 required_options["DESTINATION_FS_ID"]='Error: The destination FSx file system ID is required to run this script.
 You can get the list of file systems you have access to by running the "list_filesystems" script
 found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
 required_options["SOURCE_FS_ID"]='Error: The source FSx file system ID is required to run this script.
 You can get the list of file systems you have access to by running the "list_filesystems" script
 found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
-required_options["DESTINATION_SVM_ID"]='Error: The destination SVM ID is required to run this script.
-You can get the list of svm IDs by running the "list_svms" script
-found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
 required_options["SOURCE_SVM_ID"]='Error: The source SVM ID is required to run this script.
-You can get the list of svm IDs by running the "list_svms" script
-found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
-required_options["DESTINATION_SVM_NAME"]='Error: The destination SVM name is required to run this script.
 You can get the list of svm IDs by running the "list_svms" script
 found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
 required_options["SOURCE_SVM_NAME"]='Error: The source SVM name is required to run this script.
@@ -150,17 +152,42 @@ check_required_options
 #
 # Check that the parameters are valid.
 case "$SOURCE_TYPE" in
-  "FSx") SOURCE_TYPE="FileSystem" ;;
-  "on-prem") SOURCE_TYPE="OnPrem" ;;
+  "FSx")
+    SOURCE_TYPE="FileSystem"
+    if [ -z "$SOURCE_AWS_REGION"]; then
+      echo "Error: the source AWS region is required if the source type isn't on-prem."
+      usage
+    fi
+    SOURCE_REGION='"region":"'$SOURCE_AWS_REGION'",'
+    ;;
+  "on-prem")
+    SOURCE_TYPE="OnPrem"
+    SOURCE_REGION=""
+    ;;
   *) echo "Error: Invalid destination type '$SOURCE_TYPE'. Must be either 'FSx' or 'on-prem'." >&2
     usage ;;
 esac
+
 case "$DESTINATION_TYPE" in
-  "FSx") DESTINATION_TYPE="FileSystem" ;;
-  "on-prem") DESTINATION_TYPE="OnPrem" ;;
+  "FSx")
+    DESTINATION_TYPE="FileSystem"
+    if [ -z "$DESTINATION_AWS_REGION" ]; then
+      echo "Error: the destination AWS region is required if the destination type isn't on-prem."
+      usage
+    fi
+    DESTINATION_REGION='"region":"'$DESTINATION_AWS_REGION'",'
+    ;;
+  "on-prem")
+    DESTINATION_TYPE="OnPrem"
+    DESTINATION_REGION=""
+    ;;
   *) echo "Error: Invalid destination type '$DESTINATION_TYPE'. Must be either 'FSx' or 'on-prem'." >&2
     usage ;;
 esac
+
+if [ -z "$DESTINATION_VOLUME" ]; then
+  DESTINATION_VOLUME="${SOURCE_VOLUME}_copy"
+fi
 #
 # Check that the required commands are available.
 for cmd in jq curl; do
@@ -176,13 +203,24 @@ if [ -z "$token" ]; then
   exit 1
 fi
 
+if [ "$SVMDR" == "false" ]; then
+  if [ -z "$DESTINATION_SVM_ID" -o -z "$DESTINATION_SVM_NAME" ]; then
+    echo "Error: The destination SVM ID and destination SVM name are required if not using the -x option." >&2
+    usage
+  fi
+  DESTINATION_SVM='"svm":{"id":"'${DESTINATION_SVM_ID}'","name":"'${DESTINATION_SVM_NAME}'"},'
+else
+  DESTINATION_SVM=""
+fi
+
+set -x
 run_curl POST "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/fsx/v2/replication" \
   $tmpout $tmperr \
   '{"source": {
       "type":"'${SOURCE_TYPE}'",
       "id":"'${SOURCE_FS_ID}'",
       "credentialsId":"'${SOURCE_CREDENTIALS_ID}'",
-      "region":"'${SOURCE_AWS_REGION}'",
+      '${SOURCE_REGION}'
       "volumes": [
         {
           "name":"'${SOURCE_VOLUME}'",
@@ -195,9 +233,15 @@ run_curl POST "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOU
       "type":"'${DESTINATION_TYPE}'",
       "id":"'${DESTINATION_FS_ID}'",
       "credentialsId":"'${DESTINATION_CREDENTIALS_ID}'",
-      "region":"'${DESTINATION_AWS_REGION}'",
-      "svm": {"id":"'${DESTINATION_SVM_ID}'", "name":"'${DESTINATION_SVM_NAME}'"},
-      "volume": {"tieringPolicy": {"coolingPeriod": 2, "name": "AUTO"}}
+      '$DESTINATION_REGION'
+      '$DESTINATION_SVM'
+      "volume": {
+        "useSourceVolumeTieringPolicy":true,
+        "name":"'${DESTINATION_VOLUME}'"
+      }
+    },
+    "svmConfiguration":{
+      "replicateSvmConfiguration":'${SVMDR}'
     },
     "throttle":'${THROTTLE}',
     "schedule": "'${SCHEDULE}'"
