@@ -154,7 +154,7 @@ check_required_options
 case "$SOURCE_TYPE" in
   "FSx")
     SOURCE_TYPE="FileSystem"
-    if [ -z "$SOURCE_AWS_REGION"]; then
+    if [ -z "$SOURCE_AWS_REGION" ]; then
       echo "Error: the source AWS region is required if the source type isn't on-prem."
       usage
     fi
