@@ -213,7 +213,6 @@ else
   DESTINATION_SVM=""
 fi
 
-set -x
 run_curl POST "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/fsx/v2/replication" \
   $tmpout $tmperr \
   '{"source": {
