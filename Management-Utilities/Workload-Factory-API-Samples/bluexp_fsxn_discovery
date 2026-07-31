@@ -10,7 +10,7 @@
 ################################################################################
 usage () {
   cat 1>&2 <<EOF
-Usage: $(basename $0) -t REFRESH_TOKEN -a blueXP_BLUE_ACCOUNT_ID -c CREDENTIALS_ID -r aws_AWS_REGION -f FILESYSTEM_ID -C CONNECTOR_ID -w WORKSPACE_ID -s SECRET_NAME -u USERNAME -p PASSWORD [-P]
+Usage: $(basename $0) -t REFRESH_TOKEN -a blueXP_BLUE_ACCOUNT_ID -c CREDENTIALS_ID -r AWS_REGION -f FILESYSTEM_ID -C CONNECTOR_ID -w WORKSPACE_ID [-s SECRET_NAME] [-u USERNAME] [-p PASSWORD] [-P]
 
 Where: REFRESH_TOKEN - Is a refresh token used to obtain an access token needed
                        to run the Workload Factory APIs. You can obtain a refresh
@@ -19,15 +19,15 @@ Where: REFRESH_TOKEN - Is a refresh token used to obtain an access token needed
                            list of accounts you have access to
        CREDENTIALS_ID - is the Workload Factory credentials ID for the AWS account. Run
                         'list_credentials' to get a list of credentials you have access to
-       aws_AWS_REGION - is the AWS AWS_REGION where the FSx file systems are located
+       AWS_REGION - is the AWS AWS_REGION where the FSx file systems are located
        FILESYSTEM_ID - is the AWS file system ID of the FSx file system where the volume resides
        CONNECTOR_ID - The BlueXP connector ID. Run 'list_bluexp_connectors' to get a list
                       of connectors you have access to
        WORKSPACE_ID - The BlueXP workspace ID. Run 'list_bluexp_workspaces' to get a list of workspaces
                       you have access to.
-       SECRET_NAME - The name of the secret that holds the credentials to assoicate with the FSxN.
-       USERNAME - The username to set the password for (defaults to fsxadmin if not specified).
-       PASSWORD - The password to set for the username.
+       SECRET_NAME - The name of the secret that holds the credentials to assoicate with the FSxN. Not needed if a username and password are provided.
+       USERNAME - The username to set the password for (defaults to fsxadmin if not specified). Not needed if a secret is provided.
+       PASSWORD - The password to set for the username. Not needed if a secret is provided.
        -P - Means to just try to set the password.
 
 Instead of passing parameters on the command line, you can set the following
@@ -36,7 +36,7 @@ environment variables:
     export REFRESH_TOKEN=<REFRESH_TOKEN>
     export BLUEXP_BLUE_ACCOUNT_ID=<blueXP_BLUE_ACCOUNT_ID>
     export CREDENTIALS_ID=<CREDENTIALS_ID>
-    export AWS_AWS_REGION=<aws_AWS_REGION>
+    export AWS_REGION=<AWS_REGION>
     export USERNAME=<username>
     export PASSWORD=<password>
 

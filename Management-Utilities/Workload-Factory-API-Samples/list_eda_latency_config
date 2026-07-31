@@ -126,6 +126,9 @@ echo "Default Latency Configuration:"
 sort -f $tmpout2 | column -s, -t -R 4,5,6,7 -N "Account ID,Created By,Status,Warning Read Threshold,Warning Write Threshold,Critical Read Threshold,Critical Write Threshold"
 #
 # Now get the latency configuration for each volume.
+if [ $(jq -r '.config.filesystems | length' $tmpout) == "0" ]; then
+  exit
+fi
 jq_query='.config.filesystems | to_entries | .[] | .key + " " + (.value | to_entries | .[] | .key + " " + (.value.warning.readLatency.latencyThresholdMs | tostring) + " " + (.value.warning.writeLatency.latencyThresholdMs | tostring) + " " + (.value.critical.readLatency.latencyThresholdMs | tostring) + " " + (.value.critical.writeLatency.latencyThresholdMs | tostring) + " ")'
 if jq -r "$jq_query" $tmpout > $tmpout2 2> $tmperr; then
   :
