@@ -43,7 +43,7 @@ jobs:
         uses: hashicorp/setup-terraform@ed3a0531877aca392eb870f440d9ae7aba83a6bd # v1.4.0
         with:
           terraform_wrapper: false
-          terraform_version: 1.6.6
+          terraform_version: 1.12.1
 
       - name: Initialize Terraform
         run: terraform init
