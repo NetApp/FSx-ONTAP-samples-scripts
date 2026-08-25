@@ -2,15 +2,18 @@
 # Copyright (c) NetApp, Inc.
 # SPDX-License-Identifier: Apache-2.0
 
-name: "Code Quality: Terraform"
+name: "Code Quality: Terraform Validation for EKS/FSxN-as-PVC-for-EKS/terraform"
+
+permissions:
+  contents: read
 
 on:
   pull_request:
     paths:
-      - 'Infrastructure_as_Code/Terraform/**'
+      - 'EKS/FSxN-as-PVC-for-EKS/terraform/**'
   push:
     paths:
-      - 'Infrastructure_as_Code/Terraform/**'
+      - 'EKS/FSxN-as-PVC-for-EKS/terraform/**'
     branches:
       - main
 
@@ -18,14 +21,9 @@ jobs:
   terraform:
     name: Terraform
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        directory:
-          - 'Infrastructure_as_Code/Terraform/deploy-fsx-ontap/module'
-          - 'Infrastructure_as_Code/Terraform/deploy-fsx-ontap/standalone-module'
     defaults:
       run:
-        working-directory: ${{ matrix.directory }}
+        working-directory: 'EKS/FSxN-as-PVC-for-EKS/terraform'
 
     steps:
       - name: Harden the runner (Audit all outbound calls)
@@ -37,7 +35,7 @@ jobs:
         uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3 # v3.5.0
         with:
           fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.ref }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@ed3a0531877aca392eb870f440d9ae7aba83a6bd # v1.4.0
@@ -47,9 +45,6 @@ jobs:
 
       - name: Initialize Terraform
         run: terraform init
-
-      # - name: Format Terraform configuration
-      #   run: terraform fmt -diff -check -no-color -recursive
 
       - name: Validate Terraform configuration
         run: terraform validate

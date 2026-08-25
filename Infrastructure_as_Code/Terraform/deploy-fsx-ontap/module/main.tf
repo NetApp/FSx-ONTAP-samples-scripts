@@ -54,8 +54,8 @@ data "aws_region" "current" {}
 # associated with it that will set the initial password.
 module "fsxn_rotate_secret" {
     source = "github.com/Netapp/FSx-ONTAP-samples-scripts/Management-Utilities/fsxn-rotate-secret/terraform"
-    fsx_region = data.aws_region.current.name
-    secret_region = var.secrets_region != "" ? var.secrets_region : data.aws_region.current.name
+    fsx_region = data.aws_region.current.region
+    secret_region = var.secrets_region != "" ? var.secrets_region : data.aws_region.current.region
     aws_account_id = var.aws_account_id
     secret_name_prefix = var.secret_name_prefix
     fsx_id = aws_fsx_ontap_file_system.terraform-fsxn.id
@@ -72,8 +72,8 @@ resource "aws_fsx_ontap_storage_virtual_machine" "mysvm" {
 # associated with it that will set the initial password.
 module "svm_rotate_secret" {
     source = "github.com/Netapp/FSx-ONTAP-samples-scripts/Management-Utilities/fsxn-rotate-secret/terraform"
-    fsx_region = data.aws_region.current.name
-    secret_region = var.secrets_region != "" ? var.secrets_region : data.aws_region.current.name
+    fsx_region = data.aws_region.current.region
+    secret_region = var.secrets_region != "" ? var.secrets_region : data.aws_region.current.region
     aws_account_id = var.aws_account_id
     secret_name_prefix = var.secret_name_prefix
     svm_id = aws_fsx_ontap_storage_virtual_machine.mysvm.id

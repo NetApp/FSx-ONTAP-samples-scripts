@@ -2,10 +2,12 @@
 #
 ################################################################################
 # This script is used to warm an FSx for ONTAP volume. It does that simply
-# by reading every byte of every file in a volume. By doing reading all the
+# by reading every byte of every file in a volume. By reading all the
 # contents of a file, that forces the data to be read from the capacity tier
 # and stored in the performance tier. The assumption is that the user has
-# changed the tiering policy to something other than "all".
+# changed the tiering policy to something other than "all" and that
+# the volume is of type "DP" since ONTAP will not promote data for
+# a DP volume unless the tiering is set to "None."
 #
 # To try and speed up the process, it will spawn multiple threads to process
 # the volume. It will spawn a separate thread for each directory
@@ -28,15 +30,22 @@
 usage () {
   cat 1>&2 <<EOF
 
-Usage: $(basename $0) [-f filesystem_endpoint] [-v volume_name] [-d directory] [-t max_directory_threads] [-x max_read_threads] [-n nfs_type] [-h] [-V]
+Usage: $(basename $0) [-f filesystem_endpoint] [-v volume_name] [-d directory] [-r read_method] [-b block_size] [-t max_directory_threads] [-X max_files_threads] [-x max_read_threads] [-n nfs_type] [-h] [-V] [-c]
 Where:
-  -f filesystem_endpoint - Is the hostname or IP address of the FSx for ONTAP file system.
-  -v volume_name - Is the ID of the volume.
-  -n nfs_type - Is the NFS version to use. Default is nfs4.
-  -d directory - Is the root directory to start the process from.
-  -t max_directory_threads - Is the maximum number of threads to use to process directories. The default is 5.
-  -x max_read_threads - Is the maximum number of threads to use to read files. The default is 2.
-  -V - Enable verbose output. Displays the thread ID, date (in epoch seconds), then the directory or file being processed.
+  -f filesystem_endpoint - Is the hostname or IP address of the FSx for ONTAP file system. Only needed if not providing the -d option.
+  -v volume_name - Is the ID of the volume. Only needed if not providing the -d option.
+  -n nfs_type - Is the NFS version to use. Default is nfs4. Only needed if not providing the -d option.
+  -d directory - Is the root directory to start the process from. Not needed if you provide the -f and -v options.
+  -t max_directory_threads - Is the maximum number of threads to use to process directories. The default is 4.
+  -x max_files_threads - Is the maximum number of concurrent files to be read. The default is 5
+  -X max_read_threads - Is the maximum number of concurrent threads to use to read each file. The default is 10.
+  -V - Enable verbose output. Displays the progress of each file as it is being read.
+  -b block_size - The block size, in bytes, to use when reading files. The default is: 2 * 1024 * 1024.
+  -c - Create a copy of volume in the current directory and compare the results.
+  -r read_method - The method to use to read the file. The default is reverse. The options are:
+    * reverse - Reads the file in reverse order in 4MB blocks.
+    * random - Reads the file in random order in 4MB blocks.
+    * cat - Uses the 'cat' command to read the file.
   -h - Prints this help information.
 
 Notes:
@@ -47,6 +56,154 @@ Notes:
     reading files.
 EOF
 
+}
+
+################################################################################
+# This displays a timer on the first line. Continues to run until there are no
+# more child processes of the parent process.
+################################################################################
+updateTimer() {
+  ppid=$1
+
+  startTime=$(date +%s)
+  sleep 2 # Give time for the first process to start.
+  x=$(ps --ppid $ppid | sed -e 1d | fgrep -v " $$ " | wc -l)
+  while [ $x -gt 1 ]; do
+    (
+      flock -x -w 10 100 || {
+        echo "Error, cannot acquire the lock to update the timer." 1>&2
+        exit 1
+      }
+      currentTime=$(date +%s)
+      elaspedTime=$((currentTime-startTime))
+      hours=$((elaspedTime/3600))
+      minutes=$(((elaspedTime-hours*3600)/60))
+      seconds=$((elaspedTime-(hours*3600+minutes*60)))
+      if [ $verbose == "true" ]; then
+        printf "\033[1;1H\033[KElasped Time: %02d:%02d:%02d" $hours $minutes $seconds
+      else
+        printf "\rElasped Time: %02d:%02d:%02d" $hours $minutes $seconds
+      fi
+    ) 100<$displaySlotsFile
+    sleep 1
+    x=$(ps --ppid $ppid | sed -e 1d | fgrep -v $$ | wc -l)
+    #
+    # If the displaySlotsFile is no longer readable, then the script has exited and we should exit too.
+    if [ ! -r $displaySlotsFile ]; then
+      exit
+    fi
+  done
+}
+
+################################################################################
+# This function is used to add a line to the status section at the top of the
+# display. It will add the line to the bottom, and push the other lines up.
+################################################################################
+addStatusLine() {
+  line="$1"
+  if [ $verbose == "false" ]; then
+    echo $line
+    return
+  fi
+  #
+  # If the displaySlotsFile is no longer readable, then the script has exited and we should exit too.
+  if [ ! -r $displaySlotsFile ]; then
+    exit
+  fi
+  (
+    flock -x -w 10 100
+    if [ $? -ne 0 ]; then
+      echo "Error, cannot acquire the lock to add a status line." 1>&2
+      exit 1
+    fi
+    . $statusLinesFile
+
+    for i in $(seq 1 3); do
+      statusLines[$i]="${statusLines[$(($i+1))]}"
+    done
+    statusLines[4]="$line"
+    displaySlots[5]="$line"
+    > $statusLinesFile
+    for slot in $(seq 1 4); do
+      printf "statusLines[$slot]=\"${statusLines[$slot]}\"\n" >> $statusLinesFile
+      printf "\033[$((slot+1));1H\033[K${statusLines[$slot]}"
+    done
+  ) 100<$displaySlotsFile
+}
+
+################################################################################
+# This function returns the next available display slot and mark that slot
+# as used.
+################################################################################
+getNextDisplaySlot() {
+  #
+  # If the displaySlotsFile is no longer readable, then the script has exited and we should exit too.
+  if [ ! -r $displaySlotsFile ]; then
+    exit
+  fi
+  (
+    flock -x -w 10 100
+    if [ $? -ne 0 ]; then
+      echo "Error, cannot acquire the lock to get the next display slot." 1>&2
+      exit 1
+    fi
+    . $displaySlotsFile
+    for slot in $(seq 1 $maxDisplaySlots); do
+      if [ ${displaySlots[$slot]} -eq 0 ]; then
+        displaySlots[$slot]=1
+        echo $slot
+        echo "displaySlots=(${displaySlots[*]})" > $displaySlotsFile
+        return 0
+      fi
+    done
+    echo "Error, no display slots available. This shouldn't happen." 1>&2
+    exit 1
+  ) 100<$displaySlotsFile
+}
+
+################################################################################
+# This function frees a display slot so it can be used by another thread.
+################################################################################
+freeDisplaySlot () {
+  slot=$1
+  #
+  # If the displaySlotsFile is no longer readable, then the script has exited and we should exit too.
+  if [ ! -r $displaySlotsFile ]; then
+    exit
+  fi
+  (
+    flock -x -w 10 100 || {
+      echo "Error, cannot acquire the lock to free the display slot." 1>&2
+      exit 1
+    }
+    . $displaySlotsFile
+    if [ $slot -lt 1 -o $slot -gt $maxDisplaySlots ]; then
+      echo "Error, invalid display slot '$slot'." 1>&2
+      exit 1
+    fi
+    displaySlots[$slot]=0
+    echo "displaySlots=(${displaySlots[*]})" > $displaySlotsFile
+  ) 100<$displaySlotsFile
+}
+
+################################################################################
+# This function is used to update a display slot with a message.
+################################################################################
+updateDisplay() {
+  slot=$1
+  message="$2"
+  #
+  # If the displaySlotsFile is no longer readable, then the script has exited and we should exit too.
+  if [ ! -r $displaySlotsFile ]; then
+    exit
+  fi
+  (
+    flock -x -w 10 100 || {
+      echo "Error, cannot acquire the lock to update the display." 1>&2
+      exit 1
+    }
+    printf "\033[$slot;1H\033[K$message"
+  ) 100<$displaySlotsFile
 }
 
 ################################################################################
@@ -91,29 +248,159 @@ isMounted () {
 }
 
 ################################################################################
+# This function is used to read a file and discard the output.
+################################################################################
+readFile() {
+  local file="$1"
+  local directory="$2"
+  local displaySlot
+
+  if [ $verbose == "true" ]; then
+    displaySlot=$(getNextDisplaySlot)
+  fi
+
+  if [ $createCopy == "true" ]; then
+    out="${curDir}${directory}"
+    mkdir -p "$out"
+    out="$out/$file"
+  else
+    out="/dev/null"
+  fi
+  updateDisplay $displaySlot "cat ${file} - Start"
+  cat "$file" > "$out" 2>/dev/null
+  updateDisplay $displaySlot "cat ${file} - Done"
+
+  if [ $verbose == "true" ]; then
+    freeDisplaySlot $displaySlot
+  fi
+}
+
+################################################################################
 # This function is used to read a file and discard the output. It reads the file
 # in blocks of 4MB in reverse order. It is done this way so ONTAP doesn't
 # assume this is a backup process and not promote the data to the performance
 # tier.
 ################################################################################
-readFile () {
-  local file=$1
-  local blockSize=$((2*1024*1024))
+readFileReverse () {
+  local file="$1"
+  local directory="$2"
+  local runningPIDs
 
   fileSize=$(stat -c "%s" "$file")
-  fileBlocks=$((fileSize/blockSize))
+  totalFileBlocks=$((fileSize / blockSize))
+
+  if [ $createCopy == "true" ]; then
+    out="${curDir}${directory}"
+    mkdir -p "$out"
+    out="$out/$file"
+  else
+    out="/dev/null"
+  fi
+
+  if [ $verbose == "true" ]; then
+    displaySlot=$(getNextDisplaySlot)
+  fi
+
+  fileBlocks=$totalFileBlocks
+  lastUpdatePercent=99  # just needs to be non-zero.
+  while [ $fileBlocks -ge 0 ]; do
+    if [ $totalFileBlocks -gt 0 ]; then
+      let percentDone=100-fileBlocks*100/totalFileBlocks
+    else
+      percentDone=100
+    fi
+    if [ $((percentDone%10)) == 0 -a $verbose == "true" -a $percentDone != $lastUpdatePercent ]; then
+      lastUpdatePercent=$percentDone
+      updateDisplay $displaySlot "${file}: $percentDone%%"
+    fi
+    if [ ${#runningPIDs[*]} -ge $maxFileThreads ]; then
+      wait -n -p pid
+      if [ $? -eq 127 ]; then
+        echo "$BASHPID $(date +%s) - Warning, 'wait -n' returned 127" 1>&2
+        return 1
+      else
+        #
+        # Check to make sure the PID is one that we recorded.
+        if [ "${runningPIDs[$pid]}" != $pid ]; then
+          echo "$BASHPID $(date +%s) - Warning, expected $pid, got '${runningPIDs[$pid]}'" 1>&2
+        fi
+        unset runningPIDs[$pid]
+      fi
+    fi
+
+    dd if="$file" of="$out" bs=$blockSize conv=sparse,notrunc count=1 skip=$fileBlocks seek=$fileBlocks > /dev/null 2>&1 &
+    runningPIDs[$!]=$!
+    let fileBlocks-=1
+  done
+  wait
+  if [ $verbose == "true" ]; then
+    freeDisplaySlot $displaySlot
+  fi
+  return 0
+}
+
+################################################################################
+# This function is used to read a file and discard the output. It reads the file
+# in blocks of $blocksize in random order. It is done this way so ONTAP doesn't
+# assume this is a backup process and not promote the data to the performance
+# tier.
+################################################################################
+readFileRandom () {
+
+  local file="$1"
+  local directory="$2"
+  local blocks
+
+  fileSize=$(stat -c "%s" "$file")
+  fileBlocks=$((fileSize / blockSize))
   if [ $((fileSize % blockSize)) -ne 0 -o $fileSize -eq 0 ]; then
     let fileBlocks+=1
   fi
+  totalFileBlocks=$fileBlocks
+  #
+  # Create a random list of blocks to read.
+  for ((i=0; i<$fileBlocks; i++)); do
+    blocks[$i]=$i
+  done
+  #
+  # Shuffle the blocks.
+  for ((i=0; i<$fileBlocks; i++)); do
+    j=$(($SRANDOM % $fileBlocks))
+    tmp=${blocks[$i]}
+    blocks[$i]=${blocks[$j]}
+    blocks[$j]=$tmp
+  done
 
-  while [ $fileBlocks -ge 0 ]; do
-    if dd if="$file" of=/dev/null bs=$blockSize count=1 skip=$fileBlocks > /dev/null 2>&1; then
+  if [ $createCopy == "true" ]; then
+    out="${curDir}${directory}"
+    mkdir -p "$out"
+    out="$out/$file"
+  else
+    out="/dev/null"
+  fi
+
+  if [ $verbose == "true" ]; then
+    displaySlot=$(getNextDisplaySlot)
+  fi
+
+  lastUpdatePercent=99 # Just set to something non-zero.
+  for ((i=0; i<$fileBlocks; i++)); do
+    let percentDone=i*100/fileBlocks
+    if [ $((percentDone%10)) == 0 -a $verbose == "true" -a $percentDone != $lastUpdatePercent ]; then
+       lastUpdatePercent=$percentDone
+      updateDisplay $displaySlot "${file}: ${percentDone}%%"
+    fi
+    if dd if="$file" of="$out" bs=$blockSize conv=sparse,notrunc count=1 skip=${blocks[$i]} seek=${blocks[$i]} > /dev/null 2>&1; then
       :
     else
       return 1
     fi
-    let fileBlocks-=1
   done
+
+  if [ $verbose == "true" ]; then
+    freeDisplaySlot $displaySlot
+  fi
+
   return 0
 }
 
@@ -125,31 +412,46 @@ processDirectory () {
   local runningPIDs
 
   if [ "$verbose" = "true" ]; then
-    echo "$BASHPID $(date +%s) - Processing $1"
+    addStatusLine "$(date) - Processing directory: $1"
   fi
 
   cd "$1"
+  if [ $? -ne 0 ]; then
+    addStatusLine "$(date) - Warning, cannot change to directory '$1'."
+    return
+  fi
   while read file; do
     if [ -f "$file" ]; then
       #
       # If there are too many threads running already, wait until one finishes.
-      if [ ${#runningPIDs[*]} -ge $maxFileThreads ]; then
+      if [ ${#runningPIDs[*]} -ge $maxFilesThreads ]; then
         wait -n -p pid
         if [ $? -eq 127 ]; then
-          echo "$BASHPID $(date +%s) - Warning, 'wait -n' returned 127" 1>&2
+          addStatusLine "$(date) - Warning, 'wait -n' returned 127."
         else
           #
           # Check to make sure the PID is one that we recorded.
           if [ "${runningPIDs[$pid]}" != $pid ]; then
-            echo "$BASHPID $(date +%s) - Warning, expected $pid, got '${runningPIDs[$pid]}'" 1>&2
+            addStatusLine "$(date) - Warning, expected $pid, got '${runningPIDs[$pid]}'."
           fi
           unset runningPIDs[$pid]
         fi
       fi
-      if [ "$verbose" == "true" ]; then
-        echo "$BASHPID $(date +%s) - Reading $1/$file and discarding output. Number of threads: $((${#runningPIDs[*]}+1))"
-      fi
-      readFile "$file" || echo "$BASHPID $(date +%s) - Warning, cannot read '${file}'." 1>&2 &
+      case $readMethod in
+        reverse)
+          readFileReverse "$file" "$1" || echo "$BASHPID $(date +%s) - Warning, cannot read '${file}'." 1>&2 &
+          ;;
+        random)
+          readFileRandom "$file" "$1" || echo "$BASHPID $(date +%s) - Warning, cannot read '${file}'." 1>&2 &
+          ;;
+        cat)
+          readFile "$file" "$1" || echo "$BASHPID $(date +%s) - Warning, cannot read '${file}'." 1>&2 &
+          ;;
+        *)
+          echo "Error, unknown read method '${readMethod}'." 1>&2
+          exit 1
+          ;;
+      esac
       #
       # Record the PID of the process mostly so we can keep up with how many are running.
       runningPIDs[$!]=$!
@@ -159,7 +461,7 @@ processDirectory () {
   # Wait for all the file threads to finish.
   wait
   if [ "$verbose" = "true" ]; then
-    echo "$BASHPID $(date +%s) - Done processing $1."
+    addStatusLine "$(date) - Done processing $1."
   fi
 }
 
@@ -168,41 +470,68 @@ processDirectory () {
 ################################################################################
 #
 # Set some defaults.
-maxDirThreads=2
-maxFileThreads=5
+maxDirThreads=4    # Maximum number of directories to process at the same time.
+maxFilesThreads=5  # Maximum number of files to processs at the same time.
+maxFileThreads=10  # Maximum number of threads to read a file with at the same time.
 nfsType=nfs4
-verbose=false
+export verbose=false
+readMethod=reverse
+createCopy=false
+blockSize=$((2*1024*1024))
+displaySlotsFile=$(mktemp /tmp/displaySlotsLock.XXXXXX)
+statusLinesFile=$(mktemp /tmp/statusLines.XXXXXX)
+exitFile=$(mktemp /tmp/exit.XXXXXX)
+trapCommands="rm -f $displaySlotsFile $statusLinesFile $exitFile"
+trap 'eval "$trapCommands"' EXIT
+#
+# Initialize the displaySlots array to all slots (lines) available except the first 4 that are used for status messages.
+# The first element of the array isn't used, but since when you echo the array out
+# and then read them back in, the array starts at index 0, and we want to start with 1.
+displaySlots[0]=1
+# Reserve the first 4 lines for status messages.
+displaySlots[1]=1
+displaySlots[2]=1
+displaySlots[3]=1
+displaySlots[4]=1
+displaySlots[5]=1
+firstFreeSlot=${#displaySlots[*]}
+maxDisplaySlots=$((maxDirThreads*maxFilesThreads+(firstFreeSlot-1)))
+for slot in $(seq $firstFreeSlot $maxDisplaySlots); do
+  displaySlots[$slot]=0
+done
+echo "displaySlots=(${displaySlots[*]})" > $displaySlotsFile
 #
 # process command line options.
-while getopts "f:v:t:d:n:x:hV" option; do
+while getopts "f:v:t:d:n:x:X:r:b:hVc" option; do
   case $option in
-    f)
-      filesystemHostname=$OPTARG
-      ;;
-    v)
-      volumeName=$OPTARG
-      ;;
-    d)
-      rootDirectory=$OPTARG
-      ;;
-    t)
-      maxDirThreads=$OPTARG
-      ;;
-    x)
-      maxFileThreads=$OPTARG
-      ;;
-    n)
-      nfsType=$OPTARG
-      ;;
-    V)
-      verbose=true
-      ;;
-    *)
-      usage
+    f) filesystemHostname=$OPTARG ;;
+    v) volumeName=$OPTARG ;;
+    d) rootDirectory=$OPTARG ;;
+    t) maxDirThreads=$OPTARG ;;
+    x) maxFilesThreads=$OPTARG ;;
+    X) maxFileThreads=$OPTARG ;;
+    n) nfsType=$OPTARG ;;
+    V) verbose=true ;;
+    r) readMethod=$OPTARG ;;
+    b) blockSize=$OPTARG ;;
+    c) createCopy=true curDir=$(pwd) ;;
+    *) usage
       exit 1
       ;;
   esac
 done
+if [ $verbose == "true" ]; then
+  LINES=$(stty size | awk '{print $1}')
+  if [ $maxDisplaySlots -gt $LINES ]; then
+    echo "Warning, to provide verbose output you need at least ${maxDisplaySlots} lines in the terminal. The current terminal only has $LINES lines." 1>&2
+    echo "         Verbose output has been disabled." 1>&2
+    verbose=false
+  else
+    printf "\033[s"   # Save the cursor position.
+    printf "\033[2J"  # Clear the screen.
+  fi
+fi
+addStatusLine "Using the $readMethod reading method."
 #
 # If the user provided a filesystem endpoint, then we need to try to mount the volume.
 if [ ! -z "$filesystemHostname" ]; then
@@ -226,11 +555,11 @@ if [ ! -z "$filesystemHostname" ]; then
       exit 1
     fi
 
-    if mount -t $nfsType -o hard,ro $filesystemHostname:/$volumeName $tmpMount; then
+    if mount -t $nfsType -o hard,ro,nconnect=16 $filesystemHostname:/$volumeName $tmpMount; then
       if [ "$verbose" == "true" ]; then
-        echo "Volume '${volumeName}' from file system '${filesystemHostname}' mounted at '${tmpMount}'."
+        addStatusLine "Volume '${volumeName}' from file system '${filesystemHostname}' mounted at '${tmpMount}'."
       fi
-      trap 'umount $tmpMount; rmdir $tmpMount' EXIT
+      trapCommands="$trapCommands; umount $tmpMount; rmdir $tmpMount"
     else
       echo "Error, cannot mount ${filesystemHostname}:${volumeName}." 1>&2
       rmdir $tmpMount
@@ -239,7 +568,7 @@ if [ ! -z "$filesystemHostname" ]; then
     rootDirectory=$tmpMount
   else
     if [ $verbose == "true" ]; then
-      echo "Volume '${volumeName}' from file system '${filesystemHostname}' is already mounted at '${rootDirectory}'."
+      addStatusLine "Volume '${volumeName}' from file system '${filesystemHostname}' is already mounted at '${rootDirectory}'."
     fi
   fi
 fi
@@ -256,7 +585,8 @@ if [ ! -d "$rootDirectory" ]; then
   exit 1
 fi
 #
-# Process all the driectories in the volume.
+# Process all the directories in the volume.
+updateTimer $$ &
 while read directory; do
   #
   # If there are too many threads running already, wait until one finishes.
@@ -268,20 +598,28 @@ while read directory; do
       #
       # Check to make sure the PID is one that we recorded.
       if [ "${runningPIDs[$pid]}" != $pid ]; then
-        echo "$$ $(date +%s) - Warning, expected $pid, got '${runningPIDs[$pid]}'" 1>&2
+        addStatusLine "$(date) - Warning, expected $pid, got '${runningPIDs[$pid]}'."
       else
         unset runningPIDs[$pid]
       fi
     fi
-  fi
-  if [ "$verbose" == "true" ]; then
-    echo "$$ $(date +%s) - Processing directory $directory. Number of threads: $((${#runningPIDs[*]}+1))."
   fi
   processDirectory "$directory" &
   runningPIDs[$!]=$!
 done < <(find $rootDirectory -type d)
 
 if [ "$verbose" = "true" ]; then
-  echo "$$ $(date +%s) - Waiting for all directory threads to finish."
+  addStatusLine "$(date) - Waiting for all directory threads to finish."
 fi
 wait
+printf "\033[u"  # Restore the cursor position.
+
+if [ $createCopy == "true" ]; then
+  echo "Compare the results"
+  if diff -r "$rootDirectory" "$curDir/${rootDirectory#/}"; then
+    echo "The results are the same. Removing directory."
+    rm -rf "$curDir/${rootDirectory#/}"
+  else
+    echo "Error, the results are different." 1>&2
+  fi
+fi
