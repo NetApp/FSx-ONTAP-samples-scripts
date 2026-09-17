@@ -52,19 +52,24 @@ script twice does, typically, get more data into the performance tier so
 if you are trying to get as much data as possible into the performance tier,
 it is recommended to run the script twice.
 
+There are two versions of the script. One that designed to run on a Linux operating system name `warm_performance_tier`
+and one that is meant to run on a Windows based one name `WarmPerformanceTier.ps1`.
+
 ## Set Up
 The first step is to ensure the volume's tiering policy is set
 to something other than "all" or "snapshot-only". You should also ensure
 that the cloud-retrieval-policy is set to "on-read". You can make
 both of these changes with the following commands:
 ```
-set advanced -c off
+set advanced
 volume modify -vserver <vserver> -volume <volume> -tiering-policy auto -cloud-retrieval-policy on-read
 ```
 Where `<vserver>` is the name of the SVM and `<volume>` is the name of the volume.
 
-The next step is to copy the script to a Linux based host that is able to NFS
-mount the volume to be warmed. If the volume is already mounted, then
+The next step is to copy the appropriate script, either the Linux based one or the Windows
+based one, to the system that has access to the volume to be warmed.
+
+On a Linux based system, if the volume is already mounted, then
 any user that has read access to all the files in the volume can run it.
 Otherwise, the script needs to be run as 'root' so it can mount the
 volume before reading the files.
@@ -73,7 +78,9 @@ If the 'root' user can't read the all files in the volume, then you should use t
 to mount the volume and then run the script from a user ID that can read the contents
 of all the files in the volume. 
 
-# Running The Script
+## Running The Script
+
+### Runing the script on a Linux based operating system
 There are two main ways to run the script. The first is to just provide
 the script with a directory to start from using the -d option. The script will then read
 every file in that directory and all its subdirectories. The second way
@@ -115,7 +122,7 @@ Where:
   -d directory - Is the root directory to start the process from.
   -t max_directory_threads - Is the maximum number of threads to use to process directories. The default is 2.
   -x max_read_threads - Is the maximum number of threads to use to read files. The default is 5.
-  -V - Enable verbose output. Displays the thread ID, date (in epoch seconds), then the directory or file being processed.
+  -V - Enable verbose output. Displays progress information on the files being read.
   -h - Prints this help information.
 
 Notes:
@@ -126,11 +133,28 @@ Notes:
     reading files.
 ```
 
+### Runing the script on a Windows based operating system
+
+To run on a Windows based operating system, you will need to run the script from a
+PowerShell prompt. You can run the script with the following command:
+```
+.\WarmPerformanceTier.ps1 -Path \\fsx-server\myshare
+```
+Where `\\fsx-server\myshare` is the UNC path or mapped drive letter to the share/volume root.
+
+The script supports the following options:
+o Path -  UNC path or mapped drive letter to the share/volume root, e.g. \\fsx-server\myshare
+o ThreadCount -  Number of files to read in parallel. Default 8.
+o BlockSizeMB -  Block size in MB used for the out-of-order reads. Default 2 
+o ReadMethod - 'Reverse' (read blocks back-to-front) or 'Random' (shuffle block order). Default is 'Reverse'.
+o BatchSize -  How many files to queue at once before waiting for that batch to finish.
+    Bounds memory usage on volumes with very large file counts. Default is ThreadCount * 4.
+
 ## Finishing Step
 After running the script, you should set the cloud-retrieval-policy back to "default" by running
 the following commands:
 ```
-set advanced -c off
+set advanced
 volume modify -vserver <vserver> -volume <volume> -cloud-retrieval-policy default
 ```
 Where `<vserver>` is the name of the SVM and `<volume>` is the name of the volume.
@@ -149,4 +173,4 @@ Unless required by applicable law or agreed to in writing, software distributed 
 
 See the License for the specific language governing permissions and limitations under the License.
 
-© 2024 NetApp, Inc. All Rights Reserved.
+© 2026 NetApp, Inc. All Rights Reserved.
