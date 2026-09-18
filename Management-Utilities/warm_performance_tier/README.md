@@ -143,11 +143,12 @@ PowerShell prompt. You can run the script with the following command:
 Where `\\fsx-server\myshare` is the UNC path or mapped drive letter to the share/volume root.
 
 The script supports the following options:
-o Path -  UNC path or mapped drive letter to the share/volume root, e.g. \\fsx-server\myshare
-o ThreadCount -  Number of files to read in parallel. Default 8.
-o BlockSizeMB -  Block size in MB used for the out-of-order reads. Default 2 
-o ReadMethod - 'Reverse' (read blocks back-to-front) or 'Random' (shuffle block order). Default is 'Reverse'.
-o BatchSize -  How many files to queue at once before waiting for that batch to finish.
+
+* Path -  UNC path or mapped drive letter to the share/volume root, e.g. \\fsx-server\myshare
+* ThreadCount -  Number of files to read in parallel. Default 8.
+* BlockSizeMB -  Block size in MB used for the out-of-order reads. Default 2 
+* ReadMethod - 'Reverse' (read blocks back-to-front) or 'Random' (shuffle block order). Default is 'Reverse'.
+* BatchSize -  How many files to queue at once before waiting for that batch to finish.
     Bounds memory usage on volumes with very large file counts. Default is ThreadCount * 4.
 
 ## Finishing Step

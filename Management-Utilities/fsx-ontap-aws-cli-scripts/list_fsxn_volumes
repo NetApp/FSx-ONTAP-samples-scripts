@@ -36,7 +36,7 @@ usage () {
 Usage $(basename $0) [-r region] [-a] [-X excludeRegions] [-o] [-f fileSystemName] [-i fileSystemId] [-n] [-s svmID] [-x] [-t seconds] [-e endpoint_url] [volume_pattern]
   Where: volume_pattern - Only volumes that match the egrep pattern will be included.
                           An assumed '^' and '$' is added to the beginning and end of the pattern respectively.
-         -r region allows you to specify the region you want the list from.
+         -r means to only include the specified region(s) (comma seperated list).
          -a means all regions.
          -X excludeRegions - Comma separated list of regions to exclude from the search. Only valid when -a is specified.
          -n means include the file system and SVM names. Not compatible with the -x option.
@@ -61,8 +61,17 @@ start_watchdog () {
   pid=$1
   maxTime=$2
   region=$3
-  sleep $maxTime
-  if ps -p $pid > /dev/null; then
+
+  i=1
+  while [ $i -lt $((maxTime * 2)) ]; do
+    if ! ps -p $pid > /dev/null 2>&1; then
+      return
+    fi
+    sleep .5
+    let i+=1
+  done
+
+  if ps -p $pid > /dev/null 2>&1; then
     printf "\nWarning, timed out while getting the list of SVMs from the $region region.\nConsider excluding it with the -X option or raising the timeout with the -t option.\n" 1>&2
     pkill -P $pid
     kill $pid
@@ -214,7 +223,7 @@ volumePattern="*"
 maxTime=30
 while getopts "hr:aX:f:i:nos:xe:t:" option; do
   case "$option" in
-    r) region="$OPTARG"
+    r) region="$(echo $OPTARG | sed -e 's/,/ /g')"
       ;;
     a) allRegions=true
       ;;
