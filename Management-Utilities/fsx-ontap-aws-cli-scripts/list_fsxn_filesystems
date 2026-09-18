@@ -44,7 +44,7 @@ usage () {
   cat 1>&2 <<EOF
 Usage $(basename $0) [-r region] [-a] [-X excludeRegions] [-n] [-c] [-s] [-b] [-i fileSystemId] [-f fileSystemName] [-x] [-t seconds] [-e endpoint_url] [pattern]
   Where: pattern - means to only show file systems whos name match the pattern.
-         -r region allows you to specify the region you want the list from.
+         -r means to only search the specified region(s) (comma separated list).
          -a means all regions.
          -X excludeRegions allows you to specify a comma separated list of regions to exclude from the -a option.
          -c means to display a hierarchical view of each filesystem including svms and volumes.
@@ -71,8 +71,16 @@ start_watchdog () {
   maxTime=$2
   region=$3
 
-  sleep $maxTime
-  if ps -p $pid > /dev/null; then
+  i=1
+  while [ $i -lt $((maxTime * 2)) ]; do
+    if ! ps -p $pid > /dev/null 2>&1; then
+      return 0
+    fi
+    sleep .5
+    let i+=1
+  done
+
+  if ps -p $pid > /dev/null 2>&1; then
     printf "\nWarning, timed out while getting the list of FSxNs from the $region region.\nConsider excluding it with the -X option or raising the timeout with the -t option.\n" 1>&2
     pkill -P $pid
     kill $pid
@@ -265,7 +273,7 @@ maxTime=20
 # Process command line arguments.
 while getopts "bhcxsaX:nr:i:f:e:t:" option; do
   case "$option" in
-    r) region="$OPTARG"
+    r) region="$(echo $OPTARG | sed -e 's/,/ /g')"
       ;;
     a) allRegions=true
       ;;
@@ -322,7 +330,6 @@ if [ "$allRegions" == "true" ]; then
   # support FSxN
   allEndabledRegions=$(aws ec2 describe-regions --query "Regions[].RegionName" --output=json | jq -r '.[]')
   allFsxnRegions=$(curl -s https://api.regional-table.region-services.aws.a2z.com/index.json | jq -r '.prices[] | select(.attributes."aws:serviceName" == "Amazon FSx for NetApp ONTAP") .attributes."aws:region"' | egrep -v "$excludeRegions")
-#  allFsxnRegions=$(curl -s https://api.regional-table.region-services.aws.a2z.com/index.json | jq -r '.prices[] | select(.attributes."aws:serviceName" == "Amazon FSx for NetApp ONTAP") .attributes."aws:region"')
   for reg in $allEndabledRegions; do
     for fsxnReg in $allFsxnRegions; do
       if [ $reg == $fsxnReg ]; then

@@ -30,6 +30,7 @@ usage () {
   cat 1>&2 <<EOF
 Usage $(basename $0) [-r region] [-a] [-X excludeRegiosn] [-n] [-p] [-i fileSystemID] [-f fileSystemName] [-t seonds] [-e endpoint_url]
   Where: -a means all regions.
+         -r means to only search the specified region(s) (comma seperated list).
          -X means to exclude the specified regions (comma separated list) from the -a option.
          -n means to include file systems name.
          -p means to include the management and NAS IP address.
@@ -51,8 +52,17 @@ start_watchdog () {
   pid=$1
   maxTime=$2
   region=$3
-  sleep $maxTime
-  if ps -p $pid > /dev/null; then
+
+  i=1
+  while [ $i -lt $((maxTime*2)) ]; do
+    if ! ps -p $pid > /dev/null 2>&1; then
+      return
+    fi
+    sleep .5
+    let i+=1
+  done
+
+  if ps -p $pid > /dev/null 2>&1; then
     printf "\nWarning, timed out while getting the list of SVMs from the $region region.\nConsider excluding it with the -X option or raising the timeout with the -t option.\n" 1>&2
     pkill -P $pid
     kill $pid
@@ -129,7 +139,7 @@ excludeRegions="none"
 maxTime=20
 while getopts "haX:nr:i:f:pe:t:" option; do
   case "$option" in
-    r) region="$OPTARG"
+    r) region="$(echo "$OPTARG" | sed -e 's/,/ /g')"
       ;;
     a) allRegions=true
       ;;
