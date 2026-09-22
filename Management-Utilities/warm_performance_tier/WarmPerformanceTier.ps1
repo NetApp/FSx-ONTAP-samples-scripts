@@ -60,9 +60,11 @@ param(
     [string]$Path,
 
     [Parameter(ParameterSetName = 'Run')]
+    [ValidateRange(1, 1024)]
     [int]$ThreadCount = 8,
 
     [Parameter(ParameterSetName = 'Run')]
+    [ValidateScript({ $_ -gt 0 -and ([int64]$_ * 1MB) -le [int]::MaxValue })]
     [int]$BlockSizeMB = 2,
 
     [Parameter(ParameterSetName = 'Run')]
@@ -111,8 +113,13 @@ if (-not (Test-Path -LiteralPath $Path)) {
 }
 
 Write-Host "Enumerating files under '$Path' ..."
-$files = Get-ChildItem -LiteralPath $Path -Recurse -File -Force -ErrorAction SilentlyContinue
+$enumerationErrors = @()
+$files = Get-ChildItem -LiteralPath $Path -Recurse -File -Force -ErrorAction SilentlyContinue -ErrorVariable $enumerationErrors
 $total = $files.Count
+
+if ($enumerationErrors.Count -gt 0) {
+    Write-Warning "Encountered $($enumerationErrors.Count) errors while enumerating files. Some files may be skipped."
+}
 
 if ($total -eq 0) {
     Write-Host "No files found under '$Path'. Nothing to do."
@@ -157,9 +164,15 @@ $readScriptBlock = {
                 $toRead = [Math]::Min($blockSize, $length - $offset)
                 if ($toRead -le 0) { continue }
                 [void]$fs.Seek($offset, [System.IO.SeekOrigin]::Begin)
-                [void]$fs.Read($buffer, 0, [int]$toRead)
+                $remaining = [int]$toRead
+                while ($remaining -gt 0) {
+                    $bytesRead = $fs.Read($buffer, 0, $remaining)
+                    if ($bytesRead -eq 0) {
+                        throw "Unexpected end of file while reading '$filePath'."
+                    }
+                    $remaining -= $bytesRead
+                 }
             }
-
             return [PSCustomObject]@{ Path = $filePath; Success = $true; Bytes = $length }
         }
         finally {
@@ -230,4 +243,5 @@ Write-Host "Done in $($elapsed.ToString('hh\:mm\:ss')). Processed $doneCount fil
 if ($errorCount -gt 0) {
     Write-Host "Errors:"
     $errorList | ForEach-Object { Write-Host "  $_" }
+    exit 1
 }
