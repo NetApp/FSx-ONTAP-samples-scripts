@@ -54,6 +54,9 @@
     .\WarmPerformanceTier.ps1 -Help
 #>
 
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingWriteHost", "")]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSReviewUnusedParameter", "")] # Since the GitHub PS Lint thinks $VerboseProgress is unused.
+
 [CmdletBinding(DefaultParameterSetName = 'Run')]
 param(
     [Parameter(Mandatory = $true, ParameterSetName = 'Run', Position = 0)]
