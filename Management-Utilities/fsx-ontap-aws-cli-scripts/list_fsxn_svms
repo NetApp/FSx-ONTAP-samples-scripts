@@ -18,7 +18,7 @@
 #   o Region
 #   o File system ID
 #   o File System Name - optional
-#   o The managment and NAS IP address of the SVM - optional
+#   o The management and NAS IP address of the SVM - optional
 #   o SVM ID
 #   o SVM Name
 ################################################################################
@@ -30,7 +30,7 @@ usage () {
   cat 1>&2 <<EOF
 Usage $(basename $0) [-r region] [-a] [-X excludeRegiosn] [-n] [-p] [-i fileSystemID] [-f fileSystemName] [-t seonds] [-e endpoint_url]
   Where: -a means all regions.
-         -r means to only search the specified region(s) (comma seperated list).
+         -r means to only search the specified region(s) (comma separated list).
          -X means to exclude the specified regions (comma separated list) from the -a option.
          -n means to include file systems name.
          -p means to include the management and NAS IP address.
@@ -44,8 +44,8 @@ EOF
 
 ################################################################################
 # This function is used to kill a process, who's ID is passed as the first
-# argument, that is running longger than the time specified as the second
-# argurment.
+# argument, that is running longer than the time specified as the second
+# argument.
 ################################################################################
 start_watchdog () {
 
@@ -54,7 +54,7 @@ start_watchdog () {
   region=$3
 
   i=1
-  while [ $i -lt $((maxTime*2)) ]; do
+  while [ $i -le $((maxTime*2)) ]; do
     if ! ps -p $pid > /dev/null 2>&1; then
       return
     fi

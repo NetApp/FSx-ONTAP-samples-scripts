@@ -36,7 +36,7 @@ usage () {
 Usage $(basename $0) [-r region] [-a] [-X excludeRegions] [-o] [-f fileSystemName] [-i fileSystemId] [-n] [-s svmID] [-x] [-t seconds] [-e endpoint_url] [volume_pattern]
   Where: volume_pattern - Only volumes that match the egrep pattern will be included.
                           An assumed '^' and '$' is added to the beginning and end of the pattern respectively.
-         -r means to only include the specified region(s) (comma seperated list).
+         -r means to only include the specified region(s) (comma separated list).
          -a means all regions.
          -X excludeRegions - Comma separated list of regions to exclude from the search. Only valid when -a is specified.
          -n means include the file system and SVM names. Not compatible with the -x option.
@@ -53,8 +53,8 @@ EOF
 
 ################################################################################
 # This function is used to kill a process, who's ID is passed as the first
-# argument, that is running longger than the time specified as the second
-# argurment.
+# argument, that is running longer than the time specified as the second
+# argument.
 ################################################################################
 start_watchdog () {
 
@@ -63,7 +63,7 @@ start_watchdog () {
   region=$3
 
   i=1
-  while [ $i -lt $((maxTime * 2)) ]; do
+  while [ $i -le $((maxTime * 2)) ]; do
     if ! ps -p $pid > /dev/null 2>&1; then
       return
     fi

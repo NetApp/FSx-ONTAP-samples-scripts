@@ -72,7 +72,7 @@ start_watchdog () {
   region=$3
 
   i=1
-  while [ $i -lt $((maxTime * 2)) ]; do
+  while [ $i -le $((maxTime * 2)) ]; do
     if ! ps -p $pid > /dev/null 2>&1; then
       return 0
     fi
