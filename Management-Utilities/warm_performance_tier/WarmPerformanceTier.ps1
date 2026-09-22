@@ -112,21 +112,7 @@ if (-not (Test-Path -LiteralPath $Path)) {
     throw "Path '$Path' does not exist or is not accessible."
 }
 
-Write-Host "Enumerating files under '$Path' ..."
-$enumerationErrors = @()
-$files = Get-ChildItem -LiteralPath $Path -Recurse -File -Force -ErrorAction SilentlyContinue -ErrorVariable $enumerationErrors
-$total = $files.Count
-
-if ($enumerationErrors.Count -gt 0) {
-    Write-Warning "Encountered $($enumerationErrors.Count) errors while enumerating files. Some files may be skipped."
-}
-
-if ($total -eq 0) {
-    Write-Host "No files found under '$Path'. Nothing to do."
-    return
-}
-
-Write-Host "Found $total files. Reading with $ThreadCount parallel workers (method: $ReadMethod, block size: ${BlockSizeMB}MB, batch size: $BatchSize)..."
+Write-Host "Streaming files under '$Path' and reading with $ThreadCount parallel workers (method: $ReadMethod, block size: ${BlockSizeMB}MB, batch size: $BatchSize)..."
 
 $blockSize = [int64]$BlockSizeMB * 1MB
 
@@ -206,26 +192,35 @@ function Wait-AndCollect($jobs) {
 }
 
 $batch = New-Object System.Collections.Generic.List[object]
+$queuedCount = 0
+$enumerationErrors = @()
 
-foreach ($file in $files) {
-    $ps = [System.Management.Automation.PowerShell]::Create()
-    $ps.RunspacePool = $pool
-    [void]$ps.AddScript($readScriptBlock).AddArgument($file.FullName).AddArgument($blockSize).AddArgument($ReadMethod)
-    $handle = $ps.BeginInvoke()
-    $batch.Add([PSCustomObject]@{ Pipeline = $ps; Handle = $handle; File = $file.FullName })
+# Get-ChildItem streams FileInfo objects one at a time as it walks the tree,
+# and piping straight into ForEach-Object dispatches each file to the worker
+# queue as soon as it is discovered - the full listing is never held in
+# memory, so this scales to directories with very large file counts.
+Get-ChildItem -LiteralPath $Path -Recurse -File -Force -ErrorAction SilentlyContinue -ErrorVariable enumerationErrors |
+    ForEach-Object {
+        $file = $_
+        $queuedCount++
 
-    if ($batch.Count -ge $BatchSize) {
-        Wait-AndCollect $batch
-        $batch.Clear()
+        $ps = [System.Management.Automation.PowerShell]::Create()
+        $ps.RunspacePool = $pool
+        [void]$ps.AddScript($readScriptBlock).AddArgument($file.FullName).AddArgument($blockSize).AddArgument($ReadMethod)
+        $handle = $ps.BeginInvoke()
+        $batch.Add([PSCustomObject]@{ Pipeline = $ps; Handle = $handle; File = $file.FullName })
 
-        $elapsed = (Get-Date) - $startTime
-        $pct = [math]::Round(($doneCount / $total) * 100, 1)
-        Write-Progress -Activity "Warming performance tier" -Status "$doneCount / $total files ($errorCount errors)" -PercentComplete $pct
-        if ($VerboseProgress) {
-            Write-Host ("[{0:hh\:mm\:ss}] {1}/{2} files done ({3}%), {4} errors" -f $elapsed, $doneCount, $total, $pct, $errorCount)
+        if ($batch.Count -ge $BatchSize) {
+            Wait-AndCollect $batch
+            $batch.Clear()
+
+            $elapsed = (Get-Date) - $startTime
+            Write-Progress -Activity "Warming performance tier" -Status "$doneCount processed, $queuedCount queued so far ($errorCount errors)"
+            if ($VerboseProgress) {
+                Write-Host ("[{0:hh\:mm\:ss}] {1} processed, {2} queued so far, {3} errors" -f $elapsed, $doneCount, $queuedCount, $errorCount)
+            }
         }
     }
-}
 
 # Drain the final partial batch.
 if ($batch.Count -gt 0) {
@@ -237,6 +232,15 @@ $pool.Dispose()
 
 $elapsed = (Get-Date) - $startTime
 Write-Progress -Activity "Warming performance tier" -Completed
+
+if ($enumerationErrors.Count -gt 0) {
+    Write-Warning "Encountered $($enumerationErrors.Count) errors while enumerating files. Some files may be skipped."
+}
+
+if ($queuedCount -eq 0) {
+    Write-Host "No files found under '$Path'. Nothing to do."
+    return
+}
 
 Write-Host ""
 Write-Host "Done in $($elapsed.ToString('hh\:mm\:ss')). Processed $doneCount files, $errorCount errors."
