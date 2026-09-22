@@ -52,8 +52,9 @@ script twice does, typically, get more data into the performance tier so
 if you are trying to get as much data as possible into the performance tier,
 it is recommended to run the script twice.
 
-There are two versions of the script. One that designed to run on a Linux operating system name `warm_performance_tier`
-and one that is meant to run on a Windows based one name `WarmPerformanceTier.ps1`.
+There are two versions of the script:
+o `warm_performance_tier` - Disigned for Linux.
+o `WarmPerformanceTier.ps1` - Designed for Windows.
 
 ## Set Up
 The first step is to ensure the volume's tiering policy is set
@@ -80,7 +81,7 @@ of all the files in the volume.
 
 ## Running The Script
 
-### Runing the script on a Linux based operating system
+### Running the script on a Linux-based operating system
 There are two main ways to run the script. The first is to just provide
 the script with a directory to start from using the -d option. The script will then read
 every file in that directory and all its subdirectories. The second way
