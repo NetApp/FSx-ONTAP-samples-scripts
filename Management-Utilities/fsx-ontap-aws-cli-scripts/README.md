@@ -8,7 +8,7 @@ Windows Subsystem for Linux (WSL) based Linux distribution installed.
 Before running the UNIX based scripts, make sure the following package is installed:
 
 * jq  - lightweight and flexible command-line JSON processor
-* aws-cli - Command Line Interface for AWS
+* aws - Command Line Interface for AWS
 
 ## Summary of the convenience scripts
 
@@ -17,15 +17,16 @@ Before running the UNIX based scripts, make sure the following package is instal
 |create_fsxn_filesystem   | Creates a new FSx for NetApp ONTAP file system. |
 |create_fsxn_svm          | Creates a new Storage Virtual Server (SVM) in a specified FSx for ONTAP file system. |
 |create_fsxn_volume       | Creates a new volume under a specified SVM. |
+|delete_fsxn_filesystem   | Deletes a specified FSx for ONTAP file system. Including all the SVMs and volumes on it. |
+|delete_fsxn_svm          | Deletes a specified SVM. Including all the volumes assigned to it. |
+|delete_fsxn_volume       | Deletes a specified volume. |
 |list_fsx_filesystems     | List all the FSx for NetApp ONTAP file systems that the user has access to. |
 |list_fsx_filesystems.ps1 | List all the FSx for NetApp ONTAP file systems that the user has access to, written in PowerShell. |
 |list_fsxn_volumes        | List all the FSx for NetApp ONTAP volumes that the user has access to. |
 |list_fsxn_svms           | List all the storage virtual machines that the user access to. |
 |list_aws_subnets         | List all the AWS subnets. |
 |list_aws_vpcs            | List all the AWS VPCs. |
-|delete_fsxn_filesystem   | Deletes a specified FSx for ONTAP file system. Including all the SVMs and volumes on it. |
-|delete_fsxn_svm          | Deletes a specified SVM. Including all the volumes assigned to it. |
-|delete_fsxn_volume       | Deletes a specified volume. |
+|set_fsxn_password        | Sets the password for the fsxadmin user of a specified FSxN file system. |
 
 
 ## Author Information
