@@ -222,6 +222,7 @@ import boto3
 # snapmirror relationships have been created.
 ################################################################################
 class TooManySMs(Exception):
+    """ Custom exception to raise when too many SnapMirror relationships have been created. """
 
     # Constructor or Initializer
     def __init__(self, value):
@@ -430,7 +431,7 @@ def protectVolume(fsxId, svmName, volumeName, partnerId, partnerIp, partnerSvmNa
 
             if state == "success":
                 logger.info(f'SnapMirror relationship for {fsxId}::{svmName}:{volumeName} to {partnerIp}::{partnerSvmName}:{volumeName}{config["destinationVolumeSuffix"]} was successfully created.')
-                numSnapMirrorRelationships += 1
+                numSnapMirrorRelationships += 1 # pylint: disable=E0602
             else:
                 if body.get("error") is not None and body["error"].get("message") is not None:
                     errMessage = body["error"]["message"]
@@ -530,7 +531,7 @@ def readinConfig():
             config[var] = None
     #
     # Convert the logical string to a logic.
-    if config.get('protectAll') is not None and type(config['protectAll']) == str and config['protectAll'].lower() == "false":
+    if config.get('protectAll') is not None and type(config['protectAll']) == str and config['protectAll'].lower() == "false": # pylint: disable=E1101
         config['protectAll'] = False
     else:
         config['protectAll'] = True
@@ -653,8 +654,8 @@ def lambda_handler(event, context):
     # to send messages to a syslog server.
     logging.basicConfig(datefmt='%Y-%m-%d_%H:%M:%S', format='%(asctime)s:%(name)s:%(levelname)s:%(message)s', encoding='utf-8')
     logger = logging.getLogger("auto_create_sm_relationships")
-    logger.setLevel(logging.DEBUG)
-#    logger.setLevel(logging.INFO)
+    # logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
     #
     # Set the logging level higher for these noisy modules to mute thier messages
     # when debugging things.
@@ -677,8 +678,7 @@ def lambda_handler(event, context):
         for region in ec2Regions:
             limitRegions += [region['RegionName']]
         ec2Client.close()
-    #
-    #
+
     if dryRun:
         logger.info('Running in Dry Run mode.')
     #
@@ -710,7 +710,7 @@ def lambda_handler(event, context):
             #
             # Skip regions that don't support fsx.
             if regionName in fsxRegions:
-                logger.debug(f'Scanning region {regionName}.')
+                logger.info(f'Scanning region {regionName}.')
                 fsxClient = boto3.client('fsx', region_name=regionName, config=boto3Config)
                 tagsClient = boto3.client('resourcegroupstaggingapi', region_name=regionName, config=boto3Config)
                 try:
@@ -768,7 +768,7 @@ def lambda_handler(event, context):
                         else:
                             logger.warning(f'No management IP address found for fsxId: {fsxnId}. Probably because it is being created, or deleted.')
                             continue
-                        logger.debug(f'Getting all the volumes from fsxn with IP {fsxnIp}.')
+                        logger.info(f'Getting all the volumes from {fsxnId}.')
                         ontapVolumes = getOntapVolumes(fsxnId, fsxnIp)
                         for ontapVolume in ontapVolumes:
                             #

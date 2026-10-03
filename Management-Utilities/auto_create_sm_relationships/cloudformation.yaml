@@ -207,7 +207,7 @@ Parameters:
   maxRunTime:
     Description: "The maximum time, in seconds, the Lambda function is allowed to run before being terminated. Must be between 60 and 900 seconds."
     Type: Number
-    Default: 60
+    Default: 90
     MinValue: 60
     MaxValue: 900
 

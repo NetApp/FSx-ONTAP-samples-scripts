@@ -189,7 +189,7 @@ fs-07bcb7adXXXXXXXXX,FSxSecret-Default,username,password
 Here are the permissions that are required for the program to run:
 
 |Action|Resource|Description|
-|-|-|-|
+|-|:-:|-|
 |fsx:DescribeFileSystems| `*` | Allows the program to discovery the file systems.|
 |fsx:DescribeVolumes| `*` | Allows the program to discovery the volumes within the file systems.|
 |tag:GetResources|`*` | Allows the program to get tag information.|
