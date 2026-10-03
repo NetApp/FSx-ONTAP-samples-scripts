@@ -277,7 +277,7 @@ Resources:
                 Action:
                   - "fsx:DescribeFileSystems"
                   - "fsx:DescribeVolumes"
-                  - "tags:ListTagsForResource"
+                  - "tag:GetResources"
                   - "ec2:DescribeRegions"
                 Resource:
                   - "*"
