@@ -112,8 +112,8 @@ required_options["CIFS_SHARE_NAME"]='Error: The name of the cifs share is requir
 
 check_required_options
 #
-# Check that the CIFS_SHARE_NAME only contains allowed characters (alphanumeric, underscores and dashes).
-if [[ ! "$CIFS_SHARE_NAME" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+# Check that the CIFS_SHARE_NAME only contains allowed characters (alphanumeric, underscores, spaces and dashes).
+if [[ ! "$CIFS_SHARE_NAME" =~ ^[[:alnum:]_[:space:]-]+$ ]]; then
   echo "Error: The CIFS share name can only contain alphanumeric characters, underscores and dashes." >&2
   exit 1
 fi
@@ -135,7 +135,7 @@ fi
 # Get the existing shares and the junction path
 run_curl GET "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/fsx/v2/credentials/${CREDENTIALS_ID}/regions/${AWS_REGION}/file-systems/${FILESYSTEM_ID}/volumes/${VOLUME_ID}?include=cifsShares" $tmpout $tmperr
 cifsShares=$(jq -r '.cifsShares' $tmpout)
-alreadExist=$(echo "$cifsShares" | jq -r 'map(select(.name == "'$CIFS_SHARE_NAME'")) | length')
+alreadExist=$(echo "$cifsShares" | jq -r --arg shareName "$CIFS_SHARE_NAME" 'map(select(.name == $shareName)) | length')
 if [ "$alreadExist" -gt 0 ]; then
   echo "A share with the name '$CIFS_SHARE_NAME' already exists. No changes will be made." >&2
   exit 1
@@ -159,6 +159,6 @@ newShare='{"name":"'$CIFS_SHARE_NAME'","path":"'$SHARE_PATH'","acls":[{"userOrGr
 echo "Creating share named '$CIFS_SHARE_NAME' with path '$SHARE_PATH'."
 #
 # Add the new share to the existing ones.
-cifsShares=$(echo "$cifsShares" | jq -r '. += ['$newShare']')
+cifsShares=$(echo "$cifsShares" | jq -r --argjson newShare "$newShare" '. += [$newShare]')
 cifsShares="{\"cifsShares\": $cifsShares}"
 run_curl PATCH "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/fsx/v2/credentials/${CREDENTIALS_ID}/regions/${AWS_REGION}/file-systems/${FILESYSTEM_ID}/volumes/${VOLUME_ID}" $tmpout $tmperr "$cifsShares"

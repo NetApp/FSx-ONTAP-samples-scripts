@@ -118,6 +118,6 @@ run_curl GET "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUN
 cifsShares=$(jq -r '.cifsShares' $tmpout)
 #
 # Remove the specified share from the existing ones.
-cifsShares=$(echo "$cifsShares" | jq -r 'map(select(.name != "'$CIFS_SHARE_NAME'"))')
+cifsShares=$(echo "$cifsShares" | jq -r --arg shareName "$CIFS_SHARE_NAME" 'map(select(.name != $shareName))')
 cifsShares="{\"cifsShares\": $cifsShares}"
 run_curl PATCH "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/fsx/v2/credentials/${CREDENTIALS_ID}/regions/${AWS_REGION}/file-systems/${FILESYSTEM_ID}/volumes/${VOLUME_ID}" $tmpout $tmperr "$cifsShares"
