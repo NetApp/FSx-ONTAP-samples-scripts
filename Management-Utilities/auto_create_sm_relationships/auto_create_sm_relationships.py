@@ -527,7 +527,7 @@ def readinConfig():
     # to an empty string if someone doesn't provide a value, reset the
     # values back to None.
     for var in config:
-        if config[var] == "":
+        if config[var] == "" and var != "destinationVolumeSuffix":
             config[var] = None
     #
     # Convert the logical string to a logic.

@@ -11,9 +11,10 @@ are SnapMirror'ed to a remote FSxN file system. It does this by:
     - A RW type volume
     - Not a clone volume
     - Not a FlexCache volume
-    - Not already in an existing SnapMirror relationship
+    - Not a vserver root volume
+    - Not already in an existing SnapMirror relationship to the specified destination
     - Doesn't have an AWS tag with a key of `protect_volume` with a value of `skip`.
-- If it passes all those check then it uses the ONTAP SnapMirror API to create the SnapMirror relationship.
+- If it passes all those checks then it uses the ONTAP SnapMirror API to create the SnapMirror relationship.
 
 **NOTES**
 - The ONTAP API creates the destination volume and will error out if the destination volume already exists.

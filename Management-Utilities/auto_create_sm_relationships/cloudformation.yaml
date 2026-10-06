@@ -366,8 +366,8 @@ Resources:
           #     creates a SnapMirror relationship using the partner information
           #     provided below.
           #
-          # Version: v1.7
-          # Date: 2026-10-06-10:44:45
+          # Version: v1.8
+          # Date: 2026-10-06-16:42:22
           #
           ################################################################################
           #
@@ -878,7 +878,7 @@ Resources:
               # to an empty string if someone doesn't provide a value, reset the
               # values back to None.
               for var in config:
-                  if config[var] == "":
+                  if config[var] == "" and var != "destinationVolumeSuffix":
                       config[var] = None
               #
               # Convert the logical string to a logic.
@@ -1137,11 +1137,11 @@ Resources:
                                                   svmName = ontapVolume['svm']['name']
                                                   (partnerId, partnerIp, partnerSvmName, partnerSvmSourceName) = getPartnerInfo(fsxnId, svmName)
                                                   if partnerId == "":
-                                                      logger.warning(f'No partner found for fsxId: {fsxnId} and svmName: {svmName}.')
+                                                      logger.warning(f'No partner found for fsxId: {fsxnId} and svmName: {svmName} while trying to protect {volumeName}.')
                                                       continue
           
                                                   if getCredentials(partnerId) == ("", ""):
-                                                      logger.warning(f'No credentials found for partner fsxId: {partnerId}.')
+                                                      logger.warning(f'No credentials found for partner fsxId: {partnerId} while trying to protect {volumeName}.')
                                                       continue
               
                                                   protectVolume(fsxnId, svmName, volumeName, partnerId, partnerIp, partnerSvmName, partnerSvmSourceName)
