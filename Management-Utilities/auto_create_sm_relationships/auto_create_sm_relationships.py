@@ -462,7 +462,7 @@ def getOntapVolumes(fsxId, fsxnIp):
    
     volumes = []
     try:
-        endpoint = f'https://{fsxnIp}/api/storage/volumes?fields=name,svm,type,clone,flexcache_endpoint_type'
+        endpoint = f'https://{fsxnIp}/api/storage/volumes?fields=name,svm,type,clone,flexcache_endpoint_type,is_svm_root'
         logger.debug(f'Trying {endpoint}.')
         response = http.request('GET', endpoint, headers=headers, timeout=5.0)
         if response.status == 200:
@@ -772,8 +772,10 @@ def lambda_handler(event, context):
                         ontapVolumes = getOntapVolumes(fsxnId, fsxnIp)
                         for ontapVolume in ontapVolumes:
                             #
-                            # Only create SnapMirror relationships for RW volumes that arne't clones or FlexCaches.
-                            if ontapVolume['type'].lower() == "rw" and ontapVolume.get('clone') is not None and not ontapVolume['clone']['is_flexclone'] and ontapVolume.get('flexcache_endpoint_type') != "cache":
+                            # Only create SnapMirror relationships for RW volumes that arne't clones, vserver_roots or FlexCaches.
+                            if (ontapVolume['type'].lower() == "rw" and ontapVolume.get('clone') is not None
+                                and not ontapVolume['clone']['is_flexclone'] and ontapVolume.get('flexcache_endpoint_type') != "cache"
+                                and ontapVolume.get('is_svm_root') is not True):
                                 volumeUUID = ontapVolume['uuid']
                                 volumeARN = getVolumeARN(awsVolumes, volumeUUID)
                                 if volumeARN != "":
@@ -784,11 +786,11 @@ def lambda_handler(event, context):
                                         svmName = ontapVolume['svm']['name']
                                         (partnerId, partnerIp, partnerSvmName, partnerSvmSourceName) = getPartnerInfo(fsxnId, svmName)
                                         if partnerId == "":
-                                            logger.warning(f'No partner found for fsxId: {fsxnId} and svmName: {svmName}.')
+                                            logger.warning(f'No partner found for fsxId: {fsxnId} and svmName: {svmName} while trying to protect {volumeName}.')
                                             continue
 
                                         if getCredentials(partnerId) == ("", ""):
-                                            logger.warning(f'No credentials found for partner fsxId: {partnerId}.')
+                                            logger.warning(f'No credentials found for partner fsxId: {partnerId} while trying to protect {volumeName}.')
                                             continue
     
                                         protectVolume(fsxnId, svmName, volumeName, partnerId, partnerIp, partnerSvmName, partnerSvmSourceName)

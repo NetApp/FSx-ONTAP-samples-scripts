@@ -367,7 +367,7 @@ Resources:
           #     provided below.
           #
           # Version: v1.7
-          # Date: 2026-10-03-09:56:51
+          # Date: 2026-10-06-10:44:45
           #
           ################################################################################
           #
@@ -813,7 +813,7 @@ Resources:
              
               volumes = []
               try:
-                  endpoint = f'https://{fsxnIp}/api/storage/volumes?fields=name,svm,type,clone,flexcache_endpoint_type'
+                  endpoint = f'https://{fsxnIp}/api/storage/volumes?fields=name,svm,type,clone,flexcache_endpoint_type,is_svm_root'
                   logger.debug(f'Trying {endpoint}.')
                   response = http.request('GET', endpoint, headers=headers, timeout=5.0)
                   if response.status == 200:
@@ -1123,8 +1123,10 @@ Resources:
                                   ontapVolumes = getOntapVolumes(fsxnId, fsxnIp)
                                   for ontapVolume in ontapVolumes:
                                       #
-                                      # Only create SnapMirror relationships for RW volumes that arne't clones or FlexCaches.
-                                      if ontapVolume['type'].lower() == "rw" and ontapVolume.get('clone') is not None and not ontapVolume['clone']['is_flexclone'] and ontapVolume.get('flexcache_endpoint_type') != "cache":
+                                      # Only create SnapMirror relationships for RW volumes that arne't clones, vserver_roots or FlexCaches.
+                                      if (ontapVolume['type'].lower() == "rw" and ontapVolume.get('clone') is not None
+                                          and not ontapVolume['clone']['is_flexclone'] and ontapVolume.get('flexcache_endpoint_type') != "cache"
+                                          and ontapVolume.get('is_svm_root') is not True):
                                           volumeUUID = ontapVolume['uuid']
                                           volumeARN = getVolumeARN(awsVolumes, volumeUUID)
                                           if volumeARN != "":
