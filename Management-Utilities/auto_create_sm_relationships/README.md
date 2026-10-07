@@ -145,7 +145,7 @@ python3 auto_create_sm_relationships.py
 #### Partners Table
 This table provides the association with a source FSxN file system to its partner cluster (i.e. where its volumes should be SnapMirror'ed to.) There should be five fields for each entry:
 - soureceId - Which is the concatenation of the source file system ID followed by a ":" followed by the SVM name. It is done this way because the id has to be unique in the table. It is split up into its two components in the script when it is read in.
-- partnerFsxnId - Set to the AWS ID the partner FSxN file system.
+- partnerFsxId - Set to the AWS ID the partner FSxN file system.
 - partnerFsxnIp - Set to the IP address of the management port of the partner FSxN file system.
 - partnerSvmName - The name of the SVM where you want the SnapMirror destination volume to reside.
 - partnerSvmSourceName - Is the "local name" of the source SVM. Usually, it is the same as the source SVM, but can be different if that same name already exists on the partner file system. When you peer the SVM it will require you to create an alias for the source SVM so all the SVM names are unique.
