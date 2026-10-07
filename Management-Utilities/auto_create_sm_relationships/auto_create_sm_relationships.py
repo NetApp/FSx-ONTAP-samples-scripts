@@ -335,6 +335,7 @@ def getSnapMirrorRelationships(fsxnId, fsxnIp):
     global logger, http
 
 
+    relationships = []
     (username, password) = getCredentials(fsxnId)
     if username == "" or password == "":
         logger.error(f'No credentials for FSxN ID: {fsxnId}.')
@@ -343,7 +344,6 @@ def getSnapMirrorRelationships(fsxnId, fsxnIp):
     auth = urllib3.make_headers(basic_auth=f'{username}:{password}')
     headers = { **auth }
 
-    relationships = []
     try:
         url = '/api/snapmirror/relationships?fields=source,destination'
         while url is not None:
