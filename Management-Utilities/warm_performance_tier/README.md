@@ -53,7 +53,7 @@ if you are trying to get as much data as possible into the performance tier,
 it is recommended to run the script twice.
 
 There are two versions of the script:
-o `warm_performance_tier` - Disigned for Linux.
+o `warm_performance_tier` - Designed for Linux.
 o `WarmPerformanceTier.ps1` - Designed for Windows.
 
 ## Set Up
