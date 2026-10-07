@@ -368,8 +368,8 @@ Resources:
           #     creates a SnapMirror relationship using the partner information
           #     provided below.
           #
-          # Version: v1.9
-          # Date: 2026-10-07-08:58:52
+          # Version: v1.1
+          # Date: 2026-10-07-15:21:19
           #
           ################################################################################
           #
@@ -688,6 +688,7 @@ Resources:
               global logger, http
           
           
+              relationships = []
               (username, password) = getCredentials(fsxnId)
               if username == "" or password == "":
                   logger.error(f'No credentials for FSxN ID: {fsxnId}.')
@@ -696,7 +697,6 @@ Resources:
               auth = urllib3.make_headers(basic_auth=f'{username}:{password}')
               headers = { **auth }
           
-              relationships = []
               try:
                   url = '/api/snapmirror/relationships?fields=source,destination'
                   while url is not None:
