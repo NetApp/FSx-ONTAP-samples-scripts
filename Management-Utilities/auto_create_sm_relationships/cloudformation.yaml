@@ -368,8 +368,8 @@ Resources:
           #     creates a SnapMirror relationship using the partner information
           #     provided below.
           #
-          # Version: v1.1
-          # Date: 2026-10-07-15:21:19
+          # Version: v1.11
+          # Date: 2026-10-07-10:29:35
           #
           ################################################################################
           #
@@ -686,7 +686,6 @@ Resources:
           def getSnapMirrorRelationships(fsxnId, fsxnIp):
           
               global logger, http
-          
           
               relationships = []
               (username, password) = getCredentials(fsxnId)

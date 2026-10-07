@@ -334,7 +334,6 @@ def getSnapMirrorRelationships(fsxnId, fsxnIp):
 
     global logger, http
 
-
     relationships = []
     (username, password) = getCredentials(fsxnId)
     if username == "" or password == "":
