@@ -36,7 +36,7 @@ jobs:
       - name: Update the Cloudformation Template
         shell: bash
         working-directory: Management-Utilities/auto_create_sm_relationships
-        run: ./update-CFTemplate
+        run: ./updateCFTemplate
 
       - name: Commit the changes
         uses: step-security/git-auto-commit-action@905c3cd6e9ed2b67b4d46ff401fdb6d745d0ff9d # v7.1.0
