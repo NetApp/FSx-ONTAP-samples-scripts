@@ -75,7 +75,7 @@ start_watchdog () {
 get_svms () {
   region=$1
 
-  mkdir $tmpdir/$region
+  mkdir $tmpdir/$region > /dev/null 2>&1
   local tmpdir=$tmpdir/$region
   tmpout=$tmpdir/output
   tmpout2=$tmpdir/output2
@@ -200,10 +200,10 @@ done
 while [ ${#pids[@]} -gt 0 ]; do
   wait -n -p pid "${!pids[@]}"
   if [ $? -ne 127 ]; then
-    cat $tmpdir/${pids[$pid]}.out
+    cat $tmpdir/${pids[$pid]}.out 2> /dev/null
     unset pids[$pid]
   else
-    echo "Error, waiting for an non-existent process. This should never happen." 1>&2
-    exit 1
+    # If the wait command returns 127, then all processes are no longer running so exit.
+    exit 0
   fi
 done
