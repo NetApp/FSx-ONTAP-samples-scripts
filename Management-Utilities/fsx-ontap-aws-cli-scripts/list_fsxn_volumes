@@ -84,7 +84,7 @@ start_watchdog () {
 get_volumes () {
   local region=$1
 
-  mkdir $tmpdir/$region
+  mkdir $tmpdir/$region > /dev/null 2>&1
   local tmpdir=$tmpdir/$region
 
   volumeList=$tmpdir/list_aws_vol-out
@@ -298,10 +298,10 @@ done
 while [ ${#pids[@]} -gt 0 ]; do
   wait -n -p pid "${!pids[@]}"
   if [ $? -ne 127 ]; then
-    cat $tmpdir/${pids[$pid]}.out
+    cat $tmpdir/${pids[$pid]}.out 2> /dev/null
     unset pids[$pid]
   else
-    echo "Error, waiting for an non-existent process. This should never happen." 1>&2
-    exit 1
+    # If wait returns 127, it means there are no more child processes to wait for.
+    exit 0
   fi
 done

@@ -96,7 +96,7 @@ get_filesystems () {
   local region=$1
   local pattern=$2
 
-  mkdir $tmpdir/$region
+  mkdir $tmpdir/$region > /dev/null 2>&1
   local tmpdir=$tmpdir/$region
 
   tmpout=$(mktemp -p $tmpdir list_fss-output.XXX)
@@ -381,10 +381,11 @@ done
 while [ ${#pids[@]} -gt 0 ]; do
   wait -n -p pid "${!pids[@]}"
   if [ $? -ne 127 ]; then
-    cat $tmpdir/${pids[$pid]}.out
+    cat $tmpdir/${pids[$pid]}.out 2> /dev/null
     unset pids[$pid]
   else
-    echo "Error, waiting for an non-existent process. This should never happen." 1>&2
-    exit 1
+    # If this happens none of the PIDs are still running so somehow we missed one with the
+    # wait command. Regardless as to why or how, there is no reason to keep waiting.
+    exit 0
   fi
 done
