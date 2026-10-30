@@ -79,6 +79,25 @@ start_watchdog () {
 }
 
 ################################################################################
+# The following function echos "true" if the first argument is found in the
+# second argument, which is a space separated list of values. Otherwise
+# it echos "false".
+################################################################################
+inArray() {
+
+  region=$1
+  regions="$2"
+  for r in $regions; do
+    if [ "$r" == "$region" ]; then
+      echo "true"
+      return 1
+    fi
+  done
+  echo "false"
+  return 0
+}
+
+################################################################################
 # This function will get the list of volumes for a given region.
 ################################################################################
 get_volumes () {
@@ -211,7 +230,7 @@ fi
 #
 # Process command line arguments.
 allRegions=false
-excludeRegions="none"
+: ${excludeRegions:="none"}
 region=$(aws configure get region)
 includeFsName=false
 excludeRoot=false
@@ -274,7 +293,10 @@ if [ "$allRegions" = "true" ]; then
   allFsxnRegions=$(curl -s https://api.regional-table.region-services.aws.a2z.com/index.json | jq -r '.prices[] | select(.attributes."aws:serviceName" == "Amazon FSx for NetApp ONTAP") .attributes."aws:region"' | egrep -v $excludeRegions)
   for reg in $allEndabledRegions; do
     for fsxnReg in $allFsxnRegions; do
-      if [ $reg == $fsxnReg ]; then
+      #
+      # Since for some crazy reason AWS decided to add duplicate entries in their
+      # regional table, we need to make sure we don't add duplicates to our list of regions.
+      if [ $reg == $fsxnReg -a $(inArray $reg "${regions[*]}") == "false" ]; then
         regions+=($reg)
       fi
     done
@@ -296,7 +318,7 @@ for region in ${regions[*]}; do
 done
 
 while [ ${#pids[@]} -gt 0 ]; do
-  wait -n -p pid "${!pids[@]}"
+  wait -n -p pid "${!pids[@]}" > /dev/null 2>&1
   if [ $? -ne 127 ]; then
     cat $tmpdir/${pids[$pid]}.out 2> /dev/null
     unset pids[$pid]
