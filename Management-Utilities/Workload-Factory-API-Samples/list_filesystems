@@ -141,7 +141,6 @@ done
 # Check to see if there are any on-prem systems.
 jq_query='.items[] | .clusterUuid + "," + .name + ",N/A,On-Prem," + if(.connected) then "AVAILABLE," else "UNKNOWN," end + .credentialId'
 run_curl GET "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/onprem/v1/onprems" $tmpout $tmperr
-cp $tmpout output
 if jq -r "$jq_query" $tmpout >> $tmpout2 2> $tmperr; then
   :
 else
