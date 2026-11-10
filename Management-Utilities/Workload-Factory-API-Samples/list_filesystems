@@ -25,10 +25,11 @@ Where: refresh_token - Is a refresh token used to obtain an access token needed
                        token by going to https://services.cloud.netapp.com/refresh-token
        blueXP_account_ID - is the BlueXP account ID. Run 'list_bluexp_accts' to get a
                            list of accounts you have access to.
-       credentials_ID - is the Workload Factory credentials ID for the AWS account.
+       credentials_ID - Limit the list to only the file systems that are associated with
+                        the specified credentials ID.
                         Run 'list_credentials' to get a list of Workload Factory
                         credentials you have access to.
-       aws_region - is the AWS region where you want the list of FSx file system from.
+       aws_region - Limit the list to only the file systems in the specified AWS region.
 
 Instead of passing parameters on the command line, you can set the
 following environment variables:
@@ -84,10 +85,6 @@ required_options["REFRESH_TOKEN"]='Error: A BlueXP refresh tokon is required to 
 required_options["BLUEXP_ACCOUNT_ID"]='Error: A BlueXP account ID is required to run this script.
 You can get the list of accounts you have access to by running the "list_bluexp_accts" script
 found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
-required_options["CREDENTIALS_ID"]='Error: The Workload Factory credentials ID used to list resources is required to run this script.
-You can get a list of credentials by running the "list_credentials" script
-found in this GitHub repository: https://github.com/NetApp/FSx-ONTAP-samples-scripts/tree/main/Management-Utilities/Workload-Factory-API-Samples\n\n'
-required_options["AWS_REGION"]='Error: The AWS region where the file system is located is required.\n\n'
 
 check_required_options
 #
@@ -106,8 +103,19 @@ if [ -z "$token" ]; then
   exit 1
 fi
 
-jq_query='.items[] | "\(.id),\(.name),\(.region),\(.deploymentType),\(.status.status)"'
-run_curl GET "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/fsx/v2/credentials/${CREDENTIALS_ID}/regions/${AWS_REGION}/file-systems" $tmpout $tmperr
+jq_query='.items[] | "\(.id),\(.name),\(.region),\(.deploymentType),\(.status.status)," + (.credentialsIds | join(" "))'
+if [ ! -z "$AWS_REGION" ]; then
+  regionPayload='"regions":["'"$AWS_REGION"'"]'
+else
+  regionPayload=''
+fi
+if [ ! -z "$CREDENTIALS_ID" ]; then
+  credentialsPayload='"credentialsIds":["'"$CREDENTIALS_ID"'"]'
+else
+  credentialsPayload=''
+fi
+payload="{${regionPayload}${regionPayload:+,}${credentialsPayload}}"
+run_curl POST "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/fsx/v2/file-systems/discovery" $tmpout $tmperr "$payload"
 if jq -r "$jq_query" $tmpout > $tmpout2 2> $tmperr; then
   :
 else
@@ -119,7 +127,7 @@ fi
 # Check to see if there are more.
 nextToken=$(jq -r '.nextToken' $tmpout)
 while [ "$nextToken" != "null" ]; do
-  run_curl GET "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/fsx/v2/credentials/${CREDENTIALS_ID}/regions/${AWS_REGION}/file-systems?nextToken=${nextToken}" $tmpout $tmperr
+  run_curl POST "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/fsx/v2/file-systems/discovery?nextToken=${nextToken}" $tmpout $tmperr "$payload"
   if jq -r "$jq_query" $tmpout >> $tmpout2 2> $tmperr; then
     :
   else
@@ -129,8 +137,9 @@ while [ "$nextToken" != "null" ]; do
   fi
   nextToken=$(jq -r '.nextToken' $tmpout)
 done
-
-jq_query='.items[] | .clusterUuid + "," + .name + ",N/A,On-Prem," + if(.connected) then "AVAILABLE" else "UNKNOWN" end'
+#
+# Check to see if there are any on-prem systems.
+jq_query='.items[] | .clusterUuid + "," + .name + ",N/A,On-Prem," + if(.connected) then "AVAILABLE," else "UNKNOWN," end + .credentialId'
 run_curl GET "$token" "https://api.workloads.netapp.com/accounts/${BLUEXP_ACCOUNT_ID}/onprem/v1/onprems" $tmpout $tmperr
 if jq -r "$jq_query" $tmpout >> $tmpout2 2> $tmperr; then
   :
@@ -153,4 +162,4 @@ while [ "$nextToken" != "null" ]; do
   fi
   nextToken=$(jq -r '.nextToken' $tmpout)
 done
-sort -t, -f -k 2,2 $tmpout2 | column -t -s, -N ID,Name,Region,Deployment_Type,Status
+sort -t, -f -k 2,2 $tmpout2 | column -t -s, -N ID,Name,Region,Deployment_Type,Status,Credential_IDs
